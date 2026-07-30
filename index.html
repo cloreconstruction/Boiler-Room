@@ -1807,6 +1807,9 @@
         <span class="plate-txt">🧙 Ask the Wizard</span>
       </button>
     </div>
+    <div class="ask-row" style="margin-top: 10px;">
+      <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this)" placeholder="🎙 Now say it — the note, or the question. The plates above send it."></textarea>
+    </div>
     <div class="frow" style="margin-top: 10px; align-items: center; flex-wrap: nowrap;">
       <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0;"></select>
       <input type="file" id="qnPhoto" accept="image/*" multiple onchange="noteAddPhotos(this)" style="display: none;">
@@ -1825,9 +1828,6 @@
       <div class="chip-grid chip-grid--3" id="routeChips"></div>
       <div class="field" style="margin: 10px 0 6px;"><label>How soon</label></div>
       <div class="chip-grid chip-grid--3" id="urgChips"></div>
-    </div>
-    <div class="ask-row" style="margin-top: 10px;">
-      <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this)" placeholder="🎙 Now say it — the note, or the question. Then hit a plate above."></textarea>
     </div>
     <div class="ask-foot">
       <span id="askStatus" class="hint" style="margin-top: 0;">⚙ grinds it into the log · 🧙 answers from it.</span>
@@ -2570,7 +2570,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.80 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.81 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
