@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360">
+  <defs>
+    <linearGradient id="leverMetal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#503018"/>
+      <stop offset=".35" stop-color="#d2a04a"/>
+      <stop offset=".58" stop-color="#7e4c20"/>
+      <stop offset=".8" stop-color="#e1b55d"/>
+      <stop offset="1" stop-color="#3a2210"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(1070 257)">
+    <rect x="-18" y="-148" width="36" height="132" rx="17" fill="url(#leverMetal)" stroke="#311a0b" stroke-width="5"/>
+    <rect x="-28" y="-173" width="56" height="55" rx="22" fill="url(#leverMetal)" stroke="#311a0b" stroke-width="5"/>
+    <circle cx="0" cy="0" r="27" fill="#91602a" stroke="#2d180a" stroke-width="5"/>
+    <circle cx="0" cy="0" r="12" fill="#d2a04a" stroke="#40240e" stroke-width="4"/>
+  </g>
+</svg>
