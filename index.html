@@ -2570,7 +2570,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.79 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.80 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6134,8 +6134,50 @@ function renderAiKeyStatus() {
     ? 'Instant answers on — the Wizard is in.'
     : 'Answer lands in the app + phone ping, usually within the hour.';
 }
-function buildAskContext() {
-  const slim = entries.slice(0, 140).map(e => {
+// v4.80 — the Wizard reads the QUESTION first. Ask about dates and it gets the entries
+// FROM those dates out of the full log on this phone — this year, last year, any year.
+function askDateRange(q) {
+  q = (q || '').toLowerCase();
+  const now = new Date();
+  const mk = (y, mi, d) => localDay(new Date(y, mi, d, 12));
+  const lastDay = (y, mi) => new Date(y, mi + 1, 0).getDate();
+  const MON = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  const yr = (q.match(/\b(20\d\d)\b/) || [])[1];
+  const m = q.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s*(\d{1,2})?(?:st|nd|rd|th)?(?:\s*(?:-|–|—|to|through|thru|until)\s*(?:(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s*)?(\d{1,2})(?:st|nd|rd|th)?)?/);
+  if (m && m[1]) {
+    const mi = MON.indexOf(m[1].slice(0, 3));
+    let y = yr ? +yr : now.getFullYear();
+    if (!yr && (mi > now.getMonth() || /\blast\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/.test(q))) y -= 1;
+    const mi2 = m[3] ? MON.indexOf(m[3].slice(0, 3)) : mi;
+    const d1 = m[2] ? +m[2] : 1;
+    const d2 = m[4] ? +m[4] : (m[2] ? +m[2] : lastDay(y, mi2));
+    return [mk(y, mi, d1), mk(mi2 < mi ? y + 1 : y, mi2, d2)];
+  }
+  const t = localDay(now);
+  if (/\byesterday\b/.test(q)) { const d = new Date(now); d.setDate(d.getDate() - 1); const s = localDay(d); return [s, s]; }
+  if (/\blast week\b/.test(q)) { const ws = weekStart(now); const a = new Date(ws); a.setDate(a.getDate() - 7); const b = new Date(ws); b.setDate(b.getDate() - 1); return [localDay(a), localDay(b)]; }
+  if (/\bthis week\b/.test(q)) return [localDay(weekStart(now)), t];
+  if (/\blast month\b/.test(q)) { const y = now.getMonth() ? now.getFullYear() : now.getFullYear() - 1; const mi = (now.getMonth() + 11) % 12; return [mk(y, mi, 1), mk(y, mi, lastDay(y, mi))]; }
+  if (/\bthis month\b/.test(q)) return [mk(now.getFullYear(), now.getMonth(), 1), t];
+  if (/\blast year\b/.test(q)) { const y = now.getFullYear() - 1; return [mk(y, 0, 1), mk(y, 11, 31)]; }
+  if (yr && +yr !== now.getFullYear()) return [mk(+yr, 0, 1), mk(+yr, 11, 31)];
+  return null;
+}
+function buildAskContext(question) {
+  const range = askDateRange(question);
+  const live = entries.filter(e => !e.sample);
+  let pool, rangeLine = '';
+  if (range) {
+    const hit = live.filter(e => { const d = localDay(e.ts); return d >= range[0] && d <= range[1]; });
+    const seen = new Set();
+    pool = [];
+    for (const e of [...hit.slice(0, 220), ...live.slice(0, 30)]) { if (!seen.has(e.id)) { seen.add(e.id); pool.push(e); } }
+    rangeLine = `\nDATE RANGE PULLED FOR THIS QUESTION: ${range[0]} → ${range[1]} — ${hit.length} log entries exist in that span` +
+      (hit.length === 0 ? ' (NONE — the log has no records for those dates; say so plainly instead of guessing)' : ' (all of them are included in RECENT LOG below, no matter how old)') + '.';
+  } else {
+    pool = live.slice(0, 140);
+  }
+  const slim = pool.map(e => {
     const o = { d: localDay(e.ts), t: e.type, x: e.details, j: e.job };
     if (e.amount != null) o.amt = e.amount;
     if (e.hours != null) o.hrs = e.hours;
@@ -6169,7 +6211,7 @@ function buildAskContext() {
     return o;
   });
   const openTrips = trucks.filter(t => t.trip).map(t => ({ truck: t.name, since: t.trip.ts, job: t.trip.job, purpose: t.trip.purpose }));
-  return `TODAY: ${new Date().toString()}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first): ${JSON.stringify(slim)}`;
+  return `TODAY: ${new Date().toString()}${rangeLine}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first): ${JSON.stringify(slim)}`;
 }
 async function askInstant(what) {
   const st = $('askStatus');
@@ -6201,7 +6243,7 @@ async function askInstant(what) {
         model: 'claude-haiku-4-5',
         max_tokens: 1200,
         system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 if urgent>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Never invent amounts or dates.',
-        messages: [{ role: 'user', content: buildAskContext() + fileCtx + '\n\nERIC\'S QUESTION: ' + what }]
+        messages: [{ role: 'user', content: buildAskContext(what) + fileCtx + '\n\nERIC\'S QUESTION: ' + what }]
       })
     });
     if (!r.ok) throw new Error('API ' + r.status);
