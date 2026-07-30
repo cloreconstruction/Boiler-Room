@@ -1591,7 +1591,7 @@
   body.crew-mode #askRecent, body.crew-mode #qnTagChips, body.crew-mode .kpis,
   body.crew-mode .cap-btn[data-panel="file"], body.crew-mode .cap-btn[data-panel="mileage"],
   body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"],
-  body.crew-mode #qnVisRow, body.crew-mode #nVisChips { display: none !important; }
+  body.crew-mode #qnVisRow, body.crew-mode #nVisChips, body.crew-mode #coBillRow { display: none !important; }
   #qnVisChips .pick-chip, #nVisChips .pick-chip, #leVisChips .pick-chip { font-size: 11px; padding: 3px 9px; }
   .crew-gauges { display: flex; gap: 14px; justify-content: space-around; }
   .cg { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
@@ -1965,6 +1965,7 @@
       </svg>
     </div>
     <button class="btn-ghost" id="breakBtn" style="display: none; flex: 1 1 100%;" onclick="toggleBreak()" aria-pressed="false">☕ Go on break</button>
+    <button class="btn-ghost" id="undoPunch" style="display: none; flex: 1 1 100%;" onclick="undoPunch()">↩ Undo that clock-in</button>
   </div>
 
 
@@ -2162,12 +2163,7 @@
     <div class="hint" id="coSummary" style="font-size: 14.5px; margin: 0 0 12px;"></div>
 
     <div class="set-section fc-sec">
-      <h4>1 · Which job</h4>
-      <div class="chip-grid" id="coJobChips"></div>
-    </div>
-
-    <div class="set-section fc-sec">
-      <h4>2 · Time on the clock</h4>
+      <h4>1 · Time on the clock</h4>
       <div class="frow">
         <div class="field"><label>Start clock at</label><input type="time" id="coIn" onchange="coCalc()"></div>
         <div class="field"><label>Stop clock at</label><input type="time" id="coOut" onchange="coCalc()"></div>
@@ -2176,17 +2172,19 @@
     </div>
 
     <div class="set-section fc-sec">
-      <h4>3 · What kind of work — pick all that happened</h4>
+      <h4>2 · What kind of work — pick all that happened</h4>
       <div class="chip-grid" id="coCatChips"></div>
     </div>
 
     <div class="set-section fc-sec">
-      <h4>4 · Notes &amp; save</h4>
+      <h4>3 · Notes &amp; save</h4>
       <div class="field" style="margin-bottom: 10px;"><label>What did you do? (goes on the timesheet)</label><textarea id="coNote" class="grow" rows="3" oninput="fitTa(this)" placeholder="Framed north wall, met the inspector, ran to SBS…"></textarea></div>
-      <div class="field" style="margin-bottom: 6px;"><label>Billable to the job?</label></div>
-      <div class="chips-row" style="margin-bottom: 14px;">
-        <button class="pick-chip sel" id="coBillYes" onclick="setCoBillable(true)">💵 Billable</button>
-        <button class="pick-chip" id="coBillNo" onclick="setCoBillable(false)">🛠 Not billable — admin</button>
+      <div id="coBillRow">
+        <div class="field" style="margin-bottom: 6px;"><label>Billable to the job?</label></div>
+        <div class="chips-row" style="margin-bottom: 14px;">
+          <button class="pick-chip sel" id="coBillYes" onclick="setCoBillable(true)">💵 Billable</button>
+          <button class="pick-chip" id="coBillNo" onclick="setCoBillable(false)">🛠 Not billable — admin</button>
+        </div>
       </div>
       <div class="frow">
         <button class="btn-primary" onclick="saveClockOut()">Clock Out + Log</button>
@@ -2572,7 +2570,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.78 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.79 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -3931,9 +3929,8 @@ function renderCoCats() {
 function openClockOut() {
   const now = new Date();
   if (breakStart) toggleBreak(); // clocking out ends an open break
-  coJob = clockJobName;
   coCats = new Set(shiftCats); // whatever they flagged during the shift comes pre-checked
-  renderCoJobs(); renderCoCats();
+  renderCoCats();
   const hrs = Math.max((now - clockedInAt) / 3600000 - breakMins / 60, 0.01);
   $('coSummary').innerHTML = `<b>${esc(clockJobName)}</b> — ${fmtTime(clockedInAt)} → ${fmtTime(now)}${breakMins ? ` · ☕ ${breakMins} min break` : ''} · <b>${(Math.round(hrs * 100) / 100).toFixed(2)} hrs</b>`;
   coBillable = true; renderCoBillable();
@@ -3979,7 +3976,7 @@ function saveClockOut() {
   if (!coBillable) extra.billable = false;
   if (coCats.size) { const sc = [...coCats]; extra.category = sc[0]; if (sc.length > 1) extra.cats = sc; }
   if (edited) { const [oh, om] = adj.o.split(':').map(Number); const ts = new Date(); ts.setHours(oh, om, 0, 0); extra.ts = ts; }
-  const shiftJob = jobs.includes(coJob) ? coJob : clockJobName; // grid pick wins, lever job is the fallback
+  const shiftJob = clockJobName; // the job was chosen at clock-in, on the panel
   addEntry('Clock', note ? `${note} — ${span}` : span, shiftJob, extra);
   toast(`Shift logged — ${rounded.toFixed(2)} hrs · ${shiftJob}${edited ? ' · ✎ adjusted' : ''}${coBillable ? '' : ' · not billable'} ✓`);
   clockedInAt = null; clockJobName = null;
@@ -4085,11 +4082,25 @@ function bcRender() {
   $('bcTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   $('bcLampOff').style.display = st.clockedIn ? 'none' : '';
   $('bcAnnun').style.display = st.clockedIn ? '' : 'none';
+  const un = $('undoPunch');
+  if (un) un.style.display = (st.clockedIn && (Date.now() - clockedInAt.getTime()) < 120000) ? '' : 'none';
   $('bigClock').dataset.state = st.clockedIn ? 'in' : 'out';
   const b = $('bcTapBtn');
   b.setAttribute('aria-label', st.clockedIn
     ? `On the clock — ${hh} hours ${mm} minutes worked. Tap to clock out.`
     : 'Clocked out — tap to clock in');
+}
+// fat-finger insurance: for two minutes after a punch-in, one tap takes it back like it never happened
+function undoPunch() {
+  if (!clockedInAt) return;
+  if (Date.now() - clockedInAt.getTime() > 120000) { toast('Too late to undo — clock out instead', false); return; }
+  clockedInAt = null; clockJobName = null;
+  breakStart = null; breakMins = 0;
+  wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set();
+  setClockBtn(false);
+  $('clockStatus').textContent = 'Clocked out';
+  renderAll(); bcRender();
+  toast('↩ Clock-in undone — nothing was logged ✓');
 }
 let _bcLock = false;
 function bcTap() {
