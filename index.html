@@ -1502,9 +1502,29 @@
     cursor: pointer; touch-action: manipulation; border-radius: 16px; overflow: hidden;
   }
   #bigClock:focus-visible { outline: 4px solid #fff; outline-offset: 4px; }
-  #bigClock:active { filter: brightness(1.12); }
+
   #bigClock img, #bigClock svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   #bigClock img { object-fit: cover; }
+  #bigClock svg { pointer-events: none; z-index: 2; }
+  /* the punch target is ONLY the bottom control assembly — plate + red button, not the whole panel */
+  .bc-tap {
+    position: absolute; z-index: 3; left: 9.8%; top: 66.3%; width: 80.7%; height: 20.3%;
+    background: none; border: 0; padding: 0; cursor: pointer; border-radius: 14px;
+  }
+  .bc-tap:active { background: rgba(255,235,180,0.12); }
+  .bc-tap:focus-visible { outline: 4px solid #fff; outline-offset: -6px; border-radius: 16px; }
+  /* the job selector lives IN the panel — the empty instrument bay under the readout */
+  .bc-job {
+    position: absolute; z-index: 4;
+    left: 57.2%; top: 39.2%; width: 32.4%; height: 5.9%;
+    background: #17120a; color: #eccf8c;
+    border: 2px solid #8a6a2e; border-radius: 8px;
+    font-family: Georgia, 'Times New Roman', serif; font-weight: 700;
+    font-size: clamp(13px, 4.2vw, 21px); text-align: center; text-align-last: center;
+    padding: 0 6px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.8), 0 1px 0 rgba(232,197,124,0.25);
+    -webkit-appearance: none; appearance: none;
+  }
+  @media (min-width: 720px) { .bc-job { font-size: 19px; } }
   #bcNeedleG {
     transform-box: view-box; transform-origin: 32.353% 41.369%;
     transform: rotate(-130deg);
@@ -1874,7 +1894,6 @@
       </div>
     </div>
     <div class="clock-actions">
-      <select class="job-select" id="clockJob"></select>
       <button class="punch-lever" id="clockBtn" aria-pressed="false" aria-label="Clock in — lever is up, you are clocked out">
         <span class="pl-slot" aria-hidden="true"><span class="pl-shaft"></span><span class="pl-knob"></span></span>
         <span class="pl-txt"><b class="pl-act">Clock In</b><span class="pl-state">▲ lever up · stopped</span></span>
@@ -1910,7 +1929,9 @@
     </button>
     <!-- v4.77 — Eric's full instrument panel: one still image, live needle / readout / status / lamp
          drawn over it in SVG. The whole panel is the clock button. -->
-    <button id="bigClock" type="button" onclick="bcTap()" aria-label="Time clock — tap to clock in or out" data-state="out">
+    <div id="bigClock" data-state="out">
+      <button type="button" class="bc-tap" id="bcTapBtn" onclick="bcTap()" aria-label="Time clock — tap to clock in or out"></button>
+      <select class="bc-job" id="clockJob" title="Job for this shift" aria-label="Job for this shift"></select>
       <img src="steam/clockpanel-big.jpg" alt="" draggable="false">
       <svg viewBox="0 0 1122 1402" aria-hidden="true">
         <defs>
@@ -1928,24 +1949,21 @@
         </g>
         <circle cx="363" cy="580" r="33" fill="url(#bcHub)" stroke="#59431a" stroke-width="2"/>
         <circle cx="363" cy="580" r="11" fill="#f2e2ac"/>
-        <!-- digital readout -->
-        <rect x="672" y="302" width="316" height="160" rx="12" fill="#0a0f08"/>
-        <text id="bcTime" x="830" y="408" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="86" font-weight="700" fill="#6dee5a" letter-spacing="6">00:00</text>
-        <text x="830" y="447" text-anchor="middle" font-family="inherit" font-size="19" font-weight="700" fill="#b9cba7" letter-spacing="4">HOURS : MINUTES WORKED</text>
-        <!-- status window -->
-        <rect x="690" y="518" width="296" height="128" rx="14" fill="#0c120a"/>
-        <text id="bcWord" x="838" y="572" text-anchor="middle" font-family="inherit" font-size="34" font-weight="800" fill="#6dee5a" letter-spacing="1">CLOCKED OUT</text>
-        <text id="bcLine" x="838" y="614" text-anchor="middle" font-family="inherit" font-size="21" fill="#cfe0c0">Tap the panel to clock in</text>
+        <!-- digital readout — brass-lit numerals on the dark screen, matching the panel -->
+        <rect x="672" y="302" width="316" height="160" rx="12" fill="#0d0b06"/>
+        <text id="bcTime" x="830" y="404" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="84" font-weight="700" fill="#eccf8c" letter-spacing="5" style="filter: drop-shadow(0 0 7px rgba(236,193,110,0.55));">00:00</text>
+        <text x="830" y="445" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="19" font-weight="700" fill="#9d8452" letter-spacing="4">HOURS : MINUTES WORKED</text>
+        <text x="823" y="536" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-weight="700" fill="#a08a55" letter-spacing="6">— JOB —</text>
         <!-- lamp dimmer (visible = lamp dark = off the clock) -->
         <circle id="bcLampOff" cx="963" cy="228" r="31" fill="rgba(8,10,6,0.78)"/>
-        <!-- on-the-clock annunciator over the CLOCK IN plate -->
+        <!-- clocked in: the plate itself reads CLOCK OUT, engraved in the same brass -->
         <g id="bcAnnun" style="display: none;">
-          <rect x="140" y="962" width="612" height="222" rx="20" fill="rgba(8,12,6,0.85)" stroke="#79c96a" stroke-width="3"/>
-          <text x="446" y="1058" text-anchor="middle" font-family="inherit" font-size="52" font-weight="800" fill="#6dee5a" letter-spacing="3">ON THE CLOCK</text>
-          <text x="446" y="1118" text-anchor="middle" font-family="inherit" font-size="27" fill="#cfe0c0">tap to clock out</text>
+          <image x="215" y="1000" width="434" height="106" href="steam/plate-blank.jpg" preserveAspectRatio="none"/>
+          <text x="432" y="1082" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-weight="800" fill="#e6cd93" opacity="0.5" letter-spacing="4" transform="translate(0 3)">CLOCK OUT</text>
+          <text x="432" y="1082" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-weight="800" fill="#33230c" letter-spacing="4">CLOCK OUT</text>
         </g>
       </svg>
-    </button>
+    </div>
     <button class="btn-ghost" id="breakBtn" style="display: none; flex: 1 1 100%;" onclick="toggleBreak()" aria-pressed="false">☕ Go on break</button>
   </div>
 
@@ -2554,7 +2572,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.77 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.78 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4065,19 +4083,10 @@ function bcRender() {
   g.style.transform = `rotate(${-130 + Math.min(hrs, 12.6) / 12 * 260}deg)`;
   const hh = Math.floor(hrs), mm = Math.floor(hrs * 60) % 60;
   $('bcTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-  let word, line;
-  if (!st.clockedIn) { word = 'CLOCKED OUT'; line = hrs > 0 ? 'Last shift stays on the dial' : 'Tap the panel to clock in'; }
-  else if (breakStart) { word = '☕ ON BREAK'; line = 'Clock is paused — tap ✓ below when done'; }
-  else if (hrs >= 10) { word = '⚠ OVERTIME'; line = 'Past 10 hours — wrap it up'; }
-  else if (hrs >= 9) { word = 'NEAR 10 HOURS'; line = 'The whistle is warming up'; }
-  else if (hrs >= 8) { word = 'PAST 8 HOURS'; line = 'Caution zone'; }
-  else { word = 'ON THE CLOCK'; line = 'Tap the panel to clock out'; }
-  $('bcWord').textContent = word;
-  $('bcLine').textContent = line;
   $('bcLampOff').style.display = st.clockedIn ? 'none' : '';
   $('bcAnnun').style.display = st.clockedIn ? '' : 'none';
-  const b = $('bigClock');
-  b.dataset.state = st.clockedIn ? 'in' : 'out';
+  $('bigClock').dataset.state = st.clockedIn ? 'in' : 'out';
+  const b = $('bcTapBtn');
   b.setAttribute('aria-label', st.clockedIn
     ? `On the clock — ${hh} hours ${mm} minutes worked. Tap to clock out.`
     : 'Clocked out — tap to clock in');
