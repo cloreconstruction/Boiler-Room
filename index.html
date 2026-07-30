@@ -1494,6 +1494,23 @@
     white-space: nowrap;
   }
   .todo-due.od { color: #ffffff; background: var(--err); }
+  /* v4.77 — the big instrument panel replaces the gauge component + lever plate */
+  #employeeTimeGauge, #clockCtl { display: none !important; }
+  #bigClock {
+    position: relative; display: block; flex: 1 1 100%; width: 100%;
+    aspect-ratio: 1122 / 1402; padding: 0; border: 0; background: transparent;
+    cursor: pointer; touch-action: manipulation; border-radius: 16px; overflow: hidden;
+  }
+  #bigClock:focus-visible { outline: 4px solid #fff; outline-offset: 4px; }
+  #bigClock:active { filter: brightness(1.12); }
+  #bigClock img, #bigClock svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #bigClock img { object-fit: cover; }
+  #bcNeedleG {
+    transform-box: view-box; transform-origin: 32.353% 41.369%;
+    transform: rotate(-130deg);
+    transition: transform 700ms cubic-bezier(.2,.85,.3,1);
+  }
+  @media (prefers-reduced-motion: reduce) { #bcNeedleG { transition: none; } }
   /* v4.67 — layered CLOCK IN control (Eric's package): still background, moving brass */
   .punch-lever, .cp-wrap { display: none !important; }
   .clock-in-control {
@@ -1890,6 +1907,44 @@
       <img class="clock-layer clock-steam steam-1" src="steam/clockin-steam1.png" alt="" draggable="false">
       <img class="clock-layer clock-steam steam-2" src="steam/clockin-steam2.png" alt="" draggable="false">
       <img class="clock-layer clock-steam steam-3" src="steam/clockin-steam3.png" alt="" draggable="false">
+    </button>
+    <!-- v4.77 — Eric's full instrument panel: one still image, live needle / readout / status / lamp
+         drawn over it in SVG. The whole panel is the clock button. -->
+    <button id="bigClock" type="button" onclick="bcTap()" aria-label="Time clock — tap to clock in or out" data-state="out">
+      <img src="steam/clockpanel-big.jpg" alt="" draggable="false">
+      <svg viewBox="0 0 1122 1402" aria-hidden="true">
+        <defs>
+          <linearGradient id="bcGold" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#f0d48a"/><stop offset="0.55" stop-color="#c99b45"/><stop offset="1" stop-color="#7d5b1d"/>
+          </linearGradient>
+          <radialGradient id="bcHub" cx="0.4" cy="0.35" r="0.9">
+            <stop offset="0" stop-color="#f6e3a8"/><stop offset="0.5" stop-color="#c99b45"/><stop offset="1" stop-color="#6d4c17"/>
+          </radialGradient>
+        </defs>
+        <!-- live needle -->
+        <g id="bcNeedleG">
+          <polygon points="352,606 374,606 366,372 360,372" fill="url(#bcGold)" stroke="#3a2c10" stroke-width="1.5"/>
+          <circle cx="363" cy="617" r="11" fill="url(#bcGold)" stroke="#3a2c10" stroke-width="1.5"/>
+        </g>
+        <circle cx="363" cy="580" r="33" fill="url(#bcHub)" stroke="#59431a" stroke-width="2"/>
+        <circle cx="363" cy="580" r="11" fill="#f2e2ac"/>
+        <!-- digital readout -->
+        <rect x="672" y="302" width="316" height="160" rx="12" fill="#0a0f08"/>
+        <text id="bcTime" x="830" y="408" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="86" font-weight="700" fill="#6dee5a" letter-spacing="6">00:00</text>
+        <text x="830" y="447" text-anchor="middle" font-family="inherit" font-size="19" font-weight="700" fill="#b9cba7" letter-spacing="4">HOURS : MINUTES WORKED</text>
+        <!-- status window -->
+        <rect x="690" y="518" width="296" height="128" rx="14" fill="#0c120a"/>
+        <text id="bcWord" x="838" y="572" text-anchor="middle" font-family="inherit" font-size="34" font-weight="800" fill="#6dee5a" letter-spacing="1">CLOCKED OUT</text>
+        <text id="bcLine" x="838" y="614" text-anchor="middle" font-family="inherit" font-size="21" fill="#cfe0c0">Tap the panel to clock in</text>
+        <!-- lamp dimmer (visible = lamp dark = off the clock) -->
+        <circle id="bcLampOff" cx="963" cy="228" r="31" fill="rgba(8,10,6,0.78)"/>
+        <!-- on-the-clock annunciator over the CLOCK IN plate -->
+        <g id="bcAnnun" style="display: none;">
+          <rect x="140" y="962" width="612" height="222" rx="20" fill="rgba(8,12,6,0.85)" stroke="#79c96a" stroke-width="3"/>
+          <text x="446" y="1058" text-anchor="middle" font-family="inherit" font-size="52" font-weight="800" fill="#6dee5a" letter-spacing="3">ON THE CLOCK</text>
+          <text x="446" y="1118" text-anchor="middle" font-family="inherit" font-size="27" fill="#cfe0c0">tap to clock out</text>
+        </g>
+      </svg>
     </button>
     <button class="btn-ghost" id="breakBtn" style="display: none; flex: 1 1 100%;" onclick="toggleBreak()" aria-pressed="false">☕ Go on break</button>
   </div>
@@ -2499,7 +2554,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.76 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.77 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -3975,6 +4030,7 @@ function setClockBtn(on) {
   renderBreakBtn();
   tcRefresh();
   renderWageTick();
+  bcRender();
 }
 // v4.67 — the layered control mirrors the real state; the punch itself runs the show
 function syncClockCtl() {
@@ -4000,6 +4056,39 @@ function tcShiftState() {
   };
 }
 function tcRefresh() { if (tcGauge) { try { tcGauge.refresh(); } catch (e) {} } }
+// v4.77 — the instrument panel: needle, readout, status and lamp all read REAL state
+function bcRender() {
+  const g = $('bcNeedleG');
+  if (!g) return;
+  const st = tcShiftState();
+  const hrs = st.clockedIn ? workedSecNow() / 3600 : (st.completedShiftSeconds || 0) / 3600;
+  g.style.transform = `rotate(${-130 + Math.min(hrs, 12.6) / 12 * 260}deg)`;
+  const hh = Math.floor(hrs), mm = Math.floor(hrs * 60) % 60;
+  $('bcTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  let word, line;
+  if (!st.clockedIn) { word = 'CLOCKED OUT'; line = hrs > 0 ? 'Last shift stays on the dial' : 'Tap the panel to clock in'; }
+  else if (breakStart) { word = '☕ ON BREAK'; line = 'Clock is paused — tap ✓ below when done'; }
+  else if (hrs >= 10) { word = '⚠ OVERTIME'; line = 'Past 10 hours — wrap it up'; }
+  else if (hrs >= 9) { word = 'NEAR 10 HOURS'; line = 'The whistle is warming up'; }
+  else if (hrs >= 8) { word = 'PAST 8 HOURS'; line = 'Caution zone'; }
+  else { word = 'ON THE CLOCK'; line = 'Tap the panel to clock out'; }
+  $('bcWord').textContent = word;
+  $('bcLine').textContent = line;
+  $('bcLampOff').style.display = st.clockedIn ? 'none' : '';
+  $('bcAnnun').style.display = st.clockedIn ? '' : 'none';
+  const b = $('bigClock');
+  b.dataset.state = st.clockedIn ? 'in' : 'out';
+  b.setAttribute('aria-label', st.clockedIn
+    ? `On the clock — ${hh} hours ${mm} minutes worked. Tap to clock out.`
+    : 'Clocked out — tap to clock in');
+}
+let _bcLock = false;
+function bcTap() {
+  if (_bcLock) return;
+  _bcLock = true; setTimeout(() => { _bcLock = false; }, 700); // no double punches
+  toggleClock(); // clocked out → punches in (needle sweeps up); clocked in → clock-out sheet
+  bcRender();
+}
 let clockAnimLock = false;
 function clockCtlTap() {
   const c = $('clockCtl');
@@ -7914,19 +8003,12 @@ if (CREW_NAME) {
 applyRole();
 // v4.69 — bring the shift-hours gauge to life off the app's real state (no control of its own;
 // the layered brass lever stays the one and only actuator)
-try {
-  tcGauge = CloreTimeClockGauge.create($('employeeTimeGauge'), {
-    showControl: false,
-    updateIntervalMs: 15000,
-    title: 'Shift hours',
-    subtitle: 'green to 8 · yellow to 10 · red past 10',
-    getShiftState: tcShiftState
-  });
-} catch (e) { /* gauge missing = app still fully works */ }
+// v4.77 — the component gauge is retired; the instrument panel (bcRender) owns the display
+bcRender();
 renderAll();
 tickTimer();
 setInterval(() => { tickTimer(); if (clockedInAt) { renderKpis(); renderCrewGauges(); } }, 15000);
-setInterval(renderWageTick, 1000); // the ticker climbs every second on the clock
+setInterval(() => { renderWageTick(); bcRender(); }, 1000); // ticker + panel stay live
 setInterval(autoPull, 180000); // pick up other devices' entries every 3 minutes
 document.addEventListener('visibilitychange', () => { if (!document.hidden) autoPull(); });
 // hide the bottom bar while the keyboard is open so the screen doesn't jump
