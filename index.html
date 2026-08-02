@@ -2729,7 +2729,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.93 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.94 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -3961,7 +3961,7 @@ function sigWords(s) {
 }
 function grinderMatchCheck(entry) {
   try {
-    if (!entry || entry.sample || CREW_NAME) return; // Eric's phone only
+    if (!entry || entry.sample || entry.noSniff || CREW_NAME) return; // Eric's phone only; review-born entries already had their moment
     if (['Done', 'Clock', 'Hours'].includes(entry.type)) return;
     const ws = sigWords([entry.details, entry.ocr, entry.ai].filter(Boolean).join(' '));
     if (ws.length < 2) return;
@@ -5852,7 +5852,7 @@ function reviewAct(id, accept) {
         done: false, who: t.who, pri: t.pri, ts: new Date().toISOString(), parentId: t.id, stepN: k + 1 }));
       toast(`Checklist added — ${(pay.steps || []).length} steps ✓`);
     } else if (p.kind === 'note') {
-      addEntry('Note', pay.text || '', j);
+      addEntry('Note', pay.text || '', j, { noSniff: true });
       toast('Note added ✓');
     } else if (p.kind === 'text') {
       const who = crew.includes(pay.from) ? pay.from : undefined;
@@ -5864,7 +5864,7 @@ function reviewAct(id, accept) {
       if (accept === 'pile') {
         const from = (pay.from || 'Unknown').trim();
         if (!knownTags().some(x => x.toLowerCase() === from.toLowerCase())) prefs.tags.unshift(from);
-        addEntry('Note', `Text from ${from}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { tags: [from], ...phBits, ...(who ? { who } : {}) });
+        addEntry('Note', `Text from ${from}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { noSniff: true, tags: [from], ...phBits, ...(who ? { who } : {}) });
         renderTagChips();
         toast(`📚 Piled under ${from} — ask the Wizard for "the ${from} list" when you're ready ✓`);
       } else if (accept === 'todo') {
@@ -5872,7 +5872,7 @@ function reviewAct(id, accept) {
           done: false, who: who || 'Me', pri: 1, ts: new Date().toISOString(), ...phBits });
         toast('To-do made from the text ✓' + (phs.length ? ' — photo rides on it' : ''));
       } else {
-        addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { ...phBits, ...(who ? { who } : {}) });
+        addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { noSniff: true, ...phBits, ...(who ? { who } : {}) });
         toast('Text logged ✓');
       }
     } else if (p.kind === 'match') {
@@ -5910,6 +5910,7 @@ function reviewAct(id, accept) {
         if (pay.hours != null) extra.hours = +pay.hours;
         if (pay.category) extra.category = pay.category;
         if (pay.day && /^\d{4}-\d{2}-\d{2}$/.test(pay.day) && pay.day !== localDay(new Date())) extra.ts = new Date(pay.day + 'T12:00:00');
+        extra.noSniff = true;
         addEntry(pay.type === 'Note' ? 'Note' : 'Hours', `${pay.from}: ${pay.text || 'Shift'}`, j, extra);
         toast(`${pay.from}'s ${pay.type === 'Note' ? 'note' : 'hours'} logged ✓`);
       }
@@ -5921,7 +5922,7 @@ function reviewAct(id, accept) {
         const e = entries.find(x => x.id === pay.entryId);
         if (e) e.ai = (((e.ai ? e.ai + '\n' : '') + 'Eric says: ' + ans)).slice(0, 2000);
       } else {
-        addEntry('Note', `${pay.question || 'Photo'} — ${ans}`, j, pay.photoPath ? { photoPath: pay.photoPath } : {});
+        addEntry('Note', `${pay.question || 'Photo'} — ${ans}`, j, pay.photoPath ? { noSniff: true, photoPath: pay.photoPath } : { noSniff: true });
       }
       toast('Answered ✓');
     }
