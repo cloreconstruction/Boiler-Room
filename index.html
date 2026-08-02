@@ -1592,7 +1592,24 @@
   body.crew-mode .cap-btn[data-panel="file"], body.crew-mode .cap-btn[data-panel="mileage"],
   body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"],
   body.crew-mode #qnVisRow, body.crew-mode #nVisChips, body.crew-mode #coBillRow { display: none !important; }
-  #qnVisChips .pick-chip, #nVisChips .pick-chip, #leVisChips .pick-chip { font-size: 11px; padding: 3px 9px; }
+  /* v4.85 — tags: 4-across, every cell identical, easy to hit */
+  #qnTagChips, #nTagChips {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+  }
+  #qnTagChips .pick-chip, #nTagChips .pick-chip, #qnTagChips .mini-sel, #nTagChips .mini-sel {
+    width: 100%; margin: 0; min-height: 36px; padding: 4px 6px;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 12.5px; line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  /* who sees it: same symmetry, a touch smaller */
+  #qnVisChips, #nVisChips, #leVisChips {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+  }
+  #qnVisChips .pick-chip, #nVisChips .pick-chip, #leVisChips .pick-chip, #qnVisChips .mini-sel, #nVisChips .mini-sel {
+    width: 100%; margin: 0; min-height: 30px; padding: 2px 5px;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 10.5px; line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
   .crew-gauges { display: flex; gap: 14px; justify-content: space-around; }
   .cg { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
   .cg-tube {
@@ -2570,7 +2587,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.84 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.85 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5784,8 +5801,26 @@ function setVis(v) { qnVis = v; renderVisChips(); }
 function renderVisChips() {
   const opts = [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
   const html = opts.map(([v, w]) =>
-    `<button type="button" class="pick-chip${qnVis === v ? ' sel' : ''}" onclick="setVis('${escq(v)}')" aria-pressed="${qnVis === v}">${qnVis === v ? '✓ ' : ''}${esc(w)}</button>`).join('');
+    `<button type="button" class="pick-chip${qnVis === v ? ' sel' : ''}" onclick="setVis('${escq(v)}')" aria-pressed="${qnVis === v}">${qnVis === v ? '✓ ' : ''}${esc(w)}</button>`).join('') +
+    `<button type="button" class="pick-chip" onclick="visNewInput(this)" title="Add a person">➕ person</button>`;
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (el) el.innerHTML = html; });
+}
+function visNewInput(btn) {
+  btn.outerHTML = `<input type="text" class="mini-sel" id="visNewBox" placeholder="name…"
+    onkeydown="if(event.key==='Enter'){event.preventDefault();visAddPerson(this.value);}"
+    onblur="visAddPerson(this.value)">`;
+  const box = $('visNewBox'); if (box) box.focus();
+}
+function visAddPerson(raw) {
+  const n = (raw || '').trim().slice(0, 30);
+  if (!n) { renderVisChips(); return; }
+  if (!crew.some(c => c.toLowerCase() === n.toLowerCase())) {
+    crew.push(n);
+    scheduleSave();
+    renderWhoSelects(); renderCrewManager();
+    toast(`${n} added to the crew list ✓ (remove people in ⚙ Setup → Crew)`);
+  }
+  renderVisChips();
 }
 let leVis = '';
 function setLeVis(v) { leVis = v; renderLeVisChips(); }
