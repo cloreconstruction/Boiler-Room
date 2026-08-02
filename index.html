@@ -2741,7 +2741,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.99 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.00 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6899,28 +6899,50 @@ function buildAskContext(question) {
 // "Correction: ..." teaches it — the fix lands on the source entry AND in the log.
 let _lastAnswer = null; // { q, text, srcIds, at }
 function wizCorrectStart() {
-  const box = $('askText');
-  if (!box) return;
-  box.value = 'Correction: ';
-  box.focus();
-  fitTa(box);
-  toast('Say what was wrong — then 🧙. It sticks to the record for every future answer.');
+  // v5.00 — the correction box opens RIGHT UNDER the answer, not up in the note window
+  if ($('wizCorrBox')) { const t0 = $('wizCorrText'); if (t0) t0.focus(); return; }
+  const body = $('aiBody');
+  if (!body) return;
+  const d = document.createElement('div');
+  d.id = 'wizCorrBox';
+  d.style.marginTop = '8px';
+  d.innerHTML = `<div class="field"><label>✎ What's actually right?</label>
+    <textarea id="wizCorrText" class="grow" rows="2" placeholder="it was 3 kings not 2 — ticket is smudged"></textarea></div>
+    <div class="rev-row" style="margin-top: 6px;">
+      <button class="btn-primary" onclick="saveCorrectionInline()">✓ Save correction</button>
+      <button class="btn-ghost" onclick="$('wizCorrBox').remove()">✕ Never mind</button>
+    </div>`;
+  body.appendChild(d);
+  const t = $('wizCorrText');
+  if (t) { t.focus(); fitTa(t); }
+}
+function applyCorrection(corr) {
+  let touched = 0;
+  if (_lastAnswer && (_lastAnswer.srcIds || []).length) {
+    _lastAnswer.srcIds.forEach(id => {
+      const e = entries.find(x => x.id === id);
+      if (e) { e.ai = (((e.ai ? e.ai + '\n' : '') + 'ERIC CORRECTED: ' + corr)).slice(0, 2000); touched++; }
+    });
+  }
+  addEntry('Note', `✎ Correction${_lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, curJob, { noSniff: true });
+  scheduleSave();
+  return touched;
+}
+function saveCorrectionInline() {
+  const t = $('wizCorrText');
+  const corr = (t && t.value.trim().replace(/^correction[:\-–]?\s*/i, '')) || '';
+  if (!corr) { toast('Say what was wrong first', false); return; }
+  const touched = applyCorrection(corr.slice(0, 500));
+  const box = $('wizCorrBox');
+  if (box) box.innerHTML = `<div class="hint">✓ Correction saved${touched ? ' onto the record it came from' : ''} — every future answer uses it.</div>`;
+  toast('✎ Correction on the books ✓');
 }
 async function askInstant(what) {
   const st = $('askStatus');
   // ✎ a correction never goes to the model — it goes to the RECORD
   const corrM = what.match(/^\s*correction[:\-–]?\s*(.+)/is);
   if (corrM && corrM[1].trim()) {
-    const corr = corrM[1].trim().slice(0, 500);
-    let touched = 0;
-    if (_lastAnswer && (_lastAnswer.srcIds || []).length) {
-      _lastAnswer.srcIds.forEach(id => {
-        const e = entries.find(x => x.id === id);
-        if (e) { e.ai = (((e.ai ? e.ai + '\n' : '') + 'ERIC CORRECTED: ' + corr)).slice(0, 2000); touched++; }
-      });
-    }
-    addEntry('Note', `✎ Correction${_lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, curJob, { noSniff: true });
-    scheduleSave();
+    const touched = applyCorrection(corrM[1].trim().slice(0, 500));
     $('askText').value = ''; fitTa('askText');
     st.textContent = `✓ Correction saved${touched ? ' onto the record it came from' : ''} — the Wizard uses it from now on.`;
     toast('✎ Correction on the books ✓');
