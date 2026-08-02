@@ -1698,6 +1698,10 @@
   .req-st.on { opacity: 1; font-weight: 800; }
   .req-arrow { opacity: .38; }
   .req-x { margin-top: 6px; font-size: .72rem; padding: 3px 8px; }
+  /* ✓✓ v5.06 verification lamps: word + glyph + weight, never color alone */
+  .vv { white-space: nowrap; letter-spacing: .4px; }
+  .vv-on { font-weight: 800; opacity: 1; }
+  .vv-off { font-weight: 600; opacity: .45; }
   /* v4.91 — crew mostly ask Eric or Phil, not the Wizard: Grinder stays big, Wizard steps back */
   body.crew-mode .plate-row { align-items: center; }
   body.crew-mode .plate-btn--wiz { flex: 0 0 30%; }
@@ -2742,7 +2746,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.05 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.06 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5948,7 +5952,7 @@ function coolCard(id) {
   savePendingSoon();
   toast('🕐 Moved to the review pile — it stays there until you deal with it ✓');
 }
-const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '💬 Text message', crew: '👷 From the crew', match: '⚙ The Grinder noticed' };
+const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '💬 Text message', crew: '👷 From the crew', match: '⚙ The Grinder noticed', qb: '💼 In QuickBooks, not in your log' };
 const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', tomorrow: '🌙 by tomorrow' };
 function renderReview() {
   const box = $('revBox');
@@ -5972,11 +5976,17 @@ function renderReview() {
         ${(p.payload.photos || []).length ? `<div class="rev-row">${p.payload.photos.map((ph, i) =>
           `<button class="btn-ghost" onclick="showPhoto('${escq(ph)}')">📷 View photo${p.payload.photos.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}</div>` : ''}`;
       if (p.kind === 'match') body = `<div class="rev-text">I saw <b>${esc(p.payload.seen || '')}</b> come in${p.payload.job && p.payload.job !== '—' ? ` on ${esc(p.payload.job)}` : ''} — looks like your to-do: <b>${esc(p.payload.todo || '')}</b>. Did you handle it?</div>`;
+      if (p.kind === 'qb') body = `<div class="rev-text"><b>$${(+p.payload.amt).toFixed(2)}${p.payload.who ? ' — ' + esc(p.payload.who) : ''}</b> on ${esc(p.payload.d)}</div>
+        <div class="rev-why">${[p.payload.memo, p.payload.acct].filter(Boolean).map(esc).join(' · ')}</div>
+        <div class="rev-why">Logan's books have this — your log doesn't. Log it and pick the job so the trackers see it.</div>`;
       if (p.kind === 'crew') body = `<div class="rev-text"><b>${esc(p.payload.from || '?')}</b> — ${p.payload.type === 'Done' ? '✅ FINISHED: ' : p.payload.type !== 'Note' ? '⏱ ' : ''}${esc((p.payload.text || 'Shift').slice(0, 300))}</div>
         <div class="rev-why">${[p.payload.job, p.payload.category, p.payload.hours != null ? (+p.payload.hours).toFixed(1) + ' hrs' + (+p.payload.hours >= 12 ? ' · ⚠ LONG DAY — double-check it' : '') : '', p.payload.day,
           p.payload.route && p.payload.route !== 'The Grinder' ? '📨 for ' + p.payload.route : '', URG_WORDS[p.payload.urg] || ''].filter(Boolean).join(' · ')}</div>`;
       const meta = [p.payload && p.payload.job ? p.payload.job : '', p.source || '', p.payload && p.payload.due ? 'due ' + p.payload.due : ''].filter(Boolean).join(' · ');
-      const btns = p.kind === 'match'
+      const btns = p.kind === 'qb'
+        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it — I'll pick the job after</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not job cost — skip</button>`
+        : p.kind === 'match'
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Done — check it off</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'todo')">📌 Add to the board</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not related</button>`
@@ -6068,6 +6078,15 @@ function reviewAct(id, accept) {
         addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { noSniff: true, ...phBits, ...(who ? { who } : {}) });
         toast('Text logged ✓');
       }
+    } else if (p.kind === 'qb') {
+      // 💼 the QB line becomes a field entry, born already double-checked
+      const e = addEntry('Expense', `${pay.who || 'QB expense'}${pay.memo ? ' — ' + pay.memo : ''} (from QuickBooks import)`, '—',
+        { amount: +pay.amt, noSniff: true, ts: new Date(pay.d + 'T12:00:00') });
+      e.qbV = pay.d; e.qbQid = pay.qid;
+      if (!prefs.qbMatched) prefs.qbMatched = {};
+      prefs.qbMatched[pay.qid] = e.id;
+      scheduleSave();
+      toast(`✓✓ Logged $${(+pay.amt).toFixed(2)} — tap ✏️ on it in the log to file it under a job`);
     } else if (p.kind === 'match') {
       const t = todos.find(x => x.id === pay.todoId);
       if (accept === 'todo') {
@@ -6716,6 +6735,56 @@ async function checkCrewLogs() {
   } catch (e) { /* no crew dir yet — quiet */ }
 }
 
+// ✓✓ v5.06 TWO-CHECKMARK VERIFICATION — the field says money moved; QuickBooks proves it.
+// qb-costs.json (built from Logan's QB Transaction List export) holds the money-out lines.
+// Match = same dollars within a nickel of rounding, dates within 5 days. Category NEVER
+// matters: Eric's categories are Eric's, QB's chart of accounts is Logan's — the dollar links them.
+let qbCosts = null;
+async function checkQbCosts() {
+  if (!dbx.refreshToken || CREW_NAME) return;
+  try {
+    const t = await dbxDownload(DBX_ROOT + '/App Data/qb-costs.json');
+    if (!t) return;
+    qbCosts = JSON.parse(t);
+    qbVerifySweep();
+  } catch (e) { /* no import yet — the lamps just stay dim */ }
+}
+function qbVerifySweep() {
+  if (!qbCosts || !Array.isArray(qbCosts.lines)) return;
+  if (!prefs.qbMatched) prefs.qbMatched = {};
+  const taken = new Set(Object.keys(prefs.qbMatched));
+  let changed = false;
+  // pass 1 — light the QB lamp on field-captured money
+  entries.filter(e => e.amount != null && !e.sample && !e.qbV).forEach(e => {
+    const eDay = new Date(localDay(e.ts) + 'T12:00').getTime();
+    let best = null, bestGap = 6;
+    qbCosts.lines.forEach(l => {
+      if (taken.has(l.qid)) return;
+      if (Math.abs(l.amt - Math.abs(+e.amount)) > 0.015) return;
+      const gap = Math.abs((new Date(l.d + 'T12:00').getTime() - eDay) / 86400000);
+      if (gap <= 5 && gap < bestGap) { best = l; bestGap = gap; }
+    });
+    if (best) {
+      e.qbV = best.d; e.qbQid = best.qid;
+      prefs.qbMatched[best.qid] = e.id; taken.add(best.qid);
+      changed = true;
+    }
+  });
+  // pass 2 — QB money the field never saw (field era only, skip processor-fee noise) → cards
+  let carded = false;
+  qbCosts.lines.forEach(l => {
+    if (taken.has(l.qid)) return;
+    if (l.d < (qbCosts.fieldEraStart || '2026-07-21')) return;
+    if (/system-recorded fee/i.test(l.memo || '')) return;
+    const id = 'qb:' + l.qid;
+    if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
+    pendingQueue.push({ id, kind: 'qb', payload: {
+      qid: l.qid, d: l.d, amt: l.amt, who: l.who || '', memo: (l.memo || '').slice(0, 90), acct: l.acct || '' } });
+    carded = true;
+  });
+  if (changed) { renderLog(); scheduleSave(); toast('✓✓ QuickBooks import matched against your field captures'); }
+  if (carded) { renderPendBanner(); savePendingSoon(); }
+}
 // 🕸 v5.04 job-silence radar — a job nobody has touched in 10+ days gets ONE card a week:
 // still rolling, or time to wrap it? Runs at most once a day, on Eric's phone only.
 function radarSweep() {
@@ -8238,10 +8307,12 @@ function renderLog() {
     const ocrBit = e.ocr ? `<span>·</span><span title="Text was read from the photo — search can find it">📄 text</span>` : '';
     const aiBit = e.ai ? `<span>·</span><span title="${esc(e.ai.slice(0, 220))}">🔮 described</span>` : '';
     const nbBit = e.billable === false ? `<span>·</span><span title="Not billable — admin time">🛠 not billable</span>` : '';
+    // ✓✓ v5.06 — money entries wear both checkmarks: FIELD (captured) + QB (proven by Logan's books)
+    const vvBit = e.amount != null && !e.sample ? `<span>·</span><span class="vv"><span class="vv-on" title="Captured in the field">✓ FIELD</span> <span class="${e.qbV ? 'vv-on' : 'vv-off'}" title="${e.qbV ? 'Matched in the QuickBooks import (' + esc(e.qbV) + ')' : 'Not yet seen in a QuickBooks import'}">${e.qbV ? '✓' : '·'} QB</span></span>` : '';
     return `<div class="log-row" onclick="this.classList.toggle('x')">
       <div class="log-body">
         <div class="log-main">${esc(e.details)}${e.photoPath ? ` <span style="cursor: pointer; white-space: nowrap;" title="Tap to view the photo${e.photoPaths && e.photoPaths.length > 1 ? 's' : ''}" onclick="openEntryPhoto(${e.id}, event)">📷${e.photoPaths && e.photoPaths.length > 1 ? '×' + e.photoPaths.length : ''}</span>` : ''}${qty ? ` <strong>· ${qty}</strong>` : ''}</div>
-        <div class="log-meta"><span class="mini-chip ${chipClass[e.type]}" title="${e.type}">${chipIcon[e.type]}</span><span>${when}</span><span>·</span><span>${esc(e.job)}</span>${truckBit}${whoBit}${tagBit}${visBit}<span>·</span><span>→ ${esc(e.filedTo)}</span>${sharedBit}${ocrBit}${aiBit}${nbBit}</div>
+        <div class="log-meta"><span class="mini-chip ${chipClass[e.type]}" title="${e.type}">${chipIcon[e.type]}</span><span>${when}</span><span>·</span><span>${esc(e.job)}</span>${truckBit}${whoBit}${tagBit}${visBit}<span>·</span><span>→ ${esc(e.filedTo)}</span>${sharedBit}${ocrBit}${aiBit}${nbBit}${vvBit}</div>
       </div>
       <div class="log-savedcell"><button class="log-edit" title="Edit this entry" onclick="openLogEdit(${e.id}, event)">✏️</button>${sync}</div>
     </div>`;
@@ -8858,6 +8929,7 @@ async function pullRemote() {
   publishSharedNotes(); // 🔓 unlocked notes sweep out; re-locked ones sweep back off
   checkSharedNotes(); // crew phones pick up their FROM ERIC list
   radarSweep(); // 🕸 quiet-job check — once a day, one card a week per silent job
+  checkQbCosts(); // ✓✓ light the QB lamps + card what the books have that the field missed
 }
 async function pushRemote() {
   if (!dbx.refreshToken) return;
