@@ -2739,7 +2739,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.95 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.96 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5794,9 +5794,19 @@ function renderHotCards() {
       <div class="rev-row">
         <button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'todo')">➕ To-do for TODAY</button>
         <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Handled — log it</button>
-        <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not important</button>
+        <button class="btn-ghost" onclick="coolCard('${escq(String(p.id))}')">🕐 Handle it later</button>
       </div>
     </div>`).join('');
+}
+// 🕐 v4.96 — "later" never means "gone": the fire goes out but the card stays in the review
+// pile with everything else, waiting until Eric goes through it. Nothing slips away.
+function coolCard(id) {
+  const p = pendingQueue.find(x => String(x.id) === id);
+  if (!p || !p.payload) return;
+  p.payload.hot = false;
+  renderPendBanner(); // re-draws the strip (card steps down) and the banner count
+  savePendingSoon();
+  toast('🕐 Moved to the review pile — it stays there until you deal with it ✓');
 }
 const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '💬 Text message', crew: '👷 From the crew', match: '⚙ The Grinder noticed' };
 const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', tomorrow: '🌙 by tomorrow' };
