@@ -2742,7 +2742,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.04 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.05 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4988,7 +4988,7 @@ async function aiDescribePhoto(f) {
     body: JSON.stringify({
       model: 'claude-haiku-4-5',
       max_tokens: 300,
-      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"1-2 plain sentences: what the photo shows, the stage of work, anything notable","category":"best match from this list or empty: Framing, Foundation, Roofing, Siding, Windows/Doors, Electrical, Plumbing, HVAC, Drywall, Paint, Finish, Landscaping, Materials, Tools, Fuel, Subcontractor, Office/Admin, Permits/Fees, Insurance, Loan/Bank, Personal","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null}',
+      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"1-2 plain sentences: what the photo shows, the stage of work, anything notable","category":"best match from this list or empty: Framing, Foundation, Roofing, Siding, Windows/Doors, Electrical, Plumbing, HVAC, Drywall, Paint, Finish, Landscaping, Materials, Tools, Fuel, Subcontractor, Office/Admin, Permits/Fees, Insurance, Loan/Bank, Personal","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty"}',
       messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
         { type: 'text', text: 'Label this photo.' }
@@ -5012,12 +5012,14 @@ function queueAi(f, meta, rerender) {
       if (p.total != null && p.total !== '' && !isNaN(+p.total)) meta.aiTotal = +p.total;
       if (/^\d{4}-\d{2}-\d{2}$/.test(p.due || '')) meta.aiDue = p.due;
       if (p.dueAmt != null && p.dueAmt !== '' && !isNaN(+p.dueAmt)) meta.aiDueAmt = +p.dueAmt;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(p.expires || '')) meta.aiExpires = p.expires;
       meta.aiStatus = meta.ai ? '🔮✓' : '';
     } catch (e) { meta.aiStatus = ''; } // offline / no key mid-flight / odd format: photo just goes undescribed
     if (rerender) rerender();
     aiFlushLate(f, meta);
     aiMaybeSuggestCat(f, meta);
     billMaybeSuggest(f, meta);
+    renewMaybeSuggest(f, meta);
     aiMaybePrefillAmt(f, meta);
   });
 }
@@ -5096,6 +5098,27 @@ function billMaybeSuggest(f, meta) {
       }).catch(() => {});
     }
   } catch (e) { /* radar is best-effort — never break a photo read */ }
+}
+// 🔁 v5.05 RENEWAL RADAR — a policy/registration/permit with an expiration date becomes a
+// SLEEPING to-do: silent until two weeks out, then it wakes on the board with the real deadline.
+function renewMaybeSuggest(f, meta) {
+  try {
+    if (CREW_NAME || !meta.aiExpires) return;
+    const today = localDay(new Date());
+    if (meta.aiExpires <= today) return; // already lapsed — the document itself is the news
+    const vendor = (meta.ai || '').match(/\[([^\]—]+)/);
+    const what = vendor ? vendor[1].trim() : (meta.ai || 'this document').split('.')[0].slice(0, 60);
+    const id = `renew:${meta.aiExpires}:${String(what).toLowerCase().slice(0, 20)}`;
+    if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
+    const wake = new Date(meta.aiExpires + 'T12:00'); wake.setDate(wake.getDate() - 14);
+    const wakeDay = localDay(wake) > today ? localDay(wake) : undefined;
+    pendingQueue.push({ id, kind: 'todo', payload: {
+      text: `🔁 Renew: ${what} — expires ${meta.aiExpires}`,
+      due: meta.aiExpires, waitUntil: wakeDay, pri: 2, job: '',
+      note: `Read off the document photo. It'll sleep until ${wakeDay || 'now'} then wake on your board.` } });
+    renderPendBanner(); savePendingSoon();
+    toast(`🔁 Expiration spotted — ${meta.aiExpires}. Renewal reminder suggested in review ✓`);
+  } catch (e) { /* best-effort */ }
 }
 function aiMerge(files) {
   return files.map(f => (fcMeta.get(f) || {}).ai).filter(Boolean).join('\n— next photo —\n').slice(0, 2000);
@@ -6003,9 +6026,10 @@ function reviewAct(id, accept) {
       todos.unshift({ id: nextId++, text: pay.text || 'follow up', job: j, done: false,
         who: (pay.who && (pay.who === 'Me' || crew.includes(pay.who))) ? pay.who : 'Me',
         due: /^\d{4}-\d{2}-\d{2}$/.test(pay.due || '') ? pay.due : undefined,
+        waitUntil: /^\d{4}-\d{2}-\d{2}$/.test(pay.waitUntil || '') && pay.waitUntil > localDay(new Date()) ? pay.waitUntil : undefined,
         pri: Math.min(Math.max(+pay.pri || 1, 0), 3),
         note: pay.note || undefined, ifThen: pay.ifThen || undefined, ts: new Date().toISOString() });
-      toast('To-do added ✓');
+      toast(pay.waitUntil ? `To-do added — 💤 sleeps until ${pay.waitUntil} ✓` : 'To-do added ✓');
     } else if (p.kind === 'todos') {
       const par = pay.parent || {};
       const pj = jobs.includes(par.job) ? par.job : j; // checklist job rides on the parent
@@ -6715,7 +6739,76 @@ function radarSweep() {
       note: 'If the job is done, remove it in ⚙ Setup → Jobs so the radar stops watching it.' } });
     flagged = true;
   });
+  // 📄 v5.05 estimate-chase: a bid that went out 7–30 days ago with silence since = one nudge, ever
+  entries.filter(e => !e.sample && !e.personal && ['Note', 'Filed'].includes(e.type) &&
+    /\b(estimate|bid|quote|proposal)\b/i.test((e.details || '') + ' ' + (e.ai || ''))).forEach(e => {
+    const age = Math.floor((now - new Date(e.ts).getTime()) / 86400000);
+    if (age < 7 || age > 30) return;
+    const id = `estchase:${e.id}`;
+    if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
+    pendingQueue.push({ id, kind: 'todo', payload: {
+      text: `📄 ${e.job && e.job !== '—' ? e.job + ' — ' : ''}that estimate went out ${age} days ago — any answer yet?`,
+      pri: 1, job: e.job || '', due: today,
+      note: `From: "${(e.details || '').slice(0, 100)}". Bids die of silence — one call keeps it alive.` } });
+    flagged = true;
+  });
+  // 🛢 v5.05 truck radar: 5,000+ miles on the odometer since the last oil/service note
+  trucks.forEach(tr => {
+    const mine = entries.filter(e => !e.sample && e.truck === tr.name && e.odometer);
+    if (!mine.length) return;
+    const newest = Math.max(...mine.map(e => +e.odometer || 0));
+    const svc = mine.filter(e => /\b(oil|serviced?|maintenance|lube)\b/i.test((e.details || '') + ' ' + (e.ai || '')));
+    if (!svc.length) return; // no baseline — stay quiet rather than guess
+    const svcOdo = Math.max(...svc.map(e => +e.odometer || 0));
+    const diff = newest - svcOdo;
+    if (diff < 5000) return;
+    const id = `truck:${tr.name}:${svcOdo}`;
+    if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
+    pendingQueue.push({ id, kind: 'todo', payload: {
+      text: `🛢 ${tr.name}: ${diff.toLocaleString()} miles since the last oil/service note — book it?`,
+      pri: 1, job: '', note: `Last service note at ${svcOdo.toLocaleString()}, newest odometer ${newest.toLocaleString()}. Log the service with the word "oil" or "serviced" and this resets.` } });
+    flagged = true;
+  });
   if (flagged) { renderPendBanner(); savePendingSoon(); }
+  weatherSweep(); // 🥶 the Alaska special rides the same daily clock
+}
+// 🥶🌧 v5.05 WEATHER RADAR — weather-sensitive work on the board for today/tomorrow plus a
+// freezing or soaked forecast = one warning card. Soldotna forecast via open-meteo (no key).
+const WEATHER_WORDS = /\b(pour|pouring|concrete|footings?|slab|roof|roofing|shingle|siding|paint|stain|excavat\w*|backfill|crane|grade|gravel)\b/i;
+async function weatherSweep() {
+  try {
+    if (CREW_NAME) return;
+    const today = localDay(new Date());
+    if (lsGet('daylog-weather-day') === today) return;
+    const d2 = new Date(); d2.setDate(d2.getDate() + 1);
+    const tomorrow = localDay(d2);
+    const jobsAtRisk = todos.filter(t => !t.done && WEATHER_WORDS.test(t.text) &&
+      (t.due === today || t.due === tomorrow || /\btomorrow\b/i.test(t.text)));
+    if (!jobsAtRisk.length) { lsSet('daylog-weather-day', today); return; }
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=60.49&longitude=-151.06&daily=temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&timezone=America%2FAnchorage&forecast_days=2');
+    if (!r.ok) return; // offline — try again next sync, throttle NOT set
+    const j = await r.json();
+    lsSet('daylog-weather-day', today);
+    const minF = Math.round((j.daily.temperature_2m_min || [])[1] ?? 99);
+    const rainPct = Math.round((j.daily.precipitation_probability_max || [])[1] ?? 0);
+    const freezing = minF <= 32, soaked = rainPct >= 60;
+    if (!freezing && !soaked) return;
+    const id = `weather:${tomorrow}`;
+    if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
+    const woe = freezing && soaked ? `dropping to ${minF}°F with ${rainPct}% chance of rain`
+      : freezing ? `dropping to ${minF}°F overnight` : `${rainPct}% chance of rain`;
+    pendingQueue.push({ id, kind: 'todo', payload: {
+      text: `${freezing ? '🥶' : '🌧'} "${jobsAtRisk[0].text.slice(0, 60)}" — but tomorrow's forecast says ${woe}. Reschedule or push through?`,
+      pri: 2, job: jobsAtRisk[0].job || '', due: today,
+      note: `Weather-sensitive work spotted on the board: ${jobsAtRisk.slice(0, 3).map(t => t.text.slice(0, 40)).join(' · ')}. Forecast for Soldotna, tomorrow.` } });
+    renderPendBanner(); savePendingSoon();
+    if (prefs.pushSecret) {
+      fetch('/.netlify/functions/notify', { method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
+        body: JSON.stringify({ title: freezing ? '🥶 Weather warning' : '🌧 Weather warning', body: `Tomorrow: ${woe} — and you've got weather-sensitive work on the board`, tag: 'weather' })
+      }).catch(() => {});
+    }
+  } catch (e) { /* forecast is a bonus — never let it break a sync */ }
 }
 let _pendSaveTimer = null;
 function savePendingSoon() {
