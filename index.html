@@ -1773,6 +1773,8 @@
   }
   .todo-del { background: none; border: none; color: var(--ink-muted); cursor: pointer; font-size: 13px; padding: 4px 6px; font-family: inherit; }
   .todo-del:hover { color: var(--err); }
+  /* v4.92 — the quick-fire step box */
+  .step-quick { flex: 1 1 100%; min-width: 0; font-size: 13.5px; }
 
   /* pick chips (jobs, trucks) */
   .chips-row { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -2727,7 +2729,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.91 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.92 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -3947,7 +3949,36 @@ function addEntry(type, details, job, extra = {}) {
   entries.unshift(e);
   renderAll();
   scheduleSave();
+  grinderMatchCheck(e); // ⚙ v4.92 — the Grinder watches: does this match an open to-do?
   return e;
+}
+// --- ⚙ v4.92 THE GRINDER WATCHES: anything ground in gets sniffed against the open to-dos.
+// Two solid shared words = a card: "I saw X come in — looks like your to-do Y. Did you handle it?"
+const MATCH_STOP = new Set(['the','and','for','with','that','this','from','your','have','about','into','need','needs','then','them','they','when','what','will','would','could','should','there','here','just','some','more','over','under','been','were','was','are','you','not','but','all','can','get','got','out','our','their','make','made','take','back','call','text','ask','tell','check','pick','like','also','very','than','its','his','her','him','she']);
+function sigWords(s) {
+  return [...new Set(String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/)
+    .filter(w => w.length >= 4 && !MATCH_STOP.has(w)))];
+}
+function grinderMatchCheck(entry) {
+  try {
+    if (!entry || entry.sample || CREW_NAME) return; // Eric's phone only
+    if (['Done', 'Clock', 'Hours'].includes(entry.type)) return;
+    const ws = sigWords([entry.details, entry.ocr, entry.ai].filter(Boolean).join(' '));
+    if (ws.length < 2) return;
+    let flagged = false;
+    topTodos().filter(t => !t.done).forEach(t => {
+      if (entry.todoRef === t.id) return; // its own completion echo is not a coincidence
+      const hit = sigWords(t.text + ' ' + (t.note || '')).filter(w => ws.includes(w));
+      if (hit.length < 2) return;
+      const key = `match:${entry.id}:${t.id}`;
+      if (pendDone.has(key) || pendingQueue.some(p => p.id === key)) return;
+      pendingQueue.push({ id: key, kind: 'match', payload: {
+        todoId: t.id, todo: t.text, seen: (entry.details || entry.ai || entry.ocr || '').slice(0, 160),
+        entryType: entry.type, job: entry.job || '', words: hit.slice(0, 4) } });
+      flagged = true;
+    });
+    if (flagged) { renderPendBanner(); savePendingSoon(); }
+  } catch (err) { /* watching is best-effort — never let it break a save */ }
 }
 
 // ---------- clock in / out ----------
@@ -5728,7 +5759,7 @@ function renderPendBanner() {
   b.style.display = n ? '' : 'none';
   if (n) b.innerHTML = `📥 <b>${n} item${n === 1 ? '' : 's'} waiting for review</b> — tap to go through ${n === 1 ? 'it' : 'them'}<span class="ab-go">›</span>`;
 }
-const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '💬 Text message', crew: '👷 From the crew' };
+const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '💬 Text message', crew: '👷 From the crew', match: '⚙ The Grinder noticed' };
 const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', tomorrow: '🌙 by tomorrow' };
 function renderReview() {
   const box = $('revBox');
@@ -5749,11 +5780,16 @@ function renderReview() {
         <div class="field" style="margin-top: 8px;"><textarea id="revAns-${esc(String(p.id))}" rows="2" class="grow" placeholder="what it is / what to do with it"></textarea></div>`;
       if (p.kind === 'text') body = `<div class="rev-text">From <b>${esc(p.payload.from || '?')}</b></div>
         <div class="rev-why" style="font-size: 13.5px; color: var(--ink-2); white-space: pre-wrap;">${esc((p.payload.body || '').slice(0, 500))}</div>`;
+      if (p.kind === 'match') body = `<div class="rev-text">I saw <b>${esc(p.payload.seen || '')}</b> come in${p.payload.job && p.payload.job !== '—' ? ` on ${esc(p.payload.job)}` : ''} — looks like your to-do: <b>${esc(p.payload.todo || '')}</b>. Did you handle it?</div>`;
       if (p.kind === 'crew') body = `<div class="rev-text"><b>${esc(p.payload.from || '?')}</b> — ${p.payload.type === 'Done' ? '✅ FINISHED: ' : p.payload.type !== 'Note' ? '⏱ ' : ''}${esc((p.payload.text || 'Shift').slice(0, 300))}</div>
         <div class="rev-why">${[p.payload.job, p.payload.category, p.payload.hours != null ? (+p.payload.hours).toFixed(1) + ' hrs' : '', p.payload.day,
           p.payload.route && p.payload.route !== 'The Grinder' ? '📨 for ' + p.payload.route : '', URG_WORDS[p.payload.urg] || ''].filter(Boolean).join(' · ')}</div>`;
       const meta = [p.payload && p.payload.job ? p.payload.job : '', p.source || '', p.payload && p.payload.due ? 'due ' + p.payload.due : ''].filter(Boolean).join(' · ');
-      const btns = (p.kind === 'crew' && p.payload.type === 'Done')
+      const btns = p.kind === 'match'
+        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Done — check it off</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'todo')">📌 Add to the board</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not related</button>`
+        : (p.kind === 'crew' && p.payload.type === 'Done')
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Check it off my list too</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
         : (p.kind === 'text' || p.kind === 'crew')
@@ -5833,6 +5869,21 @@ function reviewAct(id, accept) {
       } else {
         addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}`, j, who ? { who } : {});
         toast('Text logged ✓');
+      }
+    } else if (p.kind === 'match') {
+      const t = todos.find(x => x.id === pay.todoId);
+      if (accept === 'todo') {
+        // 📌 add to the board: what came in becomes a checkable step under that to-do
+        if (t) {
+          const kids = kidsOf(t.id);
+          todos.push({ id: nextId++, text: `Check: ${(pay.seen || '').slice(0, 90)}`, job: t.job, done: false,
+            who: t.who || 'Me', pri: t.pri || 1, ts: new Date().toISOString(), parentId: t.id, stepN: kids.length + 1 });
+          renderTodos(); renderKpis(); scheduleSave();
+          toast('📌 Pinned under that to-do as a step ✓');
+        } else toast('That to-do is gone — nothing to pin to', false);
+      } else {
+        if (t && !t.done) { toggleTodo(t.id, null, true); renderTodos(); renderKpis(); renderDayTube(); scheduleSave(); }
+        toast(t ? `✓ Checked off — ${t.text.slice(0, 40)}` : '✓ Already off the list');
       }
     } else if (p.kind === 'crew' && pay.type === 'Done' && pay.srcRef) {
       // 👷 finished an assigned to-do — one tap closes Eric's copy (and logs the Done)
@@ -7431,6 +7482,38 @@ function noteEditHtml(t, extraCls) {
 function noteBtnHtml(t) {
   return `<button class="step-lock" onclick="openStepNote(${t.id}, event)" title="${hasNote(t) ? 'Edit where this stands' : 'Say where it stands, so someone else can pick it up'}">📝 ${hasNote(t) ? 'NOTE' : 'ADD NOTE'}</button>`;
 }
+// --- ⚡ v4.92 quick-fire steps: "before I can do the big one I need three little ones" ---
+// Type in the box, hit return — it's a checkable step. Box stays open for the next one.
+const stepAddOpen = new Set();
+function stepQuickHtml(pid) {
+  return `<div class="step-add"><input type="text" id="sq-${pid}" class="mini-sel step-quick"
+    placeholder="＋ need something first? type it, hit return" enterkeyhint="done"
+    onkeydown="stepQuickKey(event, ${pid})" onclick="event.stopPropagation()"></div>`;
+}
+function quickStepsFor(id, ev) {
+  if (ev) ev.stopPropagation();
+  stepAddOpen.has(id) ? stepAddOpen.delete(id) : stepAddOpen.add(id);
+  renderTodos();
+  if (stepAddOpen.has(id)) setTimeout(() => { const el = $('sq-' + id); if (el) el.focus(); }, 30);
+}
+function stepQuickKey(ev, pid) {
+  ev.stopPropagation();
+  if (ev.key === 'Escape') { stepAddOpen.delete(pid); renderTodos(); return; }
+  if (ev.key !== 'Enter') return;
+  ev.preventDefault();
+  const el = $('sq-' + pid);
+  const txt = (el && el.value.trim()) || '';
+  if (!txt) return;
+  const p = todos.find(x => x.id === pid);
+  if (!p) return;
+  const kids = kidsOf(pid);
+  todos.push({ id: nextId++, text: txt, job: p.job, done: false, who: p.who || 'Me',
+    pri: p.pri || 0, ts: new Date().toISOString(), parentId: pid, stepN: kids.length + 1 });
+  if (p.done) rollUpParent(p);
+  stepAddOpen.add(pid); parClosed.delete(pid); // keep the card open, box ready for the next one
+  renderTodos(); renderKpis(); scheduleSave();
+  setTimeout(() => { const nx = $('sq-' + pid); if (nx) nx.focus(); }, 30);
+}
 function addStepTo(pid) {
   const p = todos.find(x => x.id === pid);
   if (!p) return;
@@ -7551,8 +7634,9 @@ function renderTodos() {
       <span class="todo-text">${esc(t.text)}${whoBit}</span>
       ${thumbBit}
       <span class="todo-right">${priBit}<span class="todo-job">${esc(t.job)}</span></span>
+      ${t.done ? '' : `<button class="todo-del" title="Add quick steps under this — things you need first" onclick="quickStepsFor(${t.id}, event)">＋</button>`}
       <button class="todo-del" title="Delete" onclick="delTodo(${t.id}, event)">✕</button>
-    </div>${noteEditId === t.id ? noteEditHtml(t, 'step-note--par') : noteBlockHtml(t, 'step-note--par')}`;
+    </div>${stepAddOpen.has(t.id) ? stepQuickHtml(t.id) : ''}${noteEditId === t.id ? noteEditHtml(t, 'step-note--par') : noteBlockHtml(t, 'step-note--par')}`;
   };
 
   // ---- a to-do with steps under it: main dome lamp, one lit step at a time ----
@@ -7612,7 +7696,10 @@ function renderTodos() {
         <span>expected</span> <input type="date" value="${esc(w.until)}" onchange="setWait(${w.step.id}, this.value)">
         ${w.ripe ? '<b>that date has passed — nothing came</b>' : '<span>quiet until then</span>'}
         <button class="step-lock" onclick="setWait(${w.step.id}, '')">BACK TO ACTIVE</button></div>`;
-      body += `<div class="step-add"><button class="step-lock" onclick="addStepTo(${p.id})">＋ ADD A STEP</button>
+      // v4.92 — quick-fire: the add-a-step box is always sitting there open. Type, hit return,
+      // it's on the board and the box is ready for the next one.
+      body += stepQuickHtml(p.id);
+      body += `<div class="step-add">
         ${noteBtnHtml(p)}
         <button class="step-lock" onclick="openTodoEdit(${p.id})">EDIT THIS TO-DO</button>
         <button class="step-lock" onclick="delTodo(${p.id}, event)">DELETE</button></div>`;
