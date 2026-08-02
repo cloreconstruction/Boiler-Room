@@ -2617,6 +2617,8 @@
       <div id="crewOwnerTools" style="margin-top: 14px;">
         <div class="field" style="margin-bottom: 10px;"><label>Push secret (same value as PUSH_SECRET in Netlify — lets crew NOW notes ring phones)</label>
           <input type="text" id="sPushSec" class="wide" style="width: 100%;" placeholder="paste it once, then tap 📤" onchange="prefs.pushSecret = this.value.trim(); scheduleSave(); toast('Push secret saved — tap 📤 so crew folders get it ✓');"></div>
+        <div class="field" style="margin-bottom: 10px;"><label>🔒 Personal people (comma list — their texts stay yours: never in summaries, never near crew)</label>
+          <input type="text" id="sPersonal" class="wide" style="width: 100%;" placeholder="Shevaun, Milo" onchange="prefs.personalFolks = this.value.split(',').map(s => s.trim()).filter(Boolean); scheduleSave(); toast('🔒 Personal list saved ✓');"></div>
         <div class="frow">
           <button class="btn-ghost" onclick="publishCrewFolders()">📤 Set up / update crew folders</button>
           <button class="btn-ghost" onclick="crewPreviewToggle()">👁 View as crew</button>
@@ -2739,7 +2741,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.96 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.97 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4497,7 +4499,7 @@ function openPanel(name) {
     if (name === 'file') fcOpenInit();
     if (name === 'mileage') mOpenInit();
     if (name === 'hours') hOpenInit();
-    if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; }
+    if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', '); }
     if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; renderDayFlowRows(); renderPipeRows(); }
     if (name === 'vault') vaultOpenInit();
     if (name === 'summary') summaryOpenInit();
@@ -5774,6 +5776,16 @@ function renderPendBanner() {
 // --- 🔥 v4.95 hot cards: a text that smells like a TODAY commitment ("pouring Mery's today",
 // "delivery at 8", "inspection tomorrow") doesn't wait politely in review. It pins to the very
 // top of the screen and BREATHES until Eric acts on it. Kevin's pour never slips by again.
+// 🔒 v4.97 — personal people: their captures are Eric's eyes only. Flagged at the door,
+// walled out of every publish and every summary. Seeded with Shevaun; edit in Setup.
+function personalFolks() {
+  if (!prefs.personalFolks) prefs.personalFolks = ['Shevaun'];
+  return prefs.personalFolks;
+}
+function isPersonalSender(name) {
+  const n = String(name || '').trim().toLowerCase();
+  return !!n && personalFolks().some(p => n === p.toLowerCase() || n.startsWith(p.toLowerCase() + ' '));
+}
 const HOT_TIME = /\b(today|tonight|tomorrow|this (morning|afternoon|evening)|right now|asap|first thing|in the morning|by (monday|tuesday|wednesday|thursday|friday|saturday|sunday)|at \d{1,2}(:\d{2})?\s*(a\.?m\.?|p\.?m\.?)?)\b/i;
 const HOT_ACT = /\b(pour|pouring|concrete|deliver|delivery|dropping off|inspect|inspection|inspector|crane|truck|meet|meeting|call me|need you|show(ing)? up|start|starting|schedule[ds]?|shut ?off|leak|flood|froze|broke|broken|no (water|power|heat))\b/i;
 function hotScan(t) {
@@ -5827,7 +5839,7 @@ function renderReview() {
       else if (p.kind === 'question') body = `<div class="rev-text">${esc(p.payload.question || 'What is this?')}</div>
         ${p.payload.photoPath ? `<div class="rev-row"><button class="btn-ghost" onclick="showPhoto('${escq(p.payload.photoPath)}')">📷 View the photo</button></div>` : ''}
         <div class="field" style="margin-top: 8px;"><textarea id="revAns-${esc(String(p.id))}" rows="2" class="grow" placeholder="what it is / what to do with it"></textarea></div>`;
-      if (p.kind === 'text') body = `<div class="rev-text">From <b>${esc(p.payload.from || '?')}</b></div>
+      if (p.kind === 'text') body = `<div class="rev-text">From <b>${esc(p.payload.from || '?')}</b>${p.payload.personal ? ' · <b>🔒 PERSONAL</b> — never in a summary, never near crew' : ''}</div>
         <div class="rev-why" style="font-size: 13.5px; color: var(--ink-2); white-space: pre-wrap;">${esc((p.payload.body || '').slice(0, 500))}</div>
         ${(p.payload.photos || []).length ? `<div class="rev-row">${p.payload.photos.map((ph, i) =>
           `<button class="btn-ghost" onclick="showPhoto('${escq(ph)}')">📷 View photo${p.payload.photos.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}</div>` : ''}`;
@@ -5909,6 +5921,7 @@ function reviewAct(id, accept) {
       // "give me the Ashman list" hands Eric the whole pile when he's ready to sit with it
       const phs = (pay.photos || []).filter(Boolean);
       const phBits = phs.length ? { photoPath: phs[0], photoPaths: phs } : {}; // photos travel with whatever it becomes
+      if (pay.personal) phBits.personal = true; // 🔒 the flag rides onto whatever this becomes
       const phNote = phs.length ? ` (📷 ${phs.length} photo${phs.length > 1 ? 's' : ''})` : '';
       if (accept === 'pile') {
         const from = (pay.from || 'Unknown').trim();
@@ -6036,7 +6049,8 @@ async function checkInboxTexts() {
       const photos = [];
       for (const im of mine) { claimed.add(im.name); photos.push(await claim(im)); }
       const hot = hotScan(body) || undefined; // 🔥 time-critical commitment → pinned + ding
-      pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower, photos, hot } });
+      const personal = isPersonalSender(from) || undefined; // 🔒 Eric's eyes only, forever
+      pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower, photos, hot, personal } });
       if (hot && !CREW_NAME && prefs.pushSecret) {
         fetch('/.netlify/functions/notify', { method: 'POST',
           headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
@@ -6050,8 +6064,10 @@ async function checkInboxTexts() {
       const id = 'text:' + im.name;
       if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) continue;
       const fm = im.name.match(/^text\s*-\s*([^-]+)/i);
+      const oFrom = fm ? fm[1].trim() : '?';
       pendingQueue.push({ id, kind: 'text', source: im.name, payload: {
-        from: fm ? fm[1].trim() : '?', body: '(photo only — no words)', path: im.path_lower, photos: [await claim(im)] } });
+        from: oFrom, body: '(photo only — no words)', path: im.path_lower, photos: [await claim(im)],
+        personal: isPersonalSender(oFrom) || undefined } });
     }
     renderPendBanner();
   } catch (e) { /* no Inbox or offline — quiet */ }
@@ -6243,7 +6259,8 @@ function renderLeVisChips() {
 let _sharedCache = {};
 async function publishSharedNotes() {
   if (!dbx.refreshToken || CREW_NAME || !crew.length) return;
-  const shared = entries.filter(e => e.vis && !e.sample).slice(0, 120);
+  // 🔒 personal entries can NEVER travel — even a stray vis flag doesn't override the wall
+  const shared = entries.filter(e => e.vis && !e.sample && !e.personal).slice(0, 120);
   for (const name of crew) {
     const mineFor = shared.filter(e => e.vis === 'crew' || e.vis === name);
     const list = mineFor.filter(e => !e.ask).map(e => ({
@@ -6263,7 +6280,7 @@ async function publishSharedNotes() {
     // v4.89 — to-dos with their name on them travel too: they land straight on that
     // person's list, already assigned. Eric marks one done (or reassigns) → it leaves
     // their phone on the next sweep. Crew never triage; they just see their orders.
-    const tlist = todos.filter(t => !t.done && !t.parentId && t.who === name).slice(0, 40).map(t => ({
+    const tlist = todos.filter(t => !t.done && !t.parentId && !t.personal && t.who === name).slice(0, 40).map(t => ({
       id: t.id, text: t.text, job: t.job, due: t.due || undefined, pri: t.pri || 1
     }));
     const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks }, null, 1);
