@@ -2742,7 +2742,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.03 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.04 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5950,7 +5950,7 @@ function renderReview() {
           `<button class="btn-ghost" onclick="showPhoto('${escq(ph)}')">📷 View photo${p.payload.photos.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}</div>` : ''}`;
       if (p.kind === 'match') body = `<div class="rev-text">I saw <b>${esc(p.payload.seen || '')}</b> come in${p.payload.job && p.payload.job !== '—' ? ` on ${esc(p.payload.job)}` : ''} — looks like your to-do: <b>${esc(p.payload.todo || '')}</b>. Did you handle it?</div>`;
       if (p.kind === 'crew') body = `<div class="rev-text"><b>${esc(p.payload.from || '?')}</b> — ${p.payload.type === 'Done' ? '✅ FINISHED: ' : p.payload.type !== 'Note' ? '⏱ ' : ''}${esc((p.payload.text || 'Shift').slice(0, 300))}</div>
-        <div class="rev-why">${[p.payload.job, p.payload.category, p.payload.hours != null ? (+p.payload.hours).toFixed(1) + ' hrs' : '', p.payload.day,
+        <div class="rev-why">${[p.payload.job, p.payload.category, p.payload.hours != null ? (+p.payload.hours).toFixed(1) + ' hrs' + (+p.payload.hours >= 12 ? ' · ⚠ LONG DAY — double-check it' : '') : '', p.payload.day,
           p.payload.route && p.payload.route !== 'The Grinder' ? '📨 for ' + p.payload.route : '', URG_WORDS[p.payload.urg] || ''].filter(Boolean).join(' · ')}</div>`;
       const meta = [p.payload && p.payload.job ? p.payload.job : '', p.source || '', p.payload && p.payload.due ? 'due ' + p.payload.due : ''].filter(Boolean).join(' · ');
       const btns = p.kind === 'match'
@@ -6656,6 +6656,20 @@ async function checkCrewLogs() {
       try { const t = await dbxDownload(f.path_lower + '/app data/entries.json'); if (t) j = JSON.parse(t); } catch (e) {}
       if (!j) continue;
       const name = f.name;
+      // ⏱ v5.04 forgotten-clock radar: a crew shift that's been running 14+ hours is
+      // almost certainly a missed punch-out — one card, once per shift
+      if (j.shiftOpen && j.shiftOpen.at) {
+        const runHrs = (Date.now() - new Date(j.shiftOpen.at).getTime()) / 3600000;
+        if (runHrs >= 14) {
+          const key = `openshift:${name}:${String(j.shiftOpen.at).slice(0, 13)}`;
+          if (!pendDone.has(key) && !pendingQueue.some(p => p.id === key)) {
+            pendingQueue.push({ id: key, kind: 'todo', payload: {
+              text: `⏱ ${name}'s clock has been running ${Math.round(runHrs)} hours${j.shiftOpen.job ? ` on ${j.shiftOpen.job}` : ''} — forgotten punch-out?`,
+              due: localDay(new Date()), pri: 2, job: jobs.includes(j.shiftOpen.job) ? j.shiftOpen.job : (jobs[0] || '—'),
+              note: `Ask ${name} for the real quit time, then fix it in Hours. Their phone still shows the shift open.` } });
+          }
+        }
+      }
       (j.entries || []).slice(0, 250).forEach(e => {
         // Done entries only count when they close one of Eric's assigned to-dos (srcRef)
         if (!['Clock', 'Hours', 'Note'].includes(e.type) && !(e.type === 'Done' && e.srcRef)) return;
@@ -6678,6 +6692,31 @@ async function checkCrewLogs() {
   } catch (e) { /* no crew dir yet — quiet */ }
 }
 
+// 🕸 v5.04 job-silence radar — a job nobody has touched in 10+ days gets ONE card a week:
+// still rolling, or time to wrap it? Runs at most once a day, on Eric's phone only.
+function radarSweep() {
+  if (CREW_NAME) return;
+  const today = localDay(new Date());
+  if (lsGet('daylog-radar-day') === today) return;
+  lsSet('daylog-radar-day', today);
+  const now = Date.now();
+  const epochWeek = Math.floor(now / 86400000 / 7);
+  let flagged = false;
+  jobs.forEach(job => {
+    const last = entries.find(e => !e.sample && e.job === job); // entries run newest-first
+    if (!last) return; // brand-new job with nothing yet — leave it be
+    const days = Math.floor((now - new Date(last.ts).getTime()) / 86400000);
+    if (days < 10) return;
+    const id = `jobsilence:${job}:w${epochWeek}`;
+    if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
+    pendingQueue.push({ id, kind: 'todo', payload: {
+      text: `🕸 Nothing logged on ${job} in ${days} days — still rolling, or wrap it up?`,
+      pri: 1, job,
+      note: 'If the job is done, remove it in ⚙ Setup → Jobs so the radar stops watching it.' } });
+    flagged = true;
+  });
+  if (flagged) { renderPendBanner(); savePendingSoon(); }
+}
 let _pendSaveTimer = null;
 function savePendingSoon() {
   if (!dbx.refreshToken) return;
@@ -8684,8 +8723,12 @@ async function ensureFolders() {
 }
 let lastSync = null;
 function livePayload() {
+  // v5.04 — the open shift rides along so Eric's radar can spot a clock left running
+  let shiftOpen = null;
+  try { const s = JSON.parse(lsGet('daylog-shift') || 'null'); if (s && s.at) shiftOpen = { at: s.at, job: s.job || '' }; } catch (e) {}
   return JSON.stringify({
     jobs, trucks, crew, prefs,
+    shiftOpen,
     entries: entries.filter(e => !e.sample),
     todos: todos.filter(t => !t.sample)
   }, null, 1);
@@ -8721,6 +8764,7 @@ async function pullRemote() {
   refreshCrewCfg(); // crew phones pick up Eric's latest job/category list
   publishSharedNotes(); // 🔓 unlocked notes sweep out; re-locked ones sweep back off
   checkSharedNotes(); // crew phones pick up their FROM ERIC list
+  radarSweep(); // 🕸 quiet-job check — once a day, one card a week per silent job
 }
 async function pushRemote() {
   if (!dbx.refreshToken) return;
