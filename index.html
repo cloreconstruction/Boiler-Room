@@ -2746,7 +2746,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.06 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.07 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -3971,7 +3971,9 @@ function addEntry(type, details, job, extra = {}) {
 }
 // --- ⚙ v4.92 THE GRINDER WATCHES: anything ground in gets sniffed against the open to-dos.
 // Two solid shared words = a card: "I saw X come in — looks like your to-do Y. Did you handle it?"
-const MATCH_STOP = new Set(['the','and','for','with','that','this','from','your','have','about','into','need','needs','then','them','they','when','what','will','would','could','should','there','here','just','some','more','over','under','been','were','was','are','you','not','but','all','can','get','got','out','our','their','make','made','take','back','call','text','ask','tell','check','pick','like','also','very','than','its','his','her','him','she']);
+const MATCH_STOP = new Set(['the','and','for','with','that','this','from','your','have','about','into','need','needs','then','them','they','when','what','will','would','could','should','there','here','just','some','more','over','under','been','were','was','are','you','not','but','all','can','get','got','out','our','their','make','made','take','back','call','text','ask','tell','check','pick','like','also','very','than','its','his','her','him','she',
+  // v5.07 — Eric's-world words: they're on EVERYTHING he owns, so they prove nothing
+  'alaska','clore','eric','soldotna','kenai','peninsula','construction','company','official','government','document','resident','valid','issued','number','date','photo','statement','account','total','amount','payment','service','llc']);
 function sigWords(s) {
   return [...new Set(String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/)
     .filter(w => w.length >= 4 && !MATCH_STOP.has(w)))];
@@ -3987,6 +3989,9 @@ function grinderMatchCheck(entry) {
       if (entry.todoRef === t.id) return; // its own completion echo is not a coincidence
       const hit = sigWords(t.text + ' ' + (t.note || '')).filter(w => ws.includes(w));
       if (hit.length < 2) return;
+      // 🎓 v5.07 — it LEARNS: word-combos Eric has stamped "Not related" never match again
+      const sig = hit.slice(0, 4).sort().join('|');
+      if ((prefs.matchVeto || []).includes(sig)) return;
       const key = `match:${entry.id}:${t.id}`;
       if (pendDone.has(key) || pendingQueue.some(p => p.id === key)) return;
       pendingQueue.push({ id: key, kind: 'match', payload: {
@@ -6139,6 +6144,17 @@ function reviewAct(id, accept) {
       toast('Answered ✓');
     }
     renderTodos(); renderKpis(); renderLog(); scheduleSave();
+  }
+  // 🎓 v5.07 — "Not related" on a Grinder match TEACHES it: that word-combo is dead forever
+  if (!accept && p.kind === 'match' && p.payload && (p.payload.words || []).length) {
+    if (!prefs.matchVeto) prefs.matchVeto = [];
+    const sig = p.payload.words.slice(0, 4).sort().join('|');
+    if (!prefs.matchVeto.includes(sig)) {
+      prefs.matchVeto.push(sig);
+      if (prefs.matchVeto.length > 150) prefs.matchVeto.shift();
+      scheduleSave();
+    }
+    toast("🎓 Learned — I won't connect those words again ✓");
   }
   pendingQueue.splice(i, 1);
   pendMarkDone(p.id);
