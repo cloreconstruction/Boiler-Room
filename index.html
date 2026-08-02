@@ -1573,6 +1573,19 @@
     .clock-in-control.is-animating .clock-needle { animation: none; transform: rotate(23deg); }
     .clock-steam { display: none; }
   }
+  /* v4.86 — bolder bones: cards and Setup sections get a firm gold-tinted frame like the
+     review banner, so every box reads as its own instrument */
+  .card, .clock-card, .ask-card, .kpi {
+    border-width: 2px;
+    border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  }
+  .set-section, .fc-sec {
+    border: 2px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+    border-radius: 12px;
+  }
+  @supports not (border-color: color-mix(in srgb, red 50%, blue)) {
+    .card, .clock-card, .ask-card, .kpi, .set-section, .fc-sec { border-color: rgba(197, 155, 74, 0.5); }
+  }
   /* v4.61 — uniform button grids: every button the same size, same place, every time */
   .chip-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .chip-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1802,7 +1815,7 @@
     </div>
     <div class="header-right">
       <button class="theme-btn" id="syncChip" title="Dropbox sync status — click to sync now">○ Not connected</button>
-      <button type="button" class="wiz-lamp" id="wizLamp" data-state="hourly" onclick="wizLampTap()" title="Wizard status"><span class="wl-lens" aria-hidden="true"></span><span class="wl-txt">⏳ Hourly</span></button>
+      <button type="button" class="theme-btn wiz-lamp" id="wizLamp" data-state="hourly" onclick="wizLampTap()" title="Wizard status"><span class="sync-lamp sync-lamp--off" aria-hidden="true"></span><span class="sync-instrument__text"><strong>⏳ HOURLY</strong></span></button>
       <button class="theme-btn" id="summaryBtn" onclick="openPanel('summary')" title="View summaries or request today's"><span class="em">📊</span> Summary</button>
       <button class="theme-btn" id="setupBtn">⚙ Setup</button>
     </div>
@@ -2465,6 +2478,8 @@
         <div class="hint" style="margin-top: 8px;">Each crew member's app only ever gets these rates and their own hours — tap 📤 below after changing so their folders pick it up.</div>
       </div>
       <div id="crewOwnerTools" style="margin-top: 14px;">
+        <div class="field" style="margin-bottom: 10px;"><label>Push secret (same value as PUSH_SECRET in Netlify — lets crew NOW notes ring phones)</label>
+          <input type="text" id="sPushSec" class="wide" style="width: 100%;" placeholder="paste it once, then tap 📤" onchange="prefs.pushSecret = this.value.trim(); scheduleSave(); toast('Push secret saved — tap 📤 so crew folders get it ✓');"></div>
         <div class="frow">
           <button class="btn-ghost" onclick="publishCrewFolders()">📤 Set up / update crew folders</button>
           <button class="btn-ghost" onclick="crewPreviewToggle()">👁 View as crew</button>
@@ -2587,7 +2602,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.85 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.86 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -3995,7 +4010,8 @@ function saveClockOut() {
   if (coCats.size) { const sc = [...coCats]; extra.category = sc[0]; if (sc.length > 1) extra.cats = sc; }
   if (edited) { const [oh, om] = adj.o.split(':').map(Number); const ts = new Date(); ts.setHours(oh, om, 0, 0); extra.ts = ts; }
   const shiftJob = clockJobName; // the job was chosen at clock-in, on the panel
-  addEntry('Clock', note ? `${note} — ${span}` : span, shiftJob, extra);
+  const _e = addEntry('Clock', note ? `${note} — ${span}` : span, shiftJob, extra);
+  lastShiftUndo = { id: _e.id, at: clockedInAt.toISOString(), job: clockJobName, brM: breakMins, done: Date.now() };
   toast(`Shift logged — ${rounded.toFixed(2)} hrs · ${shiftJob}${edited ? ' · ✎ adjusted' : ''}${coBillable ? '' : ' · not billable'} ✓`);
   clockedInAt = null; clockJobName = null;
   breakStart = null; breakMins = 0;
@@ -4135,15 +4151,35 @@ function bcRender() {
   $('bcLampOff').style.display = st.clockedIn ? 'none' : '';
   $('bcAnnun').style.display = st.clockedIn ? '' : 'none';
   const un = $('undoPunch');
-  if (un) un.style.display = (st.clockedIn && (Date.now() - clockedInAt.getTime()) < 120000) ? '' : 'none';
+  if (un) {
+    const canIn = st.clockedIn && (Date.now() - clockedInAt.getTime()) < 120000;
+    const canOut = !st.clockedIn && lastShiftUndo && (Date.now() - lastShiftUndo.done) < 120000;
+    un.style.display = (canIn || canOut) ? '' : 'none';
+    un.textContent = canOut ? '↩ Undo that clock-out' : '↩ Undo that clock-in';
+  }
   $('bigClock').dataset.state = st.clockedIn ? 'in' : 'out';
   const b = $('bcTapBtn');
   b.setAttribute('aria-label', st.clockedIn
     ? `On the clock — ${hh} hours ${mm} minutes worked. Tap to clock out.`
     : 'Clocked out — tap to clock in');
 }
-// fat-finger insurance: for two minutes after a punch-in, one tap takes it back like it never happened
+// fat-finger insurance: for two minutes after a punch-in OR a clock-out, one tap takes it back
+let lastShiftUndo = null;
 function undoPunch() {
+  if (!clockedInAt && lastShiftUndo && Date.now() - lastShiftUndo.done < 120000) {
+    // un-clock-out: remove the logged shift, put the clock back exactly where it was
+    entries = entries.filter(x => x.id !== lastShiftUndo.id);
+    clockedInAt = new Date(lastShiftUndo.at);
+    clockJobName = lastShiftUndo.job;
+    breakMins = lastShiftUndo.brM || 0; breakStart = null;
+    lastShiftUndo = null;
+    saveShift();
+    setClockBtn(true);
+    $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
+    renderAll(); bcRender(); scheduleSave();
+    toast('↩ Clock-out undone — you are back on the clock ✓');
+    return;
+  }
   if (!clockedInAt) return;
   if (Date.now() - clockedInAt.getTime() > 120000) { toast('Too late to undo — clock out instead', false); return; }
   clockedInAt = null; clockJobName = null;
@@ -4294,7 +4330,7 @@ function openPanel(name) {
     if (name === 'file') fcOpenInit();
     if (name === 'mileage') mOpenInit();
     if (name === 'hours') hOpenInit();
-    if (name === 'settings') renderWageSetup();
+    if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; }
     if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; renderDayFlowRows(); renderPipeRows(); }
     if (name === 'vault') vaultOpenInit();
     if (name === 'summary') summaryOpenInit();
@@ -5237,6 +5273,13 @@ function saveNoteFrom(boxId, fromPanel) {
   ['nText', 'askText'].forEach(id => { if ($(id)) { $(id).value = ''; fitTa(id); } });
   if (fromPanel) closePanels();
   qnSel = new Set(); tagBump(tags); renderTagChips();
+  if (isCrew() && nExtra.urg === 'now' && lsGet('daylog-push-secret')) {
+    // 🔥 NOW rings every subscribed phone immediately — the note itself still rides the sync
+    fetch('/.netlify/functions/notify', { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-push-secret': lsGet('daylog-push-secret') },
+      body: JSON.stringify({ title: `🔥 ${CREW_NAME || 'Crew'} needs it NOW`, body: t.slice(0, 140), tag: 'crew-now' })
+    }).catch(() => {});
+  }
   qnRoute = ''; qnUrg = ''; renderRouteChips();
   const vis = qnVis; qnVis = ''; renderVisChips(); // back to 🔒 for the next note
   if (vis) publishSharedNotes(); // fire it toward the crew folder right away when online
@@ -5696,7 +5739,7 @@ async function publishCrewFolders() {
     const base = `${CREW_DIR}/${cleanName(name)}`;
     try { await dbxRpc('files/create_folder_v2', { path: base }); } catch (e) { /* exists */ }
     try { await dbxRpc('files/create_folder_v2', { path: base + '/Pay Stubs' }); } catch (e) { /* exists */ }
-    try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: wageCfg(), updated: new Date().toISOString() }, null, 1)); } catch (e) {}
+    try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: wageCfg(), tags: knownTags(), pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1)); } catch (e) {}
   }
   toast(`Crew folders ready — ${crew.join(', ')} ✓`);
 }
@@ -5716,6 +5759,8 @@ async function crewJoin() {
       lsSet('daylog-crew-name', cfg.name);
       lsSet('daylog-crew-jobs', JSON.stringify(cfg.jobs || []));
       if (cfg.wage) lsSet('daylog-crew-wage', JSON.stringify(cfg.wage));
+      if (Array.isArray(cfg.tags)) lsSet('daylog-crew-tags', JSON.stringify(cfg.tags));
+      if (cfg.pushSecret) lsSet('daylog-push-secret', cfg.pushSecret);
       msg.textContent = `✓ This phone is now ${cfg.name}'s. Reloading…`;
       setTimeout(() => location.reload(), 900);
       return;
@@ -5741,6 +5786,11 @@ async function refreshCrewCfg() {
       if (had !== JSON.stringify(jobs)) { renderJobSelects(); renderAll(); }
     }
     if (cfg.wage) { lsSet('daylog-crew-wage', JSON.stringify(cfg.wage)); renderWorkCatSel(); renderWageTick(); }
+    if (Array.isArray(cfg.tags) && cfg.tags.length) { // Eric's tags arrive; the crew's own stay too
+      prefs.tags = [...new Set([...cfg.tags, ...knownTags()])];
+      renderTagChips();
+    }
+    if (cfg.pushSecret) lsSet('daylog-push-secret', cfg.pushSecret);
   } catch (e) { /* quiet */ }
 }
 
@@ -6165,7 +6215,8 @@ function setWizLamp(state, holdMs) {
   const m = WIZ_LAMP[state] || WIZ_LAMP.hourly;
   l.dataset.state = state;
   delete l.dataset.plate;
-  l.innerHTML = `<span class="wl-lens" aria-hidden="true"></span><span class="wl-txt">${m[0]} ${esc(m[1])}</span>`;
+  const lampCls = state === 'instant' ? 'ok' : state === 'thinking' ? 'sync' : state === 'sent' ? 'sync' : 'off';
+  l.innerHTML = `<span class="sync-lamp sync-lamp--${lampCls}" aria-hidden="true"></span><span class="sync-instrument__text"><strong>${m[0]} ${esc(m[1]).toUpperCase()}</strong></span>`;
   l.setAttribute('aria-label', m[2]);
   l.title = m[2];
   if (_wizRevert) { clearTimeout(_wizRevert); _wizRevert = null; }
@@ -8133,6 +8184,7 @@ updateOdoHint();
 // v4.65 — crew phones: jobs come from Eric's published crew.json until their first sync refreshes it
 if (CREW_NAME) {
   try { const cj = JSON.parse(lsGet('daylog-crew-jobs') || '[]'); if (cj.length) { jobs = cj.slice(); renderJobSelects(); } } catch (e) {}
+  try { const ct = JSON.parse(lsGet('daylog-crew-tags') || '[]'); if (ct.length) prefs.tags = [...new Set([...ct, ...(prefs.tags || [])])]; } catch (e) {}
 }
 applyRole();
 restoreShift(); // a shift that was running when the app closed picks right back up
