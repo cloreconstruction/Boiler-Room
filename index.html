@@ -452,6 +452,9 @@
   .cam-ic { height: 26px; width: auto; vertical-align: middle; border-radius: 6px; }
   .cam-btn { padding: 6px 12px; }
   .cam-btn .cam-ic { height: 42px; }
+  /* v4.87 — the camera stands beside the note box, full height, one thumb away */
+  .cam-btn--tall { align-self: stretch; height: auto; display: flex; align-items: center; justify-content: center; flex: none; padding: 6px 10px; }
+  .cam-btn--tall .cam-ic { height: 52px; }
   /* v4.66 — tags stay out of the way: very small chips */
   #qnTagChips .pick-chip, #nTagChips .pick-chip { font-size: 10.5px; padding: 2px 8px; min-height: 0; font-weight: 600; }
   .ask-row { display: flex; gap: 10px; align-items: stretch; }
@@ -1573,6 +1576,75 @@
     .clock-in-control.is-animating .clock-needle { animation: none; transform: rotate(23deg); }
     .clock-steam { display: none; }
   }
+  /* v4.88 — the four header instruments (Eric's top-button art, rebuilt live):
+     iron face, copper pipe frame, brass caps lettering. Words always carry the state. */
+  .header-right { display: grid; grid-template-columns: 1.5fr 1fr 1.15fr 1fr; gap: 7px; width: 100%; }
+  .hdr-btn {
+    display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 4px 10px;
+    background: linear-gradient(180deg, #282017, #16110b);
+    border: 3px solid #7c4f2b; border-radius: 13px; cursor: pointer; font-family: Georgia, 'Times New Roman', serif;
+    box-shadow: inset 0 0 0 2px #2c1e12, inset 0 1px 0 rgba(255, 214, 150, 0.16), 0 2px 6px rgba(0, 0, 0, 0.45);
+    transition: filter 120ms ease, transform 120ms ease;
+    min-width: 0;
+  }
+  .hdr-btn:hover { filter: brightness(1.1); }
+  .hdr-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px #2c1e12, 0 1px 2px rgba(0, 0, 0, 0.4); }
+  .hdr-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .hb-tx { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; text-align: left; min-width: 0; }
+  .hb-tx strong { font-size: 13.5px; font-weight: 800; letter-spacing: 1.4px; color: #e2c179; text-transform: uppercase; white-space: nowrap; }
+  .hb-tx span { font-size: 9.5px; color: #a8895a; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  #syncChip[data-state="ok"] .hb-tx strong { color: #7ede6e; }
+  #syncChip[data-state="error"] .hb-tx strong, #syncChip[data-state="off"] .hb-tx strong { color: #ff9d88; }
+  .hb-med {
+    width: 32px; height: 32px; border-radius: 50%; flex: none; position: relative;
+    background: #221910; border: 2px solid #8a6430;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+  }
+  .radar {
+    width: 24px; height: 24px; border-radius: 50%; position: relative; overflow: hidden; flex: none;
+    background: radial-gradient(circle at 35% 30%, #b9f0ae, #2f7c39 55%, #123c1c 88%);
+    box-shadow: 0 0 8px rgba(120, 220, 120, 0.55);
+  }
+  .radar::before {
+    content: ''; position: absolute; inset: 0; border-radius: 50%;
+    background: linear-gradient(rgba(0, 50, 0, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 50, 0, 0.4) 1px, transparent 1px);
+    background-size: 6px 6px;
+  }
+  @keyframes hbSpin { to { transform: rotate(360deg); } }
+  @keyframes hbBlip { 0%, 60% { opacity: 0; } 70% { opacity: 1; } 100% { opacity: 0; } }
+  .radar-sweep {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 0deg, rgba(225, 255, 215, 0.9), rgba(225, 255, 215, 0) 75deg, transparent);
+    animation: hbSpin 3.6s linear infinite;
+  }
+  .radar-blip { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #eaffdd; animation: hbBlip 3.6s linear infinite; }
+  .rb1 { left: 30%; top: 34%; }
+  .rb2 { left: 62%; top: 58%; animation-delay: 1.6s; }
+  #syncChip[data-state="syncing"] .radar-sweep { animation-duration: 0.8s; }
+  #syncChip[data-state="syncing"] .radar-blip { animation-duration: 0.8s; }
+  #syncChip[data-state="off"] .radar, #syncChip[data-state="error"] .radar {
+    background: radial-gradient(circle at 35% 30%, #e8a193, #8a3226 55%, #401410 88%);
+    box-shadow: 0 0 8px rgba(220, 90, 66, 0.55);
+  }
+  #syncChip[data-state="off"] .radar-sweep, #syncChip[data-state="error"] .radar-sweep,
+  #syncChip[data-state="off"] .radar-blip, #syncChip[data-state="error"] .radar-blip { animation: none; opacity: 0; }
+  .hb-med .sync-lamp { width: 22px; height: 22px; }
+  .hb-bolt { position: absolute; right: -3px; bottom: -4px; font-size: 13px; color: #ffd27a; text-shadow: 0 0 5px rgba(255, 190, 90, 0.6); }
+  .hb-bars { display: flex; gap: 2.5px; align-items: flex-end; height: 19px; }
+  .hb-bars i {
+    width: 4.5px; border-radius: 1px;
+    background: linear-gradient(180deg, #ffd27a, #b97e22);
+    box-shadow: 0 0 5px rgba(255, 190, 90, 0.45);
+  }
+  .hb-gear { font-size: 22px; color: #cfa54a; text-shadow: 0 0 6px rgba(240, 190, 90, 0.4); transition: transform 350ms ease; line-height: 1; }
+  .hdr-btn:hover .hb-gear { transform: rotate(28deg); }
+  @media (prefers-reduced-motion: reduce) { .radar-sweep, .radar-blip { animation: none !important; } .hb-gear { transition: none; } }
+  @media (max-width: 520px) {
+    .header-right { grid-template-columns: 1.55fr 1fr; }
+    .hb-tx strong { font-size: 12px; letter-spacing: 1px; }
+    #summaryBtn { grid-column: 1 / -1; } /* header Setup hides on phones (bottom bar has it) — Summary takes the row */
+  }
   /* v4.86 — bolder bones: cards and Setup sections get a firm gold-tinted frame like the
      review banner, so every box reads as its own instrument */
   .card, .clock-card, .ask-card, .kpi {
@@ -1599,9 +1671,8 @@
   }
   #crewRoute { display: none; }
   body.crew-mode #crewRoute { display: block; }
-  body.crew-mode #summaryBtn, body.crew-mode #dayTubeCard, body.crew-mode #wizLamp,
-  body.crew-mode .plate-btn--wiz, body.crew-mode .ask-foot, body.crew-mode #askInline,
-  body.crew-mode #askRecent, body.crew-mode #qnTagChips, body.crew-mode .kpis,
+  body.crew-mode #summaryBtn, body.crew-mode #dayTubeCard,
+  body.crew-mode .ask-foot, body.crew-mode #qnTagChips, body.crew-mode .kpis,
   body.crew-mode .cap-btn[data-panel="file"], body.crew-mode .cap-btn[data-panel="mileage"],
   body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"],
   body.crew-mode #qnVisRow, body.crew-mode #nVisChips, body.crew-mode #coBillRow { display: none !important; }
@@ -1814,10 +1885,22 @@
       </div>
     </div>
     <div class="header-right">
-      <button class="theme-btn" id="syncChip" title="Dropbox sync status — click to sync now">○ Not connected</button>
-      <button type="button" class="theme-btn wiz-lamp" id="wizLamp" data-state="hourly" onclick="wizLampTap()" title="Wizard status"><span class="sync-lamp sync-lamp--off" aria-hidden="true"></span><span class="sync-instrument__text"><strong>⏳ HOURLY</strong></span></button>
-      <button class="theme-btn" id="summaryBtn" onclick="openPanel('summary')" title="View summaries or request today's"><span class="em">📊</span> Summary</button>
-      <button class="theme-btn" id="setupBtn">⚙ Setup</button>
+      <button class="hdr-btn hdr-sync" id="syncChip" data-state="off" title="Dropbox sync status — click to sync now">
+        <span class="hb-med"><span class="radar" aria-hidden="true"><span class="radar-sweep"></span><span class="radar-blip rb1"></span><span class="radar-blip rb2"></span></span></span>
+        <span class="hb-tx"><strong id="hbSyncWord">✕ OFFLINE</strong><span id="hbSyncSub">tap for Setup</span></span>
+      </button>
+      <button type="button" class="hdr-btn wiz-lamp" id="wizLamp" data-state="hourly" onclick="wizLampTap()" title="Wizard status">
+        <span class="hb-med"><span class="sync-lamp sync-lamp--off" aria-hidden="true"></span><span class="hb-bolt" aria-hidden="true">⚡</span></span>
+        <span class="hb-tx"><strong id="hbWizWord">HOURLY</strong></span>
+      </button>
+      <button class="hdr-btn" id="summaryBtn" onclick="openPanel('summary')" title="View summaries or request today's">
+        <span class="hb-med"><span class="hb-bars" aria-hidden="true"><i style="height: 10px;"></i><i style="height: 17px;"></i><i style="height: 13px;"></i></span></span>
+        <span class="hb-tx"><strong>SUMMARY</strong></span>
+      </button>
+      <button class="hdr-btn" id="setupBtn">
+        <span class="hb-med"><span class="hb-gear" aria-hidden="true">⚙</span></span>
+        <span class="hb-tx"><strong>SETUP</strong></span>
+      </button>
     </div>
   </header>
 
@@ -1829,6 +1912,8 @@
          options below that. Drag photos from the PC anywhere onto this card. -->
     <div class="ask-row">
       <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this)" placeholder="Put your note here → tap ⚙ To the Grinder. Tags below file it.&#10;&#10;Or ask a question here → tap 🧙 Ask the Wizard. Skip the tags."></textarea>
+      <input type="file" id="qnPhoto" accept="image/*" multiple onchange="noteAddPhotos(this)" style="display: none;">
+      <button type="button" class="btn-ghost cam-btn cam-btn--tall" onclick="$('qnPhoto').click()" aria-label="Add photos or files — or drag them onto this card" title="Add photos or files — or drag them onto this card"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"></button>
     </div>
     <div class="plate-row">
       <button type="button" class="plate-btn plate-btn--grind" onclick="saveQuickNote()" aria-label="To the grinder — save as a note" title="Save as a note — job + tags stamp on">
@@ -1842,8 +1927,6 @@
     </div>
     <div class="frow" style="margin-top: 10px; align-items: center; flex-wrap: nowrap;">
       <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0;"></select>
-      <input type="file" id="qnPhoto" accept="image/*" multiple onchange="noteAddPhotos(this)" style="display: none;">
-      <button type="button" class="btn-ghost cam-btn" onclick="$('qnPhoto').click()" aria-label="Add photos or files — or drag them onto this card" title="Add photos or files — or drag them onto this card" style="flex: none;"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"></button>
     </div>
     <div id="qnPhotoInfo" class="frow" style="gap: 6px; flex-wrap: wrap; margin-top: 6px;"></div>
     <div class="chips-row" id="qnTagChips" style="margin-top: 8px;"></div>
@@ -2602,7 +2685,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.86 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.88 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6216,7 +6299,7 @@ function setWizLamp(state, holdMs) {
   l.dataset.state = state;
   delete l.dataset.plate;
   const lampCls = state === 'instant' ? 'ok' : state === 'thinking' ? 'sync' : state === 'sent' ? 'sync' : 'off';
-  l.innerHTML = `<span class="sync-lamp sync-lamp--${lampCls}" aria-hidden="true"></span><span class="sync-instrument__text"><strong>${m[0]} ${esc(m[1]).toUpperCase()}</strong></span>`;
+  l.innerHTML = `<span class="hb-med"><span class="sync-lamp sync-lamp--${lampCls}" aria-hidden="true"></span><span class="hb-bolt" aria-hidden="true">⚡</span></span><span class="hb-tx"><strong id="hbWizWord">${esc(m[1]).toUpperCase()}</strong></span>`;
   l.setAttribute('aria-label', m[2]);
   l.title = m[2];
   if (_wizRevert) { clearTimeout(_wizRevert); _wizRevert = null; }
@@ -6334,7 +6417,10 @@ function buildAskContext(question) {
     return o;
   });
   const openTrips = trucks.filter(t => t.trip).map(t => ({ truck: t.name, since: t.trip.ts, job: t.trip.job, purpose: t.trip.purpose }));
-  return `TODAY: ${new Date().toString()}${rangeLine}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first): ${JSON.stringify(slim)}`;
+  const crewCtx = CREW_NAME
+    ? `\nNOTES ERIC SHARED (the ONLY Eric data visible here): ${JSON.stringify(crewShared.slice(0, 60).map(n => ({ d: String(n.ts).slice(0, 10), x: n.text, j: n.job })))}`
+    : '';
+  return `TODAY: ${new Date().toString()}${rangeLine}${crewCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first): ${JSON.stringify(slim)}`;
 }
 async function askInstant(what) {
   const st = $('askStatus');
@@ -6365,7 +6451,7 @@ async function askInstant(what) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
         max_tokens: 1200,
-        system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 if urgent>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Never invent amounts or dates.',
+        system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 if urgent>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Never invent amounts or dates.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
         messages: [{ role: 'user', content: buildAskContext(what) + fileCtx + '\n\nERIC\'S QUESTION: ' + what }]
       })
     });
@@ -6488,6 +6574,7 @@ async function askClaude() {
   if (!what) { toast('Type or dictate a question first', false); return; }
   qnJobPick = ''; renderAllJobChips(); // wheel snaps back on Ask too
   if (aiKey()) return askInstant(what);
+  if (isCrew()) { toast('The Wizard needs a key on this phone — ask Eric to set it up in ⚙ Setup', false); return; }
   return askViaFlag(what);
 }
 async function summaryNow() {
@@ -7589,14 +7676,13 @@ function setSync(state, msg) {
   const chip = $('syncChip');
   chip.dataset.state = state;
   const when = `Last synced: ${lastSync ? fmtTime(lastSync) : '--'}`;
-  const radar = sweep => `<span class="sync-radar" aria-hidden="true">${sweep ? '<span class="sync-radar__sweep"></span><span class="sync-radar__blip sync-radar__blip--one"></span><span class="sync-radar__blip sync-radar__blip--two"></span><span class="sync-radar__hub"></span>' : ''}</span>`;
-  const lamp = cls => `<span class="sync-lamp sync-lamp--${cls}" aria-hidden="true"></span>`;
-  const txt = (a, b) => `<span class="sync-instrument__text"><strong>${a}</strong><span>${b}</span></span>`;
-  // v4.72 — radar dial retired everywhere: the lamp + the word carry the state on all screens
-  if (state === 'ok') chip.innerHTML = lamp('ok') + txt('SYNCED', when);
-  else if (state === 'syncing') chip.innerHTML = lamp('sync') + txt('SYNCING', 'working…');
-  else if (state === 'error') chip.innerHTML = lamp('err2') + txt('! SYNC ERROR', 'tap to retry');
-  else chip.innerHTML = lamp('off') + txt('\u2715 OFFLINE', 'tap for Setup');
+  const w = $('hbSyncWord'), sub = $('hbSyncSub');
+  if (w) {
+    if (state === 'ok') { w.textContent = 'SYNCED'; sub.textContent = when; }
+    else if (state === 'syncing') { w.textContent = 'SYNCING'; sub.textContent = 'working…'; }
+    else if (state === 'error') { w.textContent = '! SYNC ERROR'; sub.textContent = 'tap to retry'; }
+    else { w.textContent = '\u2715 OFFLINE'; sub.textContent = 'tap for Setup'; }
+  }
   if (msg) $('setupStatus').textContent = msg;
 }
 function b64url(bytes) { return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
