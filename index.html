@@ -2741,7 +2741,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.00 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.01 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4945,6 +4945,7 @@ function queueOcr(f) {
     catch (e) { m.status = ''; }
     if (fcFiles.includes(f)) renderFcFileList();
     if (notePhotos.includes(f)) renderNotePhotoList();
+    if (m.ocr && !aiOn()) billMaybeSuggest(f, m); // 💳 no key? plain OCR still spots due dates
   });
 }
 function queueOcrSingle(inpId, infoId, f) {
@@ -4986,7 +4987,7 @@ async function aiDescribePhoto(f) {
     body: JSON.stringify({
       model: 'claude-haiku-4-5',
       max_tokens: 300,
-      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"1-2 plain sentences: what the photo shows, the stage of work, anything notable","category":"best match from this list or empty: Framing, Foundation, Roofing, Siding, Windows/Doors, Electrical, Plumbing, HVAC, Drywall, Paint, Finish, Landscaping, Materials, Tools, Fuel, Subcontractor, Office/Admin, Permits/Fees, Insurance, Loan/Bank, Personal","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null}',
+      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"1-2 plain sentences: what the photo shows, the stage of work, anything notable","category":"best match from this list or empty: Framing, Foundation, Roofing, Siding, Windows/Doors, Electrical, Plumbing, HVAC, Drywall, Paint, Finish, Landscaping, Materials, Tools, Fuel, Subcontractor, Office/Admin, Permits/Fees, Insurance, Loan/Bank, Personal","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null}',
       messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
         { type: 'text', text: 'Label this photo.' }
@@ -5008,11 +5009,14 @@ function queueAi(f, meta, rerender) {
       if (p.vendor) meta.ai += ` [${p.vendor}${p.total != null && p.total !== '' ? ` — $${p.total}` : ''}]`;
       meta.aiCat = p.category || '';
       if (p.total != null && p.total !== '' && !isNaN(+p.total)) meta.aiTotal = +p.total;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(p.due || '')) meta.aiDue = p.due;
+      if (p.dueAmt != null && p.dueAmt !== '' && !isNaN(+p.dueAmt)) meta.aiDueAmt = +p.dueAmt;
       meta.aiStatus = meta.ai ? '🔮✓' : '';
     } catch (e) { meta.aiStatus = ''; } // offline / no key mid-flight / odd format: photo just goes undescribed
     if (rerender) rerender();
     aiFlushLate(f, meta);
     aiMaybeSuggestCat(f, meta);
+    billMaybeSuggest(f, meta);
     aiMaybePrefillAmt(f, meta);
   });
 }
@@ -5049,6 +5053,41 @@ function aiMaybePrefillAmt(f, meta) {
   if (amt.value !== '') return; // his number wins, always
   amt.value = meta.aiTotal;
   $('fcMsg').textContent = ($('fcMsg').textContent + ` 🔮 Total read as $${meta.aiTotal} — fix it if that's off.`).trim();
+}
+// 💳 v5.01 BILL RADAR — a statement photo that shows a due date turns into a suggested
+// to-do ("Pay Global Credit Union — $1,412") with that due date, plus a phone ding.
+// Works off the Wizard's read; falls back to plain OCR patterns when there's no key.
+function billParseOcr(ocr) {
+  const t = String(ocr || '');
+  const dm = t.match(/due\s*(?:date|on|by)?\s*[:\-]?\s*((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+  const am = t.match(/(?:payment|amount|minimum)\s*due\s*[:\-]?\s*\$?\s*([\d,]+\.?\d{0,2})/i);
+  let due = '';
+  if (dm) { const d = new Date(dm[1].replace(/\./g, '')); if (!isNaN(d)) due = localDay(d); }
+  const amt = am ? +am[1].replace(/,/g, '') : null;
+  return { due, amt: amt != null && !isNaN(amt) ? amt : null };
+}
+function billMaybeSuggest(f, meta) {
+  try {
+    if (CREW_NAME) return;
+    let due = meta.aiDue || '', amt = meta.aiDueAmt != null ? meta.aiDueAmt : meta.aiTotal;
+    if (!due && meta.ocr) { const p = billParseOcr(meta.ocr); due = p.due; if (amt == null) amt = p.amt; }
+    if (!due || due <= localDay(new Date())) return; // no future due date = not a bill to chase
+    const vendor = (meta.ai || '').match(/\[([^\]—]+)/);
+    const who = vendor ? vendor[1].trim() : 'this bill';
+    const id = `bill:${due}:${String(who).toLowerCase().slice(0, 20)}`;
+    if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
+    pendingQueue.push({ id, kind: 'todo', payload: {
+      text: `Pay ${who}${amt != null ? ` — $${amt}` : ''}`, due, pri: 2, job: curJob,
+      note: `From the statement photo — due ${due}. Check the photo if the number looks off.` } });
+    renderPendBanner(); savePendingSoon();
+    toast(`💳 Bill spotted — due ${due}${amt != null ? ` · $${amt}` : ''}. Suggested to-do is in review ✓`);
+    if (prefs.pushSecret) {
+      fetch('/.netlify/functions/notify', { method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
+        body: JSON.stringify({ title: '💳 Bill spotted', body: `Pay ${who}${amt != null ? ` — $${amt}` : ''} · due ${due} — to-do waiting in review`, tag: 'bill-due' })
+      }).catch(() => {});
+    }
+  } catch (e) { /* radar is best-effort — never break a photo read */ }
 }
 function aiMerge(files) {
   return files.map(f => (fcMeta.get(f) || {}).ai).filter(Boolean).join('\n— next photo —\n').slice(0, 2000);
