@@ -1898,6 +1898,7 @@
     <button class="btn-ghost" style="background: var(--surface-1); display: none;" id="lbNext" onclick="event.stopPropagation(); lbNav(1)">Next ›</button>
     <button class="btn-ghost" style="background: var(--surface-1);" onclick="closeLightbox()">✕ Close</button>
     <button class="btn-ghost" style="background: var(--surface-1);" id="lbOrig" onclick="event.stopPropagation()">Open original</button>
+    <button class="btn-ghost" style="background: var(--surface-1);" id="lbShare" onclick="event.stopPropagation(); sharePhotoOut()">📤 Send it on</button>
   </div>
 </div>
 <div class="rev-modal" id="revModal" onclick="if(event.target===this)closeReview()">
@@ -2741,7 +2742,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.02 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.03 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5622,6 +5623,38 @@ function closeLightbox() {
   $('lightbox').classList.remove('show');
   if (img.src) { URL.revokeObjectURL(img.src); img.removeAttribute('src'); }
   lbPaths = []; lbIdx = 0;
+}
+// 📤 v5.03 — send any photo ON from the viewer: opens the phone's share sheet with the
+// full-size image, so texting a receipt to Logan's capture number is two taps. (Apple
+// won't let a web app text on its own — the share sheet is the legal doorway.)
+async function sharePhotoOut() {
+  const path = lbPaths[lbIdx];
+  if (!path) return;
+  try {
+    toast('Fetching the full-size photo…');
+    const t = await getToken();
+    const r = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + t, 'Dropbox-API-Arg': hsafe({ path }) }
+    });
+    if (!r.ok) throw new Error('download');
+    const blob = await r.blob();
+    const name = path.split('/').pop() || 'photo.jpg';
+    const file = new File([blob], /\.(jpe?g|png|webp|gif)$/i.test(name) ? name : name + '.jpg',
+      { type: blob.type || 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file] });
+      toast('📤 Handed to the share sheet ✓');
+    } else {
+      // fallback: temporary link on the clipboard — paste it into the text
+      const j = await dbxRpc('files/get_temporary_link', { path });
+      if (j.link && navigator.clipboard) { await navigator.clipboard.writeText(j.link); toast('📋 Photo link copied — paste it into the text (link works ~4 hours)'); }
+      else throw new Error('no share');
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return; // he closed the share sheet — not an error
+    toast("Couldn't hand the photo off — try Open original and share from there", false);
+  }
 }
 // ---------- file search (all of Clore DayLog, by filename) ----------
 let findTimer = null;
