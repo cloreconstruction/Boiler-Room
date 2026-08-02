@@ -1795,9 +1795,12 @@
 
   <!-- v4.55 — ONE box on top: write a note or ask the Wizard, two buttons decide where it goes -->
   <div class="card ask-card qn-card" id="qnCard">
-    <!-- v4.73 — Eric's order: the two doors on top, then set the options, then WRITE (biggest), send.
-         Drag photos or files from the PC anywhere onto this card and they attach. -->
-    <div class="plate-row" style="margin-top: 0;">
+    <!-- v4.83 — Eric's flow: WRITE first, the two doors under it, the grinder's filing
+         options below that. Drag photos from the PC anywhere onto this card. -->
+    <div class="ask-row">
+      <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this)" placeholder="Put your note here → tap ⚙ To the Grinder. Tags below file it.&#10;&#10;Or ask a question here → tap 🧙 Ask the Wizard. Skip the tags."></textarea>
+    </div>
+    <div class="plate-row">
       <button type="button" class="plate-btn plate-btn--grind" onclick="saveQuickNote()" aria-label="To the grinder — save as a note" title="Save as a note — job + tags stamp on">
         <img src="steam/btn-grinder.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
         <span class="plate-txt">⚙ To the grinder</span>
@@ -1806,9 +1809,6 @@
         <img src="steam/btn-wizard.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
         <span class="plate-txt">🧙 Ask the Wizard</span>
       </button>
-    </div>
-    <div class="ask-row" style="margin-top: 10px;">
-      <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this)" placeholder="🎙 Now say it — the note, or the question. The plates above send it."></textarea>
     </div>
     <div class="frow" style="margin-top: 10px; align-items: center; flex-wrap: nowrap;">
       <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0;"></select>
@@ -2570,7 +2570,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.82 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.83 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
