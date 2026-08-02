@@ -2741,7 +2741,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.97 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.98 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4860,6 +4860,7 @@ function renderNotePhotoList() {
   }).join('') + (notePhotos.length > 1 ? `<span class="hint" style="align-self: center;">${notePhotos.length} photos ready</span>` : '');
   el.innerHTML = html;
   const qn = $('qnPhotoInfo'); if (qn) qn.innerHTML = html; // quick card and note panel share the same staged photos
+  qnAutoDraft(); // 📝 a freshly-read photo takes the first swing at the note
 }
 // single-photo pickers (to-do): live preview + ✕ to un-pick
 const photoPv = {}; // inpId -> { url, ocr, status }
@@ -4910,6 +4911,31 @@ async function ocrRead(f) {
   const w = await tessWorker();
   const { data } = await w.recognize(f);
   return (data.text || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+}
+// 📝 v4.98 — the machine writes the first draft: once a staged photo is read (📄✓ OCR or
+// 🔮✓ Wizard), a suggested note drops into the empty box. Eric taps ⚙ to approve, edits it,
+// or wipes it and writes his own. His typed words are NEVER overwritten — drafts only ever
+// land in an empty box or replace an earlier draft as better reading arrives.
+let _qnDraft = '';
+function qnAutoDraft() {
+  const box = $('askText');
+  if (!box || !notePhotos.length) return;
+  if (box.value.trim() && box.value !== _qnDraft) return; // Eric's own words stand
+  const parts = notePhotos.map(f => {
+    const m = fcMeta.get(f) || {};
+    if (m.ai) return m.ai;
+    if (m.ocr) {
+      const lines = m.ocr.split('\n').map(s => s.trim()).filter(Boolean);
+      return lines.slice(0, 2).join(' — ').slice(0, 140);
+    }
+    return '';
+  }).filter(Boolean);
+  const draft = parts.join('\n');
+  if (!draft || draft === _qnDraft && box.value === _qnDraft) return;
+  _qnDraft = draft;
+  box.value = draft;
+  fitTa(box);
+  toast('📝 Drafted from the photo — ⚙ to approve, or fix the words first');
 }
 function queueOcr(f) {
   const m = fileMeta(f);
@@ -5465,7 +5491,7 @@ function saveNoteFrom(boxId, fromPanel) {
     }).catch(() => {});
   }
   qnJobPick = ''; renderAllJobChips(); // the wheel snaps back after every send
-  notePhotos = []; renderNotePhotoList(); // hand the File objects to the uploader; metas stay until it's done
+  notePhotos = []; _qnDraft = ''; renderNotePhotoList(); // hand the File objects to the uploader; metas stay until it's done
   if (routed) renderMyRequests(); // the strip pops up right away, ✓ SENT lit
   if (nExtra.ask) renderAskStrip();
   toast(routed ? `📨 Saved for ${routed} — it reaches them on the next sync ✓`
