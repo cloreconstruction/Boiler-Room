@@ -2729,7 +2729,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.92 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.93 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5779,7 +5779,9 @@ function renderReview() {
         ${p.payload.photoPath ? `<div class="rev-row"><button class="btn-ghost" onclick="showPhoto('${escq(p.payload.photoPath)}')">📷 View the photo</button></div>` : ''}
         <div class="field" style="margin-top: 8px;"><textarea id="revAns-${esc(String(p.id))}" rows="2" class="grow" placeholder="what it is / what to do with it"></textarea></div>`;
       if (p.kind === 'text') body = `<div class="rev-text">From <b>${esc(p.payload.from || '?')}</b></div>
-        <div class="rev-why" style="font-size: 13.5px; color: var(--ink-2); white-space: pre-wrap;">${esc((p.payload.body || '').slice(0, 500))}</div>`;
+        <div class="rev-why" style="font-size: 13.5px; color: var(--ink-2); white-space: pre-wrap;">${esc((p.payload.body || '').slice(0, 500))}</div>
+        ${(p.payload.photos || []).length ? `<div class="rev-row">${p.payload.photos.map((ph, i) =>
+          `<button class="btn-ghost" onclick="showPhoto('${escq(ph)}')">📷 View photo${p.payload.photos.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}</div>` : ''}`;
       if (p.kind === 'match') body = `<div class="rev-text">I saw <b>${esc(p.payload.seen || '')}</b> come in${p.payload.job && p.payload.job !== '—' ? ` on ${esc(p.payload.job)}` : ''} — looks like your to-do: <b>${esc(p.payload.todo || '')}</b>. Did you handle it?</div>`;
       if (p.kind === 'crew') body = `<div class="rev-text"><b>${esc(p.payload.from || '?')}</b> — ${p.payload.type === 'Done' ? '✅ FINISHED: ' : p.payload.type !== 'Note' ? '⏱ ' : ''}${esc((p.payload.text || 'Shift').slice(0, 300))}</div>
         <div class="rev-why">${[p.payload.job, p.payload.category, p.payload.hours != null ? (+p.payload.hours).toFixed(1) + ' hrs' : '', p.payload.day,
@@ -5856,18 +5858,21 @@ function reviewAct(id, accept) {
       const who = crew.includes(pay.from) ? pay.from : undefined;
       // 📚 v4.91 — pile it: files the text as a note TAGGED with the sender, so
       // "give me the Ashman list" hands Eric the whole pile when he's ready to sit with it
+      const phs = (pay.photos || []).filter(Boolean);
+      const phBits = phs.length ? { photoPath: phs[0], photoPaths: phs } : {}; // photos travel with whatever it becomes
+      const phNote = phs.length ? ` (📷 ${phs.length} photo${phs.length > 1 ? 's' : ''})` : '';
       if (accept === 'pile') {
         const from = (pay.from || 'Unknown').trim();
         if (!knownTags().some(x => x.toLowerCase() === from.toLowerCase())) prefs.tags.unshift(from);
-        addEntry('Note', `Text from ${from}: ${(pay.body || '').slice(0, 800)}`, j, { tags: [from], ...(who ? { who } : {}) });
+        addEntry('Note', `Text from ${from}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { tags: [from], ...phBits, ...(who ? { who } : {}) });
         renderTagChips();
         toast(`📚 Piled under ${from} — ask the Wizard for "the ${from} list" when you're ready ✓`);
       } else if (accept === 'todo') {
         todos.unshift({ id: nextId++, text: `${pay.from ? pay.from + ': ' : ''}${(pay.body || '').slice(0, 200)}`, job: j,
-          done: false, who: who || 'Me', pri: 1, ts: new Date().toISOString() });
-        toast('To-do made from the text ✓');
+          done: false, who: who || 'Me', pri: 1, ts: new Date().toISOString(), ...phBits });
+        toast('To-do made from the text ✓' + (phs.length ? ' — photo rides on it' : ''));
       } else {
-        addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}`, j, who ? { who } : {});
+        addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { ...phBits, ...(who ? { who } : {}) });
         toast('Text logged ✓');
       }
     } else if (p.kind === 'match') {
@@ -5944,16 +5949,50 @@ async function checkInboxTexts() {
   if (!dbx.refreshToken) return;
   try {
     const r = await dbxRpc('files/list_folder', { path: DBX_ROOT + '/Inbox', recursive: false });
-    const files = (r.entries || []).filter(f => f['.tag'] === 'file' && /^text\b.*\.txt$/i.test(f.name));
+    const all = (r.entries || []).filter(f => f['.tag'] === 'file');
+    const files = all.filter(f => /^text\b.*\.txt$/i.test(f.name));
+    // v4.92 — MMS photos: any image the Shortcut saves with the same TEXT name rides on the card.
+    // Claimed into /Inbox/Text Photos right away so the nightly sorter can't file them elsewhere.
+    const imgs = all.filter(f => /^text\b.*\.(jpe?g|png|heic|heif|webp|gif)$/i.test(f.name));
+    const stem = n => n.replace(/\s*\(\d+\)(?=\.[^.]+$)/, '').replace(/\.[^.]+$/, '').toLowerCase().trim();
+    const claim = async im => {
+      const dest = DBX_ROOT + '/Inbox/Text Photos/' + im.name;
+      try {
+        const mv = await dbxRpc('files/move_v2', { from_path: im.path_lower, to_path: dest, autorename: true });
+        return ((mv.metadata && mv.metadata.path_lower) || dest.toLowerCase());
+      } catch (err) { return im.path_lower; } // couldn't move — point at where it sits
+    };
+    const claimed = new Set();
     for (const f of files.slice(0, 20)) {
       const id = 'text:' + f.name;
-      if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) continue;
+      const mine = imgs.filter(im => stem(im.name) === stem(f.name));
+      const queued = pendingQueue.find(p => p.id === id);
+      if (queued && mine.length) { // photo landed after the card — attach late, never twice
+        for (const im of mine) {
+          claimed.add(im.name);
+          const ph = (queued.payload.photos = queued.payload.photos || []);
+          if (ph.some(x => x.split('/').pop() === im.name.toLowerCase())) continue;
+          ph.push(await claim(im));
+        }
+      }
+      if (pendDone.has(id) || queued) { mine.forEach(im => claimed.add(im.name)); continue; }
       const txt = (await dbxDownload(f.path_lower)) || '';
       const m = txt.match(/^FROM:\s*(.+)$/im);
       let from = m ? m[1].trim() : '';
       if (!from) { const fm = f.name.match(/^text\s*-\s*([^-]+)/i); from = fm ? fm[1].trim() : '?'; }
       const body = txt.replace(/^FROM:.*$/im, '').trim();
-      pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower } });
+      const photos = [];
+      for (const im of mine) { claimed.add(im.name); photos.push(await claim(im)); }
+      pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower, photos } });
+    }
+    // a TEXT photo with no matching txt still gets its own card — never silently lost
+    for (const im of imgs) {
+      if (claimed.has(im.name)) continue;
+      const id = 'text:' + im.name;
+      if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) continue;
+      const fm = im.name.match(/^text\s*-\s*([^-]+)/i);
+      pendingQueue.push({ id, kind: 'text', source: im.name, payload: {
+        from: fm ? fm[1].trim() : '?', body: '(photo only — no words)', path: im.path_lower, photos: [await claim(im)] } });
     }
     renderPendBanner();
   } catch (e) { /* no Inbox or offline — quiet */ }
