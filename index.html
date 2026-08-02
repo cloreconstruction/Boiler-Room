@@ -1681,6 +1681,13 @@
   body.crew-mode .cap-btn[data-panel="file"], body.crew-mode .cap-btn[data-panel="mileage"],
   body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"],
   body.crew-mode #qnVisRow, body.crew-mode #nVisChips, body.crew-mode #coBillRow { display: none !important; }
+  /* v4.95 — 🔥 hot card: thick frame + spelled words + slow breathing, never color alone */
+  .hot-card { border: 3px solid var(--err, #b3452f); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px;
+    animation: hotBreathe 2.2s ease-in-out infinite; }
+  .hot-head { font-weight: 800; letter-spacing: 1.2px; font-size: 13px; margin-bottom: 6px; }
+  .hot-body { font-size: 16.5px; line-height: 1.4; margin-bottom: 10px; white-space: pre-wrap; }
+  @keyframes hotBreathe { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.22); } }
+  @media (prefers-reduced-motion: reduce) { .hot-card { animation: none; } }
   /* v4.91 — 📨 request status strips: achieved stages BRIGHT + ✓/★ + spelled word, pending dim + · .
      Answered = thicker frame, never color alone. */
   .req-strip { border: 2px solid; border-color: color-mix(in srgb, var(--accent) 34%, transparent); border-radius: 12px; padding: 8px 10px; margin-top: 8px; }
@@ -1936,6 +1943,9 @@
   </header>
 
   <button id="crewBadge" style="display: none;" onclick="crewBadgeTap()"></button>
+
+  <!-- v4.95 — 🔥 hot cards: time-critical texts pinned at the VERY top until Eric deals with them -->
+  <div id="hotStrip"></div>
 
   <!-- v4.55 — ONE box on top: write a note or ask the Wizard, two buttons decide where it goes -->
   <div class="card ask-card qn-card" id="qnCard">
@@ -2729,7 +2739,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.94 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.95 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5756,8 +5766,37 @@ function renderPendBanner() {
   const b = $('pendBanner');
   if (!b) return;
   const n = pendingQueue.length;
+  const hotN = pendingQueue.filter(p => p.payload && p.payload.hot).length;
   b.style.display = n ? '' : 'none';
-  if (n) b.innerHTML = `📥 <b>${n} item${n === 1 ? '' : 's'} waiting for review</b> — tap to go through ${n === 1 ? 'it' : 'them'}<span class="ab-go">›</span>`;
+  if (n) b.innerHTML = `📥 <b>${n} item${n === 1 ? '' : 's'} waiting for review</b>${hotN ? ` · <b>🔥 ${hotN} HOT</b>` : ''} — tap to go through ${n === 1 ? 'it' : 'them'}<span class="ab-go">›</span>`;
+  renderHotCards();
+}
+// --- 🔥 v4.95 hot cards: a text that smells like a TODAY commitment ("pouring Mery's today",
+// "delivery at 8", "inspection tomorrow") doesn't wait politely in review. It pins to the very
+// top of the screen and BREATHES until Eric acts on it. Kevin's pour never slips by again.
+const HOT_TIME = /\b(today|tonight|tomorrow|this (morning|afternoon|evening)|right now|asap|first thing|in the morning|by (monday|tuesday|wednesday|thursday|friday|saturday|sunday)|at \d{1,2}(:\d{2})?\s*(a\.?m\.?|p\.?m\.?)?)\b/i;
+const HOT_ACT = /\b(pour|pouring|concrete|deliver|delivery|dropping off|inspect|inspection|inspector|crane|truck|meet|meeting|call me|need you|show(ing)? up|start|starting|schedule[ds]?|shut ?off|leak|flood|froze|broke|broken|no (water|power|heat))\b/i;
+function hotScan(t) {
+  t = String(t || '');
+  return (HOT_TIME.test(t) && HOT_ACT.test(t)) || /\b(urgent|emergency|911|asap)\b/i.test(t);
+}
+function renderHotCards() {
+  const box = $('hotStrip');
+  if (!box) return;
+  if (isCrew()) { box.innerHTML = ''; return; }
+  const hot = pendingQueue.filter(p => p.payload && p.payload.hot);
+  box.innerHTML = hot.map(p => `
+    <div class="hot-card" role="alert">
+      <div class="hot-head">🔥 NEEDS YOU — <b>${esc(p.payload.from || '?')}</b></div>
+      <div class="hot-body">${esc((p.payload.body || '').slice(0, 240))}</div>
+      ${(p.payload.photos || []).length ? `<div class="rev-row">${p.payload.photos.map(ph =>
+        `<button class="btn-ghost" onclick="showPhoto('${escq(ph)}')">📷 View photo</button>`).join('')}</div>` : ''}
+      <div class="rev-row">
+        <button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'todo')">➕ To-do for TODAY</button>
+        <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Handled — log it</button>
+        <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not important</button>
+      </div>
+    </div>`).join('');
 }
 const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '💬 Text message', crew: '👷 From the crew', match: '⚙ The Grinder noticed' };
 const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', tomorrow: '🌙 by tomorrow' };
@@ -5868,9 +5907,11 @@ function reviewAct(id, accept) {
         renderTagChips();
         toast(`📚 Piled under ${from} — ask the Wizard for "the ${from} list" when you're ready ✓`);
       } else if (accept === 'todo') {
+        // 🔥 a hot text becomes a TODAY to-do at full pressure — it stays in sight on the board
         todos.unshift({ id: nextId++, text: `${pay.from ? pay.from + ': ' : ''}${(pay.body || '').slice(0, 200)}`, job: j,
-          done: false, who: who || 'Me', pri: 1, ts: new Date().toISOString(), ...phBits });
-        toast('To-do made from the text ✓' + (phs.length ? ' — photo rides on it' : ''));
+          done: false, who: who || 'Me', pri: pay.hot ? 3 : 1, due: pay.hot ? localDay(new Date()) : undefined,
+          ts: new Date().toISOString(), ...phBits });
+        toast(pay.hot ? '🔥 On the board for TODAY, top pressure ✓' : 'To-do made from the text ✓' + (phs.length ? ' — photo rides on it' : ''));
       } else {
         addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { noSniff: true, ...phBits, ...(who ? { who } : {}) });
         toast('Text logged ✓');
@@ -5984,7 +6025,14 @@ async function checkInboxTexts() {
       const body = txt.replace(/^FROM:.*$/im, '').trim();
       const photos = [];
       for (const im of mine) { claimed.add(im.name); photos.push(await claim(im)); }
-      pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower, photos } });
+      const hot = hotScan(body) || undefined; // 🔥 time-critical commitment → pinned + ding
+      pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower, photos, hot } });
+      if (hot && !CREW_NAME && prefs.pushSecret) {
+        fetch('/.netlify/functions/notify', { method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
+          body: JSON.stringify({ title: `🔥 ${from} — needs you`, body: body.slice(0, 140), tag: 'hot-text' })
+        }).catch(() => {});
+      }
     }
     // a TEXT photo with no matching txt still gets its own card — never silently lost
     for (const im of imgs) {
