@@ -1671,11 +1671,17 @@
   }
   #crewRoute { display: none; }
   body.crew-mode #crewRoute { display: block; }
-  body.crew-mode #summaryBtn, body.crew-mode #dayTubeCard,
+  body.crew-mode #dayTubeCard,
   body.crew-mode .ask-foot, body.crew-mode #qnTagChips, body.crew-mode .kpis,
   body.crew-mode .cap-btn[data-panel="file"], body.crew-mode .cap-btn[data-panel="mileage"],
   body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"],
   body.crew-mode #qnVisRow, body.crew-mode #nVisChips, body.crew-mode #coBillRow { display: none !important; }
+  /* v4.89 — crew DO get the Summaries button now, but only the list Eric unlocked:
+     money, Ask-Claude and Generate stay Eric-only, and the 🔓 unlock buttons are his too */
+  body.crew-mode #sumMoneySec, body.crew-mode #sumAskSec, body.crew-mode #sumGenRow,
+  body.crew-mode #sumGenHint, body.crew-mode .sum-lock,
+  body.crew-mode #pendBanner, body.crew-mode #planBanner { display: none !important; }
+  .sum-lock { flex: none; font-size: .72rem; padding: 4px 8px; margin: 0 6px; white-space: nowrap; }
   /* v4.85 — tags: 4-across, every cell identical, easy to hit */
   #qnTagChips, #nTagChips {
     display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
@@ -1938,7 +1944,7 @@
     <!-- crew only: who it's for + how soon -->
     <div id="crewRoute">
       <div class="field" style="margin: 10px 0 6px;"><label>Send it to</label></div>
-      <div class="chip-grid chip-grid--3" id="routeChips"></div>
+      <div class="chip-grid" id="routeChips"></div>
       <div class="field" style="margin: 10px 0 6px;"><label>How soon</label></div>
       <div class="chip-grid chip-grid--3" id="urgChips"></div>
     </div>
@@ -2418,7 +2424,7 @@
 
   <div class="panel" id="panel-summary">
     <h3>Summaries</h3>
-    <div class="set-section fc-sec">
+    <div class="set-section fc-sec" id="sumMoneySec">
       <h4>💰 Money</h4>
       <div class="frow">
         <button class="btn-ghost" style="flex: 1; min-width: 150px;" onclick="openMoneyPage('ticker')">💰 Profit Ticker<br><span class="hint" style="display: block; margin: 3px 0 0;">your 3% · cash in vs out · office only</span></button>
@@ -2431,7 +2437,7 @@
       <h4>Summaries — newest on top, tap to open</h4>
       <div id="sumList"></div>
     </div>
-    <div class="set-section fc-sec">
+    <div class="set-section fc-sec" id="sumAskSec">
       <h4>Ask Claude (optional)</h4>
       <div class="frow" style="margin-bottom: 8px;">
         <div class="field" style="flex: 1; min-width: 220px;"><label>Ask for records — or ask any question</label><textarea id="sumWhat" class="grow" rows="2" oninput="fitTa(this)" placeholder="invoices for Mery · what did I pay Chafin? · what's due next week?"></textarea></div>
@@ -2443,10 +2449,10 @@
       </div>
       <div class="hint" style="margin-top: 8px;">Leave everything empty for the normal day summary. Type a search and you get a targeted report; type a <b>question</b> and Claude writes an answer page — both show up under Latest, with a phone notification when ready. Claude searches the log <b>and</b> the files in Dropbox.</div>
     </div>
-    <div class="frow">
+    <div class="frow" id="sumGenRow">
       <button class="btn-primary" onclick="summaryNow()">📊 Generate</button>
     </div>
-    <div class="hint">Summaries and reports generate within the hour of a request (phone notification when ready) and save to Dropbox / Clore DayLog / Summaries. The weekly one writes itself every Friday evening. Need an answer right now? Ask in the Claude chat instead — that's minutes, not an hour.</div>
+    <div class="hint" id="sumGenHint">Summaries and reports generate within the hour of a request (phone notification when ready) and save to Dropbox / Clore DayLog / Summaries. The weekly one writes itself every Friday evening. Need an answer right now? Ask in the Claude chat instead — that's minutes, not an hour.</div>
   </div>
 
   <div class="panel" id="panel-todo">
@@ -2685,7 +2691,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.88 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.89 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5526,6 +5532,11 @@ function mdToHtml(md) {
   }).join('').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 }
 // v4.56 — no more auto-opened "Latest": one list, newest on top with a ★, tap opens full screen
+// v4.89 — summaries are reviewed-then-released: Eric reads first, taps 🔓 to copy one into every
+// crew folder's Summaries (with a ding). Crew see ONLY what he unlocked — their DBX_ROOT is their
+// own crew folder, so their list reads from the copies, never from Eric's originals.
+let sumShared = new Set();
+try { sumShared = new Set(JSON.parse(lsGet('daylog-sum-shared') || '[]')); } catch (e) {}
 async function loadSummaryList() {
   $('sumList').innerHTML = '<span class="hint">loading…</span>';
   try {
@@ -5533,12 +5544,41 @@ async function loadSummaryList() {
     const files = (r.entries || []).filter(f => f['.tag'] === 'file')
       .sort((a, b) => (b.server_modified || '').localeCompare(a.server_modified || ''));
     $('sumList').innerHTML = files.length
-      ? files.map((f, i) => `<div class="sum-row" onclick="openSummaryFile('${escq(f.path_lower)}', '${escq(f.name)}')">
+      ? files.map((f, i) => {
+        const shared = sumShared.has(f.path_lower);
+        const lock = isCrew() ? '' : `<button class="btn-ghost sum-lock" aria-pressed="${shared}"
+            title="${shared ? 'Shared — tap again to send the newest version' : 'Unlock this one for the crew'}"
+            onclick="shareSummary(event, '${escq(f.path_lower)}', '${escq(f.name)}')">${shared ? '✅ SHARED' : '🔓 Unlock'}</button>`;
+        return `<div class="sum-row" onclick="openSummaryFile('${escq(f.path_lower)}', '${escq(f.name)}')">
           <span class="sum-title">${i === 0 ? '<span class="sum-star">★ LATEST</span> ' : ''}📄 ${esc(f.name.replace(/\.(html|md|pdf)$/, ''))}</span>
-          <span class="hint" style="margin:0; flex:none;">open →</span>
-        </div>`).join('')
-      : '<span class="hint">None yet — your first weekly summary writes itself Friday evening.</span>';
+          ${lock}<span class="hint" style="margin:0; flex:none;">open →</span>
+        </div>`;
+      }).join('')
+      : `<span class="hint">${isCrew() ? 'Nothing here yet — Eric unlocks summaries for the crew when they\'re ready.'
+        : 'None yet — your first weekly summary writes itself Friday evening.'}</span>`;
   } catch (e) { $('sumList').innerHTML = '<span class="hint">Couldn\'t load the list.</span>'; }
+}
+// 🔓 review-then-release: copies the summary into every /Crew/<name>/Summaries and rings the ding.
+// Tapping again after a summary regenerates re-sends the newest text (upload = overwrite, never delete).
+async function shareSummary(ev, p, name) {
+  if (ev) ev.stopPropagation();
+  if (isCrew() || !dbx.refreshToken) return;
+  try {
+    toast('🔓 Unlocking for the crew…');
+    const txt = await dbxDownload(p);
+    if (txt == null) throw new Error('missing');
+    const r = await dbxRpc('files/list_folder', { path: '/Clore DayLog/Crew', recursive: false });
+    const folks = (r.entries || []).filter(f => f['.tag'] === 'folder');
+    if (!folks.length) { toast('No crew folders yet — ⚙ Setup → Set up crew folders first', false); return; }
+    for (const f of folks) await dbxUpload((f.path_display || f.path_lower) + '/Summaries/' + name, txt);
+    sumShared.add(p); lsSet('daylog-sum-shared', JSON.stringify([...sumShared]));
+    loadSummaryList();
+    if (prefs.pushSecret) fetch('/.netlify/functions/notify', { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
+      body: JSON.stringify({ title: '📊 Summary unlocked', body: name.replace(/\.(html|md|pdf)$/, '') + ' is ready — open Summaries to read it', tag: 'sum-share' })
+    }).catch(() => {});
+    toast(`🔓 Unlocked for ${folks.length} crew ✓`);
+  } catch (e) { toast("Couldn't unlock — check Dropbox and try again", false); }
 }
 // Money pages (v4.47) — the profit ticker + client tracker live as HTML in App Data,
 // PRIVATE in Eric's Dropbox (never bundled into the public Netlify app), and open in
@@ -5657,11 +5697,14 @@ function renderReview() {
         <div class="field" style="margin-top: 8px;"><textarea id="revAns-${esc(String(p.id))}" rows="2" class="grow" placeholder="what it is / what to do with it"></textarea></div>`;
       if (p.kind === 'text') body = `<div class="rev-text">From <b>${esc(p.payload.from || '?')}</b></div>
         <div class="rev-why" style="font-size: 13.5px; color: var(--ink-2); white-space: pre-wrap;">${esc((p.payload.body || '').slice(0, 500))}</div>`;
-      if (p.kind === 'crew') body = `<div class="rev-text"><b>${esc(p.payload.from || '?')}</b> — ${p.payload.type !== 'Note' ? '⏱ ' : ''}${esc((p.payload.text || 'Shift').slice(0, 300))}</div>
+      if (p.kind === 'crew') body = `<div class="rev-text"><b>${esc(p.payload.from || '?')}</b> — ${p.payload.type === 'Done' ? '✅ FINISHED: ' : p.payload.type !== 'Note' ? '⏱ ' : ''}${esc((p.payload.text || 'Shift').slice(0, 300))}</div>
         <div class="rev-why">${[p.payload.job, p.payload.category, p.payload.hours != null ? (+p.payload.hours).toFixed(1) + ' hrs' : '', p.payload.day,
           p.payload.route && p.payload.route !== 'The Grinder' ? '📨 for ' + p.payload.route : '', URG_WORDS[p.payload.urg] || ''].filter(Boolean).join(' · ')}</div>`;
       const meta = [p.payload && p.payload.job ? p.payload.job : '', p.source || '', p.payload && p.payload.due ? 'due ' + p.payload.due : ''].filter(Boolean).join(' · ');
-      const btns = (p.kind === 'text' || p.kind === 'crew')
+      const btns = (p.kind === 'crew' && p.payload.type === 'Done')
+        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Check it off my list too</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
+        : (p.kind === 'text' || p.kind === 'crew')
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'todo')">➕ Make it a to-do</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
@@ -5720,6 +5763,11 @@ function reviewAct(id, accept) {
         addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}`, j, who ? { who } : {});
         toast('Text logged ✓');
       }
+    } else if (p.kind === 'crew' && pay.type === 'Done' && pay.srcRef) {
+      // 👷 finished an assigned to-do — one tap closes Eric's copy (and logs the Done)
+      const mine = todos.find(t => 'e' + t.id === pay.srcRef);
+      if (mine && !mine.done) { toggleTodo(mine.id, null, true); renderTodos(); renderKpis(); renderDayTube(); scheduleSave(); }
+      toast(mine ? `✅ ${pay.from} finished it — checked off your list ✓` : `✅ Noted — that to-do is already off your list`);
     } else if (p.kind === 'crew') {
       const who = crew.includes(pay.from) ? pay.from : pay.from;
       if (accept === 'todo') {
@@ -5879,7 +5927,7 @@ async function refreshCrewCfg() {
 
 // --- routing + urgency on the crew quick note ---
 let qnRoute = '', qnUrg = '';
-const CREW_ROUTES = ['Phil', 'Eric', 'The Grinder'];
+const CREW_ROUTES = ['Phil', 'Eric']; // no Grinder chip — the big plate below already grinds it
 const CREW_URGS = [['now', '🔥 I need it NOW'], ['hours', '⏳ In a few hours'], ['tomorrow', '🌙 Tomorrow']];
 function setRoute(r) { qnRoute = qnRoute === r ? '' : r; renderRouteChips(); }
 function setUrg(u) { qnUrg = qnUrg === u ? '' : u; renderRouteChips(); }
@@ -5973,8 +6021,14 @@ async function publishSharedNotes() {
       id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, text: e.details, job: e.job,
       tags: (e.tags && e.tags.length) ? e.tags : undefined, toAll: e.vis === 'crew' || undefined
     }));
-    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list }, null, 1);
-    const key = name + ':' + JSON.stringify(list);
+    // v4.89 — to-dos with their name on them travel too: they land straight on that
+    // person's list, already assigned. Eric marks one done (or reassigns) → it leaves
+    // their phone on the next sweep. Crew never triage; they just see their orders.
+    const tlist = todos.filter(t => !t.done && !t.parentId && t.who === name).slice(0, 40).map(t => ({
+      id: t.id, text: t.text, job: t.job, due: t.due || undefined, pri: t.pri || 1
+    }));
+    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist }, null, 1);
+    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist);
     if (_sharedCache[name] === key) continue; // nothing changed for this person
     try {
       await dbxUpload(`${CREW_DIR}/${cleanName(name)}/shared.json`, body);
@@ -5992,6 +6046,27 @@ async function checkSharedNotes() {
     const j = JSON.parse(t);
     crewShared = (j.notes || []).slice(0, 100);
     renderCrewShared();
+    // v4.89 — Eric's assigned to-dos land straight on this phone's list, no triage step.
+    // shared.json is the source of truth: Eric finishing/reassigning one pulls it back off
+    // (unless it's already checked here — a done to-do stays done for the 24-hr victory lap).
+    const inc = (j.todos || []).slice(0, 60);
+    const have = new Set(todos.map(x => x.srcId).filter(Boolean));
+    const incIds = new Set(inc.map(x => 'e' + x.id));
+    let fresh = 0;
+    inc.forEach(x => {
+      if (!x || !x.text || have.has('e' + x.id)) return;
+      const t2 = { id: nextId++, srcId: 'e' + x.id, fromEric: true, text: String(x.text), done: false,
+        job: jobs.includes(x.job) ? x.job : (jobs[0] || '—'), who: 'Me',
+        due: /^\d{4}-\d{2}-\d{2}$/.test(x.due || '') ? x.due : undefined,
+        pri: Math.min(Math.max(+x.pri || 1, 0), 3), ts: new Date().toISOString() };
+      todos.unshift(t2); fresh++;
+    });
+    const before = todos.length;
+    todos = todos.filter(x => !(x.fromEric && !x.done && !incIds.has(x.srcId)));
+    if (fresh || todos.length !== before) {
+      renderTodos(); renderKpis(); scheduleSave();
+      if (fresh) toast(`📨 Eric put ${fresh} to-do${fresh === 1 ? '' : 's'} on your list ✓`);
+    }
   } catch (e) { /* none yet */ }
 }
 function renderCrewShared() {
@@ -6118,13 +6193,14 @@ async function checkCrewLogs() {
       if (!j) continue;
       const name = f.name;
       (j.entries || []).slice(0, 250).forEach(e => {
-        if (!['Clock', 'Hours', 'Note'].includes(e.type)) return;
+        // Done entries only count when they close one of Eric's assigned to-dos (srcRef)
+        if (!['Clock', 'Hours', 'Note'].includes(e.type) && !(e.type === 'Done' && e.srcRef)) return;
         const key = `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}`;
         if (pendDone.has(key) || pendingQueue.some(p => p.id === key)) return;
         pendingQueue.push({ id: key, kind: 'crew', source: name, payload: {
           from: name, type: e.type, text: e.details || '', job: e.job || '',
           hours: e.hours, category: e.category || '', route: e.route || '', urg: e.urg || '',
-          day: String(e.ts).slice(0, 10) } });
+          srcRef: e.srcRef || '', day: String(e.ts).slice(0, 10) } });
       });
     }
     renderPendBanner();
@@ -6451,7 +6527,7 @@ async function askInstant(what) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
         max_tokens: 1200,
-        system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 if urgent>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Never invent amounts or dates.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
+        system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 only if Eric SAYS it is urgent — a quick personal reminder ("remind me to…") is pri 1 no matter how old it gets>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Never invent amounts or dates.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
         messages: [{ role: 'user', content: buildAskContext(what) + fileCtx + '\n\nERIC\'S QUESTION: ' + what }]
       })
     });
@@ -6474,6 +6550,7 @@ async function askInstant(what) {
           pri: Math.min(Math.max(+it.pri || 1, 0), 3),
           ts: new Date().toISOString()
         };
+        if (t.due && t.due > localDay(new Date())) t.waitUntil = t.due; // 💤 sleeps until its day
         todos.unshift(t); made.unshift(t);
       });
       renderTodos(); renderKpis(); scheduleSave();
@@ -6495,12 +6572,17 @@ async function askInstant(what) {
         pri: Math.min(Math.max(+cmd.pri || 1, 0), 3),
         ts: new Date().toISOString()
       };
+      // 💤 v4.89 — a reminder with a future date SLEEPS until that day. It doesn't sit on the
+      // open list gathering guilt: it's parked in Waiting and wakes up when it's actually relevant.
+      if (t.due && t.due > localDay(new Date())) t.waitUntil = t.due;
       todos.unshift(t);
       renderTodos(); renderKpis(); scheduleSave();
       $('askText').value = ''; fitTa('askText');
       delete st.dataset.busy; wizIdleLamp();
-      st.textContent = `✓ To-do added: "${t.text}"${t.due ? ' · due ' + t.due : ''}${t.who !== 'Me' ? ' · ' + t.who : ''} · ${t.job}`;
-      toast(`To-do added — ${t.text} ✓`);
+      st.textContent = t.waitUntil
+        ? `💤 Reminder set: "${t.text}" — sleeping until ${t.due}. It's off your list until then.`
+        : `✓ To-do added: "${t.text}"${t.due ? ' · due ' + t.due : ''}${t.who !== 'Me' ? ' · ' + t.who : ''} · ${t.job}`;
+      toast(t.waitUntil ? `💤 Sleeping until ${t.due} — ${t.text} ✓` : `To-do added — ${t.text} ✓`);
       return;
     }
     $('askText').value = ''; fitTa('askText');
@@ -6765,7 +6847,8 @@ function toggleTodo(id, ev, quiet) {
   t.done = !t.done;
   if (t.done) {
     t.doneAt = new Date().toISOString();
-    addEntry('Done', t.text, t.job, { filedTo: 'To-Dos — completed', todoRef: t.id });
+    // srcRef rides on the Done entry so Eric's phone can match it back to HIS copy of the to-do
+    addEntry('Done', t.text, t.job, { filedTo: 'To-Dos — completed', todoRef: t.id, ...(t.srcId ? { srcRef: t.srcId } : {}) });
     toast(`Done ✓ — logged: ${t.text.slice(0, 44)}${t.text.length > 44 ? '…' : ''}`);
   } else {
     delete t.doneAt;
