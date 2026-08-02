@@ -2741,7 +2741,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.01 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.02 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5071,16 +5071,23 @@ function billMaybeSuggest(f, meta) {
     if (CREW_NAME) return;
     let due = meta.aiDue || '', amt = meta.aiDueAmt != null ? meta.aiDueAmt : meta.aiTotal;
     if (!due && meta.ocr) { const p = billParseOcr(meta.ocr); due = p.due; if (amt == null) amt = p.amt; }
-    if (!due || due <= localDay(new Date())) return; // no future due date = not a bill to chase
+    if (!due) return;
+    const today = localDay(new Date());
+    // a due date that JUST passed (≤45 days) is MORE urgent, not less — likely still owed.
+    // Anything older is history and stays quiet.
+    const ageDays = Math.round((new Date(today) - new Date(due)) / 86400000);
+    if (due <= today && ageDays > 45) return;
+    const overdue = due <= today;
     const vendor = (meta.ai || '').match(/\[([^\]—]+)/);
     const who = vendor ? vendor[1].trim() : 'this bill';
     const id = `bill:${due}:${String(who).toLowerCase().slice(0, 20)}`;
     if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
     pendingQueue.push({ id, kind: 'todo', payload: {
-      text: `Pay ${who}${amt != null ? ` — $${amt}` : ''}`, due, pri: 2, job: curJob,
-      note: `From the statement photo — due ${due}. Check the photo if the number looks off.` } });
+      text: `${overdue ? '⚠ OVERDUE — ' : ''}Pay ${who}${amt != null ? ` — $${amt}` : ''}`,
+      due: overdue ? today : due, pri: overdue ? 3 : 2, job: curJob,
+      note: `From the statement photo — ${overdue ? `statement said due ${due} (already passed!)` : `due ${due}`}. Check the photo if the number looks off.` } });
     renderPendBanner(); savePendingSoon();
-    toast(`💳 Bill spotted — due ${due}${amt != null ? ` · $${amt}` : ''}. Suggested to-do is in review ✓`);
+    toast(overdue ? `⚠ 💳 OVERDUE bill spotted — was due ${due}! Suggested to-do is in review` : `💳 Bill spotted — due ${due}${amt != null ? ` · $${amt}` : ''}. Suggested to-do is in review ✓`);
     if (prefs.pushSecret) {
       fetch('/.netlify/functions/notify', { method: 'POST',
         headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
