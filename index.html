@@ -1676,6 +1676,11 @@
   body.crew-mode .cap-btn[data-panel="file"], body.crew-mode .cap-btn[data-panel="mileage"],
   body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"],
   body.crew-mode #qnVisRow, body.crew-mode #nVisChips, body.crew-mode #coBillRow { display: none !important; }
+  /* v4.90 — 📢 crew ask: Eric's question pops loud on every crew phone until somebody answers.
+     State reads by size + glyph + spelled words, never color alone. */
+  .crew-ask { border: 3px solid var(--accent); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+  .crew-ask-head { font-weight: 800; letter-spacing: 1.2px; font-size: 13px; margin-bottom: 6px; }
+  .crew-ask-q { font-size: 16px; margin-bottom: 8px; }
   /* v4.89 — crew DO get the Summaries button now, but only the list Eric unlocked:
      money, Ask-Claude and Generate stay Eric-only, and the 🔓 unlock buttons are his too */
   body.crew-mode #sumMoneySec, body.crew-mode #sumAskSec, body.crew-mode #sumGenRow,
@@ -1945,6 +1950,7 @@
     <div id="crewRoute">
       <div class="field" style="margin: 10px 0 6px;"><label>Send it to</label></div>
       <div class="chip-grid" id="routeChips"></div>
+      <div class="hint" style="margin-top: 6px;">No pick needed for the ⚙ Grinder — that's for end-of-day photos and anything you want on record.</div>
       <div class="field" style="margin: 10px 0 6px;"><label>How soon</label></div>
       <div class="chip-grid chip-grid--3" id="urgChips"></div>
     </div>
@@ -1964,6 +1970,9 @@
     <button class="app-banner" id="pendBanner" style="display: none;" onclick="openReview()"></button>
     <button class="app-banner" id="planBanner" style="display: none;" onclick="openPlanner()"></button>
   </div>
+
+  <!-- crew only: 📢 questions from Eric that need an answer — loud until somebody sends one -->
+  <div class="card" id="crewAskCard" style="display: none;"></div>
 
   <!-- crew only: notes Eric unlocked or sent to this person -->
   <div class="card" id="crewSharedCard" style="display: none;">
@@ -2691,7 +2700,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.89 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.90 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5352,8 +5361,9 @@ function saveNoteFrom(boxId, fromPanel) {
   if (isCrew()) { // routed note: who it's for + how soon ride on the entry for Eric's review cards
     if (qnRoute && qnRoute !== 'The Grinder') nExtra.route = qnRoute;
     if (qnUrg) nExtra.urg = qnUrg;
-  } else if (qnVis) {
-    nExtra.vis = qnVis; // 🔓 unlocked — travels to the crew folder(s) on the next sweep
+  } else if (qnVis || qnAsk) {
+    nExtra.vis = qnVis || 'crew'; // 🔓 unlocked — travels to the crew folder(s) on the next sweep
+    if (qnAsk) nExtra.ask = true; // ❓ pops up on their phones until somebody answers
   }
   const routed = nExtra.route;
   const noteJob = (!fromPanel && qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : curJob;
@@ -5370,11 +5380,20 @@ function saveNoteFrom(boxId, fromPanel) {
     }).catch(() => {});
   }
   qnRoute = ''; qnUrg = ''; renderRouteChips();
-  const vis = qnVis; qnVis = ''; renderVisChips(); // back to 🔒 for the next note
+  const vis = nExtra.vis || '', wasAsk = qnAsk;
+  qnVis = ''; qnAsk = false; renderVisChips(); // back to 🔒 for the next note
   if (vis) publishSharedNotes(); // fire it toward the crew folder right away when online
+  if (wasAsk && !isCrew() && prefs.pushSecret) {
+    // 📢 an ask rings the phones right now — the card itself rides the sweep
+    fetch('/.netlify/functions/notify', { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
+      body: JSON.stringify({ title: '📢 Eric needs an answer', body: t.slice(0, 140), tag: 'crew-ask' })
+    }).catch(() => {});
+  }
   qnJobPick = ''; renderAllJobChips(); // the wheel snaps back after every send
   notePhotos = []; renderNotePhotoList(); // hand the File objects to the uploader; metas stay until it's done
   toast(routed ? `📨 Saved for ${routed} — it reaches them on the next sync ✓`
+    : wasAsk ? `📢 Question sent to ${vis === 'crew' ? 'the crew' : vis} — their phones will ding, card clears when somebody answers ✓`
     : vis ? `${vis === 'crew' ? '🔓 Unlocked for all crew' : '📨 Sent to ' + vis} · ${noteJob} ✓`
     : `Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`);
   if (photos.length) attachEntryPhotos(e, photos, `Job Notes/${cleanName(noteJob)}`);
@@ -5852,6 +5871,7 @@ function applyRole() {
   renderWorkCatSel();
   renderWageTick();
   renderCrewShared();
+  renderCrewAsks();
 }
 function crewPreviewToggle() {
   crewPreview = !crewPreview;
@@ -5935,7 +5955,7 @@ function renderRouteChips() {
   const rc = $('routeChips'), uc = $('urgChips');
   if (!rc || !uc) return;
   rc.innerHTML = CREW_ROUTES.map(r =>
-    `<button class="pick-chip grid-chip${qnRoute === r ? ' sel' : ''}" onclick="setRoute('${escq(r)}')" aria-pressed="${qnRoute === r}"><span>${qnRoute === r ? '✓ ' : (r === 'The Grinder' ? '⚙ ' : '📨 ')}${esc(r)}</span></button>`).join('');
+    `<button class="pick-chip grid-chip${qnRoute === r ? ' sel' : ''}" onclick="setRoute('${escq(r)}')" aria-pressed="${qnRoute === r}"><span>${qnRoute === r ? '✓ ' : '🔔 '}Needs ${esc(r)}'s attention</span></button>`).join('');
   uc.innerHTML = CREW_URGS.map(([k, w]) =>
     `<button class="pick-chip grid-chip${qnUrg === k ? ' sel' : ''}" onclick="setUrg('${escq(k)}')" aria-pressed="${qnUrg === k}"><span>${qnUrg === k ? '✓ ' : ''}${esc(w)}</span></button>`).join('');
 }
@@ -5978,11 +5998,14 @@ function renderCrewGauges() {
 // Unlocked notes get rewritten into each crew folder's shared.json on every sweep, so
 // locking a note back up REMOVES it from their side on the next pass. Nothing else travels.
 let qnVis = ''; // '' = just me
+let qnAsk = false; // v4.90 — ❓ this note is a QUESTION: it pops up on crew phones until somebody answers
 function setVis(v) { qnVis = v; renderVisChips(); }
+function toggleAsk() { qnAsk = !qnAsk; renderVisChips(); }
 function renderVisChips() {
   const opts = [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
   const html = opts.map(([v, w]) =>
     `<button type="button" class="pick-chip${qnVis === v ? ' sel' : ''}" onclick="setVis('${escq(v)}')" aria-pressed="${qnVis === v}">${qnVis === v ? '✓ ' : ''}${esc(w)}</button>`).join('') +
+    `<button type="button" class="pick-chip${qnAsk ? ' sel' : ''}" onclick="toggleAsk()" aria-pressed="${qnAsk}" title="Rings their phones and stays up big until somebody answers — then it clears for everyone">${qnAsk ? '✓ ' : ''}❓ Needs an answer</button>` +
     `<button type="button" class="pick-chip" onclick="visNewInput(this)" title="Add a person">➕ person</button>`;
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (el) el.innerHTML = html; });
 }
@@ -6017,9 +6040,15 @@ async function publishSharedNotes() {
   if (!dbx.refreshToken || CREW_NAME || !crew.length) return;
   const shared = entries.filter(e => e.vis && !e.sample).slice(0, 120);
   for (const name of crew) {
-    const list = shared.filter(e => e.vis === 'crew' || e.vis === name).map(e => ({
+    const mineFor = shared.filter(e => e.vis === 'crew' || e.vis === name);
+    const list = mineFor.filter(e => !e.ask).map(e => ({
       id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, text: e.details, job: e.job,
       tags: (e.tags && e.tags.length) ? e.tags : undefined, toAll: e.vis === 'crew' || undefined
+    }));
+    // ❓ open asks travel separately and LOUD; an answered ask (askDone) drops off every phone
+    const asks = mineFor.filter(e => e.ask && !e.askDone).slice(0, 10).map(e => ({
+      id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, q: e.details, job: e.job,
+      toAll: e.vis === 'crew' || undefined
     }));
     // v4.89 — to-dos with their name on them travel too: they land straight on that
     // person's list, already assigned. Eric marks one done (or reassigns) → it leaves
@@ -6027,8 +6056,8 @@ async function publishSharedNotes() {
     const tlist = todos.filter(t => !t.done && !t.parentId && t.who === name).slice(0, 40).map(t => ({
       id: t.id, text: t.text, job: t.job, due: t.due || undefined, pri: t.pri || 1
     }));
-    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist }, null, 1);
-    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist);
+    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks }, null, 1);
+    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks);
     if (_sharedCache[name] === key) continue; // nothing changed for this person
     try {
       await dbxUpload(`${CREW_DIR}/${cleanName(name)}/shared.json`, body);
@@ -6046,6 +6075,8 @@ async function checkSharedNotes() {
     const j = JSON.parse(t);
     crewShared = (j.notes || []).slice(0, 100);
     renderCrewShared();
+    crewAsks = (j.asks || []).slice(0, 10);
+    renderCrewAsks();
     // v4.89 — Eric's assigned to-dos land straight on this phone's list, no triage step.
     // shared.json is the source of truth: Eric finishing/reassigning one pulls it back off
     // (unless it's already checked here — a done to-do stays done for the 24-hr victory lap).
@@ -6068,6 +6099,44 @@ async function checkSharedNotes() {
       if (fresh) toast(`📨 Eric put ${fresh} to-do${fresh === 1 ? '' : 's'} on your list ✓`);
     }
   } catch (e) { /* none yet */ }
+}
+// --- 📢 v4.90 crew ask: Eric's question stays up big on every crew phone until ONE answer lands.
+// The answer rides back as a routed NOW note with askRef; Eric's phone marks the ask done and the
+// next sweep clears the card off everyone. Answered-here asks hide locally right away.
+let crewAsks = [];
+const asksAnswered = new Set(JSON.parse(lsGet('daylog-asks-answered') || '[]'));
+function renderCrewAsks() {
+  const card = $('crewAskCard');
+  if (!card) return;
+  // in Eric's 👁 preview, derive from his own open asks so he sees exactly what pops up
+  const list = (crewPreview
+    ? entries.filter(e => e.ask && !e.askDone && e.vis && !e.sample).map(e => ({ id: e.id, q: e.details, job: e.job }))
+    : crewAsks).filter(a => !asksAnswered.has(String(a.id)));
+  card.style.display = (isCrew() && list.length) ? '' : 'none';
+  if (!isCrew() || !list.length) return;
+  card.innerHTML = list.map(a => `
+    <div class="crew-ask">
+      <div class="crew-ask-head">📢 ERIC NEEDS AN ANSWER</div>
+      <div class="crew-ask-q">${esc(a.q || '')}${a.job ? `<span class="hint" style="margin: 0;"> — ${esc(a.job)}</span>` : ''}</div>
+      <textarea id="askAns-${esc(String(a.id))}" rows="2" class="grow" placeholder="answer here — 36 and a half, swings left…"></textarea>
+      <button class="btn-primary" style="margin-top: 6px;" onclick="answerAsk('${escq(String(a.id))}', '${escq(a.job || '')}')">↩ Send the answer</button>
+    </div>`).join('');
+}
+function answerAsk(id, job) {
+  if (crewPreview) { toast('👁 Preview — on a crew phone this sends the answer straight to you'); return; }
+  const box = $('askAns-' + id);
+  const txt = (box && box.value.trim()) || '';
+  if (!txt) { toast('Type the answer first', false); return; }
+  addEntry('Note', `↩ ANSWER: ${txt}`, jobs.includes(job) ? job : curJob, { route: 'Eric', urg: 'now', askRef: +id || id });
+  asksAnswered.add(String(id)); lsSet('daylog-asks-answered', JSON.stringify([...asksAnswered].slice(-50)));
+  if (lsGet('daylog-push-secret')) {
+    fetch('/.netlify/functions/notify', { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-push-secret': lsGet('daylog-push-secret') },
+      body: JSON.stringify({ title: `↩ ${CREW_NAME || 'Crew'} answered`, body: txt.slice(0, 140), tag: 'crew-ask' })
+    }).catch(() => {});
+  }
+  renderCrewAsks();
+  toast('↩ Answer sent to Eric ✓');
 }
 function renderCrewShared() {
   const card = $('crewSharedCard');
@@ -6195,6 +6264,12 @@ async function checkCrewLogs() {
       (j.entries || []).slice(0, 250).forEach(e => {
         // Done entries only count when they close one of Eric's assigned to-dos (srcRef)
         if (!['Clock', 'Hours', 'Note'].includes(e.type) && !(e.type === 'Done' && e.srcRef)) return;
+        // ↩ an answer closes the 📢 ask by itself — next sweep clears the card off every phone.
+        // (The answer text still lands below as a review card for Eric to read.)
+        if (e.type === 'Note' && e.askRef != null) {
+          const src = entries.find(x => x.id === e.askRef && x.ask && !x.askDone);
+          if (src) { src.askDone = new Date().toISOString(); scheduleSave(); publishSharedNotes(); }
+        }
         const key = `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}`;
         if (pendDone.has(key) || pendingQueue.some(p => p.id === key)) return;
         pendingQueue.push({ id: key, kind: 'crew', source: name, payload: {
@@ -7706,7 +7781,7 @@ function deleteLogEntry() {
 }
 function renderAll() { renderKpis(); renderLog(); renderChart(); renderTodos();
   renderDayTube(); renderPipeSelect(); updateClockGauge(); renderPendBanner(); renderPlanBanner();
-  renderTagChips(); renderCrewGauges(); renderVisChips(); renderCrewShared();
+  renderTagChips(); renderCrewGauges(); renderVisChips(); renderCrewShared(); renderCrewAsks();
 }
 
 // ---------- export ----------
