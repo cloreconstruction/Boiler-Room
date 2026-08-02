@@ -2741,7 +2741,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.98 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.99 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6852,7 +6852,8 @@ function buildAskContext(question) {
     pool = live.slice(0, 140);
   }
   const slim = pool.map(e => {
-    const o = { d: localDay(e.ts), t: e.type, x: e.details, j: e.job };
+    const o = { id: e.id, d: localDay(e.ts), t: e.type, x: e.details, j: e.job };
+    if (e.photoPath || (e.photoPaths && e.photoPaths.length)) o.hasPhoto = true;
     if (e.amount != null) o.amt = e.amount;
     if (e.hours != null) o.hrs = e.hours;
     if (e.miles != null) o.mi = e.miles;
@@ -6888,10 +6889,43 @@ function buildAskContext(question) {
   const crewCtx = CREW_NAME
     ? `\nNOTES ERIC SHARED (the ONLY Eric data visible here): ${JSON.stringify(crewShared.slice(0, 60).map(n => ({ d: String(n.ts).slice(0, 10), x: n.text, j: n.job })))}`
     : '';
-  return `TODAY: ${new Date().toString()}${rangeLine}${crewCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first): ${JSON.stringify(slim)}`;
+  const followCtx = (!CREW_NAME && _lastAnswer && Date.now() - _lastAnswer.at < 15 * 60000)
+    ? `\nPREVIOUS EXCHANGE (moments ago — use it to resolve follow-up questions and pronouns):\nQ: ${_lastAnswer.q}\nA: ${String(_lastAnswer.text).slice(0, 900)}`
+    : '';
+  return `TODAY: ${new Date().toString()}${rangeLine}${crewCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first): ${JSON.stringify(slim)}`;
+}
+// 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
+// offers their photos, a follow-up within 15 minutes remembers the exchange, and
+// "Correction: ..." teaches it — the fix lands on the source entry AND in the log.
+let _lastAnswer = null; // { q, text, srcIds, at }
+function wizCorrectStart() {
+  const box = $('askText');
+  if (!box) return;
+  box.value = 'Correction: ';
+  box.focus();
+  fitTa(box);
+  toast('Say what was wrong — then 🧙. It sticks to the record for every future answer.');
 }
 async function askInstant(what) {
   const st = $('askStatus');
+  // ✎ a correction never goes to the model — it goes to the RECORD
+  const corrM = what.match(/^\s*correction[:\-–]?\s*(.+)/is);
+  if (corrM && corrM[1].trim()) {
+    const corr = corrM[1].trim().slice(0, 500);
+    let touched = 0;
+    if (_lastAnswer && (_lastAnswer.srcIds || []).length) {
+      _lastAnswer.srcIds.forEach(id => {
+        const e = entries.find(x => x.id === id);
+        if (e) { e.ai = (((e.ai ? e.ai + '\n' : '') + 'ERIC CORRECTED: ' + corr)).slice(0, 2000); touched++; }
+      });
+    }
+    addEntry('Note', `✎ Correction${_lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, curJob, { noSniff: true });
+    scheduleSave();
+    $('askText').value = ''; fitTa('askText');
+    st.textContent = `✓ Correction saved${touched ? ' onto the record it came from' : ''} — the Wizard uses it from now on.`;
+    toast('✎ Correction on the books ✓');
+    return;
+  }
   st.dataset.busy = '1';
   st.textContent = '⚙ Asking the Wizard…';
   setWizLamp('thinking');
@@ -6919,7 +6953,7 @@ async function askInstant(what) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
         max_tokens: 1200,
-        system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 only if Eric SAYS it is urgent — a quick personal reminder ("remind me to…") is pri 1 no matter how old it gets>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Never invent amounts or dates.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
+        system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 only if Eric SAYS it is urgent — a quick personal reminder ("remind me to…") is pri 1 no matter how old it gets>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Never invent amounts or dates. When your answer relies on specific log entries, end with one final line exactly like: SOURCES: 123, 456 — listing those entries\' "id" values (omit the line entirely if none apply). Numbers read from a photo ("photoText") can be OCR-garbled — when an amount or count comes only from photoText, say it may be worth checking the photo.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
         messages: [{ role: 'user', content: buildAskContext(what) + fileCtx + '\n\nERIC\'S QUESTION: ' + what }]
       })
     });
@@ -6980,8 +7014,13 @@ async function askInstant(what) {
     $('askText').value = ''; fitTa('askText');
     delete st.dataset.busy; wizIdleLamp();
     st.textContent = '✓ Answered just now.';
-    showInstantAnswer(what, text);
-    saveRecentAnswer(what, text);
+    // 🧾 pull the citation line off the answer; it powers the photo buttons + corrections
+    let clean = text, srcIds = [];
+    const sm = text.match(/\n?\s*SOURCES?:\s*([\d,\s]+)\s*$/i);
+    if (sm) { clean = text.slice(0, sm.index).trim(); srcIds = sm[1].split(/[\s,]+/).map(Number).filter(Boolean); }
+    _lastAnswer = { q: what, text: clean, srcIds, at: Date.now() };
+    showInstantAnswer(what, clean, srcIds);
+    saveRecentAnswer(what, clean);
   } catch (e) {
     delete st.dataset.busy; wizIdleLamp();
     st.textContent = '⚠ Instant answer failed (' + (e.message || 'connection') + ') — sent to the hourly check instead.';
@@ -7009,11 +7048,19 @@ function reopenAnswer(i) {
   if (r) showInstantAnswer(r.q, r.a);
 }
 let _lastAns = null;
-function showInstantAnswer(q, md) {
+function showInstantAnswer(q, md, srcIds) {
   // answer lands right in the Wizard card; full screen is one tap away
   _lastAns = { q, md };
   $('aiQ').textContent = q;
-  $('aiBody').innerHTML = mdToHtml(md);
+  // 🧾 the receipts row: photos behind the answer + the correction pencil
+  const srcs = (srcIds || []).map(id => entries.find(e => e.id === id)).filter(Boolean);
+  const phSrcs = srcs.filter(e => e.photoPath || (e.photoPaths && e.photoPaths.length));
+  const tools = `<div class="rev-row" style="margin-top: 10px; flex-wrap: wrap;">` +
+    phSrcs.slice(0, 3).map((e, i) =>
+      `<button class="btn-ghost" onclick="showPhoto('${escq((e.photoPath || e.photoPaths[0]))}')">📷 See the photo it read${phSrcs.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('') +
+    `<button class="btn-ghost" onclick="wizCorrectStart()">✎ Wrong? Correct it</button>` +
+    `</div><div class="hint" style="margin-top: 6px;">Follow-up? Just ask — I hold this exchange for 15 minutes.</div>`;
+  $('aiBody').innerHTML = mdToHtml(md) + tools;
   $('askInline').style.display = '';
   const card = document.querySelector('.ask-card');
   if (card && card.scrollIntoView) card.scrollIntoView({ block: 'nearest' });
