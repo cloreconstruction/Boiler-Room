@@ -2570,7 +2570,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.83 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.84 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4358,7 +4358,7 @@ function renderAllJobChips() {
   // v4.66 — the pick is per-note: it rides on that one note, then the wheel snaps back
   const qn = $('qnJob');
   const qsel = qnJobPick || curJob;
-  if (qn) qn.innerHTML = [...new Set([qsel, curJob, ...ordered])].map(j => `<option${j === qsel ? ' selected' : ''}>${esc(j)}</option>`).join('');
+  if (qn) qn.innerHTML = [...new Set([qsel, curJob, ...ordered])].sort((a, b) => a.localeCompare(b)).map(j => `<option${j === qsel ? ' selected' : ''}>${esc(j)}</option>`).join('');
   renderFcJobSel();
 }
 function renderTruckChips() {
