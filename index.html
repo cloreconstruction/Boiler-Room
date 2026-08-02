@@ -1534,6 +1534,11 @@
     transition: transform 700ms cubic-bezier(.2,.85,.3,1);
   }
   @media (prefers-reduced-motion: reduce) { #bcNeedleG { transition: none; } }
+  /* v4.91 — the on-the-clock lamp pulses: rhythm says LIVE (never color alone; the panel
+     words + needle + CLOCK OUT plate carry the state too) */
+  #bigClock[data-state="in"] #bcLampGlow { animation: bcBreathe 1.8s ease-in-out infinite; }
+  @keyframes bcBreathe { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { #bigClock[data-state="in"] #bcLampGlow { animation: none; opacity: 1; } }
   /* v4.67 — layered CLOCK IN control (Eric's package): still background, moving brass */
   .punch-lever, .cp-wrap { display: none !important; }
   .clock-in-control {
@@ -1676,6 +1681,19 @@
   body.crew-mode .cap-btn[data-panel="file"], body.crew-mode .cap-btn[data-panel="mileage"],
   body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"],
   body.crew-mode #qnVisRow, body.crew-mode #nVisChips, body.crew-mode #coBillRow { display: none !important; }
+  /* v4.91 — 📨 request status strips: achieved stages BRIGHT + ✓/★ + spelled word, pending dim + · .
+     Answered = thicker frame, never color alone. */
+  .req-strip { border: 2px solid; border-color: color-mix(in srgb, var(--accent) 34%, transparent); border-radius: 12px; padding: 8px 10px; margin-top: 8px; }
+  .req-strip.req-answered { border-color: var(--accent); border-width: 3px; }
+  .req-txt { font-size: 13.5px; margin-bottom: 5px; }
+  .req-stages { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 11px; letter-spacing: .5px; }
+  .req-st { opacity: .38; font-weight: 600; white-space: nowrap; }
+  .req-st.on { opacity: 1; font-weight: 800; }
+  .req-arrow { opacity: .38; }
+  .req-x { margin-top: 6px; font-size: .72rem; padding: 3px 8px; }
+  /* v4.91 — crew mostly ask Eric or Phil, not the Wizard: Grinder stays big, Wizard steps back */
+  body.crew-mode .plate-row { align-items: center; }
+  body.crew-mode .plate-btn--wiz { flex: 0 0 30%; }
   /* v4.90 — 📢 crew ask: Eric's question pops loud on every crew phone until somebody answers.
      State reads by size + glyph + spelled words, never color alone. */
   .crew-ask { border: 3px solid var(--accent); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
@@ -1953,6 +1971,8 @@
       <div class="hint" style="margin-top: 6px;">No pick needed for the ⚙ Grinder — that's for end-of-day photos and anything you want on record.</div>
       <div class="field" style="margin: 10px 0 6px;"><label>How soon</label></div>
       <div class="chip-grid chip-grid--3" id="urgChips"></div>
+      <!-- v4.91 — your sent requests + their live status lamps -->
+      <div id="myReqStrip"></div>
     </div>
     <div class="ask-foot">
       <span id="askStatus" class="hint" style="margin-top: 0;">⚙ grinds it into the log · 🧙 answers from it.</span>
@@ -1970,6 +1990,8 @@
     <button class="app-banner" id="pendBanner" style="display: none;" onclick="openReview()"></button>
     <button class="app-banner" id="planBanner" style="display: none;" onclick="openPlanner()"></button>
   </div>
+  <!-- v4.91 — Eric's open 📢 asks and their status -->
+  <div id="askStrip"></div>
 
   <!-- crew only: 📢 questions from Eric that need an answer — loud until somebody sends one -->
   <div class="card" id="crewAskCard" style="display: none;"></div>
@@ -2084,6 +2106,11 @@
         <text x="823" y="536" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-weight="700" fill="#a08a55" letter-spacing="6">— JOB —</text>
         <!-- lamp dimmer (visible = lamp dark = off the clock) -->
         <circle id="bcLampOff" cx="963" cy="228" r="31" fill="rgba(8,10,6,0.78)"/>
+        <!-- v4.91 — clocked in: the lamp BREATHES so it reads as live, not painted art -->
+        <g id="bcLampGlow" style="display: none;">
+          <circle cx="963" cy="228" r="52" fill="rgba(246,235,180,0.35)" style="filter: blur(10px);"/>
+          <circle cx="963" cy="228" r="30" fill="rgba(252,246,214,0.5)" style="filter: blur(3px);"/>
+        </g>
         <!-- clocked in: the plate itself reads CLOCK OUT, engraved in the same brass -->
         <g id="bcAnnun" style="display: none;">
           <image x="215" y="1000" width="434" height="106" href="steam/plate-blank.jpg" preserveAspectRatio="none"/>
@@ -2700,7 +2727,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.90 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.91 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4247,6 +4274,7 @@ function bcRender() {
   const hh = Math.floor(hrs), mm = Math.floor(hrs * 60) % 60;
   $('bcTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   $('bcLampOff').style.display = st.clockedIn ? 'none' : '';
+  if ($('bcLampGlow')) $('bcLampGlow').style.display = st.clockedIn ? '' : 'none'; // 💡 breathing = live
   $('bcAnnun').style.display = st.clockedIn ? '' : 'none';
   const un = $('undoPunch');
   if (un) {
@@ -4508,8 +4536,10 @@ function renderAllJobChips() {
   // quick-note card: one clean pull-down, recent jobs first (v4.54 — Eric wanted it uncrowded)
   // v4.66 — the pick is per-note: it rides on that one note, then the wheel snaps back
   const qn = $('qnJob');
-  const qsel = qnJobPick || curJob;
-  if (qn) qn.innerHTML = [...new Set([qsel, curJob, ...ordered])].sort((a, b) => a.localeCompare(b)).map(j => `<option${j === qsel ? ' selected' : ''}>${esc(j)}</option>`).join('');
+  // v4.91 — the wheel STARTS BLANK every time: pick a job, or leave it and the note files
+  // as unfiled instead of silently landing on whatever job happened to be current.
+  if (qn) qn.innerHTML = `<option value=""${qnJobPick ? '' : ' selected'}>— choose job, or leave blank —</option>` +
+    [...new Set(jobs)].sort((a, b) => a.localeCompare(b)).map(j => `<option${j === qnJobPick ? ' selected' : ''}>${esc(j)}</option>`).join('');
   renderFcJobSel();
 }
 function renderTruckChips() {
@@ -5366,7 +5396,8 @@ function saveNoteFrom(boxId, fromPanel) {
     if (qnAsk) nExtra.ask = true; // ❓ pops up on their phones until somebody answers
   }
   const routed = nExtra.route;
-  const noteJob = (!fromPanel && qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : curJob;
+  // v4.91 — quick note: blank wheel = honestly unfiled ('—'), never a silent guess
+  const noteJob = fromPanel ? curJob : (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : '—';
   const e = addEntry('Note', t, noteJob, nExtra);
   aiRegisterLate(photos, 'entry', e.id);
   ['nText', 'askText'].forEach(id => { if ($(id)) { $(id).value = ''; fitTa(id); } });
@@ -5392,6 +5423,8 @@ function saveNoteFrom(boxId, fromPanel) {
   }
   qnJobPick = ''; renderAllJobChips(); // the wheel snaps back after every send
   notePhotos = []; renderNotePhotoList(); // hand the File objects to the uploader; metas stay until it's done
+  if (routed) renderMyRequests(); // the strip pops up right away, ✓ SENT lit
+  if (nExtra.ask) renderAskStrip();
   toast(routed ? `📨 Saved for ${routed} — it reaches them on the next sync ✓`
     : wasAsk ? `📢 Question sent to ${vis === 'crew' ? 'the crew' : vis} — their phones will ding, card clears when somebody answers ✓`
     : vis ? `${vis === 'crew' ? '🔓 Unlocked for all crew' : '📨 Sent to ' + vis} · ${noteJob} ✓`
@@ -5726,6 +5759,7 @@ function renderReview() {
         : (p.kind === 'text' || p.kind === 'crew')
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'todo')">➕ Make it a to-do</button>
+           ${p.kind === 'text' ? `<button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'pile')">📚 Pile it under ${esc(p.payload.from || '?')}</button>` : ''}
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
         : `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', true)">✓ ${p.kind === 'question' ? 'Save answer' : 'Add it'}</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ No</button>`;
@@ -5738,7 +5772,17 @@ function renderReview() {
     }).join('') +
     `<div class="rev-row"><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close — finish later</button></div>`;
 }
-function openReview() { renderReview(); $('revModal').classList.add('show'); document.body.classList.add('modal-open'); }
+function openReview() {
+  // 📨 receipt stamp #2 — the sender's card is now on Eric's screen
+  let stamped = false;
+  pendingQueue.forEach(p => {
+    if (p.kind === 'crew' && p.payload && p.payload.route && p.payload.type === 'Note' && p.source) {
+      if (setAck(p.source, String(p.id).split(':')[2], 'opened')) stamped = true;
+    }
+  });
+  if (stamped) publishSharedNotes();
+  renderReview(); $('revModal').classList.add('show'); document.body.classList.add('modal-open');
+}
 function closeReview() {
   $('revModal').classList.remove('show');
   if (!document.querySelector('.panel.open')) document.body.classList.remove('modal-open');
@@ -5774,7 +5818,15 @@ function reviewAct(id, accept) {
       toast('Note added ✓');
     } else if (p.kind === 'text') {
       const who = crew.includes(pay.from) ? pay.from : undefined;
-      if (accept === 'todo') {
+      // 📚 v4.91 — pile it: files the text as a note TAGGED with the sender, so
+      // "give me the Ashman list" hands Eric the whole pile when he's ready to sit with it
+      if (accept === 'pile') {
+        const from = (pay.from || 'Unknown').trim();
+        if (!knownTags().some(x => x.toLowerCase() === from.toLowerCase())) prefs.tags.unshift(from);
+        addEntry('Note', `Text from ${from}: ${(pay.body || '').slice(0, 800)}`, j, { tags: [from], ...(who ? { who } : {}) });
+        renderTagChips();
+        toast(`📚 Piled under ${from} — ask the Wizard for "the ${from} list" when you're ready ✓`);
+      } else if (accept === 'todo') {
         todos.unshift({ id: nextId++, text: `${pay.from ? pay.from + ': ' : ''}${(pay.body || '').slice(0, 200)}`, job: j,
           done: false, who: who || 'Me', pri: 1, ts: new Date().toISOString() });
         toast('To-do made from the text ✓');
@@ -5789,6 +5841,8 @@ function reviewAct(id, accept) {
       toast(mine ? `✅ ${pay.from} finished it — checked off your list ✓` : `✅ Noted — that to-do is already off your list`);
     } else if (p.kind === 'crew') {
       const who = crew.includes(pay.from) ? pay.from : pay.from;
+      // 📨 receipt stamp #3 — acting on a routed request lights ★ ANSWERED on their phone
+      if (pay.type === 'Note' && pay.route) { setAck(p.source, String(p.id).split(':')[2], 'answered'); publishSharedNotes(); }
       if (accept === 'todo') {
         todos.unshift({ id: nextId++, text: `${pay.from}: ${(pay.text || '').slice(0, 200)}`, job: j,
           done: false, who: 'Me', pri: pay.urg === 'now' ? 3 : pay.urg === 'hours' ? 2 : 1,
@@ -5872,6 +5926,8 @@ function applyRole() {
   renderWageTick();
   renderCrewShared();
   renderCrewAsks();
+  renderMyRequests();
+  renderAskStrip();
 }
 function crewPreviewToggle() {
   crewPreview = !crewPreview;
@@ -6050,14 +6106,19 @@ async function publishSharedNotes() {
       id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, q: e.details, job: e.job,
       toAll: e.vis === 'crew' || undefined
     }));
+    // 📨 receipt stamps for THIS person's requests ride along
+    const acks = {};
+    Object.entries(prefs.crewAcks || {}).forEach(([k, v]) => {
+      if (k.startsWith(name + ':')) acks[k.slice(name.length + 1)] = v;
+    });
     // v4.89 — to-dos with their name on them travel too: they land straight on that
     // person's list, already assigned. Eric marks one done (or reassigns) → it leaves
     // their phone on the next sweep. Crew never triage; they just see their orders.
     const tlist = todos.filter(t => !t.done && !t.parentId && t.who === name).slice(0, 40).map(t => ({
       id: t.id, text: t.text, job: t.job, due: t.due || undefined, pri: t.pri || 1
     }));
-    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks }, null, 1);
-    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks);
+    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks }, null, 1);
+    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks);
     if (_sharedCache[name] === key) continue; // nothing changed for this person
     try {
       await dbxUpload(`${CREW_DIR}/${cleanName(name)}/shared.json`, body);
@@ -6077,6 +6138,8 @@ async function checkSharedNotes() {
     renderCrewShared();
     crewAsks = (j.asks || []).slice(0, 10);
     renderCrewAsks();
+    lsSet('daylog-req-acks', JSON.stringify(j.acks || {}));
+    renderMyRequests(); // 📨 light the receipt lamps
     // v4.89 — Eric's assigned to-dos land straight on this phone's list, no triage step.
     // shared.json is the source of truth: Eric finishing/reassigning one pulls it back off
     // (unless it's already checked here — a done to-do stays done for the 24-hr victory lap).
@@ -6099,6 +6162,67 @@ async function checkSharedNotes() {
       if (fresh) toast(`📨 Eric put ${fresh} to-do${fresh === 1 ? '' : 's'} on your list ✓`);
     }
   } catch (e) { /* none yet */ }
+}
+// --- 📨 v4.91 request receipts: crew see their request walk the line — SENT → RECEIVED →
+// OPENED → ANSWERED. Eric's phone stamps each stage into prefs.crewAcks; the stamps ride
+// shared.json back out. Words + glyphs + brightness carry the state, never color.
+const ACK_ORDER = { received: 1, opened: 2, answered: 3 };
+function setAck(name, entryId, stage) {
+  if (!name || entryId == null) return false;
+  if (!prefs.crewAcks) prefs.crewAcks = {};
+  const k = name + ':' + entryId;
+  if ((ACK_ORDER[prefs.crewAcks[k]] || 0) >= ACK_ORDER[stage]) return false;
+  prefs.crewAcks[k] = stage;
+  const ks = Object.keys(prefs.crewAcks);
+  if (ks.length > 200) ks.slice(0, ks.length - 200).forEach(x => delete prefs.crewAcks[x]);
+  scheduleSave();
+  return true;
+}
+const REQ_STAGES = [['sent', 'SENT'], ['received', 'RECEIVED'], ['opened', 'OPENED'], ['answered', 'ANSWERED']];
+function reqStageRow(n) {
+  return REQ_STAGES.map(([k, w], i) =>
+    `<span class="req-st${i < n ? ' on' : ''}">${i < n ? (i === 3 ? '★ ' : '✓ ') : '· '}${w}</span>`
+  ).join('<span class="req-arrow">→</span>');
+}
+function renderMyRequests() {
+  const box = $('myReqStrip');
+  if (!box) return;
+  if (!isCrew()) { box.innerHTML = ''; return; }
+  let acks = {}; try { acks = JSON.parse(lsGet('daylog-req-acks') || '{}'); } catch (e) {}
+  const dism = new Set(JSON.parse(lsGet('daylog-req-dismissed') || '[]'));
+  const reqs = entries.filter(e => e.type === 'Note' && e.route && !dism.has(String(e.id))).slice(0, 5);
+  box.innerHTML = reqs.map(e => {
+    const st = acks[String(e.id)] || 'sent';
+    const n = { sent: 1, received: 2, opened: 3, answered: 4 }[st] || 1;
+    return `<div class="req-strip${n === 4 ? ' req-answered' : ''}">
+      <div class="req-txt">📨 ${esc((e.details || '').slice(0, 70))} <span class="hint" style="margin: 0;">→ ${esc(e.route)}</span></div>
+      <div class="req-stages">${reqStageRow(n)}</div>
+      ${n === 4 ? `<button class="btn-ghost req-x" onclick="dismissReq('${escq(String(e.id))}')">✕ Got it</button>` : ''}
+    </div>`;
+  }).join('');
+}
+function dismissReq(id) {
+  const dism = new Set(JSON.parse(lsGet('daylog-req-dismissed') || '[]'));
+  dism.add(String(id)); lsSet('daylog-req-dismissed', JSON.stringify([...dism].slice(-100)));
+  renderMyRequests();
+}
+// Eric's mirror: his open 📢 asks, lit up the moment the answer lands in his review pile
+function renderAskStrip() {
+  const box = $('askStrip');
+  if (!box) return;
+  if (isCrew()) { box.innerHTML = ''; return; }
+  const asks = entries.filter(e => e.ask && !e.askSeen && !e.sample).slice(0, 4);
+  box.innerHTML = asks.map(e => e.askDone
+    ? `<div class="req-strip req-answered"><div class="req-txt">📢 ${esc((e.details || '').slice(0, 70))}</div>
+        <div class="req-stages"><span class="req-st on">✓ SENT</span><span class="req-arrow">→</span><span class="req-st on">★ ANSWERED — it's in your 📥 review pile</span></div>
+        <button class="btn-ghost req-x" onclick="dismissAsk('${escq(String(e.id))}')">✕ Got it</button></div>`
+    : `<div class="req-strip"><div class="req-txt">📢 ${esc((e.details || '').slice(0, 70))}</div>
+        <div class="req-stages"><span class="req-st on">✓ SENT — up on their phones</span><span class="req-arrow">→</span><span class="req-st">· ANSWERED</span></div></div>`).join('');
+}
+function dismissAsk(id) {
+  const e = entries.find(x => String(x.id) === id);
+  if (e) { e.askSeen = true; scheduleSave(); }
+  renderAskStrip();
 }
 // --- 📢 v4.90 crew ask: Eric's question stays up big on every crew phone until ONE answer lands.
 // The answer rides back as a routed NOW note with askRef; Eric's phone marks the ask done and the
@@ -6268,7 +6392,7 @@ async function checkCrewLogs() {
         // (The answer text still lands below as a review card for Eric to read.)
         if (e.type === 'Note' && e.askRef != null) {
           const src = entries.find(x => x.id === e.askRef && x.ask && !x.askDone);
-          if (src) { src.askDone = new Date().toISOString(); scheduleSave(); publishSharedNotes(); }
+          if (src) { src.askDone = new Date().toISOString(); scheduleSave(); publishSharedNotes(); renderAskStrip(); }
         }
         const key = `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}`;
         if (pendDone.has(key) || pendingQueue.some(p => p.id === key)) return;
@@ -6276,6 +6400,7 @@ async function checkCrewLogs() {
           from: name, type: e.type, text: e.details || '', job: e.job || '',
           hours: e.hours, category: e.category || '', route: e.route || '', urg: e.urg || '',
           srcRef: e.srcRef || '', day: String(e.ts).slice(0, 10) } });
+        if (e.type === 'Note' && e.route) setAck(name, e.id, 'received'); // 📨 receipt stamp #1
       });
     }
     renderPendBanner();
@@ -7782,6 +7907,7 @@ function deleteLogEntry() {
 function renderAll() { renderKpis(); renderLog(); renderChart(); renderTodos();
   renderDayTube(); renderPipeSelect(); updateClockGauge(); renderPendBanner(); renderPlanBanner();
   renderTagChips(); renderCrewGauges(); renderVisChips(); renderCrewShared(); renderCrewAsks();
+  renderMyRequests(); renderAskStrip();
 }
 
 // ---------- export ----------
