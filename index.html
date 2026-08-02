@@ -2570,7 +2570,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v4.81 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v4.82 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -3901,6 +3901,7 @@ function toggleClock() {
     wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); if (workCat) shiftCats.add(workCat);
     renderWorkCatSel();
     setClockBtn(true);
+    saveShift();
     $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
   } else {
     openClockOut();
@@ -3982,6 +3983,7 @@ function saveClockOut() {
   clockedInAt = null; clockJobName = null;
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); coCats = new Set(); coJob = '';
+  saveShift();
   setClockBtn(false);
   $('clockStatus').textContent = 'Clocked out';
   $('coNote').value = ''; fitTa('coNote');
@@ -4071,6 +4073,39 @@ function tcShiftState() {
   };
 }
 function tcRefresh() { if (tcGauge) { try { tcGauge.refresh(); } catch (e) {} } }
+// v4.82 — the running shift SURVIVES the app closing: every punch, break and category
+// switch is written to the phone immediately and restored on the next open. No more
+// "clock in again" after iOS kills the app or an update reloads it.
+function saveShift() {
+  if (!clockedInAt) { localStorage.removeItem('daylog-shift'); return; }
+  lsSet('daylog-shift', JSON.stringify({
+    at: clockedInAt.toISOString(), job: clockJobName,
+    brS: breakStart ? breakStart.toISOString() : null, brM: breakMins,
+    wb: wageBankCents, ws: wageSegStartSec, wc: workCat, cats: [...shiftCats]
+  }));
+}
+function restoreShift() {
+  let j = null;
+  try { j = JSON.parse(lsGet('daylog-shift') || 'null'); } catch (e) {}
+  if (!j || !j.at) return;
+  const at = new Date(j.at);
+  if (isNaN(at)) { localStorage.removeItem('daylog-shift'); return; }
+  if (Date.now() - at.getTime() > 20 * 3600000) {
+    localStorage.removeItem('daylog-shift');
+    toast(`⚠ Found an open shift from ${at.toLocaleDateString([], { weekday: 'long' })} that never got clocked out — it was NOT logged. Add it by hand in Hours.`, false);
+    return;
+  }
+  clockedInAt = at;
+  clockJobName = j.job || (jobs[0] || '—');
+  breakStart = j.brS ? new Date(j.brS) : null;
+  breakMins = j.brM || 0;
+  wageBankCents = j.wb || 0; wageSegStartSec = j.ws || 0; workCat = j.wc || '';
+  shiftCats = new Set(j.cats || []);
+  const sel = $('clockJob'); if (sel) sel.value = clockJobName;
+  setClockBtn(true);
+  $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
+  toast(`⏱ Still on the clock — ${esc(clockJobName)} since ${fmtTime(clockedInAt)} ✓`);
+}
 // v4.77 — the instrument panel: needle, readout, status and lamp all read REAL state
 function bcRender() {
   const g = $('bcNeedleG');
@@ -4097,6 +4132,7 @@ function undoPunch() {
   clockedInAt = null; clockJobName = null;
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set();
+  saveShift();
   setClockBtn(false);
   $('clockStatus').textContent = 'Clocked out';
   renderAll(); bcRender();
@@ -4210,7 +4246,7 @@ function toggleBreak() {
     breakStart = null;
     toast(`Back on it — ${breakMins} min of break today ✓`);
   }
-  renderBreakBtn(); tickTimer(); tcRefresh();
+  renderBreakBtn(); tickTimer(); tcRefresh(); saveShift();
 }
 function renderBreakBtn() {
   const b = $('breakBtn');
@@ -5862,6 +5898,7 @@ function setWorkCat(c) {
   workCat = c;
   if (c) shiftCats.add(c);
   renderWageTick();
+  if (clockedInAt) saveShift();
 }
 function renderWorkCatSel() {
   const el = $('workCatSel');
@@ -8063,8 +8100,7 @@ if (CREW_NAME) {
   try { const cj = JSON.parse(lsGet('daylog-crew-jobs') || '[]'); if (cj.length) { jobs = cj.slice(); renderJobSelects(); } } catch (e) {}
 }
 applyRole();
-// v4.69 — bring the shift-hours gauge to life off the app's real state (no control of its own;
-// the layered brass lever stays the one and only actuator)
+restoreShift(); // a shift that was running when the app closed picks right back up
 // v4.77 — the component gauge is retired; the instrument panel (bcRender) owns the display
 bcRender();
 renderAll();
