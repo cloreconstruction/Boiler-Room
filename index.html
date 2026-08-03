@@ -1698,6 +1698,16 @@
   .req-st.on { opacity: 1; font-weight: 800; }
   .req-arrow { opacity: .38; }
   .req-x { margin-top: 6px; font-size: .72rem; padding: 3px 8px; }
+  /* v5.08 — 🧙 full-screen answer + the running-log divider */
+  #wizFull { position: fixed; inset: 0; z-index: 320; background: var(--card, #17140d); display: none; flex-direction: column; }
+  #wizFull.show { display: flex; }
+  .wf-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px 18px 10px; font-size: 17px; line-height: 1.55; }
+  .wf-q { font-weight: 800; font-size: 13.5px; letter-spacing: .8px; color: var(--ink-2); margin-bottom: 12px; text-transform: uppercase; }
+  .wf-foot { padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 2px solid color-mix(in srgb, var(--accent) 34%, transparent); }
+  .wf-back { width: 100%; font-size: 17px; padding: 15px; font-weight: 800; letter-spacing: 1px; }
+  .qn-div { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; padding-top: 12px;
+    border-top: 2px solid color-mix(in srgb, var(--accent) 34%, transparent); }
+  .qn-div-label { font-size: 11px; font-weight: 800; letter-spacing: 1.3px; color: var(--ink-2); }
   /* ✓✓ v5.06 verification lamps: word + glyph + weight, never color alone */
   .vv { white-space: nowrap; letter-spacing: .4px; }
   .vv-on { font-weight: 800; opacity: 1; }
@@ -1911,6 +1921,11 @@
 <div class="rev-modal" id="planModal" onclick="if(event.target===this)closePlanner()">
   <div class="rev-box" id="planBox"></div>
 </div>
+<!-- v5.08 — 🧙 the answer and ONLY the answer: full screen, back button at the bottom -->
+<div id="wizFull">
+  <div class="wf-body" id="wizFullBody"></div>
+  <div class="wf-foot"><button class="btn-primary wf-back" onclick="closeWizFull()">‹ Back</button></div>
+</div>
 <div id="sumViewer">
   <div class="sv-head">
     <div class="sv-title" id="svTitle">Summary</div>
@@ -1991,9 +2006,16 @@
       <!-- v4.91 — your sent requests + their live status lamps -->
       <div id="myReqStrip"></div>
     </div>
+    <!-- v5.08 — hard divider: everything above is WRITING, everything below is the RUNNING LOG -->
+    <div class="qn-div">
+      <span class="qn-div-label">📜 RUNNING LOG</span>
+      <span style="display: flex; align-items: center; gap: 6px;">
+        <select id="runLogN" class="mini-sel" title="How many recent items show here" style="width: auto; min-height: 28px; padding: 2px 8px; font-size: 12px;" onchange="prefs.runLogN = +this.value; scheduleSave(); renderAskRecent();"><option>3</option><option>5</option><option>10</option></select>
+        <a href="javascript:void(0)" style="font-size: 12px;" onclick="openPanel('summary')">All answers →</a>
+      </span>
+    </div>
     <div class="ask-foot">
       <span id="askStatus" class="hint" style="margin-top: 0;">⚙ grinds it into the log · 🧙 answers from it.</span>
-      <a href="javascript:void(0)" onclick="openPanel('summary')">All answers →</a>
     </div>
     <div class="ask-inline" id="askInline" style="display: none;">
       <div class="ask-inline__head">🧙 <span id="aiQ"></span><button type="button" class="ask-inline__x" onclick="hideInlineAnswer()" aria-label="Close answer">✕</button></div>
@@ -2109,6 +2131,8 @@
             <stop offset="0" stop-color="#f6e3a8"/><stop offset="0.5" stop-color="#c99b45"/><stop offset="1" stop-color="#6d4c17"/>
           </radialGradient>
         </defs>
+        <!-- v5.08 — the colored band LIGHTS UP behind the needle as hours climb -->
+        <path id="bcArcGlow" d="" fill="none" stroke="rgba(255,240,200,0.45)" stroke-width="30" stroke-linecap="round" style="filter: blur(5px); display: none;"/>
         <!-- live needle -->
         <g id="bcNeedleG">
           <polygon points="352,606 374,606 366,372 360,372" fill="url(#bcGold)" stroke="#3a2c10" stroke-width="1.5"/>
@@ -2746,7 +2770,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.07 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.09 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4323,7 +4347,17 @@ function bcRender() {
   if (!g) return;
   const st = tcShiftState();
   const hrs = st.clockedIn ? workedSecNow() / 3600 : (st.completedShiftSeconds || 0) / 3600;
-  g.style.transform = `rotate(${-130 + Math.min(hrs, 12.6) / 12 * 260}deg)`;
+  const ang = -130 + Math.min(hrs, 12.6) / 12 * 260;
+  g.style.transform = `rotate(${ang}deg)`;
+  // v5.08 — the colored band lights up BEHIND the needle as the hours climb
+  const arc = $('bcArcGlow');
+  if (arc) {
+    if (st.clockedIn && ang > -128) {
+      const pt = a => { const r = 222, rad = a * Math.PI / 180; return `${(363 + r * Math.sin(rad)).toFixed(1)} ${(580 - r * Math.cos(rad)).toFixed(1)}`; };
+      arc.setAttribute('d', `M ${pt(-130)} A 222 222 0 ${ang - (-130) > 180 ? 1 : 0} 1 ${pt(ang)}`);
+      arc.style.display = '';
+    } else arc.style.display = 'none';
+  }
   const hh = Math.floor(hrs), mm = Math.floor(hrs * 60) % 60;
   $('bcTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   $('bcLampOff').style.display = st.clockedIn ? 'none' : '';
@@ -5936,8 +5970,8 @@ function renderHotCards() {
   const hot = pendingQueue.filter(p => p.payload && p.payload.hot);
   box.innerHTML = hot.map(p => `
     <div class="hot-card" role="alert">
-      <div class="hot-head">🔥 NEEDS YOU — <b>${esc(p.payload.from || '?')}</b></div>
-      <div class="hot-body">${esc((p.payload.body || '').slice(0, 240))}</div>
+      <div class="hot-head">🔥 NEEDS YOU — <b>${esc(p.payload.from || '?')}</b>${p.kind === 'crew' ? ' <b>· 👷 CREW, NOW</b>' : ''}</div>
+      <div class="hot-body">${esc((p.payload.body || p.payload.text || '').slice(0, 240))}</div>
       ${(p.payload.photos || []).length ? `<div class="rev-row">${p.payload.photos.map(ph =>
         `<button class="btn-ghost" onclick="showPhoto('${escq(ph)}')">📷 View photo</button>`).join('')}</div>` : ''}
       <div class="rev-row">
@@ -6715,6 +6749,14 @@ async function checkCrewLogs() {
       try { const t = await dbxDownload(f.path_lower + '/app data/entries.json'); if (t) j = JSON.parse(t); } catch (e) {}
       if (!j) continue;
       const name = f.name;
+      // 📊 v5.09 — collect what this crew member has been asking their Wizard
+      if (Array.isArray(j.askLog) && j.askLog.length) {
+        try {
+          const store = JSON.parse(lsGet('daylog-crew-asks') || '{}');
+          store[name] = j.askLog.slice(0, 30);
+          lsSet('daylog-crew-asks', JSON.stringify(store));
+        } catch (e) {}
+      }
       // ⏱ v5.04 forgotten-clock radar: a crew shift that's been running 14+ hours is
       // almost certainly a missed punch-out — one card, once per shift
       if (j.shiftOpen && j.shiftOpen.at) {
@@ -6743,7 +6785,9 @@ async function checkCrewLogs() {
         pendingQueue.push({ id: key, kind: 'crew', source: name, payload: {
           from: name, type: e.type, text: e.details || '', job: e.job || '',
           hours: e.hours, category: e.category || '', route: e.route || '', urg: e.urg || '',
-          srcRef: e.srcRef || '', day: String(e.ts).slice(0, 10) } });
+          srcRef: e.srcRef || '', day: String(e.ts).slice(0, 10),
+          // 🔥 v5.09 — a crew note aimed at Eric marked NOW gets the fire-card treatment
+          hot: (e.type === 'Note' && e.route === 'Eric' && e.urg === 'now') || undefined } });
         if (e.type === 'Note' && e.route) setAck(name, e.id, 'received'); // 📨 receipt stamp #1
       });
     }
@@ -7185,10 +7229,18 @@ function buildAskContext(question) {
   const crewCtx = CREW_NAME
     ? `\nNOTES ERIC SHARED (the ONLY Eric data visible here): ${JSON.stringify(crewShared.slice(0, 60).map(n => ({ d: String(n.ts).slice(0, 10), x: n.text, j: n.job })))}`
     : '';
+  // 📊 v5.09 — Eric can ask "what does the crew search for?": their recent Wizard questions ride along
+  let crewAskCtx = '';
+  if (!CREW_NAME) {
+    try {
+      const store = JSON.parse(lsGet('daylog-crew-asks') || '{}');
+      if (Object.keys(store).length) crewAskCtx = `\nCREW WIZARD QUESTIONS (what each crew member has been asking their own Wizard — spot the patterns so Eric can make that info easier to find): ${JSON.stringify(store)}`;
+    } catch (e) {}
+  }
   const followCtx = (!CREW_NAME && _lastAnswer && Date.now() - _lastAnswer.at < 15 * 60000)
     ? `\nPREVIOUS EXCHANGE (moments ago — use it to resolve follow-up questions and pronouns):\nQ: ${_lastAnswer.q}\nA: ${String(_lastAnswer.text).slice(0, 900)}`
     : '';
-  return `TODAY: ${new Date().toString()}${rangeLine}${crewCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first): ${JSON.stringify(slim)}`;
+  return `TODAY: ${new Date().toString()}${rangeLine}${crewCtx}${crewAskCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first): ${JSON.stringify(slim)}`;
 }
 // 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
 // offers their photos, a follow-up within 15 minutes remembers the exchange, and
@@ -7196,8 +7248,9 @@ function buildAskContext(question) {
 let _lastAnswer = null; // { q, text, srcIds, at }
 function wizCorrectStart() {
   // v5.00 — the correction box opens RIGHT UNDER the answer, not up in the note window
+  // v5.08 — and if the full-screen answer is up, it opens THERE
   if ($('wizCorrBox')) { const t0 = $('wizCorrText'); if (t0) t0.focus(); return; }
-  const body = $('aiBody');
+  const body = ($('wizFull') && $('wizFull').classList.contains('show')) ? $('wizFullBody') : $('aiBody');
   if (!body) return;
   const d = document.createElement('div');
   d.id = 'wizCorrBox';
@@ -7247,6 +7300,15 @@ async function askInstant(what) {
   st.dataset.busy = '1';
   st.textContent = '⚙ Asking the Wizard…';
   setWizLamp('thinking');
+  // 📊 v5.09 — crew phones remember what they asked (question only, never the answer),
+  // so Eric can see what info the crew keep hunting for and get ahead of it
+  if (CREW_NAME) {
+    try {
+      const al = JSON.parse(lsGet('daylog-asklog') || '[]');
+      al.unshift({ q: String(what).slice(0, 120), ts: new Date().toISOString() });
+      lsSet('daylog-asklog', JSON.stringify(al.slice(0, 50)));
+    } catch (e) {}
+  }
   try {
     // v4.50 — hand the Wizard any Dropbox filenames that match the question, so
     // "where's the Chafin invoice" can be answered with an actual file and folder
@@ -7337,7 +7399,7 @@ async function askInstant(what) {
     const sm = text.match(/\n?\s*SOURCES?:\s*([\d,\s]+)\s*$/i);
     if (sm) { clean = text.slice(0, sm.index).trim(); srcIds = sm[1].split(/[\s,]+/).map(Number).filter(Boolean); }
     _lastAnswer = { q: what, text: clean, srcIds, at: Date.now() };
-    showInstantAnswer(what, clean, srcIds);
+    showWizFull(what, clean, srcIds); // v5.08 — straight to full screen: the answer, nothing else
     saveRecentAnswer(what, clean);
   } catch (e) {
     delete st.dataset.busy; wizIdleLamp();
@@ -7347,23 +7409,49 @@ async function askInstant(what) {
 }
 function recentAnswers() { try { return JSON.parse(lsGet('daylog-answers') || '[]'); } catch (e) { return []; } }
 function saveRecentAnswer(q, a) {
-  const arr = [{ q, a, ts: new Date().toISOString() }, ...recentAnswers()].slice(0, 3);
+  const arr = [{ q, a, ts: new Date().toISOString() }, ...recentAnswers()].slice(0, 10);
   lsSet('daylog-answers', JSON.stringify(arr));
   renderAskRecent();
 }
+// 📜 v5.08 — the RUNNING LOG: recent Wizard answers AND recent Grinder notes, one stream,
+// newest first. The little dropdown picks how many show (3 / 5 / 10).
 function renderAskRecent() {
   const box = $('askRecent');
   if (!box) return;
-  const arr = recentAnswers().slice(0, 2);
-  box.innerHTML = arr.map((r, i) => {
-    const d = new Date(r.ts);
+  const n = [3, 5, 10].includes(+prefs.runLogN) ? +prefs.runLogN : 3;
+  const sel = $('runLogN'); if (sel && +sel.value !== n) sel.value = String(n);
+  const items = [
+    ...recentAnswers().map((r, i) => ({ ts: +new Date(r.ts), on: `reopenAnswer(${i})`,
+      h: `🧙 <span class="arq">${esc(r.q)}</span>` })),
+    ...entries.filter(e => !e.sample && e.type === 'Note').slice(0, n).map(e => ({ ts: +new Date(e.ts), on: `openPanel('log')`,
+      h: `⚙ <span class="arq">${esc((e.details || '').slice(0, 70))}</span>` }))
+  ].filter(it => !isNaN(it.ts)).sort((a, b) => b.ts - a.ts).slice(0, n);
+  box.innerHTML = items.map(it => {
+    const d = new Date(it.ts);
     const when = sameDay(d, new Date()) ? fmtTime(d) : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    return `<div class="ask-recent-row" onclick="reopenAnswer(${i})">🧙 <span class="arq">${esc(r.q)}</span><span class="arw">${when}</span></div>`;
+    return `<div class="ask-recent-row" onclick="${it.on}">${it.h}<span class="arw">${when}</span></div>`;
   }).join('');
 }
 function reopenAnswer(i) {
   const r = recentAnswers()[i];
-  if (r) showInstantAnswer(r.q, r.a);
+  if (r) showWizFull(r.q, r.a);
+}
+// 🧙 v5.08 — the full-screen answer: nothing else on screen, ‹ Back at the bottom
+function showWizFull(q, md, srcIds) {
+  const srcs = (srcIds || []).map(id => entries.find(e => e.id === id)).filter(Boolean);
+  const phSrcs = srcs.filter(e => e.photoPath || (e.photoPaths && e.photoPaths.length));
+  $('wizFullBody').innerHTML = `<div class="wf-q">🧙 ${esc(q)}</div>` + mdToHtml(md) +
+    `<div class="rev-row" style="margin-top: 16px; flex-wrap: wrap;">` +
+    phSrcs.slice(0, 3).map((e, i) =>
+      `<button class="btn-ghost" onclick="showPhoto('${escq(e.photoPath || e.photoPaths[0])}')">📷 See the photo it read${phSrcs.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('') +
+    `<button class="btn-ghost" onclick="wizCorrectStart()">✎ Wrong? Correct it</button></div>
+    <div class="hint" style="margin-top: 10px;">Follow-up? Tap ‹ Back and just ask — I hold this exchange for 15 minutes.</div>`;
+  $('wizFull').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+function closeWizFull() {
+  $('wizFull').classList.remove('show');
+  if (!document.querySelector('.panel.open') && !$('sumViewer').classList.contains('show')) document.body.classList.remove('modal-open');
 }
 let _lastAns = null;
 function showInstantAnswer(q, md, srcIds) {
@@ -8502,7 +8590,7 @@ function deleteLogEntry() {
 function renderAll() { renderKpis(); renderLog(); renderChart(); renderTodos();
   renderDayTube(); renderPipeSelect(); updateClockGauge(); renderPendBanner(); renderPlanBanner();
   renderTagChips(); renderCrewGauges(); renderVisChips(); renderCrewShared(); renderCrewAsks();
-  renderMyRequests(); renderAskStrip();
+  renderMyRequests(); renderAskStrip(); renderAskRecent();
 }
 
 // ---------- export ----------
@@ -8906,9 +8994,11 @@ function livePayload() {
   // v5.04 — the open shift rides along so Eric's radar can spot a clock left running
   let shiftOpen = null;
   try { const s = JSON.parse(lsGet('daylog-shift') || 'null'); if (s && s.at) shiftOpen = { at: s.at, job: s.job || '' }; } catch (e) {}
+  let askLog;
+  if (CREW_NAME) { try { askLog = JSON.parse(lsGet('daylog-asklog') || '[]').slice(0, 30); } catch (e) {} }
   return JSON.stringify({
     jobs, trucks, crew, prefs,
-    shiftOpen,
+    shiftOpen, askLog,
     entries: entries.filter(e => !e.sample),
     todos: todos.filter(t => !t.sample)
   }, null, 1);
