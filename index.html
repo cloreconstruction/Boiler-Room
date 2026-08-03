@@ -1516,6 +1516,20 @@
   }
   .bc-tap:active { background: rgba(255,235,180,0.12); }
   .bc-tap:focus-visible { outline: 4px solid #fff; outline-offset: -6px; border-radius: 16px; }
+  /* v5.15 — ON THE CLOCK reads off the BUTTON itself: the big red button burns bright,
+     with a slow breathe so it's clearly live (the CLOCK OUT plate spells it out too) */
+  #bigClock[data-state="in"] .bc-tap {
+    background: radial-gradient(ellipse at center, rgba(255,64,28,0.30) 0%, rgba(255,64,28,0.12) 55%, transparent 78%);
+    box-shadow: 0 0 34px 6px rgba(255,64,28,0.35) inset;
+    animation: btnBurn 2.4s ease-in-out infinite;
+  }
+  @keyframes btnBurn { 0%, 100% { filter: brightness(0.9); } 50% { filter: brightness(1.35); } }
+  @media (prefers-reduced-motion: reduce) { #bigClock[data-state="in"] .bc-tap { animation: none; filter: brightness(1.2); } }
+  /* v5.15 — the punch tape: always there, even empty, so its silence means something */
+  .punch-log { flex: 1 1 100%; border: 2px solid; border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+    border-radius: 12px; padding: 9px 12px; margin-top: 10px; min-height: 40px; font-size: 13.5px; line-height: 1.55; }
+  .punch-log .pl-empty { opacity: .5; font-style: italic; }
+  .punch-log .pl-open { font-weight: 700; }
   /* the job selector lives IN the panel — the empty instrument bay under the readout */
   .bc-job {
     position: absolute; z-index: 4;
@@ -1536,9 +1550,7 @@
   @media (prefers-reduced-motion: reduce) { #bcNeedleG { transition: none; } }
   /* v4.91 — the on-the-clock lamp pulses: rhythm says LIVE (never color alone; the panel
      words + needle + CLOCK OUT plate carry the state too) */
-  #bigClock[data-state="in"] #bcLampGlow { animation: bcBreathe 1.8s ease-in-out infinite; }
-  @keyframes bcBreathe { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { #bigClock[data-state="in"] #bcLampGlow { animation: none; opacity: 1; } }
+  /* v5.15 — lamp glow retired: the big red BUTTON carries the on-the-clock signal now */
   /* v4.67 — layered CLOCK IN control (Eric's package): still background, moving brass */
   .punch-lever, .cp-wrap { display: none !important; }
   .clock-in-control {
@@ -2191,6 +2203,8 @@
     </div>
     <button class="btn-ghost" id="breakBtn" style="display: none; flex: 1 1 100%;" onclick="toggleBreak()" aria-pressed="false">☕ Go on break</button>
     <button class="btn-ghost" id="undoPunch" style="display: none; flex: 1 1 100%;" onclick="undoPunch()">↩ Undo that clock-in</button>
+    <!-- v5.15 — today's punch tape: every hit of the button leaves a line; midnight wipes it clean -->
+    <div class="punch-log" id="punchLog" aria-label="Today's punches"></div>
   </div>
 
 
@@ -2824,7 +2838,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.14 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.15 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4450,6 +4464,27 @@ function dayShiftSegs() {
     .sort((a, b) => new Date(a.ts) - new Date(b.ts))
     .map(e => +e.hours);
 }
+// 🧾 v5.15 — the punch tape: one line per hit of the button, today only, never hidden.
+// Empty box on a fresh morning is the point — you can SEE that nothing's been punched.
+let _plPrev = null;
+function renderPunchLog() {
+  const box = $('punchLog');
+  if (!box) return;
+  const today = localDay(new Date());
+  const rows = entries
+    .filter(e => !e.sample && e.type === 'Clock' && (!e.who || e.who === 'Me') && localDay(e.ts) === today)
+    .sort((a, b) => new Date(a.ts) - new Date(b.ts))
+    .map(e => {
+      const m = (e.details || '').match(/Shift ([^]*)$/);
+      let span = m ? m[1] : (e.details || '');
+      const sw = span.includes('⇄ switched jobs');
+      span = span.replace(' ⇄ switched jobs', '').trim();
+      return `<div>✓ ${esc(e.job)} — ${esc(span)} · <b>${(+e.hours || 0).toFixed(2)} hrs</b>${sw ? ' ⇄' : ''}</div>`;
+    });
+  if (clockedInAt) rows.push(`<div class="pl-open">⏱ Clocked into ${esc(clockJobName || '')} at ${fmtTime(clockedInAt)} — running…</div>`);
+  const html = rows.length ? rows.join('') : '<span class="pl-empty">— no punches yet today —</span>';
+  if (html !== _plPrev) { box.innerHTML = html; _plPrev = html; }
+}
 const bcAng = h => -130 + Math.min(h, 12.6) / 12 * 260;
 const bcPt = (a, r) => { const rad = a * Math.PI / 180; return `${(363 + r * Math.sin(rad)).toFixed(1)} ${(580 - r * Math.cos(rad)).toFixed(1)}`; };
 function bcRender() {
@@ -4489,8 +4524,9 @@ function bcRender() {
   const hh = Math.floor(hrs), mm = Math.floor(hrs * 60) % 60;
   $('bcTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   $('bcLampOff').style.display = st.clockedIn ? 'none' : '';
-  if ($('bcLampGlow')) $('bcLampGlow').style.display = st.clockedIn ? '' : 'none'; // 💡 breathing = live
+  if ($('bcLampGlow')) $('bcLampGlow').style.display = 'none'; // v5.15 — retired: the BUTTON burns instead
   $('bcAnnun').style.display = st.clockedIn ? '' : 'none';
+  renderPunchLog(); // 🧾 today's punch tape under the button
   const un = $('undoPunch');
   if (un) {
     const canIn = st.clockedIn && (Date.now() - clockedInAt.getTime()) < 120000;
