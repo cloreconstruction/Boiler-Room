@@ -1707,7 +1707,7 @@
   /* v5.11 — crew Setup is MINIMAL: their phone, their Dropbox, their Wizard key, their
      notifications, three simple themes. None of Eric's machinery. */
   body.crew-mode #setDayGoal, body.crew-mode #setPipes, body.crew-mode #setJobs,
-  body.crew-mode #setTrucks, body.crew-mode #setCrew, body.crew-mode #setBackups,
+  body.crew-mode #setTrucks, body.crew-mode #setCrew, body.crew-mode #setBackups, body.crew-mode #setPrivacy,
   body.crew-mode #portalSec, body.crew-mode #qbSec, body.crew-mode #waguesSec { display: none !important; }
   body.crew-mode #setAppear .pick-chip { display: none; }
   body.crew-mode #setAppear #skin-default, body.crew-mode #setAppear #skin-daylight,
@@ -2661,18 +2661,25 @@
       <div id="crewOwnerTools" style="margin-top: 14px;">
         <div class="field" style="margin-bottom: 10px;"><label>Push secret (same value as PUSH_SECRET in Netlify — lets crew NOW notes ring phones)</label>
           <input type="text" id="sPushSec" class="wide" style="width: 100%;" placeholder="paste it once, then tap 📤" onchange="prefs.pushSecret = this.value.trim(); scheduleSave(); toast('Push secret saved — tap 📤 so crew folders get it ✓');"></div>
-        <div class="field" style="margin-bottom: 10px;"><label>🔒 Personal people (comma list — their texts stay yours: never in summaries, never near crew)</label>
-          <input type="text" id="sPersonal" class="wide" style="width: 100%;" placeholder="Shevaun, Milo" onchange="prefs.personalFolks = this.value.split(',').map(s => s.trim()).filter(Boolean); scheduleSave(); toast('🔒 Personal list saved ✓');"></div>
+        
         <div class="field" style="margin-bottom: 10px;"><label>👁 Preview as which crew member</label>
           <select id="sPreviewAs" class="mini-sel" onchange="prefs.previewAs = this.value; scheduleSave();"></select></div>
-        <!-- v5.10 — 🏠 CLIENT PORTAL: one live page per job, the code IS the key -->
-        <div class="set-section fc-sec" id="portalSec">
+        <div class="frow">
+          <button class="btn-ghost" onclick="publishCrewFolders()">📤 Set up / update crew folders</button>
+          <button class="btn-ghost" onclick="crewPreviewToggle()">👁 View as crew</button>
+        </div>
+        <div class="hint" style="margin-top: 8px;">Makes Dropbox → Clore DayLog → Crew → one folder per person (with a Pay Stubs folder inside). Then on dropbox.com, share each person's folder to THEIR OWN Dropbox account — that's the whole security wall. Drop pay stub PDFs in their folder and only they can see them.</div>
+      </div>
+      
+    </div>
+    <!-- v5.10 — 🏠 CLIENT PORTAL: one live page per job, the code IS the key -->
+        <div class="set-section" id="portalSec">
           <h4>🏠 Client portal — live project pages</h4>
           <div class="hint">Each job gets a page at an unguessable address. Text the link once; it updates as the books do. 🔄 rotate kills the old link instantly.</div>
           <div id="portalList" style="margin-top: 8px;"><span class="hint">Open ⚙ Setup while online to load…</span></div>
         </div>
         <!-- v5.10 — 💼 QB UPDATER: drop Logan's exports straight in -->
-        <div class="set-section fc-sec" id="qbSec">
+        <div class="set-section" id="qbSec">
           <h4>💼 QuickBooks updater</h4>
           <div class="hint" style="line-height: 1.5;">In QuickBooks Online → Reports, export to Excel and drop the files here:<br>
             <b>1.</b> "Sales by Product/Service Detail" — filter Customer = the job, All Dates (one per job)<br>
@@ -2682,18 +2689,10 @@
           <button class="btn-primary" style="margin-top: 10px;" onclick="$('qbDrop').click()">📥 Drop QB exports in</button>
           <div id="qbDropMsg" class="hint" style="margin-top: 6px;"></div>
         </div>
-        <div class="frow">
-          <button class="btn-ghost" onclick="publishCrewFolders()">📤 Set up / update crew folders</button>
-          <button class="btn-ghost" onclick="crewPreviewToggle()">👁 View as crew</button>
-        </div>
-        <div class="hint" style="margin-top: 8px;">Makes Dropbox → Clore DayLog → Crew → one folder per person (with a Pay Stubs folder inside). Then on dropbox.com, share each person's folder to THEIR OWN Dropbox account — that's the whole security wall. Drop pay stub PDFs in their folder and only they can see them.</div>
-      </div>
-      <div id="crewJoinTools" style="margin-top: 14px;">
-        <div class="frow">
-          
-        </div>
-        <div class="hint" id="crewJoinMsg" style="margin-top: 8px;">On the crew member's phone: connect Dropbox above with THEIR account first, then tap this.</div>
-      </div>
+        <div class="set-section" id="setPrivacy">
+      <h4>🔒 Personal people</h4>
+      <div class="field" style="margin-bottom: 10px;"><label>🔒 Personal people (comma list — their texts stay yours: never in summaries, never near crew)</label>
+          <input type="text" id="sPersonal" class="wide" style="width: 100%;" placeholder="Shevaun, Milo" onchange="prefs.personalFolks = this.value.split(',').map(s => s.trim()).filter(Boolean); scheduleSave(); toast('🔒 Personal list saved ✓');"></div>
     </div>
     <div class="set-section" id="setPhone">
       <h4>📱 This phone</h4>
@@ -2701,6 +2700,7 @@
         <button class="btn-ghost" onclick="crewJoin()">👷 This phone belongs to a crew member — set it up</button>
         <button class="btn-ghost" id="crewLeaveBtn" style="display: none;" onclick="crewLeave()">✕ Leave crew mode</button>
       </div>
+      <div class="hint" id="crewJoinMsg" style="margin-top: 8px;">On a crew member's phone: connect Dropbox with THEIR account first, then tap the crew button.</div>
     </div>
     <div class="set-section" id="setDbx">
       <h4>Dropbox</h4>
@@ -2810,7 +2810,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.11 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.12 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
