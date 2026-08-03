@@ -1698,6 +1698,21 @@
   .req-st.on { opacity: 1; font-weight: 800; }
   .req-arrow { opacity: .38; }
   .req-x { margin-top: 6px; font-size: .72rem; padding: 3px 8px; }
+  /* v5.11 — Setup declutter: every section folds to its heading; tap to open */
+  #panel-settings .set-section.collapsible > h4 { cursor: pointer; user-select: none; margin-bottom: 0; }
+  #panel-settings .set-section.collapsible > h4::before { content: '▸ '; font-size: 12px; }
+  #panel-settings .set-section.collapsible.open > h4 { margin-bottom: 10px; }
+  #panel-settings .set-section.collapsible.open > h4::before { content: '▾ '; }
+  #panel-settings .set-section.collapsible:not(.open) > :not(h4) { display: none !important; }
+  /* v5.11 — crew Setup is MINIMAL: their phone, their Dropbox, their Wizard key, their
+     notifications, three simple themes. None of Eric's machinery. */
+  body.crew-mode #setDayGoal, body.crew-mode #setPipes, body.crew-mode #setJobs,
+  body.crew-mode #setTrucks, body.crew-mode #setCrew, body.crew-mode #setBackups,
+  body.crew-mode #portalSec, body.crew-mode #qbSec, body.crew-mode #waguesSec { display: none !important; }
+  body.crew-mode #setAppear .pick-chip { display: none; }
+  body.crew-mode #setAppear #skin-default, body.crew-mode #setAppear #skin-daylight,
+  body.crew-mode #setAppear #skin-winter { display: inline-block; }
+  body.crew-mode #setWiz .field:has(#sAiPhotos), body.crew-mode #setWiz label:has(#sAiPhotos) { display: none !important; }
   /* v5.08 — 🧙 full-screen answer + the running-log divider */
   #wizFull { position: fixed; inset: 0; z-index: 320; background: var(--card, #17140d); display: none; flex-direction: column; }
   #wizFull.show { display: flex; }
@@ -2571,7 +2586,7 @@
 
   <div class="panel" id="panel-settings">
     <h3>Setup</h3>
-    <div class="set-section">
+    <div class="set-section" id="setAppear">
       <h4>Appearance</h4>
       <div class="chips-row">
         <button class="pick-chip" id="skin-default" onclick="setSkin('')">Clore Gold</button>
@@ -2588,7 +2603,7 @@
       </div>
       <div class="hint" style="margin-top: 8px;">Command Center and Steel are always dark. Clore Gold follows the ◐ Light / dark toggle. Your pick syncs to all your devices.</div>
     </div>
-    <div class="set-section">
+    <div class="set-section" id="setDayGoal">
       <h4>Day goal</h4>
       <div class="frow">
         <div class="field"><label>Hours that make a full day</label><input type="number" id="sDayGoal" min="1" max="16" step="0.5" onchange="setDayGoal(this.value)"></div>
@@ -2599,14 +2614,14 @@
       <button class="btn-ghost" onclick="dayFlowAdd()" style="margin-top: 4px;">＋ Add a stretch</button>
       <div class="hint" style="margin-top: 6px;">Each stretch draws on the meter with a brass divider and its name on the glass. Hours outside your stretches shade dark as 🌙 night. To-dos you assign to a stretch ride as small lamps above the glass.</div>
     </div>
-    <div class="set-section">
+    <div class="set-section" id="setPipes">
       <h4>Checklists</h4>
       <div class="hint" style="margin: 0 0 10px;">The step-by-step lists a to-do can be built from — a light, a sub, a permit. Pick one when you add a to-do and it drops the steps in underneath it. Edit them here; you can still add or drop a step on one individual to-do without changing the checklist itself.</div>
       <div id="pipeRows"></div>
       <button class="btn-ghost" onclick="pipeAdd()" style="margin-top: 4px;">＋ Add a checklist</button>
       <button class="btn-ghost" onclick="pipeReset()" style="margin-top: 4px;">↺ Back to the standard set</button>
     </div>
-    <div class="set-section">
+    <div class="set-section" id="setJobs">
       <h4>Jobs</h4>
       <div class="hint" style="margin: 0 0 10px;">The jobs you can tag entries and to-dos to. Removing one doesn't touch anything already logged to it.</div>
       <div id="jobList" class="job-list"></div>
@@ -2615,7 +2630,7 @@
         <button class="btn-ghost" onclick="addJobSettings()">+ Add job</button>
       </div>
     </div>
-    <div class="set-section">
+    <div class="set-section" id="setTrucks">
       <h4>Trucks</h4>
       <div class="hint" style="margin: 0 0 10px;">Your trucks for mileage. Each one remembers its last odometer reading so miles compute automatically.</div>
       <div id="truckList" class="job-list"></div>
@@ -2624,7 +2639,7 @@
         <button class="btn-ghost" onclick="addTruckSettings()">+ Add truck</button>
       </div>
     </div>
-    <div class="set-section">
+    <div class="set-section" id="setCrew">
       <h4>Crew</h4>
       <div class="hint" style="margin: 0 0 10px;">People you can assign to-dos to. Their tasks get their own section in summaries.</div>
       <div id="crewList" class="job-list"></div>
@@ -2675,13 +2690,19 @@
       </div>
       <div id="crewJoinTools" style="margin-top: 14px;">
         <div class="frow">
-          <button class="btn-ghost" onclick="crewJoin()">👷 This phone belongs to a crew member — set it up</button>
-          <button class="btn-ghost" id="crewLeaveBtn" style="display: none;" onclick="crewLeave()">✕ Leave crew mode</button>
+          
         </div>
         <div class="hint" id="crewJoinMsg" style="margin-top: 8px;">On the crew member's phone: connect Dropbox above with THEIR account first, then tap this.</div>
       </div>
     </div>
-    <div class="set-section">
+    <div class="set-section" id="setPhone">
+      <h4>📱 This phone</h4>
+      <div class="frow">
+        <button class="btn-ghost" onclick="crewJoin()">👷 This phone belongs to a crew member — set it up</button>
+        <button class="btn-ghost" id="crewLeaveBtn" style="display: none;" onclick="crewLeave()">✕ Leave crew mode</button>
+      </div>
+    </div>
+    <div class="set-section" id="setDbx">
       <h4>Dropbox</h4>
       <div class="hint" id="setupStatus" style="margin: 0 0 12px;">Not connected. One-time setup, about 5 minutes:</div>
       <div class="hint" style="margin: 0 0 12px;">
@@ -2701,7 +2722,7 @@
       </div>
       <div class="hint">Your data saves to <strong>Dropbox / Clore DayLog</strong> — entries in App Data, receipt photos in Receipts. Nothing goes anywhere else.</div>
     </div>
-    <div class="set-section">
+    <div class="set-section" id="setWiz">
       <h4>Ask Claude — instant answers</h4>
       <div class="frow">
         <div class="field" style="flex: 1; min-width: 220px;"><label>Claude API key (sk-ant-…)</label><input type="password" class="wide" id="sAiKey" placeholder="paste your key from console.anthropic.com" style="width: 100%;"></div>
@@ -2714,7 +2735,7 @@
         🔮 Describe photos automatically — every photo gets looked at and labeled (uses your key · about ¼¢ per photo)
       </label>
     </div>
-    <div class="set-section">
+    <div class="set-section" id="setNotif">
       <h4>🔔 Notifications</h4>
       <div class="frow">
         <button class="btn-primary" id="pushBtn" onclick="pushEnable()">Turn on notifications</button>
@@ -2722,7 +2743,7 @@
       </div>
       <div class="hint" id="pushStatus" style="margin-top: 8px;">The 🌙 evening reminder and 📥 review alerts buzz this phone. iPhone: add the app to your home screen first (Share → Add to Home Screen), then turn these on from the installed app.</div>
     </div>
-    <div class="set-section">
+    <div class="set-section" id="setBackups">
       <h4>Backups</h4>
       <div class="hint" style="margin: 0 0 10px;">Automatic: a dated snapshot lands in App Data / Backups on every sync. Manual, for extra peace of mind:</div>
       <div class="frow">
@@ -2789,7 +2810,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.10 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.11 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4564,7 +4585,7 @@ function openPanel(name) {
     if (name === 'hours') hOpenInit();
     if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', ');
       if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
-      renderPortalList(); }
+      renderPortalList(); initSetupCollapse(); }
     if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; renderDayFlowRows(); renderPipeRows(); }
     if (name === 'vault') vaultOpenInit();
     if (name === 'summary') summaryOpenInit();
@@ -6313,7 +6334,19 @@ function applyRole() {
   renderMyRequests();
   renderAskStrip();
 }
+// 🗂 v5.11 — Setup folds to a clean list of headings; tap one to open it.
+// Dropbox stays open on a fresh phone (it's the first thing anyone needs).
+function initSetupCollapse() {
+  document.querySelectorAll('#panel-settings > .set-section').forEach(sec => {
+    if (sec.classList.contains('collapsible')) return; // already wired
+    sec.classList.add('collapsible');
+    const h = sec.querySelector(':scope > h4');
+    if (h) h.addEventListener('click', () => sec.classList.toggle('open'));
+  });
+  if (!dbx.refreshToken) { const d = $('setDbx'); if (d) d.classList.add('open'); }
+}
 function crewPreviewToggle() {
+  if (CREW_NAME) return; // crew phones have no preview business
   crewPreview = !crewPreview;
   closePanels();
   applyRole();
@@ -6323,6 +6356,7 @@ function crewBadgeTap() { if (crewPreview) crewPreviewToggle(); }
 
 // --- Eric's side: stand up one folder per crew member with the shared config in it ---
 async function publishCrewFolders() {
+  if (CREW_NAME) return; // owner's tool only — belt and suspenders on top of the hidden UI
   if (!dbx.refreshToken) { toast('Connect Dropbox first', false); return; }
   if (!crew.length) { toast('Add crew names (Setup → Crew list) first', false); return; }
   toast('⏳ Setting up crew folders…');
@@ -6838,11 +6872,14 @@ async function renderPortalList() {
     </div>`).join('') || '<span class="hint">No clients yet.</span>';
 }
 function portalUrl(i) { return location.origin + '/c/?c=' + encodeURIComponent(_portalIdx.clients[i].code); }
+function portalGuard() { return !!CREW_NAME; } // crew phones never touch client codes
 async function portalCopy(i) {
+  if (portalGuard()) return;
   try { await navigator.clipboard.writeText(portalUrl(i)); toast('📋 Link copied — text it to the client ✓'); }
   catch (e) { prompt('Copy this link:', portalUrl(i)); }
 }
 async function portalIntel(i) {
+  if (portalGuard()) return;
   const c = _portalIdx.clients[i];
   try {
     const t = await dbxDownload(DBX_ROOT + '/App Data/Client Portal/clicks-' + c.code + '.json');
@@ -6858,6 +6895,7 @@ async function portalIntel(i) {
   } catch (e) { toast(`${c.job}: no visits yet`, false); }
 }
 async function portalRotate(i) {
+  if (portalGuard()) return;
   const c = _portalIdx.clients[i];
   const fresh = c.key + '-' + Math.random().toString(16).slice(2, 8);
   try {
@@ -6872,6 +6910,7 @@ async function portalRotate(i) {
 }
 // 💼 v5.10 — drop Logan's QB exports straight into the pipeline
 async function qbDropUpload(inp) {
+  if (CREW_NAME) return; // owner's tool only
   const files = [...(inp.files || [])];
   if (!files.length) return;
   if (!dbx.refreshToken) { toast('Connect Dropbox first (⚙ Setup)', false); return; }
