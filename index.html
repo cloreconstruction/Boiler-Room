@@ -2160,7 +2160,8 @@
           </radialGradient>
         </defs>
         <!-- v5.08 — the colored band LIGHTS UP behind the needle as hours climb -->
-        <path id="bcArcGlow" d="" fill="none" stroke="rgba(255,240,200,0.45)" stroke-width="30" stroke-linecap="round" style="filter: blur(5px); display: none;"/>
+        <g id="bcArcGlow" style="display: none;"></g>
+        <g id="bcMarks"></g>
         <!-- live needle -->
         <g id="bcNeedleG">
           <polygon points="352,606 374,606 366,372 360,372" fill="url(#bcGold)" stroke="#3a2c10" stroke-width="1.5"/>
@@ -2823,7 +2824,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.13 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.14 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4438,21 +4439,52 @@ function restoreShift() {
   toast(`⏱ Still on the clock — ${esc(clockJobName)} since ${fmtTime(clockedInAt)} ✓`);
 }
 // v4.77 — the instrument panel: needle, readout, status and lamp all read REAL state
+// v5.14 — the gauge reads the WHOLE DAY: every stretch already logged plus the one running.
+// Punches and job switches leave notches on the band; segments alternate bright / dim so a
+// glance shows how the day was cut. Brightness + notches, never color alone.
+function dayShiftSegs() {
+  const today = localDay(new Date());
+  return entries
+    .filter(e => !e.sample && (e.type === 'Clock' || e.type === 'Hours') && +e.hours > 0 &&
+      (!e.who || e.who === 'Me') && localDay(e.ts) === today)
+    .sort((a, b) => new Date(a.ts) - new Date(b.ts))
+    .map(e => +e.hours);
+}
+const bcAng = h => -130 + Math.min(h, 12.6) / 12 * 260;
+const bcPt = (a, r) => { const rad = a * Math.PI / 180; return `${(363 + r * Math.sin(rad)).toFixed(1)} ${(580 - r * Math.cos(rad)).toFixed(1)}`; };
 function bcRender() {
   const g = $('bcNeedleG');
   if (!g) return;
   const st = tcShiftState();
-  const hrs = st.clockedIn ? workedSecNow() / 3600 : (st.completedShiftSeconds || 0) / 3600;
-  const ang = -130 + Math.min(hrs, 12.6) / 12 * 260;
+  const segs = dayShiftSegs();
+  const logged = segs.reduce((s, h) => s + h, 0);
+  const live = st.clockedIn ? workedSecNow() / 3600 : 0;
+  const hrs = logged + live; // 📟 the day, added up — clocking out only parks the needle
+  const ang = bcAng(hrs);
   g.style.transform = `rotate(${ang}deg)`;
-  // v5.08 — the colored band lights up BEHIND the needle as the hours climb
-  const arc = $('bcArcGlow');
-  if (arc) {
-    if (st.clockedIn && ang > -128) {
-      const pt = a => { const r = 222, rad = a * Math.PI / 180; return `${(363 + r * Math.sin(rad)).toFixed(1)} ${(580 - r * Math.cos(rad)).toFixed(1)}`; };
-      arc.setAttribute('d', `M ${pt(-130)} A 222 222 0 ${ang - (-130) > 180 ? 1 : 0} 1 ${pt(ang)}`);
-      arc.style.display = '';
-    } else arc.style.display = 'none';
+  const arc = $('bcArcGlow'), marks = $('bcMarks');
+  if (arc && marks) {
+    // cumulative boundaries: each logged stretch ends in a notch; the live stretch runs past them
+    const bounds = [];
+    let acc = 0;
+    segs.forEach(h => { acc += h; bounds.push(acc); });
+    const pieces = [];
+    let a0 = -130;
+    const ends = [...bounds, ...(live > 0 ? [hrs] : [])];
+    ends.forEach((endH, i) => {
+      const a1 = bcAng(endH);
+      if (a1 - a0 > 0.5) pieces.push(`<path d="M ${bcPt(a0, 222)} A 222 222 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${bcPt(a1, 222)}"
+        fill="none" stroke="${i % 2 ? 'rgba(255,214,140,0.30)' : 'rgba(255,240,200,0.48)'}" stroke-width="30" stroke-linecap="butt" style="filter: blur(5px);"/>`);
+      a0 = a1;
+    });
+    arc.innerHTML = pieces.join('');
+    arc.style.display = pieces.length ? '' : 'none';
+    // ⚙ notches: a physical-looking pin at every punch-out / job switch
+    marks.innerHTML = bounds.filter(h => h > 0.05 && h < 12.6).map(h => {
+      const a = bcAng(h);
+      return `<line x1="${bcPt(a, 202).split(' ')[0]}" y1="${bcPt(a, 202).split(' ')[1]}" x2="${bcPt(a, 242).split(' ')[0]}" y2="${bcPt(a, 242).split(' ')[1]}"
+        stroke="#2a2013" stroke-width="5" stroke-linecap="round" opacity="0.9"/>`;
+    }).join('');
   }
   const hh = Math.floor(hrs), mm = Math.floor(hrs * 60) % 60;
   $('bcTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
