@@ -2648,6 +2648,25 @@
           <input type="text" id="sPushSec" class="wide" style="width: 100%;" placeholder="paste it once, then tap 📤" onchange="prefs.pushSecret = this.value.trim(); scheduleSave(); toast('Push secret saved — tap 📤 so crew folders get it ✓');"></div>
         <div class="field" style="margin-bottom: 10px;"><label>🔒 Personal people (comma list — their texts stay yours: never in summaries, never near crew)</label>
           <input type="text" id="sPersonal" class="wide" style="width: 100%;" placeholder="Shevaun, Milo" onchange="prefs.personalFolks = this.value.split(',').map(s => s.trim()).filter(Boolean); scheduleSave(); toast('🔒 Personal list saved ✓');"></div>
+        <div class="field" style="margin-bottom: 10px;"><label>👁 Preview as which crew member</label>
+          <select id="sPreviewAs" class="mini-sel" onchange="prefs.previewAs = this.value; scheduleSave();"></select></div>
+        <!-- v5.10 — 🏠 CLIENT PORTAL: one live page per job, the code IS the key -->
+        <div class="set-section fc-sec" id="portalSec">
+          <h4>🏠 Client portal — live project pages</h4>
+          <div class="hint">Each job gets a page at an unguessable address. Text the link once; it updates as the books do. 🔄 rotate kills the old link instantly.</div>
+          <div id="portalList" style="margin-top: 8px;"><span class="hint">Open ⚙ Setup while online to load…</span></div>
+        </div>
+        <!-- v5.10 — 💼 QB UPDATER: drop Logan's exports straight in -->
+        <div class="set-section fc-sec" id="qbSec">
+          <h4>💼 QuickBooks updater</h4>
+          <div class="hint" style="line-height: 1.5;">In QuickBooks Online → Reports, export to Excel and drop the files here:<br>
+            <b>1.</b> "Sales by Product/Service Detail" — filter Customer = the job, All Dates (one per job)<br>
+            <b>2.</b> "Invoice List by Date" — same filter (one per job)<br>
+            <b>3.</b> "Transaction List by Date" — no filter, All Dates (powers the ✓✓ checkmarks)</div>
+          <input type="file" id="qbDrop" accept=".xlsx" multiple style="display: none;" onchange="qbDropUpload(this)">
+          <button class="btn-primary" style="margin-top: 10px;" onclick="$('qbDrop').click()">📥 Drop QB exports in</button>
+          <div id="qbDropMsg" class="hint" style="margin-top: 6px;"></div>
+        </div>
         <div class="frow">
           <button class="btn-ghost" onclick="publishCrewFolders()">📤 Set up / update crew folders</button>
           <button class="btn-ghost" onclick="crewPreviewToggle()">👁 View as crew</button>
@@ -2770,7 +2789,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.09 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.10 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4543,7 +4562,9 @@ function openPanel(name) {
     if (name === 'file') fcOpenInit();
     if (name === 'mileage') mOpenInit();
     if (name === 'hours') hOpenInit();
-    if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', '); }
+    if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', ');
+      if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
+      renderPortalList(); }
     if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; renderDayFlowRows(); renderPipeRows(); }
     if (name === 'vault') vaultOpenInit();
     if (name === 'summary') summaryOpenInit();
@@ -6277,7 +6298,7 @@ function applyRole() {
   if (badge) {
     badge.style.display = isCrew() ? '' : 'none';
     badge.textContent = crewPreview
-      ? `👁 PREVIEW — what ${crew[0] || 'the crew'} sees · tap to go back`
+      ? `👁 PREVIEW — what ${prefs.previewAs || crew[0] || 'the crew'} sees · tap to go back`
       : `👷 ${CREW_NAME.toUpperCase()} · CLORE CONSTRUCTION`;
   }
   const own = $('crewOwnerTools'), lv = $('crewLeaveBtn');
@@ -6631,7 +6652,7 @@ function renderCrewShared() {
   if (!card) return;
   // in Eric's 👁 preview, derive the list from his own entries so he sees exactly what would land
   const list = crewPreview
-    ? entries.filter(e => e.vis && !e.sample).filter(e => e.vis === 'crew' || e.vis === (crew[0] || '')).map(e => ({ ts: e.ts, text: e.details, job: e.job, toAll: e.vis === 'crew' }))
+    ? entries.filter(e => e.vis && !e.sample).filter(e => e.vis === 'crew' || e.vis === (prefs.previewAs || crew[0] || '')).map(e => ({ ts: e.ts, text: e.details, job: e.job, toAll: e.vis === 'crew' }))
     : crewShared;
   card.style.display = (isCrew() && list.length) ? '' : 'none';
   if (!isCrew() || !list.length) return;
@@ -6795,6 +6816,76 @@ async function checkCrewLogs() {
   } catch (e) { /* no crew dir yet — quiet */ }
 }
 
+// 🏠 v5.10 CLIENT PORTAL — one live page per job at boilerroom.site/c/?c=<code>. The code
+// is the whole key: rotate = new address, old one dead. Pages read curated JSON from
+// /App Data/Client Portal/ through a Netlify function — never straight from Dropbox.
+let _portalIdx = null;
+async function renderPortalList() {
+  const box = $('portalList');
+  if (!box || CREW_NAME) return;
+  if (!dbx.refreshToken) { box.innerHTML = '<span class="hint">Connect Dropbox first.</span>'; return; }
+  try {
+    const t = await dbxDownload(DBX_ROOT + '/App Data/Client Portal/index.json');
+    _portalIdx = JSON.parse(t);
+  } catch (e) { box.innerHTML = '<span class="hint">No portal set up yet — ask Claude to build the client pages.</span>'; return; }
+  box.innerHTML = (_portalIdx.clients || []).map((c, i) => `
+    <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
+      <span class="sum-title" style="flex: 1 1 100%;">🏠 ${esc(c.job)}</span>
+      <button class="btn-ghost req-x" onclick="portalCopy(${i})">📋 Copy link</button>
+      <button class="btn-ghost req-x" onclick="window.open(portalUrl(${i}), '_blank')">👁 View as this client</button>
+      <button class="btn-ghost req-x" onclick="portalIntel(${i})">📊 What they look at</button>
+      <button class="btn-ghost req-x" onclick="portalRotate(${i})">🔄 Rotate code</button>
+    </div>`).join('') || '<span class="hint">No clients yet.</span>';
+}
+function portalUrl(i) { return location.origin + '/c/?c=' + encodeURIComponent(_portalIdx.clients[i].code); }
+async function portalCopy(i) {
+  try { await navigator.clipboard.writeText(portalUrl(i)); toast('📋 Link copied — text it to the client ✓'); }
+  catch (e) { prompt('Copy this link:', portalUrl(i)); }
+}
+async function portalIntel(i) {
+  const c = _portalIdx.clients[i];
+  try {
+    const t = await dbxDownload(DBX_ROOT + '/App Data/Client Portal/clicks-' + c.code + '.json');
+    const arr = JSON.parse(t || '[]');
+    if (!arr.length) { toast(`${c.job}: no visits yet`, false); return; }
+    const wk = Date.now() - 7 * 86400000;
+    const recent = arr.filter(x => +new Date(x.ts) > wk);
+    const counts = {};
+    recent.forEach(x => { const k = x.ev.split(':')[0]; counts[k] = (counts[k] || 0) + 1; });
+    const line = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k === 'open' ? 'visits' : k} ${n}`).join(' · ');
+    showWizFull(`What does ${c.job.split(' ')[0]} look at?`,
+      `**Last 7 days:** ${line || 'nothing'}\n\n**All time:** ${arr.length} taps recorded, newest ${new Date(arr[0].ts).toLocaleString()}.\n\nHigh "money", low "phase" taps = they care about the balance; feed that. The reverse = they want progress detail.`);
+  } catch (e) { toast(`${c.job}: no visits yet`, false); }
+}
+async function portalRotate(i) {
+  const c = _portalIdx.clients[i];
+  const fresh = c.key + '-' + Math.random().toString(16).slice(2, 8);
+  try {
+    await dbxRpc('files/move_v2', { from_path: (DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json').toLowerCase(), to_path: DBX_ROOT + '/App Data/Client Portal/' + fresh + '.json' });
+    try { await dbxRpc('files/move_v2', { from_path: (DBX_ROOT + '/App Data/Client Portal/clicks-' + c.code + '.json').toLowerCase(), to_path: DBX_ROOT + '/App Data/Client Portal/clicks-' + fresh + '.json' }); } catch (e) {}
+    c.code = fresh;
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/index.json', JSON.stringify(_portalIdx));
+    renderPortalList();
+    try { await navigator.clipboard.writeText(portalUrl(i)); } catch (e) {}
+    toast('🔄 Old link is DEAD. New link copied — text it to the client ✓');
+  } catch (e) { toast('Rotate failed — check the connection and try again', false); }
+}
+// 💼 v5.10 — drop Logan's QB exports straight into the pipeline
+async function qbDropUpload(inp) {
+  const files = [...(inp.files || [])];
+  if (!files.length) return;
+  if (!dbx.refreshToken) { toast('Connect Dropbox first (⚙ Setup)', false); return; }
+  $('qbDropMsg').textContent = 'Uploading…';
+  let done = 0;
+  for (const f of files) {
+    try { await dbxUpload('/Clore Project Tracker/QB Exports/' + f.name, f, true); done++; } catch (e) {}
+  }
+  inp.value = '';
+  $('qbDropMsg').textContent = done === files.length
+    ? `✓ ${done} file${done > 1 ? 's' : ''} in. The nightly QB refresher processes them by morning — or tell Claude "exports are in" for right now.`
+    : `⚠ Only ${done} of ${files.length} made it — try the rest again.`;
+  toast(`💼 ${done} export${done === 1 ? '' : 's'} uploaded ✓`);
+}
 // ✓✓ v5.06 TWO-CHECKMARK VERIFICATION — the field says money moved; QuickBooks proves it.
 // qb-costs.json (built from Logan's QB Transaction List export) holds the money-out lines.
 // Match = same dollars within a nickel of rounding, dates within 5 days. Category NEVER
