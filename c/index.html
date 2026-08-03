@@ -28,6 +28,23 @@
   .ph.open .ph-cats { display: block; }
   .foot { color: var(--ink2); font-size: 12.5px; text-align: center; margin-top: 26px; }
   .err { text-align: center; padding: 60px 20px; color: var(--ink2); }
+  .lamp { display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--line); border-radius: 999px;
+    padding: 5px 14px; font-size: 12.5px; font-weight: 800; letter-spacing: .8px; color: var(--ink2); margin: 0 0 14px; }
+  .lamp .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  .lamp.lit { border-color: var(--gold); color: var(--gold); }
+  .lamp.lit .dot { background: var(--gold); box-shadow: 0 0 10px var(--gold); animation: lampPulse 2s ease-in-out infinite; }
+  @keyframes lampPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .lamp.lit .dot { animation: none; } }
+  .soon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .soon { position: relative; border: 1px solid var(--line); border-radius: 14px; background: var(--card);
+    padding: 18px 8px 14px; text-align: center; cursor: default; overflow: hidden; }
+  .soon .ic { font-size: 26px; }
+  .soon .t { font-weight: 700; font-size: 13.5px; margin-top: 6px; }
+  .soon .s { color: var(--ink2); font-size: 11px; margin-top: 3px; line-height: 1.35; }
+  .soon .inner { opacity: .38; pointer-events: none; }
+  .ribbon { position: absolute; top: 14px; right: -34px; transform: rotate(35deg); background: var(--gold); color: #201c15;
+    font-size: 9px; font-weight: 800; letter-spacing: 1px; padding: 3px 36px; }
+  @media (max-width: 420px) { .soon-grid { grid-template-columns: 1fr 1fr; } .soon:last-child { grid-column: 1 / -1; } }
 </style>
 </head>
 <body>
@@ -51,9 +68,20 @@ async function boot() {
     return;
   }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // 💡 the budget lamp: LIT when the books were refreshed since this client's last visit
+  const seenKey = 'clore-seen-' + code;
+  const lastSeen = localStorage.getItem(seenKey) || '';
+  const fresh = (d.updated || '') > lastSeen;
+  try { localStorage.setItem(seenKey, d.updated || ''); } catch (e) {}
   let h = `<header><h1>CLORE CONSTRUCTION</h1><span class="upd">updated ${esc(d.updated || '')}</span></header>
     <h2>${esc(d.name || 'Your project')}</h2>
-    ${d.stage ? `<div class="stage">${esc(d.stage)}</div>` : ''}`;
+    ${d.stage ? `<div class="stage">${esc(d.stage)}</div>` : ''}
+    <div class="lamp${fresh ? ' lit' : ''}"><span class="dot"></span>${fresh ? 'BUDGET UPDATED — ' + esc(d.updated || '') : 'BUDGET CURRENT AS OF ' + esc(d.updated || '')}</div>
+    <div class="soon-grid">
+      <div class="soon" onclick="ping('soon:photos')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">progress pictures from the job</div></div></div>
+      <div class="soon" onclick="ping('soon:ask')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>
+      <div class="soon" onclick="ping('soon:materials')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Materials Board</div><div class="s">lists & picks, card by card</div></div></div>
+    </div>`;
   if (d.show && d.show.money) {
     h += `<div class="card" onclick="ping('money')"><h3>WHERE IT STANDS</h3><div class="money">
       <div class="m"><div class="v">${money(d.invoiced)}</div><div class="l">INVOICED TO DATE</div></div>
