@@ -1936,6 +1936,19 @@
 <div class="rev-modal" id="planModal" onclick="if(event.target===this)closePlanner()">
   <div class="rev-box" id="planBox"></div>
 </div>
+<!-- ⇄ v5.13 — switch jobs mid-shift: the clock never stops -->
+<div class="rev-modal" id="switchModal" onclick="if(event.target===this)cancelJobSwitch()">
+  <div class="rev-box">
+    <h3>⇄ Switch jobs — clock keeps running</h3>
+    <div class="rev-text" id="swText"></div>
+    <div class="field" style="margin-top: 10px;"><label>Quick note on what you finished (optional)</label>
+      <textarea id="swNote" rows="2" class="grow" placeholder="wrapped the header install, heading over now"></textarea></div>
+    <div class="rev-row" style="margin-top: 12px;">
+      <button class="btn-primary" onclick="doJobSwitch()">⇄ Switch — keep the clock rolling</button>
+      <button class="btn-ghost" onclick="cancelJobSwitch()">✕ Never mind</button>
+    </div>
+  </div>
+</div>
 <!-- v5.08 — 🧙 the answer and ONLY the answer: full screen, back button at the bottom -->
 <div id="wizFull">
   <div class="wf-body" id="wizFullBody"></div>
@@ -2135,7 +2148,7 @@
          drawn over it in SVG. The whole panel is the clock button. -->
     <div id="bigClock" data-state="out">
       <button type="button" class="bc-tap" id="bcTapBtn" onclick="bcTap()" aria-label="Time clock — tap to clock in or out"></button>
-      <select class="bc-job" id="clockJob" title="Job for this shift" aria-label="Job for this shift"></select>
+      <select class="bc-job" id="clockJob" title="Job for this shift — change it mid-shift to switch jobs without clocking out" aria-label="Job for this shift" onchange="clockJobChanged(this)"></select>
       <img src="steam/clockpanel-big.jpg" alt="" draggable="false">
       <svg viewBox="0 0 1122 1402" aria-hidden="true">
         <defs>
@@ -2810,7 +2823,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.12 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.13 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4234,6 +4247,49 @@ function setCoBillable(b) { coBillable = b; renderCoBillable(); }
 function renderCoBillable() {
   $('coBillYes').classList.toggle('sel', coBillable);
   $('coBillNo').classList.toggle('sel', !coBillable);
+}
+// ⇄ v5.13 — SWITCH JOBS WITHOUT PUNCHING OUT. Pick a different job on the clock panel
+// mid-shift → confirm → the finished stretch books itself on the old job with its hours,
+// categories and any quick note, and the clock rolls straight on under the new job.
+let _swTo = null;
+function clockJobChanged(sel) {
+  if (!clockedInAt) return; // before punch-in it's just picking where the shift will start
+  const to = sel.value;
+  if (!to || to === clockJobName) return;
+  sel.value = clockJobName; // nothing moves until it's confirmed
+  _swTo = to;
+  const hrs = Math.round(Math.max(workedSecNow() / 3600, 0) * 100) / 100;
+  $('swText').innerHTML = `Switching to <b>${esc(to)}</b>. The <b>${hrs.toFixed(2)} hrs</b> on <b>${esc(clockJobName)}</b> get logged right now — no punch-out, the clock keeps running.`;
+  $('swNote').value = '';
+  $('switchModal').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+function cancelJobSwitch() {
+  _swTo = null;
+  $('switchModal').classList.remove('show');
+  if (!document.querySelector('.panel.open')) document.body.classList.remove('modal-open');
+}
+function doJobSwitch() {
+  if (!_swTo || !clockedInAt) { cancelJobSwitch(); return; }
+  const now = new Date();
+  const hrs = Math.round(Math.max(workedSecNow() / 3600, 0.01) * 100) / 100;
+  const note = $('swNote').value.trim();
+  const brk = breakMins ? ` (− ${breakMins} min break)` : '';
+  const span = `Shift ${fmtTime(clockedInAt)} → ${fmtTime(now)}${brk} ⇄ switched jobs`;
+  const extra = { hours: hrs };
+  if (shiftCats && shiftCats.size) { const sc = [...shiftCats]; extra.category = sc[0]; if (sc.length > 1) extra.cats = sc; }
+  const from = clockJobName;
+  addEntry('Clock', note ? `${note} — ${span}` : span, from, extra);
+  // fresh segment starts NOW on the new job — dial, breaks and wage bank reset with it
+  clockedInAt = now; clockJobName = _swTo;
+  breakStart = null; breakMins = 0;
+  wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); if (workCat) shiftCats.add(workCat);
+  saveShift();
+  const sel = $('clockJob'); if (sel) sel.value = clockJobName;
+  $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
+  cancelJobSwitch();
+  renderAll(); bcRender();
+  toast(`⇄ ${hrs.toFixed(2)} hrs logged on ${from} — clock rolling on ${clockJobName} ✓`);
 }
 function saveClockOut() {
   if (!clockedInAt) { closePanels(); return; }
