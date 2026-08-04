@@ -2087,7 +2087,6 @@
   <div class="card" id="crewGaugeCard" style="display: none;">
     <div class="log-head" style="margin-bottom: 10px;">
       <span class="card-sub" style="margin: 0;">MY HOURS</span>
-      <button class="btn-ghost" onclick="openPayStubs()">💵 Pay stubs</button>
     </div>
     <!-- v4.70 — the live wage ticker: climbs every second on the clock, freezes on break -->
     <div id="wageTicker" style="display: none; text-align: center; margin-bottom: 12px;">
@@ -2583,10 +2582,9 @@
     <div id="mhChart" style="margin-top: 12px;"></div>
     <div class="frow" style="margin: 12px 0;">
       <button class="btn-ghost" onclick="window._mhBypass = true; openPanel('hours')">＋ Add or fix hours by hand</button>
-      <button class="btn-ghost" onclick="openPayStubs()">💵 Pay stubs</button>
     </div>
     <div id="mhList"></div>
-    <div class="hint" style="margin-top: 10px;">✎ works until you stamp a day <b>correct</b> — then it locks. Gross pay here is figured from your rates and hours; the pay stub is the official word on taxes and take-home.</div>
+    <div class="hint" style="margin-top: 10px;">✎ works until you stamp a day <b>correct</b> — then it locks. Gross pay here is figured from your rates and hours — <b>QuickBooks Workforce</b> is the official word on pay stubs, taxes, and take-home.</div>
   </div>
 
   <div class="panel" id="panel-todo">
@@ -2712,7 +2710,7 @@
           <button class="btn-ghost" onclick="publishCrewFolders()">📤 Set up / update crew folders</button>
           <button class="btn-ghost" onclick="crewPreviewToggle()">👁 View as crew</button>
         </div>
-        <div class="hint" style="margin-top: 8px;">Makes Dropbox → Clore DayLog → Crew → one folder per person (with a Pay Stubs folder inside). Then on dropbox.com, share each person's folder to THEIR OWN Dropbox account — that's the whole security wall. Drop pay stub PDFs in their folder and only they can see them.</div>
+        <div class="hint" style="margin-top: 8px;">Makes Dropbox → Clore DayLog → Crew → one folder per person. Then on dropbox.com, share each person's folder to THEIR OWN Dropbox account — that's the whole security wall. (Pay stubs live in QuickBooks Workforce, not here.)</div>
       </div>
       
     </div>
@@ -2854,7 +2852,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.16 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.17 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6506,7 +6504,6 @@ async function publishCrewFolders() {
   for (const name of crew) {
     const base = `${CREW_DIR}/${cleanName(name)}`;
     try { await dbxRpc('files/create_folder_v2', { path: base }); } catch (e) { /* exists */ }
-    try { await dbxRpc('files/create_folder_v2', { path: base + '/Pay Stubs' }); } catch (e) { /* exists */ }
     // 🔐 THEIR rates only — wageRatesFor(name) resolves this ONE person; nobody else's numbers ride along
     try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: { rates: wageRatesFor(name), catGrades: wageCfg().catGrades || {} }, tags: knownTags(), pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1)); } catch (e) {}
   }
@@ -6948,23 +6945,8 @@ function renderWageTick() {
     : `this shift · $${wageRate('').toFixed(2)}/hr`) + (breakStart ? ' · ☕ paused' : '');
 }
 
-// --- pay stubs: lists ONLY this person's folder (their Dropbox can't see anyone else's) ---
-async function openPayStubs() {
-  if (!dbx.refreshToken) { toast('Connect Dropbox first', false); return; }
-  toast('⏳ Getting your stubs…');
-  let files = [];
-  try {
-    const r = await dbxRpc('files/list_folder', { path: DBX_ROOT + '/Pay Stubs', recursive: false });
-    files = (r.entries || []).filter(f => f['.tag'] === 'file').sort((a, b) => (b.server_modified || '').localeCompare(a.server_modified || ''));
-  } catch (e) { toast('No Pay Stubs folder yet — ask Eric', false); return; }
-  $('revBox').innerHTML = `<h3>💵 Pay stubs</h3>` +
-    (files.length
-      ? files.map(f => `<div class="sum-row" onclick="openSummaryFile('${escq(f.path_lower)}', '${escq(f.name)}')"><span class="sum-title">📄 ${esc(f.name)}</span><span class="hint" style="margin:0; flex:none;">open →</span></div>`).join('')
-      : '<div class="rev-done">Nothing in your Pay Stubs folder yet.</div>') +
-    `<div class="rev-row" style="margin-top: 10px;"><button class="btn-primary" style="flex: 1;" onclick="closeReview()">Close</button></div>`;
-  $('revModal').classList.add('show');
-  document.body.classList.add('modal-open');
-}
+// v5.17 — pay stubs retired from the app: QuickBooks Workforce is the one place for stubs,
+// W-2s and taxes (each employee has their own Intuit login). Less to maintain, nothing to cross.
 
 // --- ⏱ v5.16 MY HOURS: a crew member's whole record. Week / month / all-time, hours and
 // gross pay from THEIR rates, ✎ until they stamp a day correct — then that day locks. ---
