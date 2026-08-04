@@ -1742,6 +1742,27 @@
   /* v4.91 — crew mostly ask Eric or Phil, not the Wizard: Grinder stays big, Wizard steps back */
   body.crew-mode .plate-row { align-items: center; }
   body.crew-mode .plate-btn--wiz { flex: 0 0 30%; }
+  /* v5.18 — crew page order: clock first, grinder second, needs-you next; reading matter sinks */
+  body.crew-mode .wrap { display: flex; flex-direction: column; }
+  body.crew-mode .wrap > * { order: 50; }
+  body.crew-mode .wrap > header { order: 0; }
+  body.crew-mode #crewBadge { order: 1; }
+  body.crew-mode #hotStrip { order: 2; }
+  body.crew-mode .clock-card { order: 3; }
+  body.crew-mode #crewGaugeCard { order: 4; }
+  body.crew-mode #qnCard { order: 5; }
+  body.crew-mode #crewAskCard { order: 6; }
+  body.crew-mode #todoCard { order: 7; }
+  body.crew-mode #dayTubeCard { order: 8; }
+  body.crew-mode #crewSharedCard { order: 30; }
+  body.crew-mode .wrap > footer { order: 100; }
+  /* v5.18 — Eric's CLOCK OUT plate: shows only while ON the clock; the whole plate punches out */
+  .plate-out { display: block; width: 100%; border: none; background: none; padding: 0; margin: 10px 0 0; cursor: pointer; border-radius: 12px; overflow: hidden; }
+  .plate-out img { display: block; width: 100%; height: auto; }
+  .plate-out:active { transform: translateY(2px); filter: brightness(1.15); }
+  /* v5.18 — punch tape lines are tappable: fix hours / times / notes right where you read them */
+  .punch-log div[onclick] { cursor: pointer; }
+  .pl-edit { opacity: 0.55; margin-left: 4px; }
   /* v4.90 — 📢 crew ask: Eric's question pops loud on every crew phone until somebody answers.
      State reads by size + glyph + spelled words, never color alone. */
   .crew-ask { border: 3px solid var(--accent); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
@@ -1961,6 +1982,22 @@
     </div>
   </div>
 </div>
+<!-- ✎ v5.18 — fix the RUNNING punch: no hours exist yet, so it's start time + a note -->
+<div class="rev-modal" id="liveEditModal" onclick="if(event.target===this)closeLiveEdit()">
+  <div class="rev-box">
+    <h3>✎ Fix this punch</h3>
+    <div class="rev-text">Still on the clock, so there are no hours yet — set when the shift really started, or leave a note that rides on it at clock-out.</div>
+    <div class="frow" style="margin-top: 10px;">
+      <div class="field"><label>Started at</label><input type="time" id="liveStart"></div>
+      <div class="field" style="flex: 1 1 100%;"><label>Note for the record (optional)</label>
+        <textarea id="liveNote" rows="2" class="grow" placeholder="forgot to punch — actually here at 6:30"></textarea></div>
+    </div>
+    <div class="rev-row" style="margin-top: 12px;">
+      <button class="btn-primary" onclick="saveLiveEdit()">Save</button>
+      <button class="btn-ghost" onclick="closeLiveEdit()">✕ Never mind</button>
+    </div>
+  </div>
+</div>
 <!-- v5.08 — 🧙 the answer and ONLY the answer: full screen, back button at the bottom -->
 <div id="wizFull">
   <div class="wf-body" id="wizFullBody"></div>
@@ -2083,10 +2120,11 @@
     <div id="crewSharedList"></div>
   </div>
 
-  <!-- crew only: my hours — day / week / month tubes, whistle at 10 and 40 -->
+  <!-- crew only — v5.18: fill bars retired (the shift gauge + punch tape tell the hours story).
+       This card is just the live wage ticker now, so it only shows while ON the clock. -->
   <div class="card" id="crewGaugeCard" style="display: none;">
     <div class="log-head" style="margin-bottom: 10px;">
-      <span class="card-sub" style="margin: 0;">MY HOURS</span>
+      <span class="card-sub" style="margin: 0;">EARNING RIGHT NOW</span>
     </div>
     <!-- v4.70 — the live wage ticker: climbs every second on the clock, freezes on break -->
     <div id="wageTicker" style="display: none; text-align: center; margin-bottom: 12px;">
@@ -2094,7 +2132,6 @@
       <div class="hint" id="wageSub" style="margin: 2px 0 8px;">this shift</div>
       <select class="mini-sel" id="workCatSel" style="width: 100%; font-size: 15px; padding: 8px;" onchange="setWorkCat(this.value)"></select>
     </div>
-    <div class="crew-gauges" id="crewGauges"></div>
   </div>
 
   <div class="card daytube-card" id="dayTubeCard">
@@ -2200,6 +2237,8 @@
         </g>
       </svg>
     </div>
+    <!-- v5.18 — Eric's matching CLOCK OUT plate: on the clock, the plate IS the punch-out button -->
+    <button class="plate-out" id="clockOutPlate" style="display: none;" onclick="bcTap()" aria-label="Clock out"><img src="steam/clockout-plate.webp" alt="" draggable="false"></button>
     <button class="btn-ghost" id="breakBtn" style="display: none; flex: 1 1 100%;" onclick="toggleBreak()" aria-pressed="false">☕ Go on break</button>
     <button class="btn-ghost" id="undoPunch" style="display: none; flex: 1 1 100%;" onclick="undoPunch()">↩ Undo that clock-in</button>
     <!-- v5.15 — today's punch tape: every hit of the button leaves a line; midnight wipes it clean -->
@@ -2584,7 +2623,7 @@
       <button class="btn-ghost" onclick="window._mhBypass = true; openPanel('hours')">＋ Add or fix hours by hand</button>
     </div>
     <div id="mhList"></div>
-    <div class="hint" style="margin-top: 10px;">✎ works until you stamp a day <b>correct</b> — then it locks. Gross pay here is figured from your rates and hours — <b>QuickBooks Workforce</b> is the official word on pay stubs, taxes, and take-home.</div>
+    <div class="hint" id="mhHint" style="margin-top: 10px;"></div>
   </div>
 
   <div class="panel" id="panel-todo">
@@ -2706,6 +2745,13 @@
         
         <div class="field" style="margin-bottom: 10px;"><label>👁 Preview as which crew member</label>
           <select id="sPreviewAs" class="mini-sel" onchange="prefs.previewAs = this.value; scheduleSave();"></select></div>
+        <!-- 🔓 v5.18 — they locked the wrong hours: reopen the day, they fix it, they SEND again -->
+        <div class="field" style="margin: 12px 0 4px;"><label>🔓 Reopen a locked day (their ✎ comes back on it — they fix it and SEND again)</label></div>
+        <div class="frow">
+          <div class="field"><label>Who</label><select id="unlockWho" class="mini-sel"></select></div>
+          <div class="field"><label>Which day</label><input type="date" id="unlockDay"></div>
+          <button class="btn-ghost" onclick="sendUnlock()">🔓 Reopen</button>
+        </div>
         <div class="frow">
           <button class="btn-ghost" onclick="publishCrewFolders()">📤 Set up / update crew folders</button>
           <button class="btn-ghost" onclick="crewPreviewToggle()">👁 View as crew</button>
@@ -2852,7 +2898,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.17 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.18 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4214,7 +4260,7 @@ function toggleClock() {
   if (!clockedInAt) {
     clockedInAt = new Date();
     clockJobName = $('clockJob').value;
-    wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); if (workCat) shiftCats.add(workCat);
+    wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); if (workCat) shiftCats.add(workCat); shiftNote = '';
     renderWorkCatSel();
     setClockBtn(true);
     saveShift();
@@ -4302,7 +4348,7 @@ function doJobSwitch() {
   if (!_swTo || !clockedInAt) { cancelJobSwitch(); return; }
   const now = new Date();
   const hrs = Math.round(Math.max(workedSecNow() / 3600, 0.01) * 100) / 100;
-  const note = $('swNote').value.trim();
+  const note = [shiftNote, $('swNote').value.trim()].filter(Boolean).join(' — '); // ✎ v5.18 mid-shift note rides along
   const brk = breakMins ? ` (− ${breakMins} min break)` : '';
   const span = `Shift ${fmtTime(clockedInAt)} → ${fmtTime(now)}${brk} ⇄ switched jobs`;
   const extra = { hours: hrs };
@@ -4312,7 +4358,7 @@ function doJobSwitch() {
   // fresh segment starts NOW on the new job — dial, breaks and wage bank reset with it
   clockedInAt = now; clockJobName = _swTo;
   breakStart = null; breakMins = 0;
-  wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); if (workCat) shiftCats.add(workCat);
+  wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); if (workCat) shiftCats.add(workCat); shiftNote = '';
   saveShift();
   const sel = $('clockJob'); if (sel) sel.value = clockJobName;
   $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
@@ -4327,7 +4373,7 @@ function saveClockOut() {
   const adj = coCalc();
   const edited = adj && (adj.i !== hm(clockedInAt) || adj.o !== hm(now));
   const rounded = edited ? adj.h : Math.round(Math.max((now - clockedInAt) / 3600000 - breakMins / 60, 0.01) * 100) / 100;
-  const note = $('coNote').value.trim();
+  const note = [shiftNote, $('coNote').value.trim()].filter(Boolean).join(' — '); // ✎ v5.18 mid-shift note rides along
   const brk = breakMins ? ` (− ${breakMins} min break)` : '';
   const span = edited
     ? `Shift ${hFmtHM(adj.i)} → ${hFmtHM(adj.o)}${brk} ✎ adjusted`
@@ -4342,7 +4388,7 @@ function saveClockOut() {
   toast(`Shift logged — ${rounded.toFixed(2)} hrs · ${shiftJob}${edited ? ' · ✎ adjusted' : ''}${coBillable ? '' : ' · not billable'} ✓`);
   clockedInAt = null; clockJobName = null;
   breakStart = null; breakMins = 0;
-  wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); coCats = new Set(); coJob = '';
+  wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); coCats = new Set(); coJob = ''; shiftNote = '';
   saveShift();
   setClockBtn(false);
   $('clockStatus').textContent = 'Clocked out';
@@ -4441,8 +4487,36 @@ function saveShift() {
   lsSet('daylog-shift', JSON.stringify({
     at: clockedInAt.toISOString(), job: clockJobName,
     brS: breakStart ? breakStart.toISOString() : null, brM: breakMins,
-    wb: wageBankCents, ws: wageSegStartSec, wc: workCat, cats: [...shiftCats]
+    wb: wageBankCents, ws: wageSegStartSec, wc: workCat, cats: [...shiftCats], sn: shiftNote || ''
   }));
+}
+// ✎ v5.18 — tap the RUNNING line on the punch tape: fix the start time, stash a note.
+// The note survives an app reload (rides daylog-shift) and lands on the entry at clock-out.
+let shiftNote = '';
+function openLiveEdit() {
+  if (!clockedInAt) return;
+  $('liveStart').value = String(clockedInAt.getHours()).padStart(2, '0') + ':' + String(clockedInAt.getMinutes()).padStart(2, '0');
+  $('liveNote').value = shiftNote;
+  $('liveEditModal').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+function closeLiveEdit() {
+  $('liveEditModal').classList.remove('show');
+  if (!document.querySelector('.panel.open')) document.body.classList.remove('modal-open');
+}
+function saveLiveEdit() {
+  const v = $('liveStart').value;
+  if (/^\d{2}:\d{2}$/.test(v)) {
+    const [h, m] = v.split(':').map(Number);
+    const d = new Date(clockedInAt); d.setHours(h, m, 0, 0);
+    if (d > new Date()) { toast('That start time is in the future — the clock can\'t run backwards', false); return; }
+    clockedInAt = d;
+  }
+  shiftNote = $('liveNote').value.trim();
+  saveShift(); bcRender(); renderAll();
+  $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
+  closeLiveEdit();
+  toast('✎ Punch fixed ✓');
 }
 function restoreShift() {
   let j = null;
@@ -4460,7 +4534,7 @@ function restoreShift() {
   breakStart = j.brS ? new Date(j.brS) : null;
   breakMins = j.brM || 0;
   wageBankCents = j.wb || 0; wageSegStartSec = j.ws || 0; workCat = j.wc || '';
-  shiftCats = new Set(j.cats || []);
+  shiftCats = new Set(j.cats || []); shiftNote = j.sn || '';
   const sel = $('clockJob'); if (sel) sel.value = clockJobName;
   setClockBtn(true);
   $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
@@ -4493,9 +4567,10 @@ function renderPunchLog() {
       let span = m ? m[1] : (e.details || '');
       const sw = span.includes('⇄ switched jobs');
       span = span.replace(' ⇄ switched jobs', '').trim();
-      return `<div>✓ ${esc(e.job)} — ${esc(span)} · <b>${(+e.hours || 0).toFixed(2)} hrs</b>${sw ? ' ⇄' : ''}</div>`;
+      // v5.18 — every line is tappable: fix hours, times, job or notes right on the tape (until locked)
+      return `<div onclick="openLogEdit(${e.id}, event)" role="button" title="Tap to fix this punch">✓ ${esc(e.job)} — ${esc(span)} · <b>${(+e.hours || 0).toFixed(2)} hrs</b>${sw ? ' ⇄' : ''}<span class="pl-edit">✎</span></div>`;
     });
-  if (clockedInAt) rows.push(`<div class="pl-open">⏱ Clocked into ${esc(clockJobName || '')} at ${fmtTime(clockedInAt)} — running…</div>`);
+  if (clockedInAt) rows.push(`<div class="pl-open" onclick="openLiveEdit()" role="button" title="Tap to fix the start time or add a note">⏱ Clocked into ${esc(clockJobName || '')} at ${fmtTime(clockedInAt)} — running…<span class="pl-edit">✎</span></div>`);
   const html = rows.length ? rows.join('') : '<span class="pl-empty">— no punches yet today —</span>';
   if (html !== _plPrev) { box.innerHTML = html; _plPrev = html; }
 }
@@ -4539,7 +4614,8 @@ function bcRender() {
   $('bcTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   $('bcLampOff').style.display = st.clockedIn ? 'none' : '';
   if ($('bcLampGlow')) $('bcLampGlow').style.display = 'none'; // v5.15 — retired: the BUTTON burns instead
-  $('bcAnnun').style.display = st.clockedIn ? '' : 'none';
+  $('bcAnnun').style.display = 'none'; // v5.18 — retired: Eric's real plate below carries the word
+  if ($('clockOutPlate')) $('clockOutPlate').style.display = st.clockedIn ? '' : 'none';
   renderPunchLog(); // 🧾 today's punch tape under the button
   const un = $('undoPunch');
   if (un) {
@@ -4711,7 +4787,7 @@ function renderBreakBtn() {
 
 // ---------- capture forms ----------
 function openPanel(name) {
-  if (name === 'hours' && isCrew() && !window._mhBypass) name = 'myhours'; // crew Hours = MY hours first
+  if (name === 'hours' && !window._mhBypass) name = 'myhours'; // v5.18 — EVERYONE'S Hours = the My Hours screen (Eric asked for the crew look)
   window._mhBypass = false;
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('open', p.id === 'panel-' + name && !p.classList.contains('open')));
   const panel = $('panel-' + name);
@@ -4723,9 +4799,10 @@ function openPanel(name) {
     if (name === 'file') fcOpenInit();
     if (name === 'mileage') mOpenInit();
     if (name === 'hours') hOpenInit();
-    if (name === 'myhours') renderMyHours();
+    if (name === 'myhours') { _lockArm = ''; renderMyHours(); }
     if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', ');
       if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
+      if ($('unlockWho')) $('unlockWho').innerHTML = crew.map(c => `<option>${esc(c)}</option>`).join('');
       renderPortalList(); initSetupCollapse(); }
     if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; renderDayFlowRows(); renderPipeRows(); }
     if (name === 'vault') vaultOpenInit();
@@ -6590,22 +6667,12 @@ function crewHourTotals() {
   if (clockedInAt) { const live = Math.max((now - clockedInAt) / 3600000, 0); d += live; w += live; m += live; }
   return { d, w, m };
 }
+// v5.18 — fill bars deleted (Eric: "the shift hours gauge does the trick now").
+// The card now only exists to hold the live wage ticker, so it shows only on the clock.
 function renderCrewGauges() {
   const card = $('crewGaugeCard');
   if (!card) return;
-  card.style.display = isCrew() ? '' : 'none';
-  if (!isCrew()) return;
-  const t = crewHourTotals();
-  const G = [['TODAY', t.d, 10], ['WEEK', t.w, 40], ['MONTH', t.m, 160]];
-  $('crewGauges').innerHTML = G.map(([lab, v, cap]) => {
-    const pct = Math.min(v / cap * 100, 100);
-    const hit = v >= cap;
-    return `<div class="cg" role="img" aria-label="${lab}: ${v.toFixed(1)} of ${cap} hours${hit ? ' — whistle blowing' : ''}">
-      <div class="cg-tube">${hit ? '<span class="cg-steam" aria-hidden="true">💨</span>' : ''}<div class="cg-fill${hit ? ' hit' : ''}" style="height: ${pct}%;"></div></div>
-      <div class="cg-num">${v.toFixed(1)}<span>/${cap}</span></div>
-      <div class="cg-lab">${lab}${hit ? ' · WHISTLE!' : ''}</div>
-    </div>`;
-  }).join('');
+  card.style.display = isCrew() && clockedInAt ? '' : 'none';
 }
 
 // --- 🔒 v4.71 the lock system: every note is PRIVATE unless Eric unlocks it ---
@@ -6677,14 +6744,28 @@ async function publishSharedNotes() {
     const tlist = todos.filter(t => !t.done && !t.parentId && !t.personal && t.who === name).slice(0, 40).map(t => ({
       id: t.id, text: t.text, job: t.job, due: t.due || undefined, pri: t.pri || 1
     }));
-    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks }, null, 1);
-    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks);
+    // 🔓 v5.18 — day-reopen orders ride along; the crew phone processes each exactly once
+    const unlocks = ((prefs.unlockBy || {})[name] || []).slice(-5);
+    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, unlocks }, null, 1);
+    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(unlocks);
     if (_sharedCache[name] === key) continue; // nothing changed for this person
     try {
       await dbxUpload(`${CREW_DIR}/${cleanName(name)}/shared.json`, body);
       _sharedCache[name] = key;
     } catch (e) { /* offline — next sweep gets it */ }
   }
+}
+// 🔓 v5.18 — Eric's side: reopen a day someone locked with wrong hours on it
+function sendUnlock() {
+  const name = $('unlockWho').value, day = $('unlockDay').value;
+  if (!name || !/^\d{4}-\d{2}-\d{2}$/.test(day || '')) { toast('Pick who and which day first', false); return; }
+  if (!prefs.unlockBy) prefs.unlockBy = {};
+  const arr = (prefs.unlockBy[name] || []).filter(u => u.day !== day).slice(-4);
+  arr.push({ day, at: new Date().toISOString() });
+  prefs.unlockBy[name] = arr;
+  scheduleSave(); publishSharedNotes();
+  $('unlockDay').value = '';
+  toast(`🔓 ${name}'s ${day} reopens on their next sync — they fix it and SEND it again ✓`);
 }
 // crew side: read my shared.json and show the FROM ERIC card
 let crewShared = [];
@@ -6715,6 +6796,29 @@ async function checkSharedNotes() {
         pri: Math.min(Math.max(+x.pri || 1, 0), 3), ts: new Date().toISOString() };
       todos.unshift(t2); fresh++;
     });
+    // 🔓 v5.18 — Eric reopened a locked day: the ✎ comes back, fix it and SEND again.
+    // Each reopen order runs exactly once (day+stamp remembered), so re-locking sticks.
+    const unl = (j.unlocks || []).slice(0, 5);
+    if (unl.length) {
+      let doneKeys = []; try { doneKeys = JSON.parse(lsGet('daylog-unlocks-done') || '[]'); } catch (e) {}
+      const doneSet = new Set(doneKeys);
+      let hit = 0;
+      unl.forEach(u => {
+        const k = (u.day || '') + '|' + (u.at || '');
+        if (!u.day || doneSet.has(k)) return;
+        entries.forEach(e => {
+          if (e.locked && (e.type === 'Clock' || e.type === 'Hours') && (!e.who || e.who === 'Me') &&
+            localDay(new Date(e.ts)) === u.day) { delete e.locked; e.synced = false; hit++; }
+        });
+        doneSet.add(k);
+      });
+      lsSet('daylog-unlocks-done', JSON.stringify([...doneSet].slice(-30)));
+      if (hit) {
+        scheduleSave();
+        const mh = $('panel-myhours'); if (mh && mh.classList.contains('open')) renderMyHours();
+        toast('🔓 Eric reopened a day for you — fix the hours and SEND it again');
+      }
+    }
     const before = todos.length;
     todos = todos.filter(x => !(x.fromEric && !x.done && !incIds.has(x.srcId)));
     if (fresh || todos.length !== before) {
@@ -7021,14 +7125,29 @@ function renderMyHours() {
         <b style="flex: none;">${(+e.hours || 0).toFixed(2)}</b>
         ${e.locked ? '<span style="flex: none;">🔒</span>' : `<button class="btn-ghost" style="flex: none; padding: 3px 9px;" onclick="openLogEdit(${e.id}, event)" aria-label="fix this entry">✎</button>`}
       </div>`).join('')}
-      <div style="margin-top: 8px;">${locked
-        ? '<span class="hint" style="margin: 0;">🔒 LOCKED — you sent this day in as correct</span>'
-        : `<button class="btn-primary" style="width: 100%;" onclick="lockDay('${d}')">✓ Everything is correct — SEND it (locks the day)</button>`}</div>
+      ${isCrew() ? `<div style="margin-top: 8px;">${locked
+        ? '<span class="hint" style="margin: 0;">🔒 LOCKED — you sent this day in as correct. Need it back open? Ask Eric.</span>'
+        : _lockArm === d
+          ? `<div class="rev-text" style="margin-bottom: 8px;">⚠ Sure? This sends the day in and <b>LOCKS</b> it — only Eric can reopen it.</div>
+             <div class="frow"><button class="btn-primary" style="flex: 2;" onclick="lockDayGo('${d}')">✓ YES — send &amp; lock</button>
+             <button class="btn-ghost" style="flex: 1;" onclick="lockCancel()">✕ No, wait</button></div>`
+          : `<button class="btn-primary" style="width: 100%;" onclick="lockDay('${d}')">✓ Everything is correct — SEND it (locks the day)</button>`}</div>` : ''}
     </div>`;
   }).join('') || '<div class="hint" style="margin-top: 10px;">No hours in this stretch yet — clock in and they land here.</div>';
+  if ($('mhHint')) $('mhHint').innerHTML = isCrew()
+    ? '✎ works until you stamp a day <b>correct</b> — then it locks. Gross pay here is figured from your rates and hours — <b>QuickBooks Workforce</b> is the official word on pay stubs, taxes, and take-home.'
+    : '✎ any line, any time — your days never lock. Gross here is figured from the grade rates in Setup.';
 }
+// 🔒 v5.18 — two-tap lock: first tap arms the question, second tap actually sends & locks
+let _lockArm = '';
 function lockDay(d) {
   if (clockedInAt && localDay(new Date()) === d) { toast('⏱ Clock out first — the running shift isn\'t written down yet', false); return; }
+  _lockArm = d; renderMyHours();
+}
+function lockCancel() { _lockArm = ''; renderMyHours(); }
+function lockDayGo(d) {
+  _lockArm = '';
+  if (clockedInAt && localDay(new Date()) === d) { toast('⏱ Clock out first — the running shift isn\'t written down yet', false); renderMyHours(); return; }
   mhOwn().filter(e => localDay(new Date(e.ts)) === d).forEach(e => { e.locked = true; e.synced = false; });
   scheduleSave(); renderMyHours();
   toast('🔒 Sent — that day is stamped correct and locked ✓');
@@ -7107,6 +7226,7 @@ async function renderPortalList() {
   box.innerHTML = (_portalIdx.clients || []).map((c, i) => `
     <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
       <span class="sum-title" style="flex: 1 1 100%;">🏠 ${esc(c.job)}</span>
+      <button class="btn-ghost req-x" onclick="openJournal(${i})">📖 Journal</button>
       <button class="btn-ghost req-x" onclick="portalCopy(${i})">📋 Copy link</button>
       <button class="btn-ghost req-x" onclick="window.open(portalUrl(${i}), '_blank')">👁 View as this client</button>
       <button class="btn-ghost req-x" onclick="portalIntel(${i})">📊 What they look at</button>
@@ -7149,6 +7269,72 @@ async function portalRotate(i) {
     try { await navigator.clipboard.writeText(portalUrl(i)); } catch (e) {}
     toast('🔄 Old link is DEAD. New link copied — text it to the client ✓');
   } catch (e) { toast('Rotate failed — check the connection and try again', false); }
+}
+// 📖 v5.18 — CLIENT JOURNAL: a week-by-week story on the client page. The draft writes
+// itself from the job's last 7 days, Eric's filters pick what kinds of info ride, he edits
+// the words, and only what he RELEASES ever reaches the client. Personal never eligible.
+let _jrnIdx = null;
+function journalPrefs(code) {
+  if (!prefs.journalPrefs) prefs.journalPrefs = {};
+  return prefs.journalPrefs[code] = prefs.journalPrefs[code] || { notes: true, hours: true, photos: true, money: false };
+}
+function journalDraft(job, code) {
+  const p = journalPrefs(code);
+  const from = new Date(); from.setDate(from.getDate() - 7);
+  const win = entries.filter(e => !e.sample && !e.personal && e.job === job && new Date(e.ts) >= from);
+  const lines = [];
+  if (p.notes) win.filter(e => ['Note', 'Photo'].includes(e.type) && !e.route && !e.ask && !e.noSniff && (e.details || '').trim())
+    .slice(0, 18).reverse().forEach(e =>
+      lines.push(`• ${new Date(e.ts).toLocaleDateString([], { weekday: 'short' })} — ${e.details.replace(/\s+/g, ' ').slice(0, 140)}`));
+  const hrs = win.filter(e => ['Clock', 'Hours'].includes(e.type) && +e.hours > 0).reduce((s, e) => s + +e.hours, 0);
+  if (p.hours && hrs) lines.push(`\nCrew hours on site this week: ${hrs.toFixed(1)}`);
+  const ph = win.filter(e => e.photoPath || e.type === 'Photo').length;
+  if (p.photos && ph) lines.push(`Progress photos taken: ${ph}`);
+  if (p.money) {
+    const amt = win.filter(e => ['Expense', 'Filed'].includes(e.type) && +e.amount > 0).reduce((s, e) => s + +e.amount, 0);
+    if (amt) lines.push(`Materials & subs paid this week: $${amt.toFixed(2)}`);
+  }
+  return lines.length ? lines.join('\n') : '• (quiet week on the books — write the client a line or two)';
+}
+async function openJournal(i) {
+  if (portalGuard()) return;
+  const c = _portalIdx.clients[i]; _jrnIdx = i;
+  const p = journalPrefs(c.code);
+  const chk = (k, lab) => `<button type="button" class="pick-chip${p[k] ? ' sel' : ''}" onclick="jrnFilter('${k}', ${!p[k]})" aria-pressed="${p[k]}">${p[k] ? '✓ ' : ''}${lab}</button>`;
+  $('revBox').innerHTML = `<h3>📖 ${esc(c.job)} — this week's journal</h3>
+    <div class="hint" style="margin: 0;">What the draft pulls in — flip one and it redrafts (hand edits reset):</div>
+    <div class="frow" style="margin: 8px 0;">${chk('notes', 'work notes')}${chk('hours', 'hours on site')}${chk('photos', 'photo count')}${chk('money', 'money moved')}</div>
+    <div class="field"><label>The entry — edit anything before it goes out</label>
+      <textarea id="jrnText" rows="10" class="grow" style="width: 100%;">${esc(journalDraft(c.job, c.code))}</textarea></div>
+    <div class="rev-row" style="margin-top: 10px;">
+      <button class="btn-primary" style="flex: 2;" onclick="journalRelease()">📖 Release to the client page</button>
+      <button class="btn-ghost" style="flex: 1;" onclick="closeReview()">✕ Cancel</button>
+    </div>
+    <div class="hint" style="margin-top: 8px;">Releasing stamps the week, lights the client's BUDGET/NEWS lamp on their next visit, and stacks past weeks below it. Nothing marked personal can ever ride along.</div>`;
+  $('revModal').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+function jrnFilter(k, v) {
+  const c = _portalIdx.clients[_jrnIdx];
+  journalPrefs(c.code)[k] = !!v;
+  scheduleSave(); openJournal(_jrnIdx);
+}
+async function journalRelease() {
+  if (portalGuard() || _jrnIdx == null) return;
+  const c = _portalIdx.clients[_jrnIdx];
+  const text = ($('jrnText').value || '').trim();
+  if (!text) { toast('Nothing to release', false); return; }
+  const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
+  try {
+    const d = JSON.parse(await dbxDownload(path) || '{}');
+    const now = new Date(); const from = new Date(); from.setDate(from.getDate() - 6);
+    const fmt = x => x.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    d.journal = [{ week: `${fmt(from)} – ${fmt(now)}`, released: now.toISOString().slice(0, 10), text }, ...(d.journal || [])].slice(0, 26);
+    d.updated = now.toISOString().slice(0, 10);
+    await dbxUpload(path, JSON.stringify(d, null, 1));
+    closeReview();
+    toast(`📖 Journal released — ${c.job}'s page carries it now ✓`);
+  } catch (e) { toast('Couldn\'t reach the client file — check the connection and try again', false); }
 }
 // 💼 v5.10 — drop Logan's QB exports straight into the pipeline
 async function qbDropUpload(inp) {

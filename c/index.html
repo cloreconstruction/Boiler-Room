@@ -76,12 +76,21 @@ async function boot() {
   let h = `<header><h1>CLORE CONSTRUCTION</h1><span class="upd">updated ${esc(d.updated || '')}</span></header>
     <h2>${esc(d.name || 'Your project')}</h2>
     ${d.stage ? `<div class="stage">${esc(d.stage)}</div>` : ''}
-    <div class="lamp${fresh ? ' lit' : ''}"><span class="dot"></span>${fresh ? 'BUDGET UPDATED — ' + esc(d.updated || '') : 'BUDGET CURRENT AS OF ' + esc(d.updated || '')}</div>
+    <div class="lamp${fresh ? ' lit' : ''}"><span class="dot"></span>${fresh ? 'UPDATED FOR YOU — ' + esc(d.updated || '') : 'CURRENT AS OF ' + esc(d.updated || '')}</div>
     <div class="soon-grid">
       <div class="soon" onclick="ping('soon:photos')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">progress pictures from the job</div></div></div>
       <div class="soon" onclick="ping('soon:ask')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>
       <div class="soon" onclick="ping('soon:materials')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Materials Board</div><div class="s">lists & picks, card by card</div></div></div>
     </div>`;
+  // 📖 v5.18 — the job journal: week-by-week entries Eric released; newest open, past weeks fold
+  if ((d.journal || []).length) {
+    h += `<div class="card"><h3>JOB JOURNAL — week by week</h3>` +
+      d.journal.slice(0, 26).map((j, i) => `<div class="ph${i ? '' : ' open'}" id="jr${i}">
+        <div class="ph-head" onclick="document.getElementById('jr${i}').classList.toggle('open'); ping('journal')">
+          <span>📖 Week of ${esc(j.week)}</span><span>${i ? '▾' : ''}</span></div>
+        <div class="ph-cats" style="white-space: pre-wrap; padding-left: 4px;">${esc(j.text)}</div>
+      </div>`).join('') + `</div>`;
+  }
   if (d.show && d.show.money) {
     h += `<div class="card" onclick="ping('money')"><h3>WHERE IT STANDS</h3><div class="money">
       <div class="m"><div class="v">${money(d.invoiced)}</div><div class="l">INVOICED TO DATE</div></div>
