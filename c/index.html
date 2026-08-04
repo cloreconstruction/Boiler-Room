@@ -82,14 +82,24 @@ async function boot() {
       <div class="soon" onclick="ping('soon:ask')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>
       <div class="soon" onclick="ping('soon:materials')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Materials Board</div><div class="s">lists & picks, card by card</div></div></div>
     </div>`;
-  // 📖 v5.18 — the job journal: week-by-week entries Eric released; newest open, past weeks fold
+  // 📖 v5.18 — the job journal: ONLY the latest week shows; everything older lives behind
+  // one "Past weeks" row, so the page stays clean no matter how long the job runs.
   if ((d.journal || []).length) {
-    h += `<div class="card"><h3>JOB JOURNAL — week by week</h3>` +
-      d.journal.slice(0, 26).map((j, i) => `<div class="ph${i ? '' : ' open'}" id="jr${i}">
-        <div class="ph-head" onclick="document.getElementById('jr${i}').classList.toggle('open'); ping('journal')">
-          <span>📖 Week of ${esc(j.week)}</span><span>${i ? '▾' : ''}</span></div>
-        <div class="ph-cats" style="white-space: pre-wrap; padding-left: 4px;">${esc(j.text)}</div>
-      </div>`).join('') + `</div>`;
+    const js = d.journal.slice(0, 26);
+    h += `<div class="card"><h3>JOB JOURNAL</h3>
+      <div class="ph open">
+        <div class="ph-head"><span>📖 Week of ${esc(js[0].week)}</span></div>
+        <div class="ph-cats" style="white-space: pre-wrap; padding-left: 4px;">${esc(js[0].text)}</div>
+      </div>` +
+      (js.length > 1 ? `<div class="ph" id="jrPast">
+        <div class="ph-head" onclick="document.getElementById('jrPast').classList.toggle('open'); ping('journal:past')">
+          <span>▸ Past weeks (${js.length - 1})</span><span></span></div>
+        <div class="ph-cats" style="padding-left: 0;">` +
+        js.slice(1).map((j, i) => `<div class="ph" id="jr${i + 1}">
+          <div class="ph-head" onclick="event.stopPropagation(); document.getElementById('jr${i + 1}').classList.toggle('open'); ping('journal')">
+            <span>Week of ${esc(j.week)}</span><span>▾</span></div>
+          <div class="ph-cats" style="white-space: pre-wrap;">${esc(j.text)}</div>
+        </div>`).join('') + `</div></div>` : '') + `</div>`;
   }
   if (d.show && d.show.money) {
     h += `<div class="card" onclick="ping('money')"><h3>WHERE IT STANDS</h3><div class="money">
