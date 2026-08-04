@@ -2575,6 +2575,20 @@
     <div class="hint" id="sumGenHint">Summaries and reports generate within the hour of a request (phone notification when ready) and save to Dropbox / Clore DayLog / Summaries. The weekly one writes itself every Friday evening. Need an answer right now? Ask in the Claude chat instead — that's minutes, not an hour.</div>
   </div>
 
+<!-- ⏱ v5.16 — MY HOURS: the crew's whole record. Editable until they stamp a day correct. -->
+  <div class="panel" id="panel-myhours">
+    <h3>⏱ My Hours</h3>
+    <div class="chip-grid chip-grid--3" id="mhRange"></div>
+    <div id="mhTotals" style="margin-top: 12px;"></div>
+    <div id="mhChart" style="margin-top: 12px;"></div>
+    <div class="frow" style="margin: 12px 0;">
+      <button class="btn-ghost" onclick="window._mhBypass = true; openPanel('hours')">＋ Add or fix hours by hand</button>
+      <button class="btn-ghost" onclick="openPayStubs()">💵 Pay stubs</button>
+    </div>
+    <div id="mhList"></div>
+    <div class="hint" style="margin-top: 10px;">✎ works until you stamp a day <b>correct</b> — then it locks. Gross pay here is figured from your rates and hours; the pay stub is the official word on taxes and take-home.</div>
+  </div>
+
   <div class="panel" id="panel-todo">
     <h3 id="ptTitle">Add a to-do</h3>
     <textarea id="ptText" class="todo-big grow" rows="2" oninput="fitTa(this)" placeholder="Answer Bob's text about the gate…"></textarea>
@@ -2685,6 +2699,8 @@
         <div class="field" style="margin: 10px 0 6px;"><label>Tap a category to cycle its grade — ① ② ③</label></div>
         <div class="chip-grid" id="wageCatGrid"></div>
         <div class="hint" style="margin-top: 8px;">Each crew member's app only ever gets these rates and their own hours — tap 📤 below after changing so their folders pick it up.</div>
+        <div class="field" style="margin: 12px 0 4px;"><label>💵 Per-person rates (blank = the grade rates above; a person's numbers only travel to THEIR folder)</label></div>
+        <div id="wageByRows"></div>
       </div>
       <div id="crewOwnerTools" style="margin-top: 14px;">
         <div class="field" style="margin-bottom: 10px;"><label>Push secret (same value as PUSH_SECRET in Netlify — lets crew NOW notes ring phones)</label>
@@ -2838,7 +2854,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.15 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.16 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4697,6 +4713,8 @@ function renderBreakBtn() {
 
 // ---------- capture forms ----------
 function openPanel(name) {
+  if (name === 'hours' && isCrew() && !window._mhBypass) name = 'myhours'; // crew Hours = MY hours first
+  window._mhBypass = false;
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('open', p.id === 'panel-' + name && !p.classList.contains('open')));
   const panel = $('panel-' + name);
   const isOpen = panel.classList.contains('open');
@@ -4707,6 +4725,7 @@ function openPanel(name) {
     if (name === 'file') fcOpenInit();
     if (name === 'mileage') mOpenInit();
     if (name === 'hours') hOpenInit();
+    if (name === 'myhours') renderMyHours();
     if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', ');
       if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
       renderPortalList(); initSetupCollapse(); }
@@ -6488,7 +6507,8 @@ async function publishCrewFolders() {
     const base = `${CREW_DIR}/${cleanName(name)}`;
     try { await dbxRpc('files/create_folder_v2', { path: base }); } catch (e) { /* exists */ }
     try { await dbxRpc('files/create_folder_v2', { path: base + '/Pay Stubs' }); } catch (e) { /* exists */ }
-    try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: wageCfg(), tags: knownTags(), pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1)); } catch (e) {}
+    // 🔐 THEIR rates only — wageRatesFor(name) resolves this ONE person; nobody else's numbers ride along
+    try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: { rates: wageRatesFor(name), catGrades: wageCfg().catGrades || {} }, tags: knownTags(), pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1)); } catch (e) {}
   }
   toast(`Crew folders ready — ${crew.join(', ')} ✓`);
 }
@@ -6847,11 +6867,41 @@ function renderWageSetup() {
     const g = (w.catGrades || {})[c] || 1;
     return `<button class="pick-chip grid-chip${g > 1 ? ' sel' : ''}" onclick="cycleCatGrade('${escq(c)}')" aria-label="${esc(c)} — grade ${g}, $${wageRate(c)} an hour, tap to change"><span>${GRADE_MARK[g - 1]} ${esc(c)} · $${wageRate(c)}</span></button>`;
   }).join('');
+  renderWageByRows();
 }
 function saveWageRates() {
   const w = wageCfg();
   w.rates = { 1: +$('wg1').value || 0, 2: +$('wg2').value || 0, 3: +$('wg3').value || 0 };
   scheduleSave(); renderWageSetup();
+}
+// 💵 v5.16 — EVERY crew member can have their own tier rates. Blank = the grade rates above.
+// A person's numbers only EVER travel inside their own crew.json — never anyone else's.
+function wageRatesFor(name) {
+  const base = wageCfg().rates || {};
+  const own = ((prefs.wageBy || {})[name]) || {};
+  return { 1: +own[1] || +base[1] || 0, 2: +own[2] || +base[2] || 0, 3: +own[3] || +base[3] || 0 };
+}
+function saveWageBy(name, tier, val) {
+  if (!prefs.wageBy) prefs.wageBy = {};
+  if (!prefs.wageBy[name]) prefs.wageBy[name] = {};
+  const v = parseFloat(val);
+  if (v > 0) prefs.wageBy[name][tier] = v; else delete prefs.wageBy[name][tier];
+  if (!Object.keys(prefs.wageBy[name]).length) delete prefs.wageBy[name];
+  scheduleSave();
+  toast(`💵 ${name}'s rates saved — tap 📤 so their folder picks them up ✓`);
+}
+function renderWageByRows() {
+  const box = $('wageByRows');
+  if (!box) return;
+  box.innerHTML = crew.map(n => {
+    const r = wageRatesFor(n), own = (prefs.wageBy || {})[n] || {};
+    return `<div class="frow" style="align-items: center; gap: 6px; margin-top: 6px;">
+      <b style="flex: 1 1 90px;">${esc(n)}</b>
+      ${[1, 2, 3].map(t => `<div class="field" style="flex: 0 1 90px;"><label>${GRADE_MARK[t - 1]} $/hr</label>
+        <input type="number" inputmode="decimal" min="0" step="0.5" value="${own[t] || ''}" placeholder="${r[t]}"
+        onchange="saveWageBy('${escq(n)}', ${t}, this.value)"></div>`).join('')}
+    </div>`;
+  }).join('') || '<span class="hint">Add crew above first.</span>';
 }
 function cycleCatGrade(c) {
   const w = wageCfg();
@@ -6914,6 +6964,92 @@ async function openPayStubs() {
     `<div class="rev-row" style="margin-top: 10px;"><button class="btn-primary" style="flex: 1;" onclick="closeReview()">Close</button></div>`;
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
+}
+
+// --- ⏱ v5.16 MY HOURS: a crew member's whole record. Week / month / all-time, hours and
+// gross pay from THEIR rates, ✎ until they stamp a day correct — then that day locks. ---
+let mhRangeSel = 'week';
+function mhOwn() {
+  return entries.filter(e => !e.sample && (e.type === 'Clock' || e.type === 'Hours') &&
+    (!e.who || e.who === 'Me') && +e.hours > 0);
+}
+function mhRate(e) { return wageRate(e.category || (e.cats || [])[0] || ''); }
+function mhInRange(e) {
+  if (mhRangeSel === 'all') return true;
+  const d = localDay(new Date(e.ts));
+  if (mhRangeSel === 'week') return d >= localDay(weekStart(new Date()));
+  const now = new Date();
+  return d >= localDay(new Date(now.getFullYear(), now.getMonth(), 1, 12));
+}
+function setMhRange(r) { mhRangeSel = r; renderMyHours(); }
+function renderMyHours() {
+  if (!$('mhRange')) return;
+  $('mhRange').innerHTML = [['week', 'This week'], ['month', 'This month'], ['all', 'All time']]
+    .map(([v, l]) => `<button class="pick-chip grid-chip${mhRangeSel === v ? ' sel' : ''}" onclick="setMhRange('${v}')" aria-pressed="${mhRangeSel === v}">${l}</button>`).join('');
+  const own = mhOwn();
+  const list = own.filter(mhInRange);
+  // ── totals: hours + gross, then the per-category split with grade marks
+  let hrs = 0, cents = 0; const byCat = {};
+  list.forEach(e => {
+    const h = +e.hours || 0, r = mhRate(e);
+    hrs += h; cents += Math.round(h * r * 100);
+    const c = e.category || (e.cats || [])[0] || '—';
+    (byCat[c] = byCat[c] || { h: 0, cents: 0 }).h += h;
+    byCat[c].cents += Math.round(h * r * 100);
+  });
+  $('mhTotals').innerHTML = `<div class="frow" style="gap: 18px; align-items: baseline;">
+      <div><span style="font-size: 27px; font-weight: 800;">${hrs.toFixed(2)}</span> <span class="hint" style="margin: 0;">HOURS</span></div>
+      <div><span style="font-size: 27px; font-weight: 800;">$${(cents / 100).toFixed(2)}</span> <span class="hint" style="margin: 0;">GROSS — before taxes</span></div>
+    </div>` +
+    (Object.keys(byCat).length ? `<div class="hint" style="margin: 6px 0 0;">` +
+      Object.entries(byCat).sort((a, b) => b[1].h - a[1].h).map(([c, v]) => {
+        const g = (wageCfg().catGrades || {})[c] || 1;
+        return `${c === '—' ? '— no category' : GRADE_MARK[g - 1] + ' ' + esc(c)} · ${v.h.toFixed(1)} hrs · $${(v.cents / 100).toFixed(2)}`;
+      }).join('<br>') + `</div>` : '');
+  // ── the last 8 weeks, bar by bar (heights = hours; numbers on top so it never rides on color)
+  const weeks = [];
+  for (let i = 7; i >= 0; i--) { const w = weekStart(new Date()); w.setDate(w.getDate() - i * 7); weeks.push(localDay(w)); }
+  const wk = {}; weeks.forEach(w => wk[w] = 0);
+  own.forEach(e => { const w = localDay(weekStart(new Date(e.ts))); if (w in wk) wk[w] += +e.hours || 0; });
+  const mx = Math.max(...weeks.map(w => wk[w]), 1);
+  $('mhChart').innerHTML = `<div class="hint" style="margin: 0 0 4px;">LAST 8 WEEKS</div>
+    <div style="display: flex; align-items: flex-end; gap: 5px; height: 78px;">` +
+    weeks.map(w => `<div style="flex: 1; text-align: center; align-self: flex-end;">
+        <div style="font-size: 10px; color: var(--ink-2, #b0a488);">${wk[w] ? wk[w].toFixed(0) : ''}</div>
+        <div class="mh-bar" style="height: ${Math.max(Math.round(wk[w] / mx * 52), 2)}px; background: var(--accent); opacity: ${wk[w] ? .85 : .22}; border-radius: 3px 3px 0 0;"></div>
+        <div style="font-size: 9px; color: var(--ink-2, #b0a488);">${w.slice(5).replace('-', '/')}</div>
+      </div>`).join('') + `</div>`;
+  // ── day by day, newest first: every punch, ✎ until the day is stamped correct
+  const days = {};
+  list.forEach(e => { const d = localDay(new Date(e.ts)); (days[d] = days[d] || []).push(e); });
+  const today = localDay(new Date());
+  $('mhList').innerHTML = Object.keys(days).sort().reverse().map(d => {
+    const es = days[d].sort((a, b) => new Date(a.ts) - new Date(b.ts));
+    const dh = es.reduce((s, e) => s + (+e.hours || 0), 0);
+    const dc = es.reduce((s, e) => s + Math.round((+e.hours || 0) * mhRate(e) * 100), 0);
+    const locked = es.every(e => e.locked);
+    const dt = new Date(d + 'T12:00');
+    return `<div class="card" style="margin-top: 10px; padding: 10px 12px;">
+      <div class="frow" style="justify-content: space-between; align-items: center; gap: 8px;">
+        <b>${d === today ? 'TODAY' : dt.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</b>
+        <span>${dh.toFixed(2)} hrs · $${(dc / 100).toFixed(2)}</span>
+      </div>
+      ${es.map(e => `<div class="frow" style="justify-content: space-between; align-items: center; gap: 8px; margin-top: 5px; font-size: 14px;">
+        <span style="flex: 1;">${esc(e.job)} — ${esc((e.details || '').replace(/^Shift /, ''))}${e.category || (e.cats || []).length ? ` <span class="hint" style="margin: 0;">· ${esc(e.category || (e.cats || []).join(' + '))}</span>` : ''}</span>
+        <b style="flex: none;">${(+e.hours || 0).toFixed(2)}</b>
+        ${e.locked ? '<span style="flex: none;">🔒</span>' : `<button class="btn-ghost" style="flex: none; padding: 3px 9px;" onclick="openLogEdit(${e.id}, event)" aria-label="fix this entry">✎</button>`}
+      </div>`).join('')}
+      <div style="margin-top: 8px;">${locked
+        ? '<span class="hint" style="margin: 0;">🔒 LOCKED — you sent this day in as correct</span>'
+        : `<button class="btn-primary" style="width: 100%;" onclick="lockDay('${d}')">✓ Everything is correct — SEND it (locks the day)</button>`}</div>
+    </div>`;
+  }).join('') || '<div class="hint" style="margin-top: 10px;">No hours in this stretch yet — clock in and they land here.</div>';
+}
+function lockDay(d) {
+  if (clockedInAt && localDay(new Date()) === d) { toast('⏱ Clock out first — the running shift isn\'t written down yet', false); return; }
+  mhOwn().filter(e => localDay(new Date(e.ts)) === d).forEach(e => { e.locked = true; e.synced = false; });
+  scheduleSave(); renderMyHours();
+  toast('🔒 Sent — that day is stamped correct and locked ✓');
 }
 
 // --- Eric's side: crew punches + routed notes come in as review cards, never silently ---
@@ -8788,6 +8924,8 @@ function openLogEdit(id, ev) {
   if (ev) ev.stopPropagation();
   const e = entries.find(x => x.id === id);
   if (!e) return;
+  // 🔒 v5.16 — once a crew member stamps a day correct, that day's hours don't bend
+  if (isCrew() && e.locked) { toast('🔒 That day is locked — you sent it in as correct. Ask Eric if something needs fixing.', false); return; }
   editingLogId = id;
   $('leText').value = e.details; fitTa('leText');
   const jobOpts = ['—', ...new Set([...jobs, e.job].filter(j => j && j !== '—'))];
