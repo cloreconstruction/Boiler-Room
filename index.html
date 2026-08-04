@@ -1516,11 +1516,10 @@
   }
   .bc-tap:active { background: rgba(255,235,180,0.12); }
   .bc-tap:focus-visible { outline: 4px solid #fff; outline-offset: -6px; border-radius: 16px; }
-  /* v5.15 — ON THE CLOCK reads off the BUTTON itself: the big red button burns bright,
-     with a slow breathe so it's clearly live (the CLOCK OUT plate spells it out too) */
+  /* v5.15 — ON THE CLOCK reads off the BUTTON itself. v5.23 — the glow sits ONLY on the
+     red button (85% across the band); the gold CLOCK IN plate stays dark, per Eric. */
   #bigClock[data-state="in"] .bc-tap {
-    background: radial-gradient(ellipse at center, rgba(255,64,28,0.30) 0%, rgba(255,64,28,0.12) 55%, transparent 78%);
-    box-shadow: 0 0 34px 6px rgba(255,64,28,0.35) inset;
+    background: radial-gradient(ellipse 17% 58% at 85% 48%, rgba(255,64,28,0.55) 0%, rgba(255,64,28,0.24) 55%, transparent 100%);
     animation: btnBurn 2.4s ease-in-out infinite;
   }
   @keyframes btnBurn { 0%, 100% { filter: brightness(0.9); } 50% { filter: brightness(1.35); } }
@@ -2446,6 +2445,8 @@
   <!-- v4.74 — clock-out matches the Hours screen: numbered sections, uniform grids -->
   <div class="panel" id="panel-clockout">
     <h3>Clock out</h3>
+    <!-- ⚠ v5.23 — a shift that started YESTERDAY announces itself instead of jamming the button -->
+    <div class="rev-text" id="coStaleWarn" style="display: none; border: 2px solid var(--err, #c0392b); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; font-weight: 700;"></div>
     <div class="hint" id="coSummary" style="font-size: 14.5px; margin: 0 0 12px;"></div>
 
     <div class="set-section fc-sec">
@@ -2475,6 +2476,7 @@
       <div class="frow">
         <button class="btn-primary" onclick="saveClockOut()">Clock Out + Log</button>
         <button class="btn-ghost" onclick="closePanels()">Stay clocked in</button>
+        <button class="btn-ghost" id="coScrapBtn" style="color: var(--err, #c0392b); flex: 1 1 100%;" onclick="scrapPunch()">🗑 Scrap this punch — it never happened</button>
       </div>
     </div>
   </div>
@@ -2920,7 +2922,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.22 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.23 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4293,6 +4295,27 @@ function toggleClock() {
   }
   renderAll();
 }
+// 🗑 v5.23 — the phantom-punch escape hatch: kill a wrong clock-in without logging anything.
+// Two taps (arm, then fire) so a stray thumb can't erase a real shift.
+let _scrapArm = false;
+function scrapPunch() {
+  const sb = $('coScrapBtn');
+  if (!_scrapArm) {
+    _scrapArm = true;
+    if (sb) sb.textContent = '⚠ SURE? Tap again — this shift will NOT be logged';
+    return;
+  }
+  _scrapArm = false;
+  clockedInAt = null; clockJobName = null;
+  breakStart = null; breakMins = 0;
+  wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); coCats = new Set(); coJob = ''; shiftNote = '';
+  saveShift();
+  setClockBtn(false);
+  $('clockStatus').textContent = 'Clocked out';
+  closePanels();
+  renderAll(); bcRender();
+  toast('🗑 Punch scrapped — nothing logged. Fresh start ✓');
+}
 // clock-out window: notes + billable switch before the shift logs
 let coBillable = true;
 // v4.74 — the clock-out sheet mirrors the Hours screen: job grid + task grid, same buttons
@@ -4314,6 +4337,15 @@ function renderCoCats() {
 function openClockOut() {
   const now = new Date();
   if (breakStart) toggleBreak(); // clocking out ends an open break
+  // ⚠ v5.23 — a punch left running from another day says so LOUD, with the way out right there
+  const warn = $('coStaleWarn');
+  if (warn) {
+    const stale = clockedInAt && localDay(clockedInAt) !== localDay(now);
+    warn.style.display = stale ? '' : 'none';
+    if (stale) warn.innerHTML = `⚠ This clock-in is from <b>${clockedInAt.toLocaleDateString([], { weekday: 'long' })} at ${fmtTime(clockedInAt)}</b> — looks like a forgotten punch-out. Fix the times below before logging, or 🗑 scrap it at the bottom and start clean.`;
+  }
+  const sb = $('coScrapBtn');
+  if (sb) { sb.textContent = '🗑 Scrap this punch — it never happened'; _scrapArm = false; }
   coCats = new Set(shiftCats); // whatever they flagged during the shift comes pre-checked
   renderCoCats();
   const hrs = Math.max((now - clockedInAt) / 3600000 - breakMins / 60, 0.01);
