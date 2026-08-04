@@ -2043,6 +2043,9 @@
 
   <!-- v4.95 — 🔥 hot cards: time-critical texts pinned at the VERY top until Eric deals with them -->
   <div id="hotStrip"></div>
+  <!-- 📬 v5.19 — text digest (one card, not thirty) + 📌 evening nudges for question texts -->
+  <div id="txtDigest"></div>
+  <div id="nudgeStrip"></div>
 
   <!-- v4.55 — ONE box on top: write a note or ask the Wizard, two buttons decide where it goes -->
   <div class="card ask-card qn-card" id="qnCard">
@@ -2658,6 +2661,7 @@
     <div class="chips-row" id="leVisChips"></div>
     <div class="frow" style="margin-top: 14px;">
       <button class="btn-primary" onclick="saveLogEdit()">Save changes</button>
+      <button class="btn-ghost" id="leJrnBtn" onclick="jrnStamp(editingLogId); openLogEditJrnLabel()">📖 Stamp for client journal</button>
       <button class="btn-ghost" style="color: var(--err);" onclick="deleteLogEntry()">🗑 Delete</button>
     </div>
     <div class="hint opt-hint">Edits change the original entry and resync to Dropbox automatically. The time stamp and any photo stay as they were. This edits the log record — a file already uploaded to Dropbox keeps its original name.</div>
@@ -2774,7 +2778,14 @@
             <b>2.</b> "Invoice List by Date" — same filter (one per job)<br>
             <b>3.</b> "Transaction List by Date" — no filter, All Dates (powers the ✓✓ checkmarks)</div>
           <input type="file" id="qbDrop" accept=".xlsx" multiple style="display: none;" onchange="qbDropUpload(this)">
-          <button class="btn-primary" style="margin-top: 10px;" onclick="$('qbDrop').click()">📥 Drop QB exports in</button>
+          <!-- 🖱 v5.19 — a real drop ZONE: drag the exports from the PC straight onto the dashed box -->
+          <div id="qbDropZone" style="margin-top: 10px; border: 2px dashed var(--line, #3a3226); border-radius: 12px; padding: 18px 12px; text-align: center; cursor: pointer;"
+            onclick="$('qbDrop').click()"
+            ondragover="event.preventDefault(); this.style.borderColor = 'var(--accent)';"
+            ondragleave="this.style.borderColor = '';"
+            ondrop="event.preventDefault(); this.style.borderColor = ''; qbDropFiles(event.dataTransfer.files);">
+            📥 <b>Drag QB exports here</b> — or tap to pick files
+          </div>
           <div id="qbDropMsg" class="hint" style="margin-top: 6px;"></div>
         </div>
         <div class="set-section" id="setPrivacy">
@@ -2898,7 +2909,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.18 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.19 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6192,6 +6203,23 @@ async function checkPending() {
     const txt = await dbxDownload(PENDING_PATH());
     const arr = txt ? JSON.parse(txt) : [];
     pendingQueue = (Array.isArray(arr) ? arr : []).filter(p => p && p.id && p.kind && !pendDone.has(p.id));
+    // 📬 v5.19 — triage the BACKLOG too: non-hot texts already sitting in review auto-pile
+    // under their senders and leave the queue. Review goes back to being for real decisions.
+    if (!CREW_NAME) {
+      const olds = pendingQueue.filter(p => p.kind === 'text' && !(p.payload || {}).hot);
+      if (olds.length) {
+        olds.forEach(p => {
+          const pay = p.payload || {};
+          autoLogText(pay.from, pay.body === '(photo only — no words)' ? '' : pay.body, pay.photos, pay.personal || isPersonalSender(pay.from) || undefined);
+          if (pay.path) archiveText(pay.path);
+          pendMarkDone(p.id);
+        });
+        pendingQueue = pendingQueue.filter(p => !(p.kind === 'text' && !(p.payload || {}).hot));
+        savePendingSoon();
+        toast(`📬 ${olds.length} waiting text${olds.length > 1 ? 's' : ''} auto-piled under their senders — review is for decisions now ✓`);
+        renderTextDigest(); renderTxtNudges();
+      }
+    }
   } catch (e) { /* no file yet or bad parse — leave what we have */ }
   renderPendBanner();
 }
@@ -6251,7 +6279,7 @@ function coolCard(id) {
   savePendingSoon();
   toast('🕐 Moved to the review pile — it stays there until you deal with it ✓');
 }
-const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '💬 Text message', crew: '👷 From the crew', match: '⚙ The Grinder noticed', qb: '💼 In QuickBooks, not in your log' };
+const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '🔥 Text — needs you', crew: '👷 From the crew', match: '⚙ The Grinder noticed', qb: '💼 In QuickBooks, not in your log', clientask: '💬 From a CLIENT' };
 const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', tomorrow: '🌙 by tomorrow' };
 function renderReview() {
   const box = $('revBox');
@@ -6278,6 +6306,8 @@ function renderReview() {
       if (p.kind === 'qb') body = `<div class="rev-text"><b>$${(+p.payload.amt).toFixed(2)}${p.payload.who ? ' — ' + esc(p.payload.who) : ''}</b> on ${esc(p.payload.d)}</div>
         <div class="rev-why">${[p.payload.memo, p.payload.acct].filter(Boolean).map(esc).join(' · ')}</div>
         <div class="rev-why">Logan's books have this — your log doesn't. Log it and pick the job so the trackers see it.</div>`;
+      if (p.kind === 'clientask') body = `<div class="rev-text"><b>${esc(p.payload.client || '?')}</b> wrote${p.payload.tag && p.payload.tag !== 'General' ? ` — tagged <b>${esc(p.payload.tag)}</b>` : ''}:</div>
+        <div class="rev-why" style="font-size: 13.5px; white-space: pre-wrap;">${esc((p.payload.text || '').slice(0, 600))}</div>`;
       if (p.kind === 'crew') body = `<div class="rev-text"><b>${esc(p.payload.from || '?')}</b> — ${p.payload.type === 'Done' ? '✅ FINISHED: ' : p.payload.type !== 'Note' ? '⏱ ' : ''}${esc((p.payload.text || 'Shift').slice(0, 300))}</div>
         <div class="rev-why">${[p.payload.job, p.payload.category, p.payload.hours != null ? (+p.payload.hours).toFixed(1) + ' hrs' + (+p.payload.hours >= 12 ? ' · ⚠ LONG DAY — double-check it' : '') : '', p.payload.day,
           p.payload.route && p.payload.route !== 'The Grinder' ? '📨 for ' + p.payload.route : '', URG_WORDS[p.payload.urg] || ''].filter(Boolean).join(' · ')}</div>`;
@@ -6291,6 +6321,10 @@ function renderReview() {
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not related</button>`
         : (p.kind === 'crew' && p.payload.type === 'Done')
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Check it off my list too</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
+        : p.kind === 'clientask'
+        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'todo')">➕ Make it a to-do</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
         : (p.kind === 'text' || p.kind === 'crew')
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
@@ -6376,6 +6410,17 @@ function reviewAct(id, accept) {
       } else {
         addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { noSniff: true, ...phBits, ...(who ? { who } : {}) });
         toast('Text logged ✓');
+      }
+    } else if (p.kind === 'clientask') {
+      // 💬 v5.19 — a client wrote through their portal page
+      if (accept === 'todo') {
+        todos.unshift({ id: nextId++, text: `${pay.client}: ${(pay.text || '').slice(0, 200)}`, job: j,
+          done: false, who: pay.tag === 'Phil' && crew.includes('Phil') ? 'Phil' : 'Me', pri: 2,
+          due: localDay(new Date()), ts: new Date().toISOString() });
+        toast(`To-do made from ${pay.client}'s message ✓${pay.tag === 'Phil' ? " — on Phil's list" : ''}`);
+      } else {
+        addEntry('Note', `Client ${pay.client}${pay.tag && pay.tag !== 'General' ? ' (for ' + pay.tag + ')' : ''}: ${(pay.text || '').slice(0, 800)}`, j, { noSniff: true, tags: ['Client'] });
+        toast('Client message logged ✓');
       }
     } else if (p.kind === 'qb') {
       // 💼 the QB line becomes a field entry, born already double-checked
@@ -6508,27 +6553,97 @@ async function checkInboxTexts() {
       for (const im of mine) { claimed.add(im.name); photos.push(await claim(im)); }
       const hot = hotScan(body) || undefined; // 🔥 time-critical commitment → pinned + ding
       const personal = isPersonalSender(from) || undefined; // 🔒 Eric's eyes only, forever
-      pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower, photos, hot, personal } });
-      if (hot && !CREW_NAME && prefs.pushSecret) {
-        fetch('/.netlify/functions/notify', { method: 'POST',
-          headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
-          body: JSON.stringify({ title: `🔥 ${from} — needs you`, body: body.slice(0, 140), tag: 'hot-text' })
-        }).catch(() => {});
+      // 📬 v5.19 TEXT TRIAGE — review stops filling with texts. Only HOT still pins a card.
+      // Everything else reads itself in: auto-piled under the sender, questions get the
+      // evening nudge, and the daily 📬 digest proves nothing slipped through.
+      if (hot) {
+        pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower, photos, hot, personal } });
+        if (!CREW_NAME && prefs.pushSecret) {
+          fetch('/.netlify/functions/notify', { method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
+            body: JSON.stringify({ title: `🔥 ${from} — needs you`, body: body.slice(0, 140), tag: 'hot-text' })
+          }).catch(() => {});
+        }
+      } else {
+        autoLogText(from, body, photos, personal);
+        pendDone.add(id);
+        archiveText(f.path_lower); // handled = out of the Inbox
       }
     }
-    // a TEXT photo with no matching txt still gets its own card — never silently lost
+    // a TEXT photo with no matching txt auto-piles too — never silently lost, never a card
     for (const im of imgs) {
       if (claimed.has(im.name)) continue;
       const id = 'text:' + im.name;
       if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) continue;
       const fm = im.name.match(/^text\s*-\s*([^-]+)/i);
       const oFrom = fm ? fm[1].trim() : '?';
-      pendingQueue.push({ id, kind: 'text', source: im.name, payload: {
-        from: oFrom, body: '(photo only — no words)', path: im.path_lower, photos: [await claim(im)],
-        personal: isPersonalSender(oFrom) || undefined } });
+      autoLogText(oFrom, '', [await claim(im)], isPersonalSender(oFrom) || undefined);
+      pendDone.add(id);
     }
-    renderPendBanner();
+    renderPendBanner(); renderTextDigest(); renderTxtNudges();
   } catch (e) { /* no Inbox or offline — quiet */ }
+}
+// 📚 v5.19 — a text reads itself in: logged + tagged under the sender (Wizard-searchable),
+// question texts join the nudge list so "read it and forgot" gets a second chance at 6pm.
+const NEEDS_ANSWER = /\?|can you|could you|what time|when can|when are|did you|do you|are you|will you|need you|let me know|call me|get back/i;
+function autoLogText(from, body, photos, personal) {
+  from = (from || '?').trim();
+  const who = crew.includes(from) ? from : undefined;
+  if (!knownTags().some(x => x.toLowerCase() === from.toLowerCase())) { prefs.tags.unshift(from); renderTagChips(); }
+  const phs = (photos || []).filter(Boolean);
+  const e = addEntry('Note', `Text from ${from}: ${(body || '(photo only — no words)').slice(0, 800)}${phs.length ? ` (📷 ${phs.length})` : ''}`, '—',
+    { noSniff: true, texted: true, tags: [from],
+      ...(phs.length ? { photoPath: phs[0], photoPaths: phs } : {}),
+      ...(personal ? { personal: true } : {}), ...(who ? { who } : {}) });
+  if (!personal && NEEDS_ANSWER.test(body || '')) {
+    if (!prefs.txtNudge) prefs.txtNudge = [];
+    prefs.txtNudge.push({ id: e.id, from, snip: (body || '').replace(/\s+/g, ' ').slice(0, 110), day: localDay(new Date()) });
+    prefs.txtNudge = prefs.txtNudge.slice(-20);
+  }
+  scheduleSave();
+}
+// 📬 the one card instead of thirty: today's text count, who needs you, tap to open the list
+let _tdOpen = false;
+function renderTextDigest() {
+  const box = $('txtDigest');
+  if (!box) return;
+  if (isCrew()) { box.innerHTML = ''; return; }
+  const today = localDay(new Date());
+  const tx = entries.filter(e => e.texted && !e.sample && localDay(new Date(e.ts)) === today);
+  if (!tx.length) { box.innerHTML = ''; return; }
+  const needs = (prefs.txtNudge || []).filter(n => n.day === today && !n.done);
+  box.innerHTML = `<div class="card" style="padding: 10px 14px; margin-bottom: 14px; cursor: pointer;" onclick="_tdOpen = !_tdOpen; renderTextDigest()" role="button" aria-expanded="${_tdOpen}">
+    <b>📬 ${tx.length} text${tx.length > 1 ? 's' : ''} today</b>${needs.length
+      ? ` — <b>${needs.length} need${needs.length === 1 ? 's' : ''} you</b> (${[...new Set(needs.map(n => esc(n.from)))].join(', ')})`
+      : ' — all piled, nothing waiting on you'} <span class="hint" style="margin: 0;">· tap to ${_tdOpen ? 'fold' : 'open'}</span>
+    ${_tdOpen ? `<div style="margin-top: 8px;">` + tx.slice(0, 15).map(e =>
+      `<div class="hint" style="margin: 3px 0;">${e.personal ? '🔒 ' : ''}<b>${esc((e.tags || [])[0] || '?')}</b>: ${esc(e.details.replace(/^Text from [^:]*: /, '').slice(0, 90))}</div>`).join('') + `</div>` : ''}
+  </div>`;
+}
+// 📌 the read-and-forget insurance: question texts come back QUIETLY at 6pm, then ride
+// each morning until ✓ handled or ⏰ pushed. One line each — never a growing pile.
+function renderTxtNudges() {
+  const box = $('nudgeStrip');
+  if (!box) return;
+  if (isCrew()) { box.innerHTML = ''; return; }
+  const today = localDay(new Date());
+  const due = (prefs.txtNudge || []).filter(n => !n.done && (n.day < today || (n.day === today && new Date().getHours() >= 18))).slice(0, 5);
+  box.innerHTML = due.map(n => `<div class="req-strip" style="border-color: var(--accent);">
+    <div class="req-txt">📌 <b>${esc(n.from)}</b> asked${n.day < today ? ' (' + esc(n.day) + ')' : ' today'}: ${esc(n.snip)} — handled?</div>
+    <div class="rev-row" style="margin-top: 6px;">
+      <button class="btn-ghost req-x" onclick="nudgeDone(${+n.id})">✓ Handled</button>
+      <button class="btn-ghost req-x" onclick="nudgeSnooze(${+n.id})">⏰ Tomorrow</button>
+    </div></div>`).join('');
+}
+function nudgeDone(id) {
+  (prefs.txtNudge || []).forEach(n => { if (n.id === id) n.done = true; });
+  scheduleSave(); renderTxtNudges(); renderTextDigest();
+  toast('✓ Off the hook');
+}
+function nudgeSnooze(id) {
+  (prefs.txtNudge || []).forEach(n => { if (n.id === id) n.day = tomorrowStr(); });
+  scheduleSave(); renderTxtNudges(); renderTextDigest();
+  toast('⏰ It comes back tomorrow evening — it is NOT going away');
 }
 // ============== 👷 CREW MODE (v4.65) ==============
 function applyRole() {
@@ -7263,6 +7378,8 @@ async function portalRotate(i) {
   try {
     await dbxRpc('files/move_v2', { from_path: (DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json').toLowerCase(), to_path: DBX_ROOT + '/App Data/Client Portal/' + fresh + '.json' });
     try { await dbxRpc('files/move_v2', { from_path: (DBX_ROOT + '/App Data/Client Portal/clicks-' + c.code + '.json').toLowerCase(), to_path: DBX_ROOT + '/App Data/Client Portal/clicks-' + fresh + '.json' }); } catch (e) {}
+    try { await dbxRpc('files/move_v2', { from_path: (DBX_ROOT + '/App Data/Client Portal/photos-' + c.code).toLowerCase(), to_path: DBX_ROOT + '/App Data/Client Portal/photos-' + fresh }); } catch (e) {}
+    try { await dbxRpc('files/move_v2', { from_path: (DBX_ROOT + '/App Data/Client Portal/asks-' + c.code + '.json').toLowerCase(), to_path: DBX_ROOT + '/App Data/Client Portal/asks-' + fresh + '.json' }); } catch (e) {}
     c.code = fresh;
     await dbxUpload(DBX_ROOT + '/App Data/Client Portal/index.json', JSON.stringify(_portalIdx));
     renderPortalList();
@@ -7278,18 +7395,49 @@ function journalPrefs(code) {
   if (!prefs.journalPrefs) prefs.journalPrefs = {};
   return prefs.journalPrefs[code] = prefs.journalPrefs[code] || { notes: true, hours: true, photos: true, money: false };
 }
-function journalDraft(job, code) {
+// 🗺 the portal's client names ("Mery Addition & Remodel") map back to Eric's short job names ("Mery")
+function portalAppJob(c) {
+  const key = (c.key || '').toLowerCase(), cj = (c.job || '').toLowerCase();
+  for (const j of jobs) {
+    const jl = j.toLowerCase();
+    if (jl !== '—' && (cj.includes(jl) || jl.startsWith(key))) return j;
+    const w = jl.split(/[^a-z]+/).filter(Boolean);
+    for (const a of w) for (const b of w) if (a !== b && a + b === key) return j;
+  }
+  return c.job;
+}
+// 📖 v5.19 THE STAMP — see something worth showing the owner, tap 📖, it waits in the pile
+function jrnStamp(id) {
+  if (isCrew()) return; // the journal is Eric's voice, never the crew's button
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  if (e.personal) { toast('🔒 Personal never goes near a client', false); return; }
+  e.jrn = !e.jrn; delete e.jrnDone;
+  scheduleSave();
+  if (e.jrn && (!e.job || e.job === '—')) toast('📖 Stamped — ⚠ it has NO JOB yet. Give it one (✎) or it can\'t find its journal.', false);
+  else toast(e.jrn ? `📖 Stamped for the ${e.job} journal — it builds up till you release the week ✓` : 'Stamp removed ✓');
+}
+function jrnStamped(aj) {
+  return entries.filter(e => e.jrn && !e.jrnDone && !e.personal && !e.sample && e.job === aj);
+}
+function journalDraft(aj, code) {
   const p = journalPrefs(code);
   const from = new Date(); from.setDate(from.getDate() - 7);
-  const win = entries.filter(e => !e.sample && !e.personal && e.job === job && new Date(e.ts) >= from);
+  const win = entries.filter(e => !e.sample && !e.personal && e.job === aj && new Date(e.ts) >= from);
   const lines = [];
-  if (p.notes) win.filter(e => ['Note', 'Photo'].includes(e.type) && !e.route && !e.ask && !e.noSniff && (e.details || '').trim())
-    .slice(0, 18).reverse().forEach(e =>
+  // ⭐ stamped items lead — Eric picked these by hand during the week
+  const st = jrnStamped(aj);
+  st.filter(e => (e.details || '').trim() && !/^Text from/i.test(e.details)).slice(0, 10)
+    .forEach(e => lines.push(`• ${e.details.replace(/\s+/g, ' ').slice(0, 160)}`));
+  const stPh = st.filter(e => e.photoPath).length;
+  if (p.notes) win.filter(e => ['Note', 'Photo'].includes(e.type) && !e.route && !e.ask && !e.noSniff && !e.jrn && (e.details || '').trim())
+    .slice(0, 14).reverse().forEach(e =>
       lines.push(`• ${new Date(e.ts).toLocaleDateString([], { weekday: 'short' })} — ${e.details.replace(/\s+/g, ' ').slice(0, 140)}`));
   const hrs = win.filter(e => ['Clock', 'Hours'].includes(e.type) && +e.hours > 0).reduce((s, e) => s + +e.hours, 0);
   if (p.hours && hrs) lines.push(`\nCrew hours on site this week: ${hrs.toFixed(1)}`);
   const ph = win.filter(e => e.photoPath || e.type === 'Photo').length;
   if (p.photos && ph) lines.push(`Progress photos taken: ${ph}`);
+  if (stPh) lines.push(`(${stPh} picked photo${stPh > 1 ? 's' : ''} will attach to this entry)`);
   if (p.money) {
     const amt = win.filter(e => ['Expense', 'Filed'].includes(e.type) && +e.amount > 0).reduce((s, e) => s + +e.amount, 0);
     if (amt) lines.push(`Materials & subs paid this week: $${amt.toFixed(2)}`);
@@ -7300,17 +7448,25 @@ async function openJournal(i) {
   if (portalGuard()) return;
   const c = _portalIdx.clients[i]; _jrnIdx = i;
   const p = journalPrefs(c.code);
+  const aj = portalAppJob(c);
+  const st = jrnStamped(aj);
   const chk = (k, lab) => `<button type="button" class="pick-chip${p[k] ? ' sel' : ''}" onclick="jrnFilter('${k}', ${!p[k]})" aria-pressed="${p[k]}">${p[k] ? '✓ ' : ''}${lab}</button>`;
   $('revBox').innerHTML = `<h3>📖 ${esc(c.job)} — this week's journal</h3>
-    <div class="hint" style="margin: 0;">What the draft pulls in — flip one and it redrafts (hand edits reset):</div>
+    ${st.length ? `<div class="field" style="margin: 6px 0 2px;"><label>⭐ Stamped this week — what you picked out (✕ to drop one)</label></div>` +
+      st.slice(0, 12).map(e => `<div class="sum-row" style="cursor: default;">
+        <span class="sum-title">${e.photoPath ? '📷' : '📝'} ${esc((e.details || '').replace(/\s+/g, ' ').slice(0, 70))}</span>
+        ${e.photoPath ? `<button class="btn-ghost req-x" onclick="showPhoto('${escq(e.photoPath)}')">👁</button>` : ''}
+        <button class="btn-ghost req-x" onclick="jrnStamp(${e.id}); openJournal(${i})">✕</button>
+      </div>`).join('') : `<div class="hint" style="margin: 6px 0 0;">No stamps yet — during the week, tap 📖 on any photo or note worth showing the owner and it waits here.</div>`}
+    <div class="hint" style="margin: 10px 0 0;">What the draft pulls in — flip one and it redrafts (hand edits reset):</div>
     <div class="frow" style="margin: 8px 0;">${chk('notes', 'work notes')}${chk('hours', 'hours on site')}${chk('photos', 'photo count')}${chk('money', 'money moved')}</div>
     <div class="field"><label>The entry — edit anything before it goes out</label>
-      <textarea id="jrnText" rows="10" class="grow" style="width: 100%;">${esc(journalDraft(c.job, c.code))}</textarea></div>
+      <textarea id="jrnText" rows="10" class="grow" style="width: 100%;">${esc(journalDraft(aj, c.code))}</textarea></div>
     <div class="rev-row" style="margin-top: 10px;">
-      <button class="btn-primary" style="flex: 2;" onclick="journalRelease()">📖 Release to the client page</button>
+      <button class="btn-primary" style="flex: 2;" onclick="journalRelease()">📖 Release to the client page${st.some(e => e.photoPath) ? ' (photos ride along)' : ''}</button>
       <button class="btn-ghost" style="flex: 1;" onclick="closeReview()">✕ Cancel</button>
     </div>
-    <div class="hint" style="margin-top: 8px;">Releasing stamps the week, lights the client's BUDGET/NEWS lamp on their next visit, and stacks past weeks below it. Nothing marked personal can ever ride along.</div>`;
+    <div class="hint" style="margin-top: 8px;">Releasing stamps the week, lights the client's lamp on their next visit, and folds past weeks behind one row. Nothing marked personal can ever ride along.</div>`;
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
 }
@@ -7325,18 +7481,68 @@ async function journalRelease() {
   const text = ($('jrnText').value || '').trim();
   if (!text) { toast('Nothing to release', false); return; }
   const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
+  const aj = portalAppJob(c);
+  const st = jrnStamped(aj);
   try {
+    // 📷 picked photos copy into the client's own portal folder — served by code, like everything else
+    const photos = [];
+    for (const e of st) {
+      if (!e.photoPath) continue;
+      const name = String(e.photoPath).split('/').pop().replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80);
+      if (!name) continue;
+      try {
+        await dbxRpc('files/copy_v2', { from_path: e.photoPath, to_path: DBX_ROOT + '/App Data/Client Portal/photos-' + c.code + '/' + name });
+        photos.push(name);
+      } catch (err) { photos.push(name); /* already there from an earlier try */ }
+    }
     const d = JSON.parse(await dbxDownload(path) || '{}');
     const now = new Date(); const from = new Date(); from.setDate(from.getDate() - 6);
     const fmt = x => x.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    d.journal = [{ week: `${fmt(from)} – ${fmt(now)}`, released: now.toISOString().slice(0, 10), text }, ...(d.journal || [])].slice(0, 26);
+    d.journal = [{ week: `${fmt(from)} – ${fmt(now)}`, released: now.toISOString().slice(0, 10), text,
+      ...(photos.length ? { photos: [...new Set(photos)] } : {}) }, ...(d.journal || [])].slice(0, 26);
     d.updated = now.toISOString().slice(0, 10);
     await dbxUpload(path, JSON.stringify(d, null, 1));
+    st.forEach(e => { e.jrnDone = true; }); // stamps are spent — the pile starts fresh
+    scheduleSave();
     closeReview();
-    toast(`📖 Journal released — ${c.job}'s page carries it now ✓`);
+    toast(`📖 Journal released — ${c.job}'s page carries it now${photos.length ? ` with ${photos.length} photo${photos.length > 1 ? 's' : ''}` : ''} ✓`);
   } catch (e) { toast('Couldn\'t reach the client file — check the connection and try again', false); }
 }
+// 💬 v5.19 — clients write back through their page; their words land in Eric's review pile
+async function checkClientAsks() {
+  if (!dbx.refreshToken || CREW_NAME) return;
+  try {
+    if (!_portalIdx) _portalIdx = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/index.json'));
+  } catch (e) { return; }
+  if (!_portalIdx || !Array.isArray(_portalIdx.clients)) return;
+  if (!prefs.caSeen) prefs.caSeen = {};
+  let got = 0;
+  for (const c of _portalIdx.clients) {
+    let arr = [];
+    try { arr = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/asks-' + c.code + '.json') || '[]'); } catch (e) { continue; }
+    if (!Array.isArray(arr)) continue;
+    const seen = prefs.caSeen[c.key] || '';
+    const fresh = arr.filter(a => a && a.ts && a.ts > seen);
+    if (!fresh.length) continue;
+    prefs.caSeen[c.key] = fresh.map(a => a.ts).sort().pop();
+    fresh.slice(0, 10).forEach(a => {
+      const id = 'cask:' + c.key + ':' + a.ts;
+      if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
+      pendingQueue.push({ id, kind: 'clientask', source: c.job,
+        payload: { job: portalAppJob(c), client: c.job, tag: ['Phil', 'Eric'].includes(a.tag) ? a.tag : 'General', text: String(a.text || '').slice(0, 1000), ts: a.ts } });
+      got++;
+    });
+    scheduleSave();
+  }
+  if (got) { renderPendBanner(); toast(`💬 ${got} message${got > 1 ? 's' : ''} from clients — in your 📥 review pile`); }
+}
 // 💼 v5.10 — drop Logan's QB exports straight into the pipeline
+function qbDropFiles(fileList) {
+  // 🖱 v5.19 — dragged files ride the same rails as picked ones
+  const files = [...(fileList || [])].filter(f => /\.xlsx$/i.test(f.name));
+  if (!files.length) { toast('Those aren\'t .xlsx exports — QuickBooks → Export to Excel first', false); return; }
+  qbDropUpload({ files, value: '' });
+}
 async function qbDropUpload(inp) {
   if (CREW_NAME) return; // owner's tool only
   const files = [...(inp.files || [])];
@@ -8001,7 +8207,8 @@ function showWizFull(q, md, srcIds) {
   $('wizFullBody').innerHTML = `<div class="wf-q">🧙 ${esc(q)}</div>` + mdToHtml(md) +
     `<div class="rev-row" style="margin-top: 16px; flex-wrap: wrap;">` +
     phSrcs.slice(0, 3).map((e, i) =>
-      `<button class="btn-ghost" onclick="showPhoto('${escq(e.photoPath || e.photoPaths[0])}')">📷 See the photo it read${phSrcs.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('') +
+      `<button class="btn-ghost" onclick="showPhoto('${escq(e.photoPath || e.photoPaths[0])}')">📷 See the photo it read${phSrcs.length > 1 ? ' ' + (i + 1) : ''}</button>` +
+      (!isCrew() ? `<button class="btn-ghost" onclick="jrnStamp(${e.id})">📖 Stamp for journal${phSrcs.length > 1 ? ' ' + (i + 1) : ''}</button>` : '')).join('') +
     `<button class="btn-ghost" onclick="wizCorrectStart()">✎ Wrong? Correct it</button></div>
     <div class="hint" style="margin-top: 10px;">Follow-up? Tap ‹ Back and just ask — I hold this exchange for 15 minutes.</div>`;
   $('wizFull').classList.add('show');
@@ -8021,7 +8228,8 @@ function showInstantAnswer(q, md, srcIds) {
   const phSrcs = srcs.filter(e => e.photoPath || (e.photoPaths && e.photoPaths.length));
   const tools = `<div class="rev-row" style="margin-top: 10px; flex-wrap: wrap;">` +
     phSrcs.slice(0, 3).map((e, i) =>
-      `<button class="btn-ghost" onclick="showPhoto('${escq((e.photoPath || e.photoPaths[0]))}')">📷 See the photo it read${phSrcs.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('') +
+      `<button class="btn-ghost" onclick="showPhoto('${escq((e.photoPath || e.photoPaths[0]))}')">📷 See the photo it read${phSrcs.length > 1 ? ' ' + (i + 1) : ''}</button>` +
+      (!isCrew() ? `<button class="btn-ghost" onclick="jrnStamp(${e.id})">📖 Stamp for journal${phSrcs.length > 1 ? ' ' + (i + 1) : ''}</button>` : '')).join('') +
     `<button class="btn-ghost" onclick="wizCorrectStart()">✎ Wrong? Correct it</button>` +
     `</div><div class="hint" style="margin-top: 6px;">Follow-up? Just ask — I hold this exchange for 15 minutes.</div>`;
   $('aiBody').innerHTML = mdToHtml(md) + tools;
@@ -9095,6 +9303,7 @@ function openLogEdit(id, ev) {
   // 🔒 v5.16 — once a crew member stamps a day correct, that day's hours don't bend
   if (isCrew() && e.locked) { toast('🔒 That day is locked — you sent it in as correct. Ask Eric if something needs fixing.', false); return; }
   editingLogId = id;
+  openLogEditJrnLabel();
   $('leText').value = e.details; fitTa('leText');
   const jobOpts = ['—', ...new Set([...jobs, e.job].filter(j => j && j !== '—'))];
   $('leJob').innerHTML = jobOpts.map(j => `<option${j === e.job ? ' selected' : ''}>${esc(j)}</option>`).join('');
@@ -9111,6 +9320,13 @@ function openLogEdit(id, ev) {
     $('leQty').value = ''; $('leQty').dataset.key = '';
   }
   openPanel('logedit');
+}
+function openLogEditJrnLabel() {
+  const b = $('leJrnBtn');
+  if (!b) return;
+  const e = entries.find(x => x.id === editingLogId);
+  b.style.display = isCrew() || !e ? 'none' : '';
+  if (e) b.textContent = e.jrn && !e.jrnDone ? '📖 Stamped for journal ✓ (tap to remove)' : '📖 Stamp for client journal';
 }
 function saveLogEdit() {
   const e = entries.find(x => x.id === editingLogId);
@@ -9150,7 +9366,7 @@ function deleteLogEntry() {
 function renderAll() { renderKpis(); renderLog(); renderChart(); renderTodos();
   renderDayTube(); renderPipeSelect(); updateClockGauge(); renderPendBanner(); renderPlanBanner();
   renderTagChips(); renderCrewGauges(); renderVisChips(); renderCrewShared(); renderCrewAsks();
-  renderMyRequests(); renderAskStrip(); renderAskRecent();
+  renderMyRequests(); renderAskStrip(); renderAskRecent(); renderTextDigest(); renderTxtNudges();
 }
 
 // ---------- export ----------
@@ -9590,6 +9806,7 @@ async function pullRemote() {
   renderJobSelects(); renderJobsManager(); renderTrucksManager(); renderTruckChips(); renderCrewManager(); renderWhoSelects(); renderAll();
   checkPending(); // proposals waiting for review ride along with every pull
   checkInboxTexts(); // texts the phone's Shortcuts saved into /Inbox
+  checkClientAsks(); // 💬 v5.19 — client questions/remarks from the portal pages
   checkCrewLogs(); // crew punches + routed notes become 👷 review cards
   refreshCrewCfg(); // crew phones pick up Eric's latest job/category list
   publishSharedNotes(); // 🔓 unlocked notes sweep out; re-locked ones sweep back off

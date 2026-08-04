@@ -7,12 +7,16 @@
 <title>Clore Construction — Project</title>
 <style>
   :root { --bg: #171410; --card: #201c15; --line: #3a3226; --gold: #c9a24b; --ink: #efe7d5; --ink2: #b0a488; }
+  /* ☀ v5.19 — light mode: same brass, daylight paper */
+  [data-theme="light"] { --bg: #f3eee2; --card: #fffdf6; --line: #d9cdb2; --gold: #8a6a1f; --ink: #2b2416; --ink2: #6d5f42; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 640px; margin: 0 auto; padding: 22px 16px 60px; }
   header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 8px; }
   h1 { font-size: 18px; margin: 0; letter-spacing: 1.5px; color: var(--gold); font-weight: 800; }
-  .upd { color: var(--ink2); font-size: 12.5px; }
+  .upd { color: var(--ink2); font-size: 12.5px; white-space: nowrap; }
+  .theme-btn { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px;
+    padding: 3px 10px; font-size: 13px; cursor: pointer; margin-left: 8px; }
   h2 { font-size: 24px; margin: 14px 0 2px; }
   .stage { display: inline-block; border: 2px solid var(--gold); color: var(--gold); border-radius: 999px; padding: 4px 14px; font-weight: 700; font-size: 13.5px; letter-spacing: .8px; margin: 6px 0 18px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
@@ -26,6 +30,10 @@
   .ph-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; cursor: pointer; }
   .ph-cats { display: none; color: var(--ink2); font-size: 14px; padding: 6px 0 2px 12px; }
   .ph.open .ph-cats { display: block; }
+  .jr-shots { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .jr-shots img { height: 72px; width: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; }
+  .gal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .gal img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; }
   .foot { color: var(--ink2); font-size: 12.5px; text-align: center; margin-top: 26px; }
   .err { text-align: center; padding: 60px 20px; color: var(--ink2); }
   .lamp { display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--line); border-radius: 999px;
@@ -38,12 +46,18 @@
   .soon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
   .soon { position: relative; border: 1px solid var(--line); border-radius: 14px; background: var(--card);
     padding: 18px 8px 14px; text-align: center; cursor: default; overflow: hidden; }
+  .soon.live { cursor: pointer; border-color: var(--gold); }
   .soon .ic { font-size: 26px; }
   .soon .t { font-weight: 700; font-size: 13.5px; margin-top: 6px; }
   .soon .s { color: var(--ink2); font-size: 11px; margin-top: 3px; line-height: 1.35; }
   .soon .inner { opacity: .38; pointer-events: none; }
+  .soon.live .inner { opacity: 1; }
   .ribbon { position: absolute; top: 14px; right: -34px; transform: rotate(35deg); background: var(--gold); color: #201c15;
     font-size: 9px; font-weight: 800; letter-spacing: 1px; padding: 3px 36px; }
+  .tagchip { border: 1px solid var(--line); background: none; color: var(--ink); border-radius: 999px; padding: 6px 14px; font-size: 14px; cursor: pointer; }
+  .tagchip.sel { border-color: var(--gold); color: var(--gold); font-weight: 700; }
+  .ask-ta { width: 100%; min-height: 90px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; }
+  .send-btn { margin-top: 10px; width: 100%; border: none; border-radius: 10px; background: var(--gold); color: #201c15; font-weight: 800; font-size: 15px; padding: 12px; cursor: pointer; }
   @media (max-width: 420px) { .soon-grid { grid-template-columns: 1fr 1fr; } .soon:last-child { grid-column: 1 / -1; } }
 </style>
 </head>
@@ -53,14 +67,54 @@
 const code = new URLSearchParams(location.search).get('c') || location.hash.slice(1);
 const $ = s => document.querySelector(s);
 const money = n => '$' + (+n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const FN = '/.netlify/functions/client-portal';
+const photoUrl = n => FN + '?c=' + encodeURIComponent(code) + '&p=' + encodeURIComponent(n);
 function ping(ev) {
-  try { fetch('/.netlify/functions/client-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ c: code, ev }) }); } catch (e) {}
+  try { fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ c: code, ev }) }); } catch (e) {}
+}
+// ☀☾ theme: remembered per device; default follows the phone's own setting
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('clore-theme', t); } catch (e) {}
+  const b = $('#themeBtn'); if (b) b.textContent = t === 'light' ? '☾ Dark' : '☀ Light';
+}
+function toggleTheme() { applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'); ping('theme'); }
+(() => {
+  let t = null;
+  try { t = localStorage.getItem('clore-theme'); } catch (e) {}
+  if (!t) t = matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+})();
+let askTag = 'General';
+function pickTag(t, el) {
+  askTag = t;
+  document.querySelectorAll('.tagchip').forEach(x => x.classList.toggle('sel', x === el));
+}
+async function sendAsk() {
+  const ta = $('#askTa');
+  const text = (ta.value || '').trim();
+  if (!text) { ta.focus(); return; }
+  $('#askSend').disabled = true; $('#askSend').textContent = 'Sending…';
+  try {
+    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ c: code, ask: { tag: askTag, text } }) });
+    if (!r.ok) throw new Error();
+    $('#askCard').innerHTML = '<h3>💬 ASK OR REMARK</h3><div style="padding: 8px 0;">✓ Sent — Eric reads these directly. He\'ll get back to you.</div>';
+  } catch (e) {
+    $('#askSend').disabled = false; $('#askSend').textContent = 'Send it';
+    alert('Couldn\'t send just now — try again in a minute.');
+  }
+}
+function toggleCard(id, ev) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+  if (el.style.display !== 'none') { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); ping(ev); }
 }
 async function boot() {
   if (!code) { $('#app').innerHTML = '<div class="err">This link is missing its code — ask Clore Construction for a fresh one.</div>'; return; }
   let d;
   try {
-    const r = await fetch('/.netlify/functions/client-portal?c=' + encodeURIComponent(code));
+    const r = await fetch(FN + '?c=' + encodeURIComponent(code));
     if (!r.ok) throw new Error();
     d = await r.json();
   } catch (e) {
@@ -68,28 +122,45 @@ async function boot() {
     return;
   }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  // 💡 the budget lamp: LIT when the books were refreshed since this client's last visit
+  // 💡 the lamp: LIT when the page got fresher since this client's last visit
   const seenKey = 'clore-seen-' + code;
   const lastSeen = localStorage.getItem(seenKey) || '';
   const fresh = (d.updated || '') > lastSeen;
   try { localStorage.setItem(seenKey, d.updated || ''); } catch (e) {}
-  let h = `<header><h1>CLORE CONSTRUCTION</h1><span class="upd">updated ${esc(d.updated || '')}</span></header>
+  const allShots = (d.journal || []).flatMap(j => j.photos || []);
+  let h = `<header><h1>CLORE CONSTRUCTION</h1><span class="upd">updated ${esc(d.updated || '')}<button class="theme-btn" id="themeBtn" onclick="toggleTheme()">${document.documentElement.dataset.theme === 'light' ? '☾ Dark' : '☀ Light'}</button></span></header>
     <h2>${esc(d.name || 'Your project')}</h2>
     ${d.stage ? `<div class="stage">${esc(d.stage)}</div>` : ''}
     <div class="lamp${fresh ? ' lit' : ''}"><span class="dot"></span>${fresh ? 'UPDATED FOR YOU — ' + esc(d.updated || '') : 'CURRENT AS OF ' + esc(d.updated || '')}</div>
     <div class="soon-grid">
-      <div class="soon" onclick="ping('soon:photos')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">progress pictures from the job</div></div></div>
-      <div class="soon" onclick="ping('soon:ask')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>
+      ${allShots.length
+        ? `<div class="soon live" onclick="toggleCard('photoCard', 'photos')"><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">${allShots.length} progress picture${allShots.length > 1 ? 's' : ''}</div></div></div>`
+        : `<div class="soon" onclick="ping('soon:photos')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">progress pictures from the job</div></div></div>`}
+      <div class="soon live" onclick="toggleCard('askCard', 'ask:open')"><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>
       <div class="soon" onclick="ping('soon:materials')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Materials Board</div><div class="s">lists & picks, card by card</div></div></div>
-    </div>`;
-  // 📖 v5.18 — the job journal: ONLY the latest week shows; everything older lives behind
-  // one "Past weeks" row, so the page stays clean no matter how long the job runs.
+    </div>
+    <div class="card" id="askCard" style="display: none;">
+      <h3>💬 ASK OR REMARK</h3>
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <button class="tagchip" onclick="pickTag('Phil', this)">Phil</button>
+        <button class="tagchip" onclick="pickTag('Eric', this)">Eric</button>
+        <button class="tagchip sel" onclick="pickTag('General', this)">General</button>
+      </div>
+      <textarea class="ask-ta" id="askTa" placeholder="Ask a question or leave a remark — it goes straight to Eric's desk."></textarea>
+      <button class="send-btn" id="askSend" onclick="sendAsk()">Send it</button>
+    </div>
+    ${allShots.length ? `<div class="card" id="photoCard" style="display: none;"><h3>📷 PROGRESS PHOTOS — newest first</h3>
+      <div class="gal">${allShots.slice(0, 60).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="progress photo" onclick="window.open('${photoUrl(n)}', '_blank'); ping('photo:open')">`).join('')}</div>
+    </div>` : ''}`;
+  // 📖 the job journal: ONLY the latest week shows; older weeks live behind one fold
   if ((d.journal || []).length) {
     const js = d.journal.slice(0, 26);
+    const shots = j => (j.photos || []).length
+      ? `<div class="jr-shots">${j.photos.slice(0, 8).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="job photo" onclick="event.stopPropagation(); window.open('${photoUrl(n)}', '_blank'); ping('photo:open')">`).join('')}</div>` : '';
     h += `<div class="card"><h3>JOB JOURNAL</h3>
       <div class="ph open">
         <div class="ph-head"><span>📖 Week of ${esc(js[0].week)}</span></div>
-        <div class="ph-cats" style="white-space: pre-wrap; padding-left: 4px;">${esc(js[0].text)}</div>
+        <div class="ph-cats" style="white-space: pre-wrap; padding-left: 4px;">${esc(js[0].text)}${shots(js[0])}</div>
       </div>` +
       (js.length > 1 ? `<div class="ph" id="jrPast">
         <div class="ph-head" onclick="document.getElementById('jrPast').classList.toggle('open'); ping('journal:past')">
@@ -98,7 +169,7 @@ async function boot() {
         js.slice(1).map((j, i) => `<div class="ph" id="jr${i + 1}">
           <div class="ph-head" onclick="event.stopPropagation(); document.getElementById('jr${i + 1}').classList.toggle('open'); ping('journal')">
             <span>Week of ${esc(j.week)}</span><span>▾</span></div>
-          <div class="ph-cats" style="white-space: pre-wrap;">${esc(j.text)}</div>
+          <div class="ph-cats" style="white-space: pre-wrap;">${esc(j.text)}${shots(j)}</div>
         </div>`).join('') + `</div></div>` : '') + `</div>`;
   }
   if (d.show && d.show.money) {
@@ -115,7 +186,7 @@ async function boot() {
         <div class="ph-cats">${(p.cats || []).map(c => `${esc(c[0])} — ${money(c[1])}`).join('<br>')}</div>
       </div>`).join('') + `</div>`;
   }
-  h += `<div class="foot">Questions? Call or text Eric directly — this page updates as the books do.</div>`;
+  h += `<div class="foot">Questions? Use 💬 Ask / Remark above, or call or text Eric directly.</div>`;
   $('#app').innerHTML = h;
   ping('open');
 }
