@@ -1532,11 +1532,11 @@
   /* the job selector lives IN the panel — the empty instrument bay under the readout */
   .bc-job {
     position: absolute; z-index: 4;
-    left: 57.2%; top: 39.2%; width: 32.4%; height: 5.9%;
+    left: 55.8%; top: 38.9%; width: 35.2%; height: 6.6%; /* v5.24 — a little bigger */
     background: #17120a; color: #eccf8c;
     border: 2px solid #8a6a2e; border-radius: 8px;
     font-family: Georgia, 'Times New Roman', serif; font-weight: 700;
-    font-size: clamp(13px, 4.2vw, 21px); text-align: center; text-align-last: center;
+    font-size: clamp(15px, 5vw, 24px); text-align: center; text-align-last: center; /* v5.24 — a little bigger, per Eric */
     padding: 0 6px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.8), 0 1px 0 rgba(232,197,124,0.25);
     -webkit-appearance: none; appearance: none;
   }
@@ -1755,11 +1755,8 @@
   body.crew-mode #dayTubeCard { order: 8; }
   body.crew-mode #crewSharedCard { order: 30; }
   body.crew-mode .wrap > footer { order: 100; }
-  /* v5.18 — Eric's CLOCK OUT plate: shows only while ON the clock; the whole plate punches out */
-  .plate-out { display: block; width: 100%; border: none; background: none; padding: 0; margin: 10px 0 0; cursor: pointer; border-radius: 12px; overflow: hidden; }
-  .plate-out img { display: block; width: 100%; height: auto; }
-  .plate-out:active { transform: translateY(2px); filter: brightness(1.15); }
-  /* v5.18 — punch tape lines are tappable: fix hours / times / notes right where you read them */
+  /* v5.18 — punch tape lines are tappable: fix hours / times / notes right where you read them
+     (v5.24: the RUNNING punch is not — finish it first, or ↩ undo and start over) */
   .punch-log div[onclick] { cursor: pointer; }
   .pl-edit { opacity: 0.55; margin-left: 4px; }
   /* 💡 v5.21 — QB freshness lamps: bright + glow + day-count when fresh; dim + STALE word when old */
@@ -1984,22 +1981,6 @@
     <div class="rev-row" style="margin-top: 12px;">
       <button class="btn-primary" onclick="doJobSwitch()">⇄ Switch — keep the clock rolling</button>
       <button class="btn-ghost" onclick="cancelJobSwitch()">✕ Never mind</button>
-    </div>
-  </div>
-</div>
-<!-- ✎ v5.18 — fix the RUNNING punch: no hours exist yet, so it's start time + a note -->
-<div class="rev-modal" id="liveEditModal" onclick="if(event.target===this)closeLiveEdit()">
-  <div class="rev-box">
-    <h3>✎ Fix this punch</h3>
-    <div class="rev-text">Still on the clock, so there are no hours yet — set when the shift really started, or leave a note that rides on it at clock-out.</div>
-    <div class="frow" style="margin-top: 10px;">
-      <div class="field"><label>Started at</label><input type="time" id="liveStart"></div>
-      <div class="field" style="flex: 1 1 100%;"><label>Note for the record (optional)</label>
-        <textarea id="liveNote" rows="2" class="grow" placeholder="forgot to punch — actually here at 6:30"></textarea></div>
-    </div>
-    <div class="rev-row" style="margin-top: 12px;">
-      <button class="btn-primary" onclick="saveLiveEdit()">Save</button>
-      <button class="btn-ghost" onclick="closeLiveEdit()">✕ Never mind</button>
     </div>
   </div>
 </div>
@@ -2245,8 +2226,6 @@
         </g>
       </svg>
     </div>
-    <!-- v5.18 — Eric's matching CLOCK OUT plate: on the clock, the plate IS the punch-out button -->
-    <button class="plate-out" id="clockOutPlate" style="display: none;" onclick="bcTap()" aria-label="Clock out"><img src="steam/clockout-plate.webp" alt="" draggable="false"></button>
     <button class="btn-ghost" id="breakBtn" style="display: none; flex: 1 1 100%;" onclick="toggleBreak()" aria-pressed="false">☕ Go on break</button>
     <button class="btn-ghost" id="undoPunch" style="display: none; flex: 1 1 100%;" onclick="undoPunch()">↩ Undo that clock-in</button>
     <!-- v5.15 — today's punch tape: every hit of the button leaves a line; midnight wipes it clean -->
@@ -2922,7 +2901,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.23 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.24 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4544,34 +4523,10 @@ function saveShift() {
     wb: wageBankCents, ws: wageSegStartSec, wc: workCat, cats: [...shiftCats], sn: shiftNote || ''
   }));
 }
-// ✎ v5.18 — tap the RUNNING line on the punch tape: fix the start time, stash a note.
-// The note survives an app reload (rides daylog-shift) and lands on the entry at clock-out.
+// v5.24 — live-edit retired per Eric: the running punch is untouchable until it's finished.
+// Mess it up? ↩ undo (always available while clocked in) and start over. shiftNote survives
+// as plumbing (job-switch notes still ride it).
 let shiftNote = '';
-function openLiveEdit() {
-  if (!clockedInAt) return;
-  $('liveStart').value = String(clockedInAt.getHours()).padStart(2, '0') + ':' + String(clockedInAt.getMinutes()).padStart(2, '0');
-  $('liveNote').value = shiftNote;
-  $('liveEditModal').classList.add('show');
-  document.body.classList.add('modal-open');
-}
-function closeLiveEdit() {
-  $('liveEditModal').classList.remove('show');
-  if (!document.querySelector('.panel.open')) document.body.classList.remove('modal-open');
-}
-function saveLiveEdit() {
-  const v = $('liveStart').value;
-  if (/^\d{2}:\d{2}$/.test(v)) {
-    const [h, m] = v.split(':').map(Number);
-    const d = new Date(clockedInAt); d.setHours(h, m, 0, 0);
-    if (d > new Date()) { toast('That start time is in the future — the clock can\'t run backwards', false); return; }
-    clockedInAt = d;
-  }
-  shiftNote = $('liveNote').value.trim();
-  saveShift(); bcRender(); renderAll();
-  $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
-  closeLiveEdit();
-  toast('✎ Punch fixed ✓');
-}
 function restoreShift() {
   let j = null;
   try { j = JSON.parse(lsGet('daylog-shift') || 'null'); } catch (e) {}
@@ -4624,7 +4579,8 @@ function renderPunchLog() {
       // v5.18 — every line is tappable: fix hours, times, job or notes right on the tape (until locked)
       return `<div onclick="openLogEdit(${e.id}, event)" role="button" title="Tap to fix this punch">✓ ${esc(e.job)} — ${esc(span)} · <b>${(+e.hours || 0).toFixed(2)} hrs</b>${sw ? ' ⇄' : ''}<span class="pl-edit">✎</span></div>`;
     });
-  if (clockedInAt) rows.push(`<div class="pl-open" onclick="openLiveEdit()" role="button" title="Tap to fix the start time or add a note">⏱ Clocked into ${esc(clockJobName || '')} at ${fmtTime(clockedInAt)} — running…<span class="pl-edit">✎</span></div>`);
+  // v5.24 — the RUNNING punch is hands-off: finish it (or ↩ undo) before anything edits
+  if (clockedInAt) rows.push(`<div class="pl-open">⏱ Clocked into ${esc(clockJobName || '')} at ${fmtTime(clockedInAt)} — running…</div>`);
   const html = rows.length ? rows.join('') : '<span class="pl-empty">— no punches yet today —</span>';
   if (html !== _plPrev) { box.innerHTML = html; _plPrev = html; }
 }
@@ -4668,15 +4624,18 @@ function bcRender() {
   $('bcTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   $('bcLampOff').style.display = st.clockedIn ? 'none' : '';
   if ($('bcLampGlow')) $('bcLampGlow').style.display = 'none'; // v5.15 — retired: the BUTTON burns instead
-  $('bcAnnun').style.display = 'none'; // v5.18 — retired: Eric's real plate below carries the word
-  if ($('clockOutPlate')) $('clockOutPlate').style.display = st.clockedIn ? '' : 'none';
+  // v5.24 — ONE control, Eric's words: red button lights AND the gold banner flips to CLOCK OUT
+  $('bcAnnun').style.display = st.clockedIn ? '' : 'none';
   renderPunchLog(); // 🧾 today's punch tape under the button
   const un = $('undoPunch');
   if (un) {
-    const canIn = st.clockedIn && (Date.now() - clockedInAt.getTime()) < 120000;
+    // v5.24 — Eric: "if you mess up a clock-in, you just push undo and start over."
+    // Undo rides the WHOLE shift now; past 10 minutes it takes two taps so a stray thumb
+    // can't erase a real morning. Undo-a-clock-out keeps its 2-minute window.
+    const canIn = st.clockedIn;
     const canOut = !st.clockedIn && lastShiftUndo && (Date.now() - lastShiftUndo.done) < 120000;
     un.style.display = (canIn || canOut) ? '' : 'none';
-    un.textContent = canOut ? '↩ Undo that clock-out' : '↩ Undo that clock-in';
+    if (!_undoArm) un.textContent = canOut ? '↩ Undo that clock-out' : '↩ Undo that clock-in — start over';
   }
   $('bigClock').dataset.state = st.clockedIn ? 'in' : 'out';
   const b = $('bcTapBtn');
@@ -4685,7 +4644,7 @@ function bcRender() {
     : 'Clocked out — tap to clock in');
 }
 // fat-finger insurance: for two minutes after a punch-in OR a clock-out, one tap takes it back
-let lastShiftUndo = null;
+let lastShiftUndo = null, _undoArm = false;
 function undoPunch() {
   if (!clockedInAt && lastShiftUndo && Date.now() - lastShiftUndo.done < 120000) {
     // un-clock-out: remove the logged shift, put the clock back exactly where it was
@@ -4702,7 +4661,15 @@ function undoPunch() {
     return;
   }
   if (!clockedInAt) return;
-  if (Date.now() - clockedInAt.getTime() > 120000) { toast('Too late to undo — clock out instead', false); return; }
+  // v5.24 — undo works the whole shift; older than 10 minutes = arm first, fire second
+  if (Date.now() - clockedInAt.getTime() > 600000 && !_undoArm) {
+    _undoArm = true;
+    const un = $('undoPunch');
+    if (un) un.textContent = `⚠ SURE? ${fmtTime(clockedInAt)} till now will NOT be logged — tap again`;
+    setTimeout(() => { _undoArm = false; bcRender(); }, 6000); // cools back off by itself
+    return;
+  }
+  _undoArm = false;
   clockedInAt = null; clockJobName = null;
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set();
