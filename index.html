@@ -2781,10 +2781,10 @@
           <h4>💼 QuickBooks updater</h4>
           <!-- 💡 v5.21 — three lamps, one per report: all three lit = the books feed is FRESH -->
           <div id="qbLights" style="margin: 4px 0 8px;"></div>
-          <div class="hint" style="line-height: 1.5;">In QuickBooks Online → Reports, export to Excel and drop the files here:<br>
-            <b>1.</b> "Sales by Product/Service Detail" — filter Customer = the job, All Dates (one per job)<br>
-            <b>2.</b> "Invoice List by Date" — same filter (one per job)<br>
-            <b>3.</b> "Transaction List by Date" — no filter, All Dates (powers the ✓✓ checkmarks)</div>
+          <div class="hint" style="line-height: 1.5;">In QuickBooks Online → Reports, export to Excel — <b>ALL customers, All Dates, no filters</b> (Claude sorts by job). Three files total:<br>
+            <b>1.</b> "Sales by Product/Service Detail" — feeds the phase breakdowns<br>
+            <b>2.</b> "Invoice List by Date" — feeds invoiced / paid / open<br>
+            <b>3.</b> "Transaction List by Date" — powers the ✓✓ checkmarks</div>
           <input type="file" id="qbDrop" accept=".xlsx" multiple style="display: none;" onchange="qbDropUpload(this)">
           <!-- 🖱 v5.19 — a real drop ZONE: drag the exports from the PC straight onto the dashed box -->
           <div id="qbDropZone" style="margin-top: 10px; border: 2px dashed var(--line, #3a3226); border-radius: 12px; padding: 18px 12px; text-align: center; cursor: pointer;"
@@ -2920,7 +2920,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.21 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.22 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
