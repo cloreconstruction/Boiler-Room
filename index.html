@@ -1763,6 +1763,12 @@
   /* v5.18 — punch tape lines are tappable: fix hours / times / notes right where you read them */
   .punch-log div[onclick] { cursor: pointer; }
   .pl-edit { opacity: 0.55; margin-left: 4px; }
+  /* 💡 v5.21 — QB freshness lamps: bright + glow + day-count when fresh; dim + STALE word when old */
+  .qb-lamp { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--line, #3a3226); border-radius: 999px;
+    padding: 4px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink-2, #b0a488); margin: 2px 6px 2px 0; opacity: 0.65; }
+  .qb-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line, #3a3226); }
+  .qb-lamp.lit { border-color: var(--accent); color: var(--ink-1, #f2e9d8); opacity: 1; }
+  .qb-lamp.lit .qb-dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
   /* v4.90 — 📢 crew ask: Eric's question pops loud on every crew phone until somebody answers.
      State reads by size + glyph + spelled words, never color alone. */
   .crew-ask { border: 3px solid var(--accent); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
@@ -2773,6 +2779,8 @@
         <!-- v5.10 — 💼 QB UPDATER: drop Logan's exports straight in -->
         <div class="set-section" id="qbSec">
           <h4>💼 QuickBooks updater</h4>
+          <!-- 💡 v5.21 — three lamps, one per report: all three lit = the books feed is FRESH -->
+          <div id="qbLights" style="margin: 4px 0 8px;"></div>
           <div class="hint" style="line-height: 1.5;">In QuickBooks Online → Reports, export to Excel and drop the files here:<br>
             <b>1.</b> "Sales by Product/Service Detail" — filter Customer = the job, All Dates (one per job)<br>
             <b>2.</b> "Invoice List by Date" — same filter (one per job)<br>
@@ -2787,6 +2795,9 @@
             📥 <b>Drag QB exports here</b> — or tap to pick files
           </div>
           <div id="qbDropMsg" class="hint" style="margin-top: 6px;"></div>
+          <!-- 📣 v5.21 — the button rings Claude: raises a flag file the hourly watcher grabs -->
+          <button class="btn-ghost" style="margin-top: 10px;" onclick="qbUpdateNow()">📣 Tell Claude — process the new exports</button>
+          <div id="qbNowMsg" class="hint" style="margin-top: 6px;"></div>
         </div>
         <div class="set-section" id="setPrivacy">
       <h4>🔒 Personal people</h4>
@@ -2909,7 +2920,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.20 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.21 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4814,7 +4825,7 @@ function openPanel(name) {
     if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', ');
       if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
       if ($('unlockWho')) $('unlockWho').innerHTML = crew.map(c => `<option>${esc(c)}</option>`).join('');
-      renderPortalList(); initSetupCollapse(); }
+      renderPortalList(); renderQbLights(); initSetupCollapse(); }
     if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; renderDayFlowRows(); renderPipeRows(); }
     if (name === 'vault') vaultOpenInit();
     if (name === 'summary') summaryOpenInit();
@@ -7641,6 +7652,39 @@ async function checkClientAsks() {
   }
   if (got) { renderPendBanner(); toast(`💬 ${got} message${got > 1 ? 's' : ''} from clients — in your 📥 review pile`); }
 }
+// 💡 v5.21 — QB freshness lamps: one per report kind, lit while its newest upload is ≤7 days old.
+// All three burning = the whole books feed is current. Brightness + the day-count word, never color alone.
+async function renderQbLights() {
+  const box = $('qbLights');
+  if (!box || CREW_NAME) return;
+  if (!dbx.refreshToken) { box.innerHTML = '<span class="hint">Connect Dropbox to read the feed.</span>'; return; }
+  let files = [];
+  try {
+    const r = await dbxRpc('files/list_folder', { path: '/Clore Project Tracker/QB Exports', recursive: false });
+    files = (r.entries || []).filter(f => f['.tag'] === 'file');
+  } catch (e) { box.innerHTML = ''; return; }
+  const KINDS = [[/sales by product/i, 'SALES'], [/invoice list/i, 'INVOICES'], [/transaction list/i, 'TRANSACTIONS']];
+  const now = Date.now();
+  box.innerHTML = KINDS.map(([rx, lab]) => {
+    const newest = files.filter(f => rx.test(f.name)).map(f => +new Date(f.server_modified)).sort((a, b) => b - a)[0];
+    const days = newest ? Math.floor((now - newest) / 86400000) : null;
+    const lit = !!newest && days <= 7;
+    const word = newest ? (lit ? (days === 0 ? 'today' : days + 'd ago') : 'STALE ' + days + 'd') : 'never';
+    return `<span class="qb-lamp${lit ? ' lit' : ''}" role="img" aria-label="${lab} export — ${newest ? (lit ? 'fresh, ' : 'stale, ') + days + ' days old' : 'never uploaded'}"><span class="qb-dot"></span>${lab} <b>${word}</b></span>`;
+  }).join('');
+}
+// 📣 v5.21 — the button that rings Claude: raises UPDATE-NOW.txt in the exports folder.
+// A scheduled watcher checks every hour; sees the flag → processes everything new right then.
+// The nightly refresher stays as the no-matter-what backstop.
+async function qbUpdateNow() {
+  if (CREW_NAME) return;
+  if (!dbx.refreshToken) { toast('Connect Dropbox first (⚙ Setup)', false); return; }
+  try {
+    await dbxUpload('/Clore Project Tracker/QB Exports/UPDATE-NOW.txt', 'Eric pushed the button at ' + new Date().toISOString());
+    $('qbNowMsg').textContent = '📣 Flag is UP. Claude checks on the hour — the new exports get processed and the lamps, checkmarks and client pages follow. Nightly run is the backstop either way. Need it this second? Tell Claude "exports are in" in the chat.';
+    toast('📣 Claude grabs it within the hour ✓');
+  } catch (e) { toast('Couldn\'t raise the flag — check the connection and try again', false); }
+}
 // 💼 v5.10 — drop Logan's QB exports straight into the pipeline
 function qbDropFiles(fileList) {
   // 🖱 v5.19 — dragged files ride the same rails as picked ones
@@ -7660,9 +7704,10 @@ async function qbDropUpload(inp) {
   }
   inp.value = '';
   $('qbDropMsg').textContent = done === files.length
-    ? `✓ ${done} file${done > 1 ? 's' : ''} in. The nightly QB refresher processes them by morning — or tell Claude "exports are in" for right now.`
+    ? `✓ ${done} file${done > 1 ? 's' : ''} in. Tap 📣 below for within-the-hour processing, or the nightly refresher gets them by morning.`
     : `⚠ Only ${done} of ${files.length} made it — try the rest again.`;
   toast(`💼 ${done} export${done === 1 ? '' : 's'} uploaded ✓`);
+  renderQbLights(); // 💡 fresh upload = the lamp lights right away
 }
 // ✓✓ v5.06 TWO-CHECKMARK VERIFICATION — the field says money moved; QuickBooks proves it.
 // qb-costs.json (built from Logan's QB Transaction List export) holds the money-out lines.
