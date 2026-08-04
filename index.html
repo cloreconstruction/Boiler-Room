@@ -2909,7 +2909,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.19 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.20 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7461,14 +7461,104 @@ async function openJournal(i) {
     <div class="hint" style="margin: 10px 0 0;">What the draft pulls in — flip one and it redrafts (hand edits reset):</div>
     <div class="frow" style="margin: 8px 0;">${chk('notes', 'work notes')}${chk('hours', 'hours on site')}${chk('photos', 'photo count')}${chk('money', 'money moved')}</div>
     <div class="field"><label>The entry — edit anything before it goes out</label>
+      <div class="hint" id="jrnAiHint" style="margin: 0 0 4px;"></div>
       <textarea id="jrnText" rows="10" class="grow" style="width: 100%;">${esc(journalDraft(aj, c.code))}</textarea></div>
     <div class="rev-row" style="margin-top: 10px;">
-      <button class="btn-primary" style="flex: 2;" onclick="journalRelease()">📖 Release to the client page${st.some(e => e.photoPath) ? ' (photos ride along)' : ''}</button>
+      <button class="btn-primary" id="jrnGoBtn" style="flex: 2;" onclick="journalRelease()">📖 Release to the client page${st.some(e => e.photoPath) ? ' (photos ride along)' : ''}</button>
       <button class="btn-ghost" style="flex: 1;" onclick="closeReview()">✕ Cancel</button>
     </div>
-    <div class="hint" style="margin-top: 8px;">Releasing stamps the week, lights the client's lamp on their next visit, and folds past weeks behind one row. Nothing marked personal can ever ride along.</div>`;
+    <div class="hint" style="margin-top: 8px;">Releasing stamps the week, lights the client's lamp on their next visit, and folds past weeks behind one row. Nothing marked personal can ever ride along.</div>
+    <!-- ↩ v5.20 — what's already out there: every released week can be edited or taken back -->
+    <div id="jrnRelList" style="margin-top: 12px;"><span class="hint">⏳ checking what's on their page…</span></div>`;
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
+  _jrnEditIdx = null; _jrnRetractArm = null;
+  journalAiTidy(aj, c); // 🧙 v5.20 — the Wizard rewrites the raw pull into client-facing bullets
+  renderJrnReleased();  // ↩ v5.20 — released weeks: editable, retractable
+}
+// ↩ v5.20 — NOTHING sent to a client is beyond reach: edit updates their page live,
+// take-back pulls the week off it entirely. Their lamp lights either way.
+let _jrnEditIdx = null, _jrnRetractArm = null;
+async function renderJrnReleased() {
+  const box = $('jrnRelList');
+  if (!box || _jrnIdx == null) return;
+  const c = _portalIdx.clients[_jrnIdx];
+  let d = null;
+  try { d = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || '{}'); } catch (e) {}
+  const js = (d && d.journal) || [];
+  if (!js.length) { box.innerHTML = '<span class="hint">Nothing released to their page yet.</span>'; return; }
+  box.innerHTML = `<div class="field" style="margin: 0 0 2px;"><label>📤 On their page now — ✎ edit it or ↩ take it back</label></div>` +
+    js.slice(0, 8).map((j, i) => `<div class="sum-row" style="cursor: default; flex-wrap: wrap;">
+      <span class="sum-title">📖 Week of ${esc(j.week || '?')}${(j.photos || []).length ? ` · 📷 ${j.photos.length}` : ''}${j.edited ? ' · ✎ edited' : ''}</span>
+      <button class="btn-ghost req-x" onclick="jrnEditRel(${i})">✎ Edit</button>
+      <button class="btn-ghost req-x" ${_jrnRetractArm === i ? 'style="color: var(--err); font-weight: 700;"' : ''} onclick="jrnRetract(${i})">${_jrnRetractArm === i ? '↩ SURE? Tap again' : '↩ Take back'}</button>
+    </div>`).join('');
+}
+async function jrnEditRel(i) {
+  const c = _portalIdx.clients[_jrnIdx];
+  try {
+    const d = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || '{}');
+    const j = (d.journal || [])[i];
+    if (!j) { toast('That week is gone from their page already', false); return; }
+    _jrnEditIdx = i; _jrnRetractArm = null;
+    $('jrnText').value = j.text || '';
+    const hint = $('jrnAiHint'); if (hint) hint.textContent = `✎ Editing "Week of ${j.week}" — saving updates their page on the spot.`;
+    const btn = $('jrnGoBtn'); if (btn) btn.textContent = '💾 Save the edit — updates their page';
+    $('jrnText').focus();
+  } catch (e) { toast('Couldn\'t load it — check the connection', false); }
+}
+async function jrnRetract(i) {
+  if (_jrnRetractArm !== i) { _jrnRetractArm = i; renderJrnReleased(); return; } // two-tap: no accidental take-backs
+  _jrnRetractArm = null;
+  const c = _portalIdx.clients[_jrnIdx];
+  try {
+    const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
+    const d = JSON.parse(await dbxDownload(path) || '{}');
+    const gone = (d.journal || []).splice(i, 1)[0];
+    d.updated = new Date().toISOString().slice(0, 10);
+    await dbxUpload(path, JSON.stringify(d, null, 1));
+    renderJrnReleased();
+    toast(`↩ "Week of ${gone ? gone.week : '?'}" is OFF ${c.job}'s page ✓`);
+  } catch (e) { toast('Couldn\'t take it back — check the connection and try again', false); }
+}
+// 🧙 v5.20 — the Wizard drafts the journal: raw entries are MATERIAL, not the message.
+// It drops tests, internal logistics and scheduling chatter; keeps what an owner cares about.
+// No key / offline / already-edited → the raw draft stands, exactly like before.
+async function journalAiTidy(aj, c) {
+  if (!aiKey()) return;
+  const box = $('jrnText');
+  if (!box) return;
+  const raw = box.value;
+  const hint = $('jrnAiHint');
+  if (hint) hint.textContent = '🧙 The Wizard is tidying the draft…';
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': aiKey(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 700,
+        system: 'You write the weekly client journal entry for Clore Construction (Eric Clore, general contractor, Kenai Peninsula, Alaska). The reader is the HOMEOWNER of one project. From the raw field notes you receive, write 4-8 short plain-text bullets, each starting with "• ", describing what happened on THEIR project this week — work completed, deliveries, subs scheduled, decisions, lead times. Warm, plain, confident builder\'s voice. STRICT RULES: drop test entries, app chatter, Eric\'s personal logistics (his trucks, tractors, other jobs, family), crew-management noise, and anything not about this client\'s project. Never invent work that is not in the notes. Keep any line marked ⭐ STAMPED (Eric picked it by hand) — rewrite its wording but keep its substance. Keep hour totals / photo counts / money lines if present, as their own closing bullets, rephrased naturally. If a note answers a question the owner asked, keep that. Output ONLY the bullets (and closing lines) — no headers, no markdown bold, no sign-off.',
+        messages: [{ role: 'user', content: `PROJECT: ${c.job}\nWEEK'S RAW FIELD NOTES (⭐ STAMPED = Eric hand-picked):\n${jrnStamped(aj).map(e => `⭐ STAMPED: ${(e.details || '').replace(/\s+/g, ' ').slice(0, 200)}`).join('\n')}\n${raw}` }]
+      })
+    });
+    if (!r.ok) throw new Error('API ' + r.status);
+    const j = await r.json();
+    const text = (j.content || []).map(x => x.text || '').join('').trim();
+    if (!text || !text.includes('•')) throw new Error('empty');
+    // only swap in if Eric hasn't started editing the raw draft himself
+    if (box.value === raw) {
+      box.value = text;
+      if (hint) hint.textContent = '🧙 Wizard-drafted from the week\'s notes — read it over, then release.';
+    } else if (hint) hint.textContent = '';
+  } catch (e) {
+    if (hint) hint.textContent = '(Wizard couldn\'t tidy it — this is the raw pull; trim what doesn\'t belong.)';
+  }
 }
 function jrnFilter(k, v) {
   const c = _portalIdx.clients[_jrnIdx];
@@ -7481,6 +7571,21 @@ async function journalRelease() {
   const text = ($('jrnText').value || '').trim();
   if (!text) { toast('Nothing to release', false); return; }
   const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
+  // ✎ v5.20 — edit mode: rewrite the already-released week in place, live on their page
+  if (_jrnEditIdx != null) {
+    try {
+      const d = JSON.parse(await dbxDownload(path) || '{}');
+      const j = (d.journal || [])[_jrnEditIdx];
+      if (!j) { toast('That week left their page — release it fresh instead', false); _jrnEditIdx = null; return; }
+      j.text = text; j.edited = new Date().toISOString().slice(0, 10);
+      d.updated = j.edited;
+      await dbxUpload(path, JSON.stringify(d, null, 1));
+      _jrnEditIdx = null;
+      closeReview();
+      toast(`✎ "Week of ${j.week}" updated on ${c.job}'s page ✓`);
+    } catch (e) { toast('Couldn\'t save the edit — check the connection', false); }
+    return;
+  }
   const aj = portalAppJob(c);
   const st = jrnStamped(aj);
   try {
