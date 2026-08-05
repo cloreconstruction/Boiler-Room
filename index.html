@@ -2889,7 +2889,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.27 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.28 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7566,6 +7566,7 @@ async function renderPortalList() {
     <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
       <span class="sum-title" style="flex: 1 1 100%;">🏠 ${esc(c.job)}</span>
       <button class="btn-ghost req-x" onclick="openJournal(${i})">📖 Journal</button>
+      <button class="btn-ghost req-x" onclick="openMaterials(${i})">📋 Materials</button>
       <button class="btn-ghost req-x" onclick="portalCopy(${i})">📋 Copy link</button>
       <button class="btn-ghost req-x" onclick="window.open(portalUrl(${i}), '_blank')">👁 View as this client</button>
       <button class="btn-ghost req-x" onclick="portalIntel(${i})">📊 What they look at</button>
@@ -7836,6 +7837,206 @@ async function journalRelease() {
     closeReview();
     toast(`📖 Journal released — ${c.job}'s page carries it now${photos.length ? ` with ${photos.length} photo${photos.length > 1 ? 's' : ''}` : ''} ✓`);
   } catch (e) { toast('Couldn\'t reach the client file — check the connection and try again', false); }
+}
+// 📋 v5.28 — THE MATERIALS BOARD MANAGER. Eric's side of the card table: rooms → items →
+// four lamps he advances (PICK NEEDED → PICKED → ORDERED → ARRIVED), options for the client
+// to pick from, order/arrival dates (client sees them only if he says so), and grouped
+// orders (kids) that go READY TO ORDER when every piece is confirmed.
+// Per client: /App Data/Client Portal/materials-<code>.json · master template: materials-master.json
+let _matD = null, _matIdx = null, _matEdit = '', _matDirty = false, _matArm = '';
+const MAT_STATES = [['pick', '○ PICK NEEDED'], ['picked', '● PICKED'], ['ordered', '📦 ORDERED'], ['arrived', '✅ ARRIVED']];
+const MAT_TRADES = ['Electrical', 'Plumbing', 'Tile', 'Doors', 'Windows', 'Paint', 'Cabinets', 'Flooring', 'Siding', 'Roofing', 'Decks', 'Misc'];
+function matWord(s) { return (MAT_STATES.find(x => x[0] === (s || 'pick')) || MAT_STATES[0])[1]; }
+async function openMaterials(i) {
+  if (portalGuard()) return;
+  _matIdx = i; _matEdit = ''; _matDirty = false; _matArm = '';
+  const c = _portalIdx.clients[i];
+  toast('⏳ Loading the board…');
+  try { _matD = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json') || 'null'); } catch (e) { _matD = null; }
+  if (!_matD || !Array.isArray(_matD.rooms)) _matD = { updated: '', rooms: [] };
+  renderMatMgr();
+  $('revModal').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+function matNextId() {
+  let mx = _matD.seq || 0; // monotonic: a deleted item's id is never reissued
+  _matD.rooms.forEach(r => (r.items || []).forEach(x => { const n = parseInt(String(x.id).replace(/\D/g, '')) || 0; if (n > mx) mx = n; }));
+  _matD.seq = mx + 1;
+  return 'm' + _matD.seq;
+}
+function renderMatMgr() {
+  const c = _portalIdx.clients[_matIdx];
+  const box = $('revBox');
+  const need = _matD.rooms.reduce((s, r) => s + (r.items || []).filter(x => (x.s || 'pick') === 'pick').length, 0);
+  box.innerHTML = `<h3>📋 ${esc(c.job)} — materials board${_matDirty ? ' <span style="color: var(--err, #c0392b);">· unsaved</span>' : ''}</h3>
+    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} rooms · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client. Tap a lamp to advance it; ✎ opens the works.` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
+    ${_matD.rooms.map((r, ri) => `<div class="set-section fc-sec" style="margin-top: 10px;"><h4>${esc(r.name)}
+      <button class="btn-ghost req-x" style="float: right;" onclick="matAddItem(${ri})">➕ item</button></h4>
+      ${(r.items || []).map(it => matMgrItem(ri, it)).join('') || '<span class="hint">no items yet</span>'}
+    </div>`).join('')}
+    <div class="frow" style="margin-top: 12px;">
+      <div class="field" style="flex: 1;"><input type="text" id="matNewRoom" placeholder="new room name…"></div>
+      <button class="btn-ghost" onclick="matAddRoom()">➕ room</button>
+    </div>
+    <div class="rev-row" style="margin-top: 12px; flex-wrap: wrap;">
+      <button class="btn-primary" style="flex: 2;" onclick="matSave()">💾 Save to the client's page</button>
+      ${!_matD.rooms.length ? `<button class="btn-ghost" style="flex: 2;" onclick="matFromMaster()">🧱 Start from the master list</button>` : `<button class="btn-ghost" style="flex: 1;" onclick="matSaveMaster()">${_matArm === 'master' ? '⚠ SURE? Overwrites the master' : '📌 Save as master'}</button>`}
+      <button class="btn-ghost" style="flex: 1;" onclick="matClose()">✕ Close</button>
+    </div>
+    <div class="hint" style="margin-top: 8px;">Per-client setup: 🧱 start from the master, ✕ what this job doesn't need, ➕ what's special. Order/arrival dates stay crew-only unless "show dates" is checked on the item.</div>`;
+}
+function matMgrItem(ri, it) {
+  const kids = it.kids || [];
+  const ready = kids.length && kids.every(k => k.ok);
+  const editing = _matEdit === it.id;
+  return `<div style="border-top: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent); padding: 7px 0;">
+    <div class="frow" style="align-items: center; gap: 6px;">
+      <button class="btn-ghost req-x" style="flex: none; min-width: 118px;" onclick="matCycle('${escq(it.id)}')" title="tap to advance the lamps">${matWord(it.s)}</button>
+      <span style="flex: 1; min-width: 120px;"><b>${esc(it.n)}</b> <span class="hint" style="margin: 0;">· ${esc(it.t || 'Misc')}${kids.length ? ` · ${kids.filter(k => k.ok).length}/${kids.length}` : ''}</span>${ready && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY TO ORDER</b>' : ''}</span>
+      <button class="btn-ghost req-x" onclick="_matEdit = _matEdit === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()">✎</button>
+      <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
+    </div>
+    ${(it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
+    ${editing ? matMgrEditor(it) : ''}
+  </div>`;
+}
+function matMgrEditor(it) {
+  const id = escq(it.id);
+  return `<div class="frow" style="margin-top: 8px; gap: 8px;">
+    <div class="field" style="flex: 2; min-width: 150px;"><label>Item</label><input type="text" value="${esc(it.n)}" onchange="matSet('${id}', 'n', this.value)"></div>
+    <div class="field"><label>Trade</label><select onchange="matSet('${id}', 't', this.value)">${MAT_TRADES.map(t => `<option${t === it.t ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
+    <div class="field" style="flex: 1 1 100%;"><label>Their pick (what's decided)</label><input type="text" value="${esc(it.pick || '')}" onchange="matSet('${id}', 'pick', this.value)"></div>
+    <div class="field" style="flex: 1 1 100%;"><label>Link</label><input type="text" value="${esc(it.url || '')}" onchange="matSet('${id}', 'url', this.value)"></div>
+    <div class="field" style="flex: 1 1 100%;"><label>Status note to the client ("can't get this one — options below")</label><textarea rows="2" class="grow" onchange="matSet('${id}', 'note', this.value)">${esc(it.note || '')}</textarea></div>
+    <div class="field" style="flex: 1 1 100%;"><label>Options for them to pick (one per line: title | link | price)</label><textarea rows="3" class="grow" onchange="matSetOpts('${id}', this.value)">${esc((it.opts || []).map(o => [o.t, o.url || '', o.price || ''].join(' | ').replace(/ \| +$/, '').replace(/ \| $/, '')).join('\n'))}</textarea></div>
+    <div class="field"><label>Ordered date</label><input type="date" value="${esc(it.odate || '')}" onchange="matSet('${id}', 'odate', this.value)"></div>
+    <div class="field"><label>Expected arrival</label><input type="date" value="${esc(it.eta || '')}" onchange="matSet('${id}', 'eta', this.value)"></div>
+    <div class="field" style="flex: 1 1 100%;"><label><input type="checkbox" ${it.showEta ? 'checked' : ''} onchange="matSet('${id}', 'showEta', this.checked)" style="width: auto; margin-right: 6px;">Show the dates to the client (off = crew-only)</label></div>
+    <div class="field" style="flex: 1 1 100%;"><label>Grouped pieces — e.g. every window in the order (one per line: name | note)</label><textarea rows="3" class="grow" onchange="matSetKids('${id}', this.value)">${esc((it.kids || []).map(k => k.n + (k.note ? ' | ' + k.note : '')).join('\n'))}</textarea></div>
+    ${(it.kids || []).length ? `<div class="field" style="flex: 1 1 100%;"><label>Confirm each piece — all green = READY TO ORDER</label>
+      <div class="chips-row">${it.kids.map((k, ki) => `<button type="button" class="pick-chip${k.ok ? ' sel' : ''}" onclick="matKidOk('${id}', ${ki})">${k.ok ? '● ✓ ' : '○ '}${esc(k.n)}</button>`).join('')}</div></div>` : ''}
+    ${(it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">${it.remarks.slice(-4).map(r => `${r.from === 'client' ? '👤 client' : 'you'}: ${esc(r.text)}`).join('<br>')}</div>` : ''}
+    <button class="btn-ghost" style="flex: 1 1 100%;" onclick="_matEdit = ''; renderMatMgr()">✓ Done with this item</button>
+  </div>`;
+}
+function matFindItem(id) { for (const r of _matD.rooms) { const f = (r.items || []).find(x => x.id === id); if (f) return f; } }
+function matSet(id, k, v) {
+  const it = matFindItem(id);
+  if (!it) return;
+  if (typeof v === 'string') v = v.trim();
+  if (v === '' || v === false) delete it[k]; else it[k] = v;
+  _matDirty = true;
+}
+function matSetOpts(id, txt) {
+  const it = matFindItem(id);
+  if (!it) return;
+  const opts = txt.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const p = l.split('|').map(x => x.trim());
+    const o = { t: p[0] };
+    if (p[1]) o.url = p[1];
+    if (p[2]) o.price = p[2];
+    return o;
+  });
+  if (opts.length) it.opts = opts; else delete it.opts;
+  _matDirty = true;
+}
+function matSetKids(id, txt) {
+  const it = matFindItem(id);
+  if (!it) return;
+  const old = it.kids || [];
+  const kids = txt.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const p = l.split('|').map(x => x.trim());
+    const prev = old.find(k => k.n === p[0]);
+    const k = { n: p[0], ok: prev ? !!prev.ok : false };
+    if (p[1]) k.note = p[1];
+    return k;
+  });
+  if (kids.length) it.kids = kids; else delete it.kids;
+  _matDirty = true;
+  renderMatMgr();
+}
+function matKidOk(id, ki) {
+  const it = matFindItem(id);
+  if (!it || !it.kids || !it.kids[ki]) return;
+  it.kids[ki].ok = !it.kids[ki].ok;
+  _matDirty = true;
+  renderMatMgr();
+  if (it.kids.every(k => k.ok)) toast(`● ALL CONFIRMED — ${it.n} reads READY TO ORDER on their page (after 💾 Save)`);
+}
+function matCycle(id) {
+  const it = matFindItem(id);
+  if (!it) return;
+  const order = ['pick', 'picked', 'ordered', 'arrived'];
+  it.s = order[(order.indexOf(it.s || 'pick') + 1) % 4];
+  if (it.s === 'ordered' && !it.odate) it.odate = localDay(new Date());
+  _matDirty = true;
+  renderMatMgr();
+}
+function matDelItem(id) {
+  if (_matArm !== id) { _matArm = id; renderMatMgr(); setTimeout(() => { if (_matArm === id) { _matArm = ''; renderMatMgr(); } }, 5000); return; }
+  _matArm = '';
+  _matD.rooms.forEach(r => { r.items = (r.items || []).filter(x => x.id !== id); });
+  _matD.rooms = _matD.rooms.filter(r => r.items.length || true); // empty rooms stay until saved
+  _matDirty = true;
+  renderMatMgr();
+}
+function matAddItem(ri) {
+  const r = _matD.rooms[ri];
+  if (!r) return;
+  const id = matNextId();
+  r.items = r.items || [];
+  r.items.push({ id, n: 'New item', t: 'Misc', s: 'pick' });
+  _matEdit = id; _matDirty = true;
+  renderMatMgr();
+}
+function matAddRoom() {
+  const v = ($('matNewRoom').value || '').trim().slice(0, 40);
+  if (!v) return;
+  _matD.rooms.push({ name: v, items: [] });
+  _matDirty = true;
+  renderMatMgr();
+}
+async function matFromMaster() {
+  try {
+    const m = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-master.json') || 'null');
+    if (!m || !Array.isArray(m.rooms)) { toast('No master list yet — build a board and 📌 Save as master', false); return; }
+    _matD = m; _matDirty = true;
+    renderMatMgr();
+    toast('🧱 Master list loaded — ✕ what this job doesn\'t need, then 💾 Save');
+  } catch (e) { toast('Couldn\'t load the master — check the connection', false); }
+}
+async function matSaveMaster() {
+  if (_matArm !== 'master') { _matArm = 'master'; renderMatMgr(); setTimeout(() => { if (_matArm === 'master') { _matArm = ''; renderMatMgr(); } }, 5000); return; }
+  _matArm = '';
+  // master = structure only: statuses reset, picks/dates/remarks stripped, kids unconfirmed
+  const m = { updated: localDay(new Date()), rooms: _matD.rooms.map(r => ({ name: r.name, items: (r.items || []).map(x => {
+    const d = { id: x.id, n: x.n, t: x.t || 'Misc', s: 'pick' };
+    if (x.kids) d.kids = x.kids.map(k => ({ n: k.n, ok: false }));
+    return d;
+  }) })) };
+  try {
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-master.json', JSON.stringify(m));
+    renderMatMgr();
+    toast('📌 Master list updated — every future job starts from this ✓');
+  } catch (e) { toast('Couldn\'t save the master — try again', false); }
+}
+async function matSave() {
+  const c = _portalIdx.clients[_matIdx];
+  _matD.updated = localDay(new Date());
+  try {
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json', JSON.stringify(_matD));
+    // bump the page stamp so their lamp lights
+    const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
+    try { const d = JSON.parse(await dbxDownload(path) || '{}'); d.updated = _matD.updated; await dbxUpload(path, JSON.stringify(d, null, 1)); } catch (e) {}
+    _matDirty = false;
+    renderMatMgr();
+    toast(`📋 Board saved — live on ${c.job}'s page ✓`);
+  } catch (e) { toast('Couldn\'t save — check the connection and try again', false); }
+}
+function matClose() {
+  if (_matDirty && _matArm !== 'close') { _matArm = 'close'; toast('⚠ Unsaved changes — tap ✕ Close again to leave without saving', false); setTimeout(() => { if (_matArm === 'close') _matArm = ''; }, 4000); return; }
+  _matArm = '';
+  closeReview();
 }
 // 💬 v5.25 — Eric's actions travel back to the ask on the client's page (the three lamps).
 // Fire-and-forget: offline just means the lamp lights on a later sweep-through.

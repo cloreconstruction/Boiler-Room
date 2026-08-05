@@ -61,6 +61,12 @@ const portal = async req => {
       const ct = IMG_CT[(p.split('.').pop() || '').toLowerCase()] || 'application/octet-stream';
       return new Response(buf, { headers: { 'content-type': ct, 'cache-control': 'private, max-age=86400' } });
     }
+    // 📋 the materials board (rooms, items, lamps) — served whole; picks/remarks come back by POST
+    if (url.searchParams.get('mat')) {
+      if (await dl(t, `${BASE}/${c}.json`) == null) return new Response('nope', { status: 404 });
+      const mat = await dl(t, `${BASE}/materials-${c}.json`);
+      return new Response(mat || '{"rooms":[]}', { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+    }
     // 💬 their own asks, with the three-lamp state (sent / on it / answered)
     if (url.searchParams.get('a')) {
       if (await dl(t, `${BASE}/${c}.json`) == null) return new Response('nope', { status: 404 });
@@ -78,9 +84,37 @@ const portal = async req => {
     if (!c) return new Response('bad', { status: 400 });
     const t = await dbxToken();
     if (await dl(t, `${BASE}/${c}.json`) == null) return new Response('nope', { status: 404 });
+    // 📋 a materials-board action: a pick locks the item; a remark rides the item's thread.
+    // Both ALSO append to the asks file so Eric's review pile hears about it on his next sync.
+    if (b.mat && typeof b.mat === 'object') {
+      const id = String(b.mat.id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24);
+      const pick = String(b.mat.pick || '').slice(0, 300).trim();
+      const remark = String(b.mat.remark || '').slice(0, 600).trim();
+      if (!id || (!pick && !remark)) return new Response('bad', { status: 400 });
+      const mpath = `${BASE}/materials-${c}.json`;
+      let mat = null;
+      try { mat = JSON.parse(await dl(t, mpath) || 'null'); } catch (e) {}
+      if (!mat || !Array.isArray(mat.rooms)) return new Response('nope', { status: 404 });
+      let item = null;
+      for (const r of mat.rooms) { const f = (r.items || []).find(x => x && x.id === id); if (f) { item = f; break; } }
+      if (!item) return new Response('nope', { status: 404 });
+      const now = new Date().toISOString();
+      if (pick) { item.s = 'picked'; item.pick = pick; item.pickedTs = now.slice(0, 10); }
+      if (remark) item.remarks = [...(item.remarks || []), { from: 'client', text: remark, ts: now }].slice(-20);
+      mat.updated = now.slice(0, 10);
+      await up(t, mpath, JSON.stringify(mat));
+      // echo into the asks channel → Eric's review pile
+      const apath = `${BASE}/asks-${c}.json`;
+      let arr = [];
+      try { arr = JSON.parse(await dl(t, apath) || '[]'); } catch (e) {}
+      if (!Array.isArray(arr)) arr = [];
+      arr.unshift({ tag: 'Materials', text: pick ? `📋 PICKED — ${item.n}: ${pick}` : `📋 ${item.n}: ${remark}`, ts: now });
+      await up(t, apath, JSON.stringify(arr.slice(0, 200)));
+      return new Response('ok');
+    }
     // 💬 a question or remark from the client — lands in Eric's review pile on his next sync
     if (b.ask && typeof b.ask === 'object') {
-      const tag = ['Phil', 'Eric', 'General', 'Feedback'].includes(b.ask.tag) ? b.ask.tag : 'General';
+      const tag = ['Phil', 'Eric', 'General', 'Feedback', 'Materials'].includes(b.ask.tag) ? b.ask.tag : 'General';
       const text = String(b.ask.text || '').slice(0, 1000).trim();
       if (!text) return new Response('bad', { status: 400 });
       const path = `${BASE}/asks-${c}.json`;
