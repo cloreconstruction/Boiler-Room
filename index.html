@@ -1676,6 +1676,9 @@
   }
   /* v4.61 — uniform button grids: every button the same size, same place, every time */
   .chip-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  /* 🚚 v5.25 — the mileage button announces an open trip, brightness + word, never color alone */
+  .cap-btn.mile-open { color: var(--accent); font-weight: 800; }
+  .cap-btn.mile-open .ic { filter: drop-shadow(0 0 7px rgba(255,140,40,0.85)); }
   .chip-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .chip-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   /* v4.65 — crew mode: same boiler room, smaller crew of controls.
@@ -2279,31 +2282,15 @@
     <button class="cap-btn cap-setup" data-panel="settings" aria-label="Setup"><span class="ic">⚙</span><span class="lb-long">Setup</span><span class="lb-short">Setup</span></button>
   </div>
 
+  <!-- 🚚 v5.25 — THE FIVE-TAP TRIP (Eric's spec): Truck → ✓ reading → Job → tag → GO.
+       Ending is one number. A trip left open flips this whole panel (and its button) to END mode. -->
   <div class="panel" id="panel-mileage">
-    <h3>Log mileage</h3>
+    <h3 id="mTitle">🚚 Trip</h3>
     <div class="set-section fc-sec">
       <h4>Truck</h4>
-      <div class="chips-row" id="mTruckChips"></div>
+      <div class="chip-grid" id="mTruckChips"></div>
     </div>
-    <div id="mTripCard"></div>
-    <div class="set-section fc-sec">
-      <h4>Odometer — start of trip</h4>
-      <div class="frow">
-        <div class="field"><label>Reading now</label><input type="number" id="mOdo" inputmode="numeric" min="0" step="1" placeholder="84247" oninput="updateOdoHint()"></div>
-        <div class="field"><label>Miles (optional — logs directly)</label><input type="number" id="mMiles" inputmode="decimal" min="0" step="0.1" placeholder="—"></div>
-      </div>
-      <div class="hint" id="mOdoHint" style="margin-top: 8px;"></div>
-    </div>
-    <div class="set-section fc-sec">
-      <h4>Job</h4>
-      <div class="chips-row" id="mJobChips"></div>
-    </div>
-    <div class="frow">
-      <div class="field" style="flex: 1; min-width: 180px;"><label>Destination / purpose (optional)</label><textarea id="mPurpose" class="grow" rows="2" oninput="fitTa(this)" placeholder="Supply run — lumber yard"></textarea></div>
-      <button class="btn-primary" id="mSaveBtn" onclick="saveMileage()">Log</button>
-    </div>
-    <div id="mConfirm"></div>
-    <div class="hint opt-hint">Type the odometer when you get in — that starts the trip. Your next reading closes it and credits the miles to the job you set out on.</div>
+    <div id="mBody"></div>
   </div>
 
   <div class="panel" id="panel-file">
@@ -2901,7 +2888,7 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <footer>v5.24 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.25 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4886,7 +4873,7 @@ function setCurJob(n) {
   prefs.jobRecent = [n, ...(prefs.jobRecent || []).filter(x => x !== n)].slice(0, 8);
   renderAllJobChips();
 }
-function setCurTruck(n) { curTruck = n; prefs.lastTruck = n; renderTruckChips(); renderTripCard(); updateOdoHint(); }
+function setCurTruck(n) { curTruck = n; prefs.lastTruck = n; renderTruckChips(); renderMileBody(); }
 function renderAllJobChips() {
   const ordered = recentJobsOrdered();
   if (!jobs.includes(curJob)) { curJob = prefs.lastJob && jobs.includes(prefs.lastJob) ? prefs.lastJob : ordered[0]; }
@@ -4896,7 +4883,7 @@ function renderAllJobChips() {
     (jobs.length > chipJobs.length
       ? `<select class="mini-sel" onchange="if(this.value)setCurJob(this.value)"><option value="">All jobs…</option>${ordered.map(j => `<option value="${esc(j)}">${esc(j)}</option>`).join('')}</select>`
       : '');
-  ['mJobChips', 'nJobChips'].forEach(id => { $(id).innerHTML = picker; });
+  ['nJobChips'].forEach(id => { $(id).innerHTML = picker; }); // v5.25 — mileage has its own even grid now
   // hours panel: every job as a same-size grid button, ALPHABETICAL — same spot every time you open it
   const hj = $('hJobChips');
   if (hj) hj.innerHTML = [...jobs].sort((a, b) => a.localeCompare(b)).map(n =>
@@ -4912,7 +4899,9 @@ function renderAllJobChips() {
 }
 function renderTruckChips() {
   if (!trucks.find(t => t.name === curTruck)) { curTruck = prefs.lastTruck && trucks.find(t => t.name === prefs.lastTruck) ? prefs.lastTruck : trucks[0].name; }
-  $('mTruckChips').innerHTML = chipsHtml(trucks.map(t => t.name), curTruck, 'setCurTruck');
+  // v5.25 — even grid: same-size boxes no matter the name; ⏱ marks a truck with an open trip
+  $('mTruckChips').innerHTML = trucks.map(t =>
+    `<button class="pick-chip grid-chip${t.name === curTruck ? ' sel' : ''}" onclick="setCurTruck('${escq(t.name)}')" aria-pressed="${t.name === curTruck}"><span>${t.name === curTruck ? '✓ ' : ''}${t.trip ? '⏱ ' : ''}${esc(t.name)}</span></button>`).join('');
 }
 // ---------- v4.53 tags: people & places, freeform-but-remembered ----------
 // prefs.tags = remembered names, most recently used first (syncs with everything else).
@@ -4975,111 +4964,144 @@ function tripWhen(ts) {
   if (d.toDateString() === y.toDateString()) return `yesterday ${time}`;
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ` ${time}`;
 }
-function renderTripCard() {
-  const el = $('mTripCard');
-  if (!el) return;
+// 🚚 v5.25 — THE FIVE-TAP TRIP (rebuilt to Eric's spec). Truck → ✓ reading → Job → tag → GO.
+// A trip left open flips the panel (and the bottom-bar button) to END mode: one number closes it.
+function tripTagList() {
+  if (!prefs.tripTags) prefs.tripTags = ['Dump run', 'Materials', 'Parts', 'Bid look'];
+  return prefs.tripTags;
+}
+let mJobSel = '', mTagSel = new Set(), mTagEdit = false, _tripScrapArm = false;
+function mOpenInit() {
+  const ot = trucks.find(t => t.trip);
+  if (ot) curTruck = ot.name; // an open trip owns the panel until it's dealt with
+  mJobSel = jobs.includes(curJob) ? curJob : (jobs[0] || '—');
+  mTagSel = new Set(); mTagEdit = false; _tripScrapArm = false;
+  renderTruckChips(); renderMileBody();
+}
+function renderMileBody() {
+  const box = $('mBody');
+  if (!box) return;
   const t = trucks.find(x => x.name === curTruck);
   const last = (prefs.lastOdo || {})[curTruck];
-  const lastRow = last
-    ? `<div class="trip-last"><button type="button" class="use-last" onclick="fillLastOdo()">Use last reading: ${last.odo.toLocaleString()}</button> <span class="hint" style="display:inline;">from ${tripWhen(last.ts)}</span></div>`
-    : '';
   if (t && t.trip) {
-    el.innerHTML = `<div class="trip-card" role="status">
-      <div class="trip-head"><span class="trip-wait-dot" aria-hidden="true"></span> OPEN TRIP — WAITING TO BE CLOSED</div>
-      <div class="trip-rows">
-        Started at <b>${t.trip.odo.toLocaleString()}</b> · ${tripWhen(t.trip.ts)}<br>
-        Miles will go to <b>${esc(t.trip.job)}</b>${t.trip.purpose ? ` — ${esc(t.trip.purpose)}` : ''}<br>
-        Your next reading closes it — usually the start of tomorrow's trip.
-      </div>${lastRow}</div>`;
-  } else {
-    el.innerHTML = `<div class="trip-card none">
-      <div class="trip-head">NO OPEN TRIP — ${esc(curTruck)}</div>
-      <div class="trip-rows">Typing a reading starts one.</div>${lastRow}</div>`;
-  }
-}
-function fillLastOdo() {
-  const last = (prefs.lastOdo || {})[curTruck];
-  if (!last) return;
-  $('mOdo').value = last.odo;
-  updateOdoHint();
-  $('mOdo').focus();
-}
-function mOpenInit() { $('mConfirm').innerHTML = ''; renderTripCard(); updateOdoHint(); }
-function updateOdoHint() {
-  const t = trucks.find(t => t.name === curTruck);
-  const odo = parseFloat($('mOdo').value);
-  let msg;
-  if (!t) msg = '';
-  else if (!t.trip) msg = isNaN(odo)
-    ? `No open trip for ${curTruck} — typing a reading starts one.`
-    : `Starts a new trip at ${odo.toLocaleString()} ✓`;
-  else if (isNaN(odo)) msg = `Trip open — started at ${t.trip.odo.toLocaleString()} (${t.trip.job}). Your next reading closes it.`;
-  else if (odo <= t.trip.odo) msg = `⚠ That's not past the trip start (${t.trip.odo.toLocaleString()}) — check the number, or use Miles to log directly.`;
-  else msg = `${(odo - t.trip.odo).toFixed(1)} mi → ${t.trip.job} — tap Log and you'll get a confirm before anything closes.`;
-  $('mOdoHint').textContent = msg;
-  const c = $('mConfirm');
-  if (c && c.innerHTML) c.innerHTML = ''; // number changed — a stale confirmation would lie
-}
-function saveMileage() {
-  const t = trucks.find(t => t.name === curTruck);
-  const odo = parseFloat($('mOdo').value);
-  const manual = parseFloat($('mMiles').value);
-  const purpose = $('mPurpose').value;
-  if (!isNaN(manual) && manual > 0) {   // direct miles entry — logs immediately, doesn't touch trips
-    const extra = { miles: manual, truck: curTruck };
-    if (!isNaN(odo)) { extra.odometer = odo; setLastOdo(curTruck, odo); }
-    addEntry('Mileage', purpose || 'Business travel', curJob, extra);
-    $('mMiles').value = ''; $('mOdo').value = ''; $('mPurpose').value = ''; fitTa('mPurpose'); mOpenInit(); scheduleSave(); closePanels();
-    toast(`Miles logged — ${manual.toFixed(1)} mi · ${curTruck} · ${curJob} ✓`);
-    return;
-  }
-  if (isNaN(odo)) { toast('Type the odometer (start of trip) or Miles', false); return; }
-  if (t.trip && odo <= t.trip.odo) {
-    toast(`⚠ Not past the trip start (${t.trip.odo.toLocaleString()}) — check the number`, false);
-    return;
-  }
-  if (t.trip) {   // ask before closing — Eric wants to see where the miles are going
-    const miles = +(odo - t.trip.odo).toFixed(1);
-    $('mConfirm').innerHTML = `<div class="m-confirm" role="alertdialog" aria-label="Close this trip?">
-      <h4>Close this trip and open the next?</h4>
-      <div class="sum">
-        <b>${miles.toFixed(1)} mi</b> → <b>${esc(t.trip.job)}</b> (started ${t.trip.odo.toLocaleString()}, ${tripWhen(t.trip.ts)})<br>
-        Then a new trip starts at <b>${odo.toLocaleString()}</b> for <b>${esc(curJob)}</b>.
-      </div>
+    if ($('mTitle')) $('mTitle').textContent = '🚚 END trip — ' + curTruck;
+    box.innerHTML = `
+      <div class="set-section fc-sec"><h4>Trip open — ${tripWhen(t.trip.ts)}</h4>
+        <div class="rev-text" style="margin: 0;">Started at <b>${(+t.trip.odo).toLocaleString()}</b> · miles go to <b>${esc(t.trip.job)}</b>${(t.trip.tags || []).length ? ' — ' + t.trip.tags.map(esc).join(', ') : t.trip.purpose ? ' — ' + esc(t.trip.purpose) : ''}</div></div>
+      <div class="set-section fc-sec"><h4>Odometer — END of trip</h4>
+        <input type="number" id="mEndOdo" inputmode="numeric" min="0" step="1" placeholder="${Math.round(+t.trip.odo) + 10}" style="font-size: 26px; font-weight: 800; width: 100%; padding: 10px 12px;" oninput="mEndHint()">
+        <div class="hint" id="mEndHint" style="margin-top: 6px;">One number — the miles figure themselves.</div></div>
       <div class="frow">
-        <button class="btn-primary" onclick="tripConfirm('next')">✓ Close &amp; start next</button>
-        <button class="btn-ghost" onclick="tripConfirm('closeOnly')">Close only — no new trip</button>
-        <button class="btn-ghost" onclick="tripConfirm('cancel')">✕ Cancel</button>
-      </div></div>`;
-    $('mConfirm').scrollIntoView({ block: 'nearest' });
-    return;
+        <button class="btn-primary" style="flex: 1 1 100%;" onclick="endTrip(false)">✓ End trip — log the miles</button>
+        <button class="btn-ghost" style="flex: 2;" onclick="endTrip(true)">⇄ End &amp; start the NEXT trip at this reading</button>
+        <button class="btn-ghost" id="mScrapBtn" style="flex: 1; color: var(--err, #c0392b);" onclick="scrapTrip()">🗑 Scrap</button>
+      </div>`;
+  } else {
+    if ($('mTitle')) $('mTitle').textContent = '🚚 Start trip — ' + curTruck;
+    box.innerHTML = `
+      <div class="set-section fc-sec"><h4>Odometer — start of trip</h4>
+        ${last ? `<div class="hint" style="margin: 0 0 6px;">Last reading for ${esc(curTruck)} — ${tripWhen(last.ts)}. Tap the number to change it.</div>` : `<div class="hint" style="margin: 0 0 6px;">First reading for this truck — type it once, it remembers from here.</div>`}
+        <input type="number" id="mStartOdo" inputmode="numeric" min="0" step="1" value="${last ? Math.round(+last.odo) : ''}" placeholder="84247" style="font-size: 26px; font-weight: 800; width: 100%; padding: 10px 12px;"></div>
+      <div class="set-section fc-sec"><h4>Job — where the miles go</h4><div class="chip-grid" id="mJobGrid"></div></div>
+      <div class="set-section fc-sec"><h4>Purpose — tap a tag <button type="button" class="btn-ghost req-x" style="float: right;" onclick="mTagEdit = !mTagEdit; renderMileTags()">${'✎ edit tags'}</button></h4>
+        <div class="chips-row" id="mTagChips"></div></div>
+      <button class="btn-primary" style="width: 100%; margin-top: 6px; font-size: 17px; padding: 14px;" onclick="startTrip()">✓ Confirm reading — START TRIP</button>`;
+    renderMileJobs(); renderMileTags();
   }
-  // no open trip: this reading starts one
-  t.trip = { odo, job: curJob, purpose, ts: new Date().toISOString() };
-  setLastOdo(curTruck, odo);
-  toast(`Trip started — ${curTruck} at ${odo.toLocaleString()} · ${curJob} ✓ Next reading closes it.`);
-  $('mOdo').value = ''; $('mPurpose').value = ''; fitTa('mPurpose'); mOpenInit(); renderTrucksManager(); scheduleSave(); closePanels();
 }
-function tripConfirm(action) {
-  const c = $('mConfirm');
-  if (action === 'cancel') { c.innerHTML = ''; return; }
-  const t = trucks.find(t => t.name === curTruck);
-  const odo = parseFloat($('mOdo').value);
-  const purpose = $('mPurpose').value;
-  if (!t || !t.trip || isNaN(odo) || odo <= t.trip.odo) { c.innerHTML = ''; updateOdoHint(); return; }
+function renderMileJobs() {
+  const el = $('mJobGrid');
+  if (!el) return;
+  el.innerHTML = [...jobs].sort((a, b) => a.localeCompare(b)).map(n =>
+    `<button class="pick-chip grid-chip${n === mJobSel ? ' sel' : ''}" onclick="mJobSel = '${escq(n)}'; renderMileJobs()" aria-pressed="${n === mJobSel}"><span>${n === mJobSel ? '✓ ' : ''}${esc(n)}</span></button>`).join('');
+}
+function renderMileTags() {
+  const el = $('mTagChips');
+  if (!el) return;
+  el.innerHTML = tripTagList().map(g =>
+    `<button type="button" class="pick-chip${mTagSel.has(g) ? ' sel' : ''}" onclick="${mTagEdit ? `delTripTag('${escq(g)}')` : `togTripTag('${escq(g)}')`}" aria-pressed="${mTagSel.has(g)}">${mTagEdit ? '✕ ' : mTagSel.has(g) ? '✓ ' : ''}${esc(g)}</button>`).join('') +
+    (mTagEdit ? '' : `<button type="button" class="pick-chip" onclick="newTripTag(this)">➕ tag</button>`);
+}
+function togTripTag(g) { mTagSel.has(g) ? mTagSel.delete(g) : mTagSel.add(g); renderMileTags(); }
+function delTripTag(g) {
+  prefs.tripTags = tripTagList().filter(x => x !== g);
+  mTagSel.delete(g); scheduleSave(); renderMileTags();
+  toast(`Tag gone — ${g}`);
+}
+function newTripTag(btn) {
+  btn.outerHTML = `<input type="text" class="mini-sel" id="mNewTag" placeholder="tag…" onkeydown="if(event.key==='Enter'){event.preventDefault();addTripTag(this.value);}" onblur="addTripTag(this.value)">`;
+  const b = $('mNewTag'); if (b) b.focus();
+}
+function addTripTag(raw) {
+  const g = (raw || '').trim().slice(0, 24);
+  if (g && !tripTagList().some(x => x.toLowerCase() === g.toLowerCase())) { prefs.tripTags.push(g); mTagSel.add(g); scheduleSave(); }
+  renderMileTags();
+}
+function startTrip() {
+  const t = trucks.find(x => x.name === curTruck);
+  if (!t) { toast('Pick a truck first', false); return; }
+  const odo = parseFloat($('mStartOdo').value);
+  if (isNaN(odo) || odo < 0) { toast('Type the odometer reading first', false); $('mStartOdo').focus(); return; }
+  t.trip = { odo, job: mJobSel || curJob, tags: [...mTagSel], ts: new Date().toISOString() };
+  setLastOdo(curTruck, odo);
+  renderMileBody(); renderMileFace(); renderTrucksManager(); scheduleSave(); closePanels();
+  toast(`🚚 Trip started — ${curTruck} at ${odo.toLocaleString()} → ${t.trip.job} ✓`);
+}
+function mEndHint() {
+  const t = trucks.find(x => x.name === curTruck);
+  const odo = parseFloat($('mEndOdo').value);
+  const el = $('mEndHint');
+  if (!el) return;
+  el.textContent = !t || !t.trip || isNaN(odo) ? 'One number — the miles figure themselves.'
+    : odo <= t.trip.odo ? `⚠ Not past the start (${(+t.trip.odo).toLocaleString()}) — check it`
+    : `${(odo - t.trip.odo).toFixed(1)} mi → ${t.trip.job} ✓`;
+}
+function endTrip(startNext) {
+  const t = trucks.find(x => x.name === curTruck);
+  if (!t || !t.trip) return;
+  const odo = parseFloat($('mEndOdo').value);
+  if (isNaN(odo)) { toast('Type the END odometer reading', false); $('mEndOdo').focus(); return; }
+  if (odo <= t.trip.odo) { toast(`⚠ Not past the trip start (${(+t.trip.odo).toLocaleString()}) — check the number`, false); return; }
   const closed = t.trip;
   const miles = +(odo - closed.odo).toFixed(1);
-  addEntry('Mileage', closed.purpose || 'Trip', closed.job, { miles, truck: curTruck, odometer: odo, startOdometer: closed.odo });
+  addEntry('Mileage', (closed.tags || []).join(', ') || closed.purpose || 'Trip', closed.job,
+    { miles, truck: curTruck, odometer: odo, startOdometer: closed.odo, ...((closed.tags || []).length ? { tags: closed.tags } : {}) });
   setLastOdo(curTruck, odo);
-  if (action === 'next') {
-    t.trip = { odo, job: curJob, purpose, ts: new Date().toISOString() };
-    toast(`Trip logged — ${miles.toFixed(1)} mi · ${closed.job} ✓ · New trip started at ${odo.toLocaleString()} (${curJob})`);
-  } else {
-    t.trip = null;
-    toast(`Trip logged — ${miles.toFixed(1)} mi · ${closed.job} ✓ · No open trip on ${curTruck}`);
+  t.trip = null;
+  renderMileFace(); renderTrucksManager(); scheduleSave();
+  if (startNext) {
+    // ⇄ Eric's back-fill, inverted: this reading ends the old trip AND starts the new one
+    mJobSel = jobs.includes(curJob) ? curJob : (jobs[0] || '—'); mTagSel = new Set();
+    renderMileBody();
+    const inp = $('mStartOdo'); if (inp) inp.value = Math.round(odo);
+    toast(`✓ ${miles.toFixed(1)} mi → ${closed.job} logged. New trip at ${odo.toLocaleString()} — pick the job and confirm.`);
+    return;
   }
-  c.innerHTML = '';
-  $('mOdo').value = ''; $('mPurpose').value = ''; fitTa('mPurpose'); mOpenInit(); renderTrucksManager(); scheduleSave(); closePanels();
+  renderMileBody(); closePanels();
+  toast(`✓ Trip logged — ${miles.toFixed(1)} mi · ${closed.job} · ${curTruck} at ${odo.toLocaleString()}`);
+}
+function scrapTrip() {
+  const t = trucks.find(x => x.name === curTruck);
+  if (!t || !t.trip) return;
+  if (!_tripScrapArm) {
+    _tripScrapArm = true;
+    const b = $('mScrapBtn'); if (b) b.textContent = '⚠ SURE? No miles will be logged';
+    return;
+  }
+  _tripScrapArm = false;
+  t.trip = null;
+  renderMileBody(); renderMileFace(); renderTrucksManager(); scheduleSave();
+  toast('🗑 Trip scrapped — nothing logged');
+}
+// the bottom-bar button flips its face when a trip is open — forgetting reads like the clock
+function renderMileFace() {
+  const b = document.querySelector('.cap-btn[data-panel="mileage"]');
+  if (!b) return;
+  const open = trucks.some(t => t.trip);
+  b.classList.toggle('mile-open', open);
+  const lb = b.querySelector('.lb-long'), ls = b.querySelector('.lb-short');
+  if (lb) lb.textContent = open ? 'End Trip' : 'Mileage';
+  if (ls) ls.textContent = open ? 'End Trip' : 'Miles';
 }
 // ---------- file cabinet ----------
 let fcPath = '';        // '' = Clore DayLog root
@@ -6316,8 +6338,10 @@ function renderReview() {
       if (p.kind === 'qb') body = `<div class="rev-text"><b>$${(+p.payload.amt).toFixed(2)}${p.payload.who ? ' — ' + esc(p.payload.who) : ''}</b> on ${esc(p.payload.d)}</div>
         <div class="rev-why">${[p.payload.memo, p.payload.acct].filter(Boolean).map(esc).join(' · ')}</div>
         <div class="rev-why">Logan's books have this — your log doesn't. Log it and pick the job so the trackers see it.</div>`;
-      if (p.kind === 'clientask') body = `<div class="rev-text"><b>${esc(p.payload.client || '?')}</b> wrote${p.payload.tag && p.payload.tag !== 'General' ? ` — tagged <b>${esc(p.payload.tag)}</b>` : ''}:</div>
-        <div class="rev-why" style="font-size: 13.5px; white-space: pre-wrap;">${esc((p.payload.text || '').slice(0, 600))}</div>`;
+      if (p.kind === 'clientask') body = `<div class="rev-text"><b>${esc(p.payload.client || '?')}</b> wrote${p.payload.tag && p.payload.tag !== 'General' ? ` — tagged <b>${esc(p.payload.tag)}</b>` : ''}:${p.payload.onit ? ' <span class="hint" style="margin: 0;">● ON IT lit on their page</span>' : ''}</div>
+        <div class="rev-why" style="font-size: 13.5px; white-space: pre-wrap;">${esc((p.payload.text || '').slice(0, 600))}</div>
+        <div class="field" style="margin-top: 8px;"><label>✍ Answer — goes straight onto their page, lights their third lamp</label>
+          <textarea id="caAns-${esc(String(p.id)).replace(/[^a-zA-Z0-9:_-]/g, '')}" rows="2" class="grow" placeholder="type it and hit ✍ — or handle it another way below"></textarea></div>`;
       if (p.kind === 'crew') body = `<div class="rev-text"><b>${esc(p.payload.from || '?')}</b> — ${p.payload.type === 'Done' ? '✅ FINISHED: ' : p.payload.type !== 'Note' ? '⏱ ' : ''}${esc((p.payload.text || 'Shift').slice(0, 300))}</div>
         <div class="rev-why">${[p.payload.job, p.payload.category, p.payload.hours != null ? (+p.payload.hours).toFixed(1) + ' hrs' + (+p.payload.hours >= 12 ? ' · ⚠ LONG DAY — double-check it' : '') : '', p.payload.day,
           p.payload.route && p.payload.route !== 'The Grinder' ? '📨 for ' + p.payload.route : '', URG_WORDS[p.payload.urg] || ''].filter(Boolean).join(' · ')}</div>`;
@@ -6333,8 +6357,10 @@ function renderReview() {
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Check it off my list too</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
         : p.kind === 'clientask'
-        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
-           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'todo')">➕ Make it a to-do</button>
+        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'answer')">✍ Send the answer</button>
+           ${p.payload.onit ? '' : `<button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'onit')">● I'm on it — light their lamp</button>`}
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'todo')">➕ To-do</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
         : (p.kind === 'text' || p.kind === 'crew')
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
@@ -6422,14 +6448,31 @@ function reviewAct(id, accept) {
         toast('Text logged ✓');
       }
     } else if (p.kind === 'clientask') {
-      // 💬 v5.19 — a client wrote through their portal page
-      if (accept === 'todo') {
+      // 💬 v5.19 — a client wrote through their portal page. v5.25 — the three lamps:
+      // SENT is theirs; ● ON IT is Eric's to light; ✍ ANSWERED carries the words back.
+      if (accept === 'onit') {
+        pay.onit = true;
+        markClientAsk(pay.code, pay.ts, { onit: true });
+        renderReview(); savePendingSoon();
+        toast(`● ON IT lit on ${pay.client}'s page ✓`);
+        return; // the card stays — he's on it, not done with it
+      }
+      if (accept === 'answer') {
+        const ansEl = $(`caAns-${String(p.id).replace(/[^a-zA-Z0-9:_-]/g, '')}`);
+        const ans = ansEl ? ansEl.value.trim() : '';
+        if (!ans) { toast('Type the answer first', false); return; }
+        markClientAsk(pay.code, pay.ts, { onit: true, answer: ans.slice(0, 1000), done: true, doneTs: new Date().toISOString() });
+        addEntry('Note', `Answered ${pay.client}: "${(pay.text || '').slice(0, 120)}" → ${ans.slice(0, 500)}`, j, { noSniff: true, tags: ['Client'] });
+        toast(`✍ Answer on ${pay.client}'s page — their third lamp is lit ✓`);
+      } else if (accept === 'todo') {
         todos.unshift({ id: nextId++, text: `${pay.client}: ${(pay.text || '').slice(0, 200)}`, job: j,
           done: false, who: pay.tag === 'Phil' && crew.includes('Phil') ? 'Phil' : 'Me', pri: 2,
           due: localDay(new Date()), ts: new Date().toISOString() });
+        markClientAsk(pay.code, pay.ts, { onit: true, done: true, doneTs: new Date().toISOString() });
         toast(`To-do made from ${pay.client}'s message ✓${pay.tag === 'Phil' ? " — on Phil's list" : ''}`);
       } else {
         addEntry('Note', `Client ${pay.client}${pay.tag && pay.tag !== 'General' ? ' (for ' + pay.tag + ')' : ''}: ${(pay.text || '').slice(0, 800)}`, j, { noSniff: true, tags: ['Client'] });
+        markClientAsk(pay.code, pay.ts, { onit: true, done: true, doneTs: new Date().toISOString() });
         toast('Client message logged ✓');
       }
     } else if (p.kind === 'qb') {
@@ -6494,6 +6537,8 @@ function reviewAct(id, accept) {
     }
     renderTodos(); renderKpis(); renderLog(); scheduleSave();
   }
+  // 💬 v5.25 — even a skipped client ask closes out on their page (off their open list)
+  if (!accept && p.kind === 'clientask' && p.payload) markClientAsk(p.payload.code, p.payload.ts, { done: true, doneTs: new Date().toISOString() });
   // 🎓 v5.07 — "Not related" on a Grinder match TEACHES it: that word-combo is dead forever
   if (!accept && p.kind === 'match' && p.payload && (p.payload.words || []).length) {
     if (!prefs.matchVeto) prefs.matchVeto = [];
@@ -6605,12 +6650,7 @@ function autoLogText(from, body, photos, personal) {
     { noSniff: true, texted: true, tags: [from],
       ...(phs.length ? { photoPath: phs[0], photoPaths: phs } : {}),
       ...(personal ? { personal: true } : {}), ...(who ? { who } : {}) });
-  if (!personal && NEEDS_ANSWER.test(body || '')) {
-    if (!prefs.txtNudge) prefs.txtNudge = [];
-    prefs.txtNudge.push({ id: e.id, from, snip: (body || '').replace(/\s+/g, ' ').slice(0, 110), day: localDay(new Date()) });
-    prefs.txtNudge = prefs.txtNudge.slice(-20);
-  }
-  scheduleSave();
+  scheduleSave(); // v5.25 — nudge recording retired with the strip; the digest spots questions live
 }
 // 📬 the one card instead of thirty: today's text count, who needs you, tap to open the list
 let _tdOpen = false;
@@ -6621,40 +6661,19 @@ function renderTextDigest() {
   const today = localDay(new Date());
   const tx = entries.filter(e => e.texted && !e.sample && localDay(new Date(e.ts)) === today);
   if (!tx.length) { box.innerHTML = ''; return; }
-  const needs = (prefs.txtNudge || []).filter(n => n.day === today && !n.done);
+  // v5.25 — nudges retired (parked): the digest figures questions on the fly, informational only
+  const needs = tx.filter(e => !e.personal && NEEDS_ANSWER.test((e.details || '').replace(/^Text from [^:]*: /, '')));
   box.innerHTML = `<div class="card" style="padding: 10px 14px; margin-bottom: 14px; cursor: pointer;" onclick="_tdOpen = !_tdOpen; renderTextDigest()" role="button" aria-expanded="${_tdOpen}">
     <b>📬 ${tx.length} text${tx.length > 1 ? 's' : ''} today</b>${needs.length
-      ? ` — <b>${needs.length} need${needs.length === 1 ? 's' : ''} you</b> (${[...new Set(needs.map(n => esc(n.from)))].join(', ')})`
+      ? ` — <b>${needs.length} look${needs.length === 1 ? 's' : ''} like a question</b> (${[...new Set(needs.map(e => esc((e.tags || [])[0] || '?')))].join(', ')})`
       : ' — all piled, nothing waiting on you'} <span class="hint" style="margin: 0;">· tap to ${_tdOpen ? 'fold' : 'open'}</span>
     ${_tdOpen ? `<div style="margin-top: 8px;">` + tx.slice(0, 15).map(e =>
       `<div class="hint" style="margin: 3px 0;">${e.personal ? '🔒 ' : ''}<b>${esc((e.tags || [])[0] || '?')}</b>: ${esc(e.details.replace(/^Text from [^:]*: /, '').slice(0, 90))}</div>`).join('') + `</div>` : ''}
   </div>`;
 }
-// 📌 the read-and-forget insurance: question texts come back QUIETLY at 6pm, then ride
-// each morning until ✓ handled or ⏰ pushed. One line each — never a growing pile.
-function renderTxtNudges() {
-  const box = $('nudgeStrip');
-  if (!box) return;
-  if (isCrew()) { box.innerHTML = ''; return; }
-  const today = localDay(new Date());
-  const due = (prefs.txtNudge || []).filter(n => !n.done && (n.day < today || (n.day === today && new Date().getHours() >= 18))).slice(0, 5);
-  box.innerHTML = due.map(n => `<div class="req-strip" style="border-color: var(--accent);">
-    <div class="req-txt">📌 <b>${esc(n.from)}</b> asked${n.day < today ? ' (' + esc(n.day) + ')' : ' today'}: ${esc(n.snip)} — handled?</div>
-    <div class="rev-row" style="margin-top: 6px;">
-      <button class="btn-ghost req-x" onclick="nudgeDone(${+n.id})">✓ Handled</button>
-      <button class="btn-ghost req-x" onclick="nudgeSnooze(${+n.id})">⏰ Tomorrow</button>
-    </div></div>`).join('');
-}
-function nudgeDone(id) {
-  (prefs.txtNudge || []).forEach(n => { if (n.id === id) n.done = true; });
-  scheduleSave(); renderTxtNudges(); renderTextDigest();
-  toast('✓ Off the hook');
-}
-function nudgeSnooze(id) {
-  (prefs.txtNudge || []).forEach(n => { if (n.id === id) n.day = tomorrowStr(); });
-  scheduleSave(); renderTxtNudges(); renderTextDigest();
-  toast('⏰ It comes back tomorrow evening — it is NOT going away');
-}
+// 📌 v5.25 — the evening-nudge strip is RETIRED (Eric: too much clutter; idea parked for a
+// refined version later — likely living INSIDE the digest, never loose cards on the page).
+function renderTxtNudges() { const box = $('nudgeStrip'); if (box) box.innerHTML = ''; }
 // ============== 👷 CREW MODE (v4.65) ==============
 function applyRole() {
   document.body.classList.toggle('crew-mode', isCrew());
@@ -7623,6 +7642,20 @@ async function journalRelease() {
     toast(`📖 Journal released — ${c.job}'s page carries it now${photos.length ? ` with ${photos.length} photo${photos.length > 1 ? 's' : ''}` : ''} ✓`);
   } catch (e) { toast('Couldn\'t reach the client file — check the connection and try again', false); }
 }
+// 💬 v5.25 — Eric's actions travel back to the ask on the client's page (the three lamps).
+// Fire-and-forget: offline just means the lamp lights on a later sweep-through.
+async function markClientAsk(code, ts, patch) {
+  if (!code || !ts || !dbx.refreshToken || CREW_NAME) return;
+  const path = DBX_ROOT + '/App Data/Client Portal/asks-' + code + '.json';
+  try {
+    const arr = JSON.parse(await dbxDownload(path) || '[]');
+    if (!Array.isArray(arr)) return;
+    const a = arr.find(x => x && x.ts === ts);
+    if (!a) return;
+    Object.assign(a, patch);
+    await dbxUpload(path, JSON.stringify(arr.slice(0, 200)));
+  } catch (e) { /* next action retries the lamp */ }
+}
 // 💬 v5.19 — clients write back through their page; their words land in Eric's review pile
 async function checkClientAsks() {
   if (!dbx.refreshToken || CREW_NAME) return;
@@ -7644,7 +7677,7 @@ async function checkClientAsks() {
       const id = 'cask:' + c.key + ':' + a.ts;
       if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
       pendingQueue.push({ id, kind: 'clientask', source: c.job,
-        payload: { job: portalAppJob(c), client: c.job, tag: ['Phil', 'Eric'].includes(a.tag) ? a.tag : 'General', text: String(a.text || '').slice(0, 1000), ts: a.ts } });
+        payload: { job: portalAppJob(c), client: c.job, code: c.code, tag: ['Phil', 'Eric'].includes(a.tag) ? a.tag : 'General', text: String(a.text || '').slice(0, 1000), ts: a.ts } });
       got++;
     });
     scheduleSave();
@@ -9515,7 +9548,7 @@ function deleteLogEntry() {
 function renderAll() { renderKpis(); renderLog(); renderChart(); renderTodos();
   renderDayTube(); renderPipeSelect(); updateClockGauge(); renderPendBanner(); renderPlanBanner();
   renderTagChips(); renderCrewGauges(); renderVisChips(); renderCrewShared(); renderCrewAsks();
-  renderMyRequests(); renderAskStrip(); renderAskRecent(); renderTextDigest(); renderTxtNudges();
+  renderMyRequests(); renderAskStrip(); renderAskRecent(); renderTextDigest(); renderTxtNudges(); renderMileFace();
 }
 
 // ---------- export ----------
@@ -10130,7 +10163,6 @@ wireDropZones();
 // v4.55 — the box is dual-purpose now (note OR question), so Enter just makes a new line;
 // the two buttons decide where the words go.
 $('ptText').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); saveTodoPanel(); } });
-$('mPurpose').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); saveMileage(); } });
 $('hDesc').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); saveHours(); } });
 $('nText').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); saveNote(); } });
 $('findInput').addEventListener('keydown', ev => { if (ev.key === 'Enter') { clearTimeout(findTimer); doFileSearch(); } });
@@ -10167,7 +10199,7 @@ renderTrucksManager();
 renderTruckChips();
 renderCrewManager();
 renderWhoSelects();
-updateOdoHint();
+renderMileFace();
 // v4.65 — crew phones: jobs come from Eric's published crew.json until their first sync refreshes it
 if (CREW_NAME) {
   try { const cj = JSON.parse(lsGet('daylog-crew-jobs') || '[]'); if (cj.length) { jobs = cj.slice(); renderJobSelects(); } } catch (e) {}

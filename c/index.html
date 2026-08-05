@@ -90,6 +90,8 @@ function pickTag(t, el) {
   askTag = t;
   document.querySelectorAll('.tagchip').forEach(x => x.classList.toggle('sel', x === el));
 }
+// 💬 v5.25 — send as many as you like: each ask is its own item with three lamps.
+// ● SENT the moment it goes · ● ON IT when Eric lights it · ● ANSWERED with his words below.
 async function sendAsk() {
   const ta = $('#askTa');
   const text = (ta.value || '').trim();
@@ -99,11 +101,34 @@ async function sendAsk() {
     const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ c: code, ask: { tag: askTag, text } }) });
     if (!r.ok) throw new Error();
-    $('#askCard').innerHTML = '<h3>💬 ASK OR REMARK</h3><div style="padding: 8px 0;">✓ Sent — Eric reads these directly. He\'ll get back to you.</div>';
+    ta.value = '';
+    $('#askSend').disabled = false; $('#askSend').textContent = 'Send it';
+    loadAsks(true);
   } catch (e) {
     $('#askSend').disabled = false; $('#askSend').textContent = 'Send it';
     alert('Couldn\'t send just now — try again in a minute.');
   }
+}
+const lampRow = a => {
+  const answered = !!a.answer || a.done;
+  const l = (on, word) => `<span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; font-size: 11px; font-weight: 800; letter-spacing: .5px; color: ${on ? 'var(--gold)' : 'var(--ink2)'}; opacity: ${on ? 1 : 0.55};"><span style="width: 8px; height: 8px; border-radius: 50%; background: ${on ? 'var(--gold)' : 'var(--line)'}; ${on ? 'box-shadow: 0 0 6px var(--gold);' : ''}"></span>${on ? '✓ ' : ''}${word}</span>`;
+  return l(true, 'SENT') + l(!!a.onit, 'ON IT') + l(answered, 'ANSWERED');
+};
+async function loadAsks(justSent) {
+  const box = $('#askList');
+  if (!box) return;
+  let arr = [];
+  try { arr = await (await fetch(FN + '?c=' + encodeURIComponent(code) + '&a=1')).json(); } catch (e) {}
+  if (!Array.isArray(arr)) arr = [];
+  const cutoff = Date.now() - 14 * 86400000;
+  const show = arr.filter(a => a && (!a.done || (a.doneTs && +new Date(a.doneTs) > cutoff))).slice(0, 10);
+  const esc2 = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  box.innerHTML = (justSent ? '<div style="color: var(--gold); font-weight: 700; margin: 8px 0 4px;">✓ Sent — ask another any time.</div>' : '') +
+    show.map(a => `<div style="border-top: 1px solid var(--line); padding: 10px 0;">
+      <div style="font-size: 14px; margin-bottom: 5px;">${a.tag && a.tag !== 'General' ? '<b>' + esc2(a.tag) + ':</b> ' : ''}${esc2(a.text)}</div>
+      <div>${lampRow(a)}</div>
+      ${a.answer ? `<div style="margin-top: 6px; padding: 8px 10px; border-left: 3px solid var(--gold); background: rgba(128,128,128,0.06); white-space: pre-wrap;"><b>Here's your answer:</b><br>${esc2(a.answer)}</div>` : ''}
+    </div>`).join('');
 }
 function toggleCard(id, ev) {
   const el = document.getElementById(id);
@@ -148,6 +173,7 @@ async function boot() {
       </div>
       <textarea class="ask-ta" id="askTa" placeholder="Ask a question or leave a remark — it goes straight to Eric's desk."></textarea>
       <button class="send-btn" id="askSend" onclick="sendAsk()">Send it</button>
+      <div id="askList"></div>
     </div>
     ${allShots.length ? `<div class="card" id="photoCard" style="display: none;"><h3>📷 PROGRESS PHOTOS — newest first</h3>
       <div class="gal">${allShots.slice(0, 60).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="progress photo" onclick="window.open('${photoUrl(n)}', '_blank'); ping('photo:open')">`).join('')}</div>
@@ -188,6 +214,7 @@ async function boot() {
   }
   h += `<div class="foot">Questions? Use 💬 Ask / Remark above, or call or text Eric directly.</div>`;
   $('#app').innerHTML = h;
+  loadAsks(false); // 💬 their open questions + the three lamps
   ping('open');
 }
 boot();

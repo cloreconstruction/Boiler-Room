@@ -61,6 +61,12 @@ const portal = async req => {
       const ct = IMG_CT[(p.split('.').pop() || '').toLowerCase()] || 'application/octet-stream';
       return new Response(buf, { headers: { 'content-type': ct, 'cache-control': 'private, max-age=86400' } });
     }
+    // 💬 their own asks, with the three-lamp state (sent / on it / answered)
+    if (url.searchParams.get('a')) {
+      if (await dl(t, `${BASE}/${c}.json`) == null) return new Response('nope', { status: 404 });
+      const asks = await dl(t, `${BASE}/asks-${c}.json`);
+      return new Response(asks || '[]', { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+    }
     const txt = await dl(t, `${BASE}/${c}.json`);
     if (txt == null) return new Response(JSON.stringify({ error: 'not found' }), { status: 404 });
     return new Response(txt, { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
