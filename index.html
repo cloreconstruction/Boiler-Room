@@ -2901,7 +2901,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.29 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.30 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5050,11 +5050,14 @@ function tripTagList() {
   if (!prefs.tripTags) prefs.tripTags = ['Dump run', 'Materials', 'Parts', 'Bid look'];
   return prefs.tripTags;
 }
-let mJobSel = '', mTagSel = new Set(), mTagEdit = false, _tripScrapArm = false;
+// 🚚 v5.30 — mJobSel is a SET: Eric hits several jobs on one trip; miles split evenly.
+let mJobSel = new Set(), mTagSel = new Set(), mTagEdit = false, _tripScrapArm = false;
+function mJobDefault() { return new Set(jobs.includes(curJob) ? [curJob] : jobs[0] ? [jobs[0]] : []); }
+const tripJobsOf = trip => (trip.jobs && trip.jobs.length ? trip.jobs : [trip.job]);
 function mOpenInit() {
   const ot = trucks.find(t => t.trip);
   if (ot) curTruck = ot.name; // an open trip owns the panel until it's dealt with
-  mJobSel = jobs.includes(curJob) ? curJob : (jobs[0] || '—');
+  mJobSel = mJobDefault();
   mTagSel = new Set(); mTagEdit = false; _tripScrapArm = false;
   renderTruckChips(); renderMileBody();
 }
@@ -5067,7 +5070,7 @@ function renderMileBody() {
     if ($('mTitle')) $('mTitle').textContent = '🚚 END trip — ' + curTruck;
     box.innerHTML = `
       <div class="set-section fc-sec"><h4>Trip open — ${tripWhen(t.trip.ts)}</h4>
-        <div class="rev-text" style="margin: 0;">Started at <b>${(+t.trip.odo).toLocaleString()}</b> · miles go to <b>${esc(t.trip.job)}</b>${(t.trip.tags || []).length ? ' — ' + t.trip.tags.map(esc).join(', ') : t.trip.purpose ? ' — ' + esc(t.trip.purpose) : ''}</div></div>
+        <div class="rev-text" style="margin: 0;">Started at <b>${(+t.trip.odo).toLocaleString()}</b> · miles go to <b>${tripJobsOf(t.trip).map(esc).join(' + ')}</b>${tripJobsOf(t.trip).length > 1 ? ' (split evenly)' : ''}${(t.trip.tags || []).length ? ' — ' + t.trip.tags.map(esc).join(', ') : t.trip.purpose ? ' — ' + esc(t.trip.purpose) : ''}</div></div>
       <div class="set-section fc-sec"><h4>Odometer — END of trip</h4>
         <input type="number" id="mEndOdo" inputmode="numeric" min="0" step="1" placeholder="${Math.round(+t.trip.odo) + 10}" style="font-size: 26px; font-weight: 800; width: 100%; padding: 10px 12px;" oninput="mEndHint()">
         <div class="hint" id="mEndHint" style="margin-top: 6px;">One number — the miles figure themselves.</div></div>
@@ -5082,7 +5085,7 @@ function renderMileBody() {
       <div class="set-section fc-sec"><h4>Odometer — start of trip</h4>
         ${last ? `<div class="hint" style="margin: 0 0 6px;">Last reading for ${esc(curTruck)} — ${tripWhen(last.ts)}. Tap the number to change it.</div>` : `<div class="hint" style="margin: 0 0 6px;">First reading for this truck — type it once, it remembers from here.</div>`}
         <input type="number" id="mStartOdo" inputmode="numeric" min="0" step="1" value="${last ? Math.round(+last.odo) : ''}" placeholder="84247" style="font-size: 26px; font-weight: 800; width: 100%; padding: 10px 12px;"></div>
-      <div class="set-section fc-sec"><h4>Job — where the miles go</h4><div class="chip-grid" id="mJobGrid"></div></div>
+      <div class="set-section fc-sec"><h4>Job — where the miles go · tap all you'll hit, miles split evenly</h4><div class="chip-grid" id="mJobGrid"></div></div>
       <div class="set-section fc-sec"><h4>Purpose — tap a tag <button type="button" class="btn-ghost req-x" style="float: right;" onclick="mTagEdit = !mTagEdit; renderMileTags()">${'✎ edit tags'}</button></h4>
         <div class="chips-row" id="mTagChips"></div></div>
       <button class="btn-primary" style="width: 100%; margin-top: 6px; font-size: 17px; padding: 14px;" onclick="startTrip()">✓ Confirm reading — START TRIP</button>`;
@@ -5093,8 +5096,9 @@ function renderMileJobs() {
   const el = $('mJobGrid');
   if (!el) return;
   el.innerHTML = [...jobs].sort((a, b) => a.localeCompare(b)).map(n =>
-    `<button class="pick-chip grid-chip${n === mJobSel ? ' sel' : ''}" onclick="mJobSel = '${escq(n)}'; renderMileJobs()" aria-pressed="${n === mJobSel}"><span>${n === mJobSel ? '✓ ' : ''}${esc(n)}</span></button>`).join('');
+    `<button class="pick-chip grid-chip${mJobSel.has(n) ? ' sel' : ''}" onclick="togTripJob('${escq(n)}')" aria-pressed="${mJobSel.has(n)}"><span>${mJobSel.has(n) ? '✓ ' : ''}${esc(n)}</span></button>`).join('');
 }
+function togTripJob(n) { mJobSel.has(n) ? mJobSel.delete(n) : mJobSel.add(n); renderMileJobs(); }
 function renderMileTags() {
   const el = $('mTagChips');
   if (!el) return;
@@ -5122,19 +5126,24 @@ function startTrip() {
   if (!t) { toast('Pick a truck first', false); return; }
   const odo = parseFloat($('mStartOdo').value);
   if (isNaN(odo) || odo < 0) { toast('Type the odometer reading first', false); $('mStartOdo').focus(); return; }
-  t.trip = { odo, job: mJobSel || curJob, tags: [...mTagSel], ts: new Date().toISOString() };
+  const picked = [...mJobSel].filter(n => jobs.includes(n));
+  if (!picked.length && curJob) picked.push(curJob);
+  t.trip = { odo, job: picked[0] || curJob, ...(picked.length > 1 ? { jobs: picked } : {}), tags: [...mTagSel], ts: new Date().toISOString() };
   setLastOdo(curTruck, odo);
   renderMileBody(); renderMileFace(); renderTrucksManager(); scheduleSave(); closePanels();
-  toast(`🚚 Trip started — ${curTruck} at ${odo.toLocaleString()} → ${t.trip.job} ✓`);
+  toast(`🚚 Trip started — ${curTruck} at ${odo.toLocaleString()} → ${tripJobsOf(t.trip).join(' + ')} ✓`);
 }
 function mEndHint() {
   const t = trucks.find(x => x.name === curTruck);
   const odo = parseFloat($('mEndOdo').value);
   const el = $('mEndHint');
   if (!el) return;
-  el.textContent = !t || !t.trip || isNaN(odo) ? 'One number — the miles figure themselves.'
-    : odo <= t.trip.odo ? `⚠ Not past the start (${(+t.trip.odo).toLocaleString()}) — check it`
-    : `${(odo - t.trip.odo).toFixed(1)} mi → ${t.trip.job} ✓`;
+  if (!t || !t.trip || isNaN(odo)) { el.textContent = 'One number — the miles figure themselves.'; return; }
+  if (odo <= t.trip.odo) { el.textContent = `⚠ Not past the start (${(+t.trip.odo).toLocaleString()}) — check it`; return; }
+  const tj = tripJobsOf(t.trip), mi = odo - t.trip.odo;
+  el.textContent = tj.length > 1
+    ? `${mi.toFixed(1)} mi ÷ ${tj.length} jobs → about ${(mi / tj.length).toFixed(1)} each ✓`
+    : `${mi.toFixed(1)} mi → ${t.trip.job} ✓`;
 }
 function endTrip(startNext) {
   const t = trucks.find(x => x.name === curTruck);
@@ -5144,21 +5153,36 @@ function endTrip(startNext) {
   if (odo <= t.trip.odo) { toast(`⚠ Not past the trip start (${(+t.trip.odo).toLocaleString()}) — check the number`, false); return; }
   const closed = t.trip;
   const miles = +(odo - closed.odo).toFixed(1);
-  addEntry('Mileage', (closed.tags || []).join(', ') || closed.purpose || 'Trip', closed.job,
-    { miles, truck: curTruck, odometer: odo, startOdometer: closed.odo, ...((closed.tags || []).length ? { tags: closed.tags } : {}) });
+  const tj = tripJobsOf(closed);
+  const base = (closed.tags || []).join(', ') || closed.purpose || 'Trip';
+  if (tj.length > 1) {
+    // ✂ split evenly — one Mileage row per job so every job report stays honest;
+    // rounding remainder rides the LAST job so the shares always sum to the trip.
+    const share = Math.floor((miles / tj.length) * 10) / 10;
+    tj.forEach((jb, i) => {
+      const mi = i === tj.length - 1 ? +(miles - share * (tj.length - 1)).toFixed(1) : share;
+      addEntry('Mileage', `${base} · ${mi.toFixed(1)} of ${miles.toFixed(1)} mi — split ${tj.length} ways`, jb,
+        { miles: mi, truck: curTruck, odometer: odo, startOdometer: closed.odo,
+          split: tj.length, ...((closed.tags || []).length ? { tags: closed.tags } : {}) });
+    });
+  } else {
+    addEntry('Mileage', base, tj[0],
+      { miles, truck: curTruck, odometer: odo, startOdometer: closed.odo, ...((closed.tags || []).length ? { tags: closed.tags } : {}) });
+  }
   setLastOdo(curTruck, odo);
   t.trip = null;
   renderMileFace(); renderTrucksManager(); scheduleSave();
+  const jobsWord = tj.length > 1 ? `split across ${tj.join(' + ')}` : `→ ${tj[0]}`;
   if (startNext) {
     // ⇄ Eric's back-fill, inverted: this reading ends the old trip AND starts the new one
-    mJobSel = jobs.includes(curJob) ? curJob : (jobs[0] || '—'); mTagSel = new Set();
+    mJobSel = mJobDefault(); mTagSel = new Set();
     renderMileBody();
     const inp = $('mStartOdo'); if (inp) inp.value = Math.round(odo);
-    toast(`✓ ${miles.toFixed(1)} mi → ${closed.job} logged. New trip at ${odo.toLocaleString()} — pick the job and confirm.`);
+    toast(`✓ ${miles.toFixed(1)} mi ${jobsWord}. New trip at ${odo.toLocaleString()} — pick the job and confirm.`);
     return;
   }
   renderMileBody(); closePanels();
-  toast(`✓ Trip logged — ${miles.toFixed(1)} mi · ${closed.job} · ${curTruck} at ${odo.toLocaleString()}`);
+  toast(`✓ Trip logged — ${miles.toFixed(1)} mi ${jobsWord} · ${curTruck} at ${odo.toLocaleString()}`);
 }
 function scrapTrip() {
   const t = trucks.find(x => x.name === curTruck);
