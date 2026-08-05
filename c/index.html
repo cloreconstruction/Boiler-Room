@@ -130,6 +130,17 @@ async function loadAsks(justSent) {
       ${a.answer ? `<div style="margin-top: 6px; padding: 8px 10px; border-left: 3px solid var(--gold); background: rgba(128,128,128,0.06); white-space: pre-wrap;"><b>Here's your answer:</b><br>${esc2(a.answer)}</div>` : ''}
     </div>`).join('');
 }
+// 💬 v5.26 — feedback rides the ask channel with its own tag, straight to Eric's pile
+function openFeedback() {
+  askTag = 'Feedback';
+  const card = $('#askCard');
+  card.style.display = '';
+  document.querySelectorAll('.tagchip').forEach(x => x.classList.remove('sel'));
+  const ta = $('#askTa');
+  if (ta) { ta.placeholder = 'App feedback — what works, what doesn\'t, what\'s missing? This page is young; your take shapes it.'; ta.focus(); }
+  card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  ping('feedback:open');
+}
 function toggleCard(id, ev) {
   const el = document.getElementById(id);
   el.style.display = el.style.display === 'none' ? '' : 'none';
@@ -212,7 +223,8 @@ async function boot() {
         <div class="ph-cats">${(p.cats || []).map(c => `${esc(c[0])} — ${money(c[1])}`).join('<br>')}</div>
       </div>`).join('') + `</div>`;
   }
-  h += `<div class="foot">Questions? Use 💬 Ask / Remark above, or call or text Eric directly.</div>`;
+  h += `<button class="theme-btn" style="display: block; margin: 22px auto 0;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
+    <div class="foot">Questions? Use 💬 Ask / Remark above, or call or text Eric directly.</div>`;
   $('#app').innerHTML = h;
   loadAsks(false); // 💬 their open questions + the three lamps
   ping('open');

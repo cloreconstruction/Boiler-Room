@@ -80,7 +80,7 @@ const portal = async req => {
     if (await dl(t, `${BASE}/${c}.json`) == null) return new Response('nope', { status: 404 });
     // 💬 a question or remark from the client — lands in Eric's review pile on his next sync
     if (b.ask && typeof b.ask === 'object') {
-      const tag = ['Phil', 'Eric', 'General'].includes(b.ask.tag) ? b.ask.tag : 'General';
+      const tag = ['Phil', 'Eric', 'General', 'Feedback'].includes(b.ask.tag) ? b.ask.tag : 'General';
       const text = String(b.ask.text || '').slice(0, 1000).trim();
       if (!text) return new Response('bad', { status: 400 });
       const path = `${BASE}/asks-${c}.json`;

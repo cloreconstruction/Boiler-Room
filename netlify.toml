@@ -2,5 +2,5 @@
   directory = "netlify/functions"
   node_bundler = "none"
 
-[functions."plan-reminder"]
-  schedule = "0 1 * * *"
+# 🌙🅿 v5.26 — plan-reminder schedule PARKED with the Plan-tomorrow feature (Eric: refine later).
+# Restore the [functions."plan-reminder"] schedule block to bring the 5pm nudge back.
