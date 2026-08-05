@@ -825,6 +825,14 @@
   .sv-title { flex: 1; font-weight: 700; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sv-close { background: var(--chip-gray-bg); border: 1px solid var(--border); border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 700; padding: 7px 16px; color: var(--ink-1); }
   #svFrame { flex: 1; width: 100%; border: 0; background: #fff; }
+  /* 👁 v5.29 — client preview lives INSIDE the app (standing rule: nothing opens in
+     external tabs on the phone — the installed app has no back button out there) */
+  #cliPrev { display: none; position: fixed; inset: 0; background: var(--surface-1); z-index: 120; flex-direction: column; }
+  #cliPrev.show { display: flex; }
+  .cp-banner { display: block; width: 100%; text-align: center; font-weight: 800; letter-spacing: 1.5px;
+    font-size: 13px; padding: 14px 10px; border: none; cursor: pointer;
+    background: var(--accent); color: var(--accent-ink); font-family: inherit; flex: 0 0 auto; }
+  #cpFrame { flex: 1; width: 100%; border: 0; background: #fff; }
   .set-section {
     border: 1px solid var(--border); border-radius: 12px;
     padding: 14px; margin-bottom: 12px;
@@ -1999,6 +2007,10 @@
   </div>
   <iframe id="svFrame" title="Summary"></iframe>
 </div>
+<div id="cliPrev">
+  <button class="cp-banner" onclick="clientPreviewClose()">👁 CLIENT PREVIEW · TAP HERE TO COME BACK</button>
+  <iframe id="cpFrame" title="Client page preview"></iframe>
+</div>
 <div class="wrap">
   <header>
     <div class="brand">
@@ -2889,7 +2901,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.28 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.29 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7568,12 +7580,24 @@ async function renderPortalList() {
       <button class="btn-ghost req-x" onclick="openJournal(${i})">📖 Journal</button>
       <button class="btn-ghost req-x" onclick="openMaterials(${i})">📋 Materials</button>
       <button class="btn-ghost req-x" onclick="portalCopy(${i})">📋 Copy link</button>
-      <button class="btn-ghost req-x" onclick="window.open(portalUrl(${i}), '_blank')">👁 View as this client</button>
+      <button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
       <button class="btn-ghost req-x" onclick="portalIntel(${i})">📊 What they look at</button>
       <button class="btn-ghost req-x" onclick="portalRotate(${i})">🔄 Rotate code</button>
     </div>`).join('') || '<span class="hint">No clients yet.</span>';
 }
 function portalUrl(i) { return location.origin + '/c/?c=' + encodeURIComponent(_portalIdx.clients[i].code); }
+// 👁 v5.29 — the client page opens INSIDE the app, gold banner to come back. window.open
+// hijacked the whole installed app with no way home (and broke the no-external-tabs rule).
+// &pv=1 keeps Eric's own looks out of the "What they look at" tallies.
+function clientPreviewOpen(i) {
+  if (portalGuard()) return;
+  $('cpFrame').src = portalUrl(i) + '&pv=1';
+  $('cliPrev').classList.add('show');
+}
+function clientPreviewClose() {
+  $('cliPrev').classList.remove('show');
+  $('cpFrame').src = 'about:blank';
+}
 function portalGuard() { return !!CREW_NAME; } // crew phones never touch client codes
 async function portalCopy(i) {
   if (portalGuard()) return;

@@ -65,12 +65,30 @@
 <div class="wrap" id="app"><div class="err">Loading your project…</div></div>
 <script>
 const code = new URLSearchParams(location.search).get('c') || location.hash.slice(1);
+// 👁 pv=1 = Eric previewing from inside his app — real page, but his taps don't count
+const PV = !!new URLSearchParams(location.search).get('pv');
 const $ = s => document.querySelector(s);
 const money = n => '$' + (+n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const FN = '/.netlify/functions/client-portal';
 const photoUrl = n => FN + '?c=' + encodeURIComponent(code) + '&p=' + encodeURIComponent(n);
 function ping(ev) {
+  if (PV) return; // preview looks stay out of the tallies
   try { fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ c: code, ev }) }); } catch (e) {}
+}
+// 📷 photos open right here in a lightbox — never a new tab (phones get stuck out there)
+function shotOpen(u) {
+  let d = $('#shotBox');
+  if (!d) {
+    d = document.createElement('div'); d.id = 'shotBox';
+    d.style.cssText = 'display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;padding:16px;cursor:pointer;';
+    d.innerHTML = '<img id="shotImg" alt="photo" style="max-width:100%;max-height:88%;border-radius:8px;">' +
+      '<div style="color:#fff;font-weight:800;letter-spacing:1px;font-size:13px;margin-top:14px;">✕ TAP ANYWHERE TO CLOSE</div>';
+    d.onclick = () => { d.style.display = 'none'; $('#shotImg').src = ''; };
+    document.body.appendChild(d);
+  }
+  $('#shotImg').src = u;
+  d.style.display = 'flex';
+  ping('photo:open');
 }
 // ☀☾ theme: remembered per device; default follows the phone's own setting
 function applyTheme(t) {
@@ -288,13 +306,13 @@ async function boot() {
       <div id="askList"></div>
     </div>
     ${allShots.length ? `<div class="card" id="photoCard" style="display: none;"><h3>📷 PROGRESS PHOTOS — newest first</h3>
-      <div class="gal">${allShots.slice(0, 60).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="progress photo" onclick="window.open('${photoUrl(n)}', '_blank'); ping('photo:open')">`).join('')}</div>
+      <div class="gal">${allShots.slice(0, 60).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="progress photo" onclick="shotOpen('${photoUrl(n)}')">`).join('')}</div>
     </div>` : ''}`;
   // 📖 the job journal: ONLY the latest week shows; older weeks live behind one fold
   if ((d.journal || []).length) {
     const js = d.journal.slice(0, 26);
     const shots = j => (j.photos || []).length
-      ? `<div class="jr-shots">${j.photos.slice(0, 8).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="job photo" onclick="event.stopPropagation(); window.open('${photoUrl(n)}', '_blank'); ping('photo:open')">`).join('')}</div>` : '';
+      ? `<div class="jr-shots">${j.photos.slice(0, 8).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="job photo" onclick="event.stopPropagation(); shotOpen('${photoUrl(n)}')">`).join('')}</div>` : '';
     h += `<div class="card"><h3>JOB JOURNAL</h3>
       <div class="ph open">
         <div class="ph-head"><span>📖 Week of ${esc(js[0].week)}</span></div>
