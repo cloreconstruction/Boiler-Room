@@ -187,7 +187,7 @@
   }
   :root[data-skin="steam"] .btn-primary,
   :root[data-skin="steam"] .punch-lever,
-  :root[data-skin="steam"] .pick-chip.sel,
+  :root[data-skin="steam"] .pick-chip,
   :root[data-skin="steam"] .ttab.active {
     border: 9px solid #b98a35;
     border-image: url("steam/brass.webp") 18 fill stretch;
@@ -196,6 +196,12 @@
     text-shadow: 0 1px 0 rgba(255,244,214,0.5);
     text-transform: uppercase; letter-spacing: 1px; font-weight: 800;
     box-shadow: 0 3px 7px rgba(0,0,0,0.6);
+  }
+  /* ✨ v5.31 — Eric: EVERY chip wears the gold plate (easy to see); the PICKED one
+     goes BRIGHT with a gold band + glow. Never color alone: ✓ glyph rides along. */
+  :root[data-skin="steam"] .pick-chip.sel {
+    filter: brightness(1.25) saturate(1.1);
+    box-shadow: 0 0 0 3px #14100c, 0 0 0 6px #f2cf6f, 0 0 18px 5px rgba(242,207,111,0.85), 0 3px 7px rgba(0,0,0,0.6);
   }
   :root[data-skin="steam"] .btn-ghost,
   :root[data-skin="steam"] .cap-btn,
@@ -1860,13 +1866,17 @@
 
   /* pick chips (jobs, trucks) */
   .chips-row { display: flex; flex-wrap: wrap; gap: 7px; }
+  /* ✨ v5.31 — the gold plate IS the standard chip on every skin; picked = BRIGHT + banded */
   .pick-chip {
-    background: var(--chip-gray-bg); border: 1px solid var(--border); border-radius: 999px;
+    background: var(--accent); border: 1px solid var(--accent); border-radius: 999px;
     padding: 9px 15px; font-size: 13.5px; font-weight: 600; cursor: pointer;
-    font-family: inherit; color: var(--ink-1); min-height: 40px;
+    font-family: inherit; color: var(--accent-ink); min-height: 40px;
   }
-  .pick-chip:hover { border-color: var(--accent); }
-  .pick-chip.sel { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .pick-chip:hover { filter: brightness(1.08); }
+  .pick-chip.sel {
+    filter: brightness(1.22) saturate(1.12); font-weight: 800;
+    box-shadow: 0 0 0 2px var(--surface-1), 0 0 0 5px var(--accent), 0 0 12px 3px var(--accent);
+  }
 
   /* toast confirmations */
   #toast {
@@ -2901,7 +2911,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.30 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.31 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4856,7 +4866,7 @@ function closePanels() {
 // ---------- chips: jobs & trucks ----------
 const escq = s => esc(s).replace(/'/g, "\\'");
 function chipsHtml(list, selected, fn) {
-  return list.map(n => `<button class="pick-chip${n === selected ? ' sel' : ''}" onclick="${fn}('${escq(n)}')">${esc(n)}</button>`).join('');
+  return list.map(n => `<button class="pick-chip${n === selected ? ' sel' : ''}" onclick="${fn}('${escq(n)}')" aria-pressed="${n === selected}">${n === selected ? '✓ ' : ''}${esc(n)}</button>`).join('');
 }
 function applySkin(s) {
   if (s) document.documentElement.dataset.skin = s;
@@ -4895,7 +4905,7 @@ function renderAllJobChips() {
   if (!jobs.includes(curJob)) { curJob = prefs.lastJob && jobs.includes(prefs.lastJob) ? prefs.lastJob : ordered[0]; }
   const chipJobs = [...new Set([curJob, ...ordered])].slice(0, 6);
   const picker =
-    chipJobs.map(n => `<button class="pick-chip${n === curJob ? ' sel' : ''}" onclick="setCurJob('${escq(n)}')">${esc(n)}</button>`).join('') +
+    chipJobs.map(n => `<button class="pick-chip${n === curJob ? ' sel' : ''}" onclick="setCurJob('${escq(n)}')" aria-pressed="${n === curJob}">${n === curJob ? '✓ ' : ''}${esc(n)}</button>`).join('') +
     (jobs.length > chipJobs.length
       ? `<select class="mini-sel" onchange="if(this.value)setCurJob(this.value)"><option value="">All jobs…</option>${ordered.map(j => `<option value="${esc(j)}">${esc(j)}</option>`).join('')}</select>`
       : '');
