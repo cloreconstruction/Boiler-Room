@@ -199,6 +199,8 @@
   }
   /* ✨ v5.31 — Eric: EVERY chip wears the gold plate (easy to see); the PICKED one
      goes BRIGHT with a gold band + glow. Never color alone: ✓ glyph rides along. */
+  /* v5.32 — plate letters tightened so Scritchfield/Reiniger-length names fit whole */
+  :root[data-skin="steam"] .pick-chip { font-size: 11px; letter-spacing: 0.4px; }
   :root[data-skin="steam"] .pick-chip.sel {
     filter: brightness(1.25) saturate(1.1);
     box-shadow: 0 0 0 3px #14100c, 0 0 0 6px #f2cf6f, 0 0 18px 5px rgba(242,207,111,0.85), 0 3px 7px rgba(0,0,0,0.6);
@@ -1830,9 +1832,9 @@
   .cg-num span { font-size: 11px; color: var(--ink-muted); font-weight: 600; }
   .cg-lab { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--ink-2); }
   .grid-chip {
-    width: 100%; min-height: 46px; margin: 0; padding: 6px 8px;
+    width: 100%; min-height: 46px; margin: 0; padding: 6px 5px;
     display: flex; align-items: center; justify-content: center; text-align: center;
-    font-size: 13.5px; line-height: 1.25; overflow: hidden;
+    font-size: 12px; line-height: 1.25; overflow: hidden;
   }
   .grid-chip > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   /* v4.60 — row columns: lamp+due on the left, gauge+job on the right, words own the middle */
@@ -1866,10 +1868,11 @@
 
   /* pick chips (jobs, trucks) */
   .chips-row { display: flex; flex-wrap: wrap; gap: 7px; }
-  /* ✨ v5.31 — the gold plate IS the standard chip on every skin; picked = BRIGHT + banded */
+  /* ✨ v5.31 — the gold plate IS the standard chip on every skin; picked = BRIGHT + banded.
+     v5.32 — smaller letters so a Scritchfield-length word fits a plate in one piece. */
   .pick-chip {
     background: var(--accent); border: 1px solid var(--accent); border-radius: 999px;
-    padding: 9px 15px; font-size: 13.5px; font-weight: 600; cursor: pointer;
+    padding: 9px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
     font-family: inherit; color: var(--accent-ink); min-height: 40px;
   }
   .pick-chip:hover { filter: brightness(1.08); }
@@ -2911,7 +2914,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.31 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.32 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4318,13 +4321,13 @@ function renderCoJobs() {
   const el = $('coJobChips');
   if (!el) return;
   el.innerHTML = [...jobs].sort((a, b) => a.localeCompare(b)).map(n =>
-    `<button class="pick-chip grid-chip${n === coJob ? ' sel' : ''}" onclick="setCoJob('${escq(n)}')" aria-pressed="${n === coJob}"><span>${n === coJob ? '✓ ' : ''}${esc(n)}</span></button>`).join('');
+    `<button class="pick-chip grid-chip${n === coJob ? ' sel' : ''}" onclick="setCoJob('${escq(n)}')" aria-pressed="${n === coJob}"><span>${n === coJob ? '✓&nbsp;' : ''}${esc(n)}</span></button>`).join('');
 }
 function renderCoCats() {
   const el = $('coCatChips');
   if (!el) return;
   el.innerHTML = HOUR_CATS.map(c =>
-    `<button class="pick-chip grid-chip${coCats.has(c) ? ' sel' : ''}" onclick="setCoCat('${escq(c)}')" aria-pressed="${coCats.has(c)}"><span>${coCats.has(c) ? '✓ ' : ''}${esc(c)}</span></button>`).join('');
+    `<button class="pick-chip grid-chip${coCats.has(c) ? ' sel' : ''}" onclick="setCoCat('${escq(c)}')" aria-pressed="${coCats.has(c)}"><span>${coCats.has(c) ? '✓&nbsp;' : ''}${esc(c)}</span></button>`).join('');
 }
 function openClockOut() {
   const now = new Date();
@@ -4866,7 +4869,7 @@ function closePanels() {
 // ---------- chips: jobs & trucks ----------
 const escq = s => esc(s).replace(/'/g, "\\'");
 function chipsHtml(list, selected, fn) {
-  return list.map(n => `<button class="pick-chip${n === selected ? ' sel' : ''}" onclick="${fn}('${escq(n)}')" aria-pressed="${n === selected}">${n === selected ? '✓ ' : ''}${esc(n)}</button>`).join('');
+  return list.map(n => `<button class="pick-chip${n === selected ? ' sel' : ''}" onclick="${fn}('${escq(n)}')" aria-pressed="${n === selected}">${n === selected ? '✓&nbsp;' : ''}${esc(n)}</button>`).join('');
 }
 function applySkin(s) {
   if (s) document.documentElement.dataset.skin = s;
@@ -4905,7 +4908,7 @@ function renderAllJobChips() {
   if (!jobs.includes(curJob)) { curJob = prefs.lastJob && jobs.includes(prefs.lastJob) ? prefs.lastJob : ordered[0]; }
   const chipJobs = [...new Set([curJob, ...ordered])].slice(0, 6);
   const picker =
-    chipJobs.map(n => `<button class="pick-chip${n === curJob ? ' sel' : ''}" onclick="setCurJob('${escq(n)}')" aria-pressed="${n === curJob}">${n === curJob ? '✓ ' : ''}${esc(n)}</button>`).join('') +
+    chipJobs.map(n => `<button class="pick-chip${n === curJob ? ' sel' : ''}" onclick="setCurJob('${escq(n)}')" aria-pressed="${n === curJob}">${n === curJob ? '✓&nbsp;' : ''}${esc(n)}</button>`).join('') +
     (jobs.length > chipJobs.length
       ? `<select class="mini-sel" onchange="if(this.value)setCurJob(this.value)"><option value="">All jobs…</option>${ordered.map(j => `<option value="${esc(j)}">${esc(j)}</option>`).join('')}</select>`
       : '');
@@ -4913,7 +4916,7 @@ function renderAllJobChips() {
   // hours panel: every job as a same-size grid button, ALPHABETICAL — same spot every time you open it
   const hj = $('hJobChips');
   if (hj) hj.innerHTML = [...jobs].sort((a, b) => a.localeCompare(b)).map(n =>
-    `<button class="pick-chip grid-chip${n === curJob ? ' sel' : ''}" onclick="setCurJob('${escq(n)}')" aria-pressed="${n === curJob}"><span>${n === curJob ? '✓ ' : ''}${esc(n)}</span></button>`).join('');
+    `<button class="pick-chip grid-chip${n === curJob ? ' sel' : ''}" onclick="setCurJob('${escq(n)}')" aria-pressed="${n === curJob}"><span>${n === curJob ? '✓&nbsp;' : ''}${esc(n)}</span></button>`).join('');
   // quick-note card: one clean pull-down, recent jobs first (v4.54 — Eric wanted it uncrowded)
   // v4.66 — the pick is per-note: it rides on that one note, then the wheel snaps back
   const qn = $('qnJob');
@@ -4927,7 +4930,7 @@ function renderTruckChips() {
   if (!trucks.find(t => t.name === curTruck)) { curTruck = prefs.lastTruck && trucks.find(t => t.name === prefs.lastTruck) ? prefs.lastTruck : trucks[0].name; }
   // v5.25 — even grid: same-size boxes no matter the name; ⏱ marks a truck with an open trip
   $('mTruckChips').innerHTML = trucks.map(t =>
-    `<button class="pick-chip grid-chip${t.name === curTruck ? ' sel' : ''}" onclick="setCurTruck('${escq(t.name)}')" aria-pressed="${t.name === curTruck}"><span>${t.name === curTruck ? '✓ ' : ''}${t.trip ? '⏱ ' : ''}${esc(t.name)}</span></button>`).join('');
+    `<button class="pick-chip grid-chip${t.name === curTruck ? ' sel' : ''}" onclick="setCurTruck('${escq(t.name)}')" aria-pressed="${t.name === curTruck}"><span>${t.name === curTruck ? '✓&nbsp;' : ''}${t.trip ? '⏱ ' : ''}${esc(t.name)}</span></button>`).join('');
 }
 // ---------- v4.53 tags: people & places, freeform-but-remembered ----------
 // prefs.tags = remembered names, most recently used first (syncs with everything else).
@@ -5106,14 +5109,14 @@ function renderMileJobs() {
   const el = $('mJobGrid');
   if (!el) return;
   el.innerHTML = [...jobs].sort((a, b) => a.localeCompare(b)).map(n =>
-    `<button class="pick-chip grid-chip${mJobSel.has(n) ? ' sel' : ''}" onclick="togTripJob('${escq(n)}')" aria-pressed="${mJobSel.has(n)}"><span>${mJobSel.has(n) ? '✓ ' : ''}${esc(n)}</span></button>`).join('');
+    `<button class="pick-chip grid-chip${mJobSel.has(n) ? ' sel' : ''}" onclick="togTripJob('${escq(n)}')" aria-pressed="${mJobSel.has(n)}"><span>${mJobSel.has(n) ? '✓&nbsp;' : ''}${esc(n)}</span></button>`).join('');
 }
 function togTripJob(n) { mJobSel.has(n) ? mJobSel.delete(n) : mJobSel.add(n); renderMileJobs(); }
 function renderMileTags() {
   const el = $('mTagChips');
   if (!el) return;
   el.innerHTML = tripTagList().map(g =>
-    `<button type="button" class="pick-chip${mTagSel.has(g) ? ' sel' : ''}" onclick="${mTagEdit ? `delTripTag('${escq(g)}')` : `togTripTag('${escq(g)}')`}" aria-pressed="${mTagSel.has(g)}">${mTagEdit ? '✕ ' : mTagSel.has(g) ? '✓ ' : ''}${esc(g)}</button>`).join('') +
+    `<button type="button" class="pick-chip${mTagSel.has(g) ? ' sel' : ''}" onclick="${mTagEdit ? `delTripTag('${escq(g)}')` : `togTripTag('${escq(g)}')`}" aria-pressed="${mTagSel.has(g)}">${mTagEdit ? '✕ ' : mTagSel.has(g) ? '✓&nbsp;' : ''}${esc(g)}</button>`).join('') +
     (mTagEdit ? '' : `<button type="button" class="pick-chip" onclick="newTripTag(this)">➕ tag</button>`);
 }
 function togTripTag(g) { mTagSel.has(g) ? mTagSel.delete(g) : mTagSel.add(g); renderMileTags(); }
@@ -5926,7 +5929,7 @@ function renderHourCats() {
   const el = $('hCatChips');
   if (!el) return;
   el.innerHTML = HOUR_CATS.map(c =>
-    `<button class="pick-chip grid-chip${hCats.has(c) ? ' sel' : ''}" onclick="setHourCat('${escq(c)}')" aria-pressed="${hCats.has(c)}"><span>${hCats.has(c) ? '✓ ' : ''}${esc(c)}</span></button>`).join('');
+    `<button class="pick-chip grid-chip${hCats.has(c) ? ' sel' : ''}" onclick="setHourCat('${escq(c)}')" aria-pressed="${hCats.has(c)}"><span>${hCats.has(c) ? '✓&nbsp;' : ''}${esc(c)}</span></button>`).join('');
 }
 function hCalc() {
   const i = $('hIn').value, o = $('hOut').value;
@@ -6870,7 +6873,7 @@ function renderTextDigest() {
       ${Object.entries(byWho).sort((a, b) => b[1] - a[1]).map(([s, n]) =>
         _tdRen === s
           ? `<input type="text" class="mini-sel" id="tdRenBox" placeholder="whose number?" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault();tdRenameDone('${escq(s)}', this.value);}" onblur="tdRenameDone('${escq(s)}', this.value)">`
-          : `<button class="pick-chip${_tdSender === s ? ' sel' : ''}" onclick="tdPick('${escq(s)}', event)">${_tdSender === s ? '✓ ' : ''}${esc(s)} (${n})</button>` +
+          : `<button class="pick-chip${_tdSender === s ? ' sel' : ''}" onclick="tdPick('${escq(s)}', event)">${_tdSender === s ? '✓&nbsp;' : ''}${esc(s)} (${n})</button>` +
             (LOOKS_LIKE_PHONE.test(s) ? `<button class="pick-chip" onclick="tdRenameStart('${escq(s)}', event)" title="whose number is this?">✎ name</button>` : '')).join('')}
     </div>
     <div style="margin-top: 6px;" onclick="event.stopPropagation()">` + shown.slice(0, 40).map(e =>
@@ -7002,7 +7005,7 @@ function renderRouteChips() {
   rc.innerHTML = CREW_ROUTES.map(r =>
     `<button class="pick-chip grid-chip${qnRoute === r ? ' sel' : ''}" onclick="setRoute('${escq(r)}')" aria-pressed="${qnRoute === r}"><span>${qnRoute === r ? '✓ ' : '🔔 '}Needs ${esc(r)}'s attention</span></button>`).join('');
   uc.innerHTML = CREW_URGS.map(([k, w]) =>
-    `<button class="pick-chip grid-chip${qnUrg === k ? ' sel' : ''}" onclick="setUrg('${escq(k)}')" aria-pressed="${qnUrg === k}"><span>${qnUrg === k ? '✓ ' : ''}${esc(w)}</span></button>`).join('');
+    `<button class="pick-chip grid-chip${qnUrg === k ? ' sel' : ''}" onclick="setUrg('${escq(k)}')" aria-pressed="${qnUrg === k}"><span>${qnUrg === k ? '✓&nbsp;' : ''}${esc(w)}</span></button>`).join('');
 }
 
 // --- day / week / month gauges: their own hours only; whistle at 10-hr day, 40-hr week ---
@@ -7058,9 +7061,9 @@ function renderVisChips() {
   const opts = [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
   const html = opts.map(([v, w]) => {
     const on = selOf(v);
-    return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="setVis('${escq(v)}')" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(w)}</button>`;
+    return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="setVis('${escq(v)}')" aria-pressed="${on}">${on ? '✓&nbsp;' : ''}${esc(w)}</button>`;
   }).join('') +
-    `<button type="button" class="pick-chip${qnAsk ? ' sel' : ''}" onclick="toggleAsk()" aria-pressed="${qnAsk}" title="Rings their phones and stays up big until somebody answers — then it clears for everyone">${qnAsk ? '✓ ' : ''}❓ Needs an answer</button>` +
+    `<button type="button" class="pick-chip${qnAsk ? ' sel' : ''}" onclick="toggleAsk()" aria-pressed="${qnAsk}" title="Rings their phones and stays up big until somebody answers — then it clears for everyone">${qnAsk ? '✓&nbsp;' : ''}❓ Needs an answer</button>` +
     `<button type="button" class="pick-chip" onclick="visNewInput(this)" title="Add a person">➕ person</button>` +
     (qnVisNames.size > 1 ? `<div class="hint" style="flex: 1 1 100%; margin: 2px 0 0;">→ goes to ${[...qnVisNames].map(esc).join(' + ')} — each sees it on their own phone</div>` : '');
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (el) el.innerHTML = html; });
@@ -7099,7 +7102,7 @@ function renderLeVisChips() {
   const opts = [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
   el.innerHTML = opts.map(([v, w]) => {
     const on = selOf(v);
-    return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="setLeVis('${escq(v)}')" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(w)}</button>`;
+    return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="setLeVis('${escq(v)}')" aria-pressed="${on}">${on ? '✓&nbsp;' : ''}${esc(w)}</button>`;
   }).join('');
 }
 let _sharedCache = {};
@@ -7733,7 +7736,7 @@ async function openJournal(i) {
   const p = journalPrefs(c.code);
   const aj = portalAppJob(c);
   const st = jrnStamped(aj);
-  const chk = (k, lab) => `<button type="button" class="pick-chip${p[k] ? ' sel' : ''}" onclick="jrnFilter('${k}', ${!p[k]})" aria-pressed="${p[k]}">${p[k] ? '✓ ' : ''}${lab}</button>`;
+  const chk = (k, lab) => `<button type="button" class="pick-chip${p[k] ? ' sel' : ''}" onclick="jrnFilter('${k}', ${!p[k]})" aria-pressed="${p[k]}">${p[k] ? '✓&nbsp;' : ''}${lab}</button>`;
   $('revBox').innerHTML = `<h3>📖 ${esc(c.job)} — this week's journal</h3>
     ${st.length ? `<div class="field" style="margin: 6px 0 2px;"><label>⭐ Stamped this week — what you picked out (✕ to drop one)</label></div>` +
       st.slice(0, 12).map(e => `<div class="sum-row" style="cursor: default;">
