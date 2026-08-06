@@ -2912,6 +2912,16 @@
         <input type="checkbox" id="sAiPhotos" onchange="prefs.aiPhotos = this.checked; scheduleSave();">
         🔮 Describe photos automatically — every photo gets looked at and labeled (uses your key · about ¼¢ per photo)
       </label>
+      <div class="frow" style="margin-top: 12px;">
+        <div class="field"><label>🧠 Which brain answers</label>
+          <select id="sAiModel" style="min-width: 250px;" onchange="prefs.aiModel = this.value; scheduleSave(); setAiModelHint();">
+            <option value="auto">Let it pick — recommended</option>
+            <option value="fast">⚡ Always the quick one</option>
+            <option value="smart">🧠 Always the smart one</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint" id="aiModelHint" style="margin-top: 6px;"></div>
     </div>
     <div class="set-section" id="setNotif">
       <h4>🔔 Notifications</h4>
@@ -2990,7 +3000,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.41 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.42 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4917,7 +4927,7 @@ function openPanel(name) {
       if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
       if ($('unlockWho')) $('unlockWho').innerHTML = crew.map(c => `<option>${esc(c)}</option>`).join('');
       renderPortalList(); renderQbLights(); initSetupCollapse(); }
-    if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; renderDayFlowRows(); renderPipeRows(); }
+    if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; $('sAiModel').value = aiMode(); setAiModelHint(); renderDayFlowRows(); renderPipeRows(); }
     if (name === 'vault') vaultOpenInit();
     if (name === 'summary') summaryOpenInit();
     if (name === 'find') findOpenInit();
@@ -5539,24 +5549,15 @@ async function shrinkForAi(f) {
 }
 async function aiDescribePhoto(f) {
   const b64 = await shrinkForAi(f);
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': aiKey(),
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5',
+  // 🧠 v5.42 — labeling a receipt or a jobsite shot is the ⚡ quick brain's best work
+  const { r } = await aiCall({
       max_tokens: 300,
       system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"1-2 plain sentences: what the photo shows, the stage of work, anything notable","category":"best match from this list or empty: Framing, Foundation, Roofing, Siding, Windows/Doors, Electrical, Plumbing, HVAC, Drywall, Paint, Finish, Landscaping, Materials, Tools, Fuel, Subcontractor, Office/Admin, Permits/Fees, Insurance, Loan/Bank, Personal","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty"}',
       messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
         { type: 'text', text: 'Label this photo.' }
       ] }]
-    })
-  });
+  }, 'photo');
   if (!r.ok) throw new Error('AI ' + r.status);
   const j = await r.json();
   const text = (j.content || []).map(c => c.text || '').join('').trim();
@@ -6621,18 +6622,17 @@ async function caAiRead(btn, rel) {
     const j = await dbxRpc('files/get_temporary_link', { path: DBX_ROOT + '/App Data/Client Portal/' + rel });
     const blob = await (await fetch(j.link)).blob();
     const b64 = await shrinkForAi(blob);
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': aiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400,
+    // 🧠 v5.42 — reading it is easy; the ORDERING advice is a judgement call, so this one
+    // goes to the 🧠 smart brain. Lead times and compatibility are where a wrong call costs money.
+    const { r, model } = await aiCall({ max_tokens: 400,
         system: 'A homeowner client sent this screenshot or photo of a product they picked for their remodel. You are helping the builder (residential, Kenai Peninsula, Alaska) read it fast. Reply in 2-4 short plain sentences, no lists: what the product is (brand + model if visible), the price if visible, then one practical note for the builder — availability/lead-time flags, sizing or compatibility cautions, or what to confirm before ordering.',
         messages: [{ role: 'user', content: [
           { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
-          { type: 'text', text: 'Read this for me.' } ] }] })
-    });
+          { type: 'text', text: 'Read this for me.' } ] }]
+    }, 'advice');
     if (!r.ok) throw new Error('AI ' + r.status);
     const jj = await r.json();
-    out.textContent = (jj.content || []).map(c => c.text || '').join('').trim() || 'Nothing readable in it.';
+    out.textContent = ((jj.content || []).map(c => c.text || '').join('').trim() || 'Nothing readable in it.') + `\n\n— ${brainWord(model)}`;
     btn.style.display = 'none';
   } catch (e) {
     btn.disabled = false; btn.textContent = '🔮 What is it? — details + suggestions';
@@ -8085,21 +8085,13 @@ async function journalAiTidy(aj, c) {
   const hint = $('jrnAiHint');
   if (hint) hint.textContent = '🧙 The Wizard is tidying the draft…';
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': aiKey(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+    // 🧠 v5.42 — a HOMEOWNER reads this one. Client-facing prose gets the smart brain;
+    // it's the difference between a note that reads like a builder wrote it and one that doesn't.
+    const { r, model: jrnWho } = await aiCall({
         max_tokens: 700,
         system: 'You write the weekly client journal entry for Clore Construction (Eric Clore, general contractor, Kenai Peninsula, Alaska). The reader is the HOMEOWNER of one project. From the raw field notes you receive, write 4-8 short plain-text bullets, each starting with "• ", describing what happened on THEIR project this week — work completed, deliveries, subs scheduled, decisions, lead times. Warm, plain, confident builder\'s voice. STRICT RULES: drop test entries, app chatter, Eric\'s personal logistics (his trucks, tractors, other jobs, family), crew-management noise, and anything not about this client\'s project. Never invent work that is not in the notes. Keep any line marked ⭐ STAMPED (Eric picked it by hand) — rewrite its wording but keep its substance. Keep hour totals / photo counts / money lines if present, as their own closing bullets, rephrased naturally. If a note answers a question the owner asked, keep that. Output ONLY the bullets (and closing lines) — no headers, no markdown bold, no sign-off.',
         messages: [{ role: 'user', content: `PROJECT: ${c.job}\nWEEK'S RAW FIELD NOTES (⭐ STAMPED = Eric hand-picked):\n${jrnStamped(aj).map(e => `⭐ STAMPED: ${(e.details || '').replace(/\s+/g, ' ').slice(0, 200)}`).join('\n')}\n${raw}` }]
-      })
-    });
+    }, 'journal');
     if (!r.ok) throw new Error('API ' + r.status);
     const j = await r.json();
     const text = (j.content || []).map(x => x.text || '').join('').trim();
@@ -8107,7 +8099,7 @@ async function journalAiTidy(aj, c) {
     // only swap in if Eric hasn't started editing the raw draft himself
     if (box.value === raw) {
       box.value = text;
-      if (hint) hint.textContent = '🧙 Wizard-drafted from the week\'s notes — read it over, then release.';
+      if (hint) hint.textContent = `🧙 Wizard-drafted from the week's notes (${brainWord(jrnWho)}) — read it over, then release.`;
     } else if (hint) hint.textContent = '';
   } catch (e) {
     if (hint) hint.textContent = '(Wizard couldn\'t tidy it — this is the raw pull; trim what doesn\'t belong.)';
@@ -8761,6 +8753,50 @@ function closeSumViewer() {
 }
 // ---------- Ask Claude: instant when an API key is saved, hourly flag otherwise ----------
 function aiKey() { return lsGet('daylog-aikey') || ''; }
+// ============== 🧠 v5.42 — WHICH BRAIN ANSWERS ==============
+// Eric: "make it so that the best AI is answering the best questions." One place decides.
+// ⚡ QUICK (Haiku) is fast and cheap and reads receipts and photos perfectly well — it handles
+// labeling, tidy-ups and plain lookups. 🧠 SMART (Sonnet) costs more and thinks harder, so it
+// gets the work that actually needs thinking: money math, date ranges, "why", breaking a pasted
+// email into steps, and anything a CLIENT will read. Opus is deliberately not here — big jump in
+// cost and slower on a phone, for no gain on work this size.
+// If SMART ever fails (outage, bad model name, rate limit) the call falls back to QUICK rather
+// than dying — an answer beats a spinner.
+const AI_FAST = 'claude-haiku-4-5';
+const AI_SMART = 'claude-sonnet-4-5';
+// the tells that a question needs the smart one: arithmetic, spans of time, judgement, or a wall
+// of pasted text. Everything else is a lookup and the quick one is better at it (it's faster).
+const SMART_HINTS = /\b(how much|how many|how long|total|totals|sum|average|spent|spend|spending|cost|costs|owe|owed|owing|invoiced|profit|margin|compare|comparison|versus|vs|difference|add up|tally|breakdown|break (?:this |it |them )?down|step by step|why|should i|explain|figure out|work out|which one|what's best|best option|recommend|worth it|year to date|ytd|last month|this month|last week|this week|this year|last year|quarter|so far|between|since|each job|every job|per job|all jobs)\b/i;
+// a junk saved value can never break the wheel or the routing — it reads as auto
+function aiMode() { return ['auto', 'fast', 'smart'].includes(prefs.aiModel) ? prefs.aiModel : 'auto'; }
+function pickModel(kind, text) {
+  const m = aiMode();
+  if (m === 'fast') return AI_FAST;                       // Eric forced the cheap one
+  if (m === 'smart') return AI_SMART;                     // Eric forced the smart one
+  if (kind === 'photo') return AI_FAST;                   // receipts and jobsite shots — quick is plenty
+  if (kind === 'advice' || kind === 'journal') return AI_SMART; // a client reads these
+  const t = String(text || '');
+  return (t.length > 220 || SMART_HINTS.test(t)) ? AI_SMART : AI_FAST;
+}
+// brightness/word/glyph, never colour: the brain is always spelled out
+function brainWord(model) { return model === AI_SMART ? '🧠 smart brain' : '⚡ quick brain'; }
+// one door for every Claude call in the app. Hand it a body WITHOUT a model and it picks one.
+async function aiCall(body, kind, text) {
+  const post = m => fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': aiKey(),
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify(Object.assign({ model: m }, body))
+  });
+  let model = pickModel(kind, text), fell = false;
+  let r = await post(model);
+  if (!r.ok && model === AI_SMART) { fell = true; model = AI_FAST; r = await post(model); }
+  return { r, model, fell };
+}
 // ---------- Wizard lamp: reports the real answer route (icon + word + lens pattern, never color alone) ----------
 const WIZ_LAMP = {
   instant:  ['⚡', 'Instant', 'Instant answers — your key is saved on this device, the Wizard replies right here.'],
@@ -8820,6 +8856,17 @@ function renderAiKeyStatus() {
   if (askSt && !askSt.dataset.busy) askSt.textContent = has
     ? 'Instant answers on — the Wizard is in.'
     : 'Answer lands in the app + phone ping, usually within the hour.';
+}
+// 🧠 v5.42 — spell out what the wheel just did, in plain words. No colour, no guessing.
+function setAiModelHint() {
+  const el = $('aiModelHint');
+  if (!el) return;
+  const m = aiMode();
+  el.innerHTML = m === 'fast'
+    ? '⚡ <b>Always the quick one.</b> Cheapest and fastest. Fine for photos and lookups — money math and long questions may come back thin.'
+    : m === 'smart'
+    ? '🧠 <b>Always the smart one.</b> Thinks harder on everything, including photo labels that never needed it. Costs more per question.'
+    : '<b>Let it pick.</b> Photos, receipts and plain lookups go to the ⚡ quick brain. Money math, date ranges, comparisons, "why", pasted emails and anything a client reads go to the 🧠 smart brain. Every answer says which one took it.';
 }
 // v4.80 — the Wizard reads the QUESTION first. Ask about dates and it gets the entries
 // FROM those dates out of the full log on this phone — this year, last year, any year.
@@ -8995,21 +9042,14 @@ async function askInstant(what) {
         if (names.length) fileCtx = '\nDROPBOX FILES WHOSE NAMES MATCH THE QUESTION: ' + JSON.stringify(names);
       } catch (e) { /* offline — the log context stands alone */ }
     }
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': aiKey(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+    // 🧠 v5.42 — the router reads the question and picks. "where's the Chafin invoice" is a
+    // lookup and goes quick; "how much did I spend at Spenard year to date" is thinking, and
+    // goes smart. Eric can force either one in ⚙ Setup → the Wizard.
+    const { r, model: aiWho, fell: aiFell } = await aiCall({
         max_tokens: 1200,
         system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 only if Eric SAYS it is urgent — a quick personal reminder ("remind me to…") is pri 1 no matter how old it gets>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Never invent amounts or dates. When your answer relies on specific log entries, end with one final line exactly like: SOURCES: 123, 456 — listing those entries\' "id" values (omit the line entirely if none apply). Numbers read from a photo ("photoText") can be OCR-garbled — when an amount or count comes only from photoText, say it may be worth checking the photo.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
         messages: [{ role: 'user', content: buildAskContext(what) + fileCtx + '\n\nERIC\'S QUESTION: ' + what }]
-      })
-    });
+    }, 'wizard', what);
     if (!r.ok) throw new Error('API ' + r.status);
     const j = await r.json();
     const text = (j.content || []).map(c => c.text || '').join('').trim();
@@ -9066,13 +9106,14 @@ async function askInstant(what) {
     }
     $('askText').value = ''; fitTa('askText');
     delete st.dataset.busy; wizIdleLamp();
-    st.textContent = '✓ Answered just now.';
+    // 🧠 v5.42 — say WHICH brain answered, in words, every time. Never a colour, never a guess.
+    st.textContent = '✓ Answered just now · ' + brainWord(aiWho);
     // 🧾 pull the citation line off the answer; it powers the photo buttons + corrections
     let clean = text, srcIds = [];
     const sm = text.match(/\n?\s*SOURCES?:\s*([\d,\s]+)\s*$/i);
     if (sm) { clean = text.slice(0, sm.index).trim(); srcIds = sm[1].split(/[\s,]+/).map(Number).filter(Boolean); }
     _lastAnswer = { q: what, text: clean, srcIds, at: Date.now() };
-    showWizFull(what, clean, srcIds); // v5.08 — straight to full screen: the answer, nothing else
+    showWizFull(what, clean, srcIds, brainWord(aiWho) + (aiFell ? ' — the smart one was busy, so the quick one took it' : '')); // v5.08 — straight to full screen: the answer, nothing else
     saveRecentAnswer(what, clean);
   } catch (e) {
     delete st.dataset.busy; wizIdleLamp();
@@ -9110,10 +9151,11 @@ function reopenAnswer(i) {
   if (r) showWizFull(r.q, r.a);
 }
 // 🧙 v5.08 — the full-screen answer: nothing else on screen, ‹ Back at the bottom
-function showWizFull(q, md, srcIds) {
+function showWizFull(q, md, srcIds, brain) {
   const srcs = (srcIds || []).map(id => entries.find(e => e.id === id)).filter(Boolean);
   const phSrcs = srcs.filter(e => e.photoPath || (e.photoPaths && e.photoPaths.length));
   $('wizFullBody').innerHTML = `<div class="wf-q">🧙 ${esc(q)}</div>` + mdToHtml(md) +
+    (brain ? `<div class="wf-brain hint" style="margin-top: 12px;">Answered by the ${esc(brain)}</div>` : '') +
     `<div class="rev-row" style="margin-top: 16px; flex-wrap: wrap;">` +
     phSrcs.slice(0, 3).map((e, i) =>
       `<button class="btn-ghost" onclick="showPhoto('${escq(e.photoPath || e.photoPaths[0])}')">📷 See the photo it read${phSrcs.length > 1 ? ' ' + (i + 1) : ''}</button>` +
