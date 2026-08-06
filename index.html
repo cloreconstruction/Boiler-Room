@@ -840,7 +840,8 @@
   .cp-banner { display: block; width: 100%; text-align: center; font-weight: 800; letter-spacing: 1.5px;
     font-size: 13px; padding: 14px 10px; border: none; cursor: pointer;
     background: var(--accent); color: var(--accent-ink); font-family: inherit; flex: 0 0 auto; }
-  #cpFrame { flex: 1; width: 100%; border: 0; background: #fff; }
+  .cp-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #cpFrame { width: 100%; height: 100%; min-height: 100%; border: 0; background: #fff; display: block; }
   .cp-x { position: absolute; right: 18px; bottom: 18px; z-index: 5; border: none; border-radius: 999px;
     background: var(--accent); color: var(--accent-ink); font-family: inherit; font-weight: 800;
     font-size: 15px; letter-spacing: 1px; padding: 14px 22px; cursor: pointer;
@@ -1924,7 +1925,7 @@
   .app-banner .ab-go { float: right; font-weight: 800; font-size: 16px; }
   .rev-modal {
     position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.58); display: none;
-    overflow-y: auto; overscroll-behavior: contain;
+    overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
     padding: 18px 12px calc(30px + env(safe-area-inset-bottom));
   }
   .rev-modal.show { display: block; }
@@ -2031,7 +2032,8 @@
 </div>
 <div id="cliPrev">
   <button class="cp-banner" onclick="clientPreviewClose()">👁 CLIENT PREVIEW · TAP HERE TO COME BACK</button>
-  <iframe id="cpFrame" title="Client page preview"></iframe>
+  <!-- v5.35 — iPhones size an iframe to its content; the WRAPPER scrolls, or long pages (journal!) can't move -->
+  <div class="cp-scroll"><iframe id="cpFrame" title="Client page preview"></iframe></div>
   <!-- v5.34 — second exit for the PC: a corner ✕ that can't be missed (Esc works too) -->
   <button class="cp-x" onclick="clientPreviewClose()" aria-label="Close client preview">✕ CLOSE</button>
 </div>
@@ -2928,7 +2930,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.34 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.35 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6483,6 +6485,7 @@ function renderReview() {
         <div class="rev-why">Logan's books have this — your log doesn't. Log it and pick the job so the trackers see it.</div>`;
       if (p.kind === 'clientask') body = `<div class="rev-text"><b>${esc(p.payload.client || '?')}</b> wrote${p.payload.tag && p.payload.tag !== 'General' ? ` — tagged <b>${esc(p.payload.tag)}</b>` : ''}:${p.payload.onit ? ' <span class="hint" style="margin: 0;">● ON IT lit on their page</span>' : ''}</div>
         <div class="rev-why" style="font-size: 13.5px; white-space: pre-wrap;">${esc((p.payload.text || '').slice(0, 600))}</div>
+        ${p.payload.photo ? `<div class="ca-photo" data-path="${esc(p.payload.photo)}" style="margin-top: 8px;"><span class="hint">📎 their picture — loading…</span></div>` : ''}
         <div class="field" style="margin-top: 8px;"><label>✍ Answer — goes straight onto their page, lights their third lamp</label>
           <textarea id="caAns-${esc(String(p.id)).replace(/[^a-zA-Z0-9:_-]/g, '')}" rows="2" class="grow" placeholder="type it and hit ✍ — or handle it another way below"></textarea></div>`;
       if (p.kind === 'crew') body = `<div class="rev-text"><b>${esc(p.payload.from || '?')}</b> — ${p.payload.type === 'Done' ? '✅ FINISHED: ' : p.payload.type !== 'Note' ? '⏱ ' : ''}${esc((p.payload.text || 'Shift').slice(0, 300))}</div>
@@ -6520,6 +6523,46 @@ function renderReview() {
       </div>`;
     }).join('') +
     `<div class="rev-row"><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close — finish later</button></div>`;
+  loadCaPhotos();
+}
+// 📎 v5.35 — a client sent a PICTURE of their pick: show it on the card + 🔮 read it for details
+async function loadCaPhotos() {
+  for (const box of document.querySelectorAll('.ca-photo:not([data-done])')) {
+    box.dataset.done = '1';
+    const rel = box.dataset.path || '';
+    if (!rel || rel.includes('..')) continue;
+    try {
+      const j = await dbxRpc('files/get_temporary_link', { path: DBX_ROOT + '/App Data/Client Portal/' + rel });
+      if (!j.link) throw new Error();
+      box.innerHTML = `<img src="${esc(j.link)}" alt="client's picture" style="max-width: 100%; max-height: 300px; border-radius: 10px; display: block;">` +
+        (aiOn() ? `<button class="btn-ghost req-x" style="margin-top: 6px;" onclick="caAiRead(this, '${escq(rel)}')">🔮 What is it? — details + suggestions</button><div class="ca-ai hint" style="white-space: pre-wrap;"></div>` : '');
+    } catch (e) { box.innerHTML = '<span class="hint">📎 picture attached — couldn\'t load the preview (it\'s in Dropbox under Client Portal/' + esc(rel.split('/')[0]) + ')</span>'; }
+  }
+}
+async function caAiRead(btn, rel) {
+  const out = btn.parentElement.querySelector('.ca-ai');
+  btn.disabled = true; btn.textContent = '🔮 reading…';
+  try {
+    const j = await dbxRpc('files/get_temporary_link', { path: DBX_ROOT + '/App Data/Client Portal/' + rel });
+    const blob = await (await fetch(j.link)).blob();
+    const b64 = await shrinkForAi(blob);
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': aiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400,
+        system: 'A homeowner client sent this screenshot or photo of a product they picked for their remodel. You are helping the builder (residential, Kenai Peninsula, Alaska) read it fast. Reply in 2-4 short plain sentences, no lists: what the product is (brand + model if visible), the price if visible, then one practical note for the builder — availability/lead-time flags, sizing or compatibility cautions, or what to confirm before ordering.',
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+          { type: 'text', text: 'Read this for me.' } ] }] })
+    });
+    if (!r.ok) throw new Error('AI ' + r.status);
+    const jj = await r.json();
+    out.textContent = (jj.content || []).map(c => c.text || '').join('').trim() || 'Nothing readable in it.';
+    btn.style.display = 'none';
+  } catch (e) {
+    btn.disabled = false; btn.textContent = '🔮 What is it? — details + suggestions';
+    toast('Could not read it just now — try again', false);
+  }
 }
 function openReview() {
   // 📨 receipt stamp #2 — the sender's card is now on Eric's screen
@@ -8171,7 +8214,8 @@ async function checkClientAsks() {
       const id = 'cask:' + c.key + ':' + a.ts;
       if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
       pendingQueue.push({ id, kind: 'clientask', source: c.job,
-        payload: { job: portalAppJob(c), client: c.job, code: c.code, tag: ['Phil', 'Eric'].includes(a.tag) ? a.tag : 'General', text: String(a.text || '').slice(0, 1000), ts: a.ts } });
+        payload: { job: portalAppJob(c), client: c.job, code: c.code, tag: ['Phil', 'Eric', 'Materials', 'Feedback'].includes(a.tag) ? a.tag : 'General', text: String(a.text || '').slice(0, 1000), ts: a.ts,
+          ...(typeof a.photo === 'string' && a.photo ? { photo: a.photo.replace(/[^a-zA-Z0-9._/-]/g, '').slice(0, 120) } : {}) } });
       got++;
     });
     scheduleSave();

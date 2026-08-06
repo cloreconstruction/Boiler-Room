@@ -59,6 +59,15 @@
   .ask-ta { width: 100%; min-height: 90px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; }
   .send-btn { margin-top: 10px; width: 100%; border: none; border-radius: 10px; background: var(--gold); color: #201c15; font-weight: 800; font-size: 15px; padding: 12px; cursor: pointer; }
   @media (max-width: 420px) { .soon-grid { grid-template-columns: 1fr 1fr; } .soon:last-child { grid-column: 1 / -1; } }
+  /* 📋 v5.35 — the materials board is its own FULL SCREEN, not a card squeezed between boxes */
+  #matCard.fs { position: fixed; inset: 0; z-index: 150; margin: 0; border: none; border-radius: 0;
+    background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; display: block;
+    padding: 0 16px calc(60px + env(safe-area-inset-bottom, 0px)); }
+  .mat-head { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; background: var(--bg); padding: 14px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+  .mat-head h3 { margin: 0; }
+  .mat-close { border: none; border-radius: 999px; background: var(--gold); color: #201c15; font-weight: 800;
+    padding: 10px 18px; cursor: pointer; font-size: 14px; font-family: inherit; }
 </style>
 </head>
 <body>
@@ -226,8 +235,64 @@ function matItemHtml(it) {
       ${(it.remarks || []).slice(-4).map(rm => `<div style="font-size: 12.5px; color: var(--ink2); margin: 3px 0;">${rm.from === 'client' ? 'You' : 'Eric'}: ${esc3(rm.text)}</div>`).join('')}
       <div style="margin-top: 6px;"><input type="text" id="mr-${esc3(it.id)}" placeholder="question or remark on this item…" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);">
         <button class="theme-btn" style="margin-top: 6px;" onclick="matRemark('${esc3(it.id)}')">💬 Send</button></div>
+      <div style="margin-top: 8px; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px;" ondragover="event.preventDefault()" ondrop="matDrop(event, '${esc3(it.id)}')">
+        <input type="file" id="mf-${esc3(it.id)}" accept="image/*" style="display: none;" onchange="matPhoto('${esc3(it.id)}', this.files[0]); this.value = '';">
+        <button class="theme-btn" onclick="document.getElementById('mf-${esc3(it.id)}').click()">📎 Send a picture of what you picked</button>
+        <span style="font-size: 11.5px; color: var(--ink2);"> — or drag &amp; drop it here</span>
+        <div id="mfs-${esc3(it.id)}" style="font-size: 12.5px; color: var(--gold); margin-top: 4px;"></div>
+      </div>
     </div>` : ''}
   </div>`;
+}
+// 📋 v5.35 — the board takes the whole screen; ✕ Back (or Esc) returns to the tiles
+function matOpenFS() {
+  const el = document.getElementById('matCard');
+  el.style.display = 'block'; el.classList.add('fs');
+  document.body.style.overflow = 'hidden';
+  el.scrollTop = 0;
+  ping('mat:open');
+}
+function matCloseFS() {
+  const el = document.getElementById('matCard');
+  el.style.display = 'none'; el.classList.remove('fs');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { const el = document.getElementById('matCard'); if (el && el.classList.contains('fs') && el.style.display !== 'none') matCloseFS(); }
+});
+// 📎 v5.35 — drop or pick a photo/screenshot of what they chose; it lands in Eric's review pile
+async function matShrink(f) {
+  const img = await createImageBitmap(f);
+  const max = 1400;
+  const sc = Math.min(1, max / Math.max(img.width, img.height));
+  const c2 = document.createElement('canvas');
+  c2.width = Math.max(1, Math.round(img.width * sc));
+  c2.height = Math.max(1, Math.round(img.height * sc));
+  c2.getContext('2d').drawImage(img, 0, 0, c2.width, c2.height);
+  const blob = await new Promise(res => c2.toBlob(res, 'image/jpeg', 0.82));
+  return await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(blob); });
+}
+async function matPhoto(id, f) {
+  if (!f || !(f.type || '').startsWith('image/')) return;
+  const st = document.getElementById('mfs-' + id);
+  if (st) st.textContent = '📎 sending your picture…';
+  try {
+    const b64 = await matShrink(f);
+    const okd = await matPost({ id, photo: { n: (f.name || 'pick').slice(0, 60), b64 } });
+    if (!okd) throw new Error();
+    const it = matFind(id);
+    if (it) it.remarks = [...(it.remarks || []), { from: 'client', text: '📎 sent a picture' }];
+    renderMat();
+    const st2 = document.getElementById('mfs-' + id);
+    if (st2) st2.textContent = '✓ Sent — Clore Construction will take a look.';
+  } catch (e) {
+    if (st) st.textContent = "Couldn't send it — try again in a minute.";
+  }
+}
+function matDrop(ev, id) {
+  ev.preventDefault();
+  const f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+  if (f) matPhoto(id, f);
 }
 function matFind(id) { for (const r of _mat.rooms) { const f = (r.items || []).find(x => x.id === id); if (f) return f; } }
 async function matPost(body) {
@@ -293,7 +358,7 @@ async function boot() {
       <div class="soon live" onclick="toggleCard('askCard', 'ask:open')"><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>
       <div class="soon" id="matTile" onclick="ping('soon:materials')"><div class="ribbon" id="matRibbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Materials Board</div><div class="s" id="matTileSub">lists & picks, card by card</div></div></div>
     </div>
-    <div class="card" id="matCard" style="display: none;"><h3>📋 MATERIALS BOARD — room by room</h3><div id="matBody"></div></div>
+    <div class="card" id="matCard" style="display: none;"><div class="mat-head"><h3>📋 MATERIALS BOARD</h3><button class="mat-close" onclick="matCloseFS()">✕ Back</button></div><div id="matBody"></div></div>
     <div class="card" id="askCard" style="display: none;">
       <h3>💬 ASK OR REMARK</h3>
       <div style="display: flex; gap: 8px; margin-bottom: 10px;">
@@ -352,7 +417,7 @@ async function boot() {
     const tile = document.getElementById('matTile');
     const rib = document.getElementById('matRibbon');
     if (rib) rib.remove();
-    if (tile) { tile.classList.add('live'); tile.onclick = () => { renderMat(); toggleCard('matCard', 'mat:open'); }; }
+    if (tile) { tile.classList.add('live'); tile.onclick = () => { renderMat(); matOpenFS(); }; }
     updateMatTile();
   });
   ping('open');

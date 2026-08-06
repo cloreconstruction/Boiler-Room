@@ -90,7 +90,10 @@ const portal = async req => {
       const id = String(b.mat.id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24);
       const pick = String(b.mat.pick || '').slice(0, 300).trim();
       const remark = String(b.mat.remark || '').slice(0, 600).trim();
-      if (!id || (!pick && !remark)) return new Response('bad', { status: 400 });
+      // 📎 v5.35 — a picture of their pick (client-side shrunk JPEG, base64)
+      const photo = b.mat.photo && typeof b.mat.photo === 'object' && typeof b.mat.photo.b64 === 'string' ? b.mat.photo : null;
+      if (!id || (!pick && !remark && !photo)) return new Response('bad', { status: 400 });
+      if (photo && photo.b64.length > 6_000_000) return new Response('too big', { status: 413 });
       const mpath = `${BASE}/materials-${c}.json`;
       let mat = null;
       try { mat = JSON.parse(await dl(t, mpath) || 'null'); } catch (e) {}
@@ -99,16 +102,29 @@ const portal = async req => {
       for (const r of mat.rooms) { const f = (r.items || []).find(x => x && x.id === id); if (f) { item = f; break; } }
       if (!item) return new Response('nope', { status: 404 });
       const now = new Date().toISOString();
+      let phPath = '';
+      if (photo) {
+        let buf;
+        try { buf = Buffer.from(photo.b64, 'base64'); } catch (e) { return new Response('bad', { status: 400 }); }
+        if (!buf.length || buf.length > 4_500_000) return new Response('too big', { status: 413 });
+        const safe = String(photo.n || 'pick').replace(/[^a-zA-Z0-9._-]/g, '').replace(/\.(png|jpe?g|webp|heic|heif|gif)$/i, '').slice(0, 40) || 'pick';
+        const fname = `${Date.now()}-${safe}.jpg`;
+        await up(t, `${BASE}/mat-uploads-${c}/${fname}`, buf);
+        phPath = `mat-uploads-${c}/${fname}`;
+        item.remarks = [...(item.remarks || []), { from: 'client', text: '📎 sent a picture', ts: now }].slice(-20);
+      }
       if (pick) { item.s = 'picked'; item.pick = pick; item.pickedTs = now.slice(0, 10); }
       if (remark) item.remarks = [...(item.remarks || []), { from: 'client', text: remark, ts: now }].slice(-20);
       mat.updated = now.slice(0, 10);
       await up(t, mpath, JSON.stringify(mat));
-      // echo into the asks channel → Eric's review pile
+      // echo into the asks channel → Eric's review pile (a photo rides along by path)
       const apath = `${BASE}/asks-${c}.json`;
       let arr = [];
       try { arr = JSON.parse(await dl(t, apath) || '[]'); } catch (e) {}
       if (!Array.isArray(arr)) arr = [];
-      arr.unshift({ tag: 'Materials', text: pick ? `📋 PICKED — ${item.n}: ${pick}` : `📋 ${item.n}: ${remark}`, ts: now });
+      arr.unshift({ tag: 'Materials',
+        text: pick ? `📋 PICKED — ${item.n}: ${pick}` : remark ? `📋 ${item.n}: ${remark}` : `📎 ${item.n}: sent a picture of their pick`,
+        ts: now, ...(phPath ? { photo: phPath } : {}) });
       await up(t, apath, JSON.stringify(arr.slice(0, 200)));
       return new Response('ok');
     }
