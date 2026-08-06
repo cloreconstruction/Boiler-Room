@@ -2935,7 +2935,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.37 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.38 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7819,20 +7819,23 @@ async function openJournal(i) {
   const aj = portalAppJob(c);
   const st = jrnStamped(aj);
   const chk = (k, lab) => `<button type="button" class="pick-chip${p[k] ? ' sel' : ''}" onclick="jrnFilter('${k}', ${!p[k]})" aria-pressed="${p[k]}">${p[k] ? '✓&nbsp;' : ''}${lab}</button>`;
+  const stNotes = st.filter(e => !e.photoPath);
   $('revBox').innerHTML = `<h3>📖 ${esc(c.job)} — this week's journal</h3>
-    ${st.length ? `<div class="field" style="margin: 6px 0 2px;"><label>⭐ Stamped this week — what you picked out (✕ to drop one)</label></div>` +
-      st.slice(0, 12).map(e => `<div class="sum-row" style="cursor: default;">
-        <span class="sum-title">${e.photoPath ? '📷' : '📝'} ${esc((e.details || '').replace(/\s+/g, ' ').slice(0, 70))}</span>
-        ${e.photoPath ? `<button class="btn-ghost req-x" onclick="showPhoto('${escq(e.photoPath)}')">👁</button>` : ''}
+    ${stNotes.length ? `<div class="field" style="margin: 6px 0 2px;"><label>⭐ Stamped notes — what you picked out (✕ to drop one)</label></div>` +
+      stNotes.slice(0, 12).map(e => `<div class="sum-row" style="cursor: default;">
+        <span class="sum-title">📝 ${esc((e.details || '').replace(/\s+/g, ' ').slice(0, 70))}</span>
         <button class="btn-ghost req-x" onclick="jrnStamp(${e.id}); openJournal(${i})">✕</button>
-      </div>`).join('') : `<div class="hint" style="margin: 6px 0 0;">No stamps yet — during the week, tap 📖 on any photo or note worth showing the owner and it waits here.</div>`}
+      </div>`).join('') : ''}
+    <!-- 📷 v5.38 — ALL the job's photos live HERE: tap the ones that ride with this week -->
+    <div class="field" style="margin: 8px 0 2px;"><label>📷 Job photos — tap the ones to send with this week</label></div>
+    <div id="jrnPhGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;"></div>
     <div class="hint" style="margin: 10px 0 0;">What the draft pulls in — flip one and it redrafts (hand edits reset):</div>
     <div class="frow" style="margin: 8px 0;">${chk('notes', 'work notes')}${chk('hours', 'hours on site')}${chk('photos', 'photo count')}${chk('money', 'money moved')}</div>
     <div class="field"><label>The entry — edit anything before it goes out</label>
       <div class="hint" id="jrnAiHint" style="margin: 0 0 4px;"></div>
       <textarea id="jrnText" rows="10" class="grow" style="width: 100%;">${esc(journalDraft(aj, c.code))}</textarea></div>
     <div class="rev-row" style="margin-top: 10px;">
-      <button class="btn-primary" id="jrnGoBtn" style="flex: 2;" onclick="journalRelease()">📖 Release to the client page${st.some(e => e.photoPath) ? ' (photos ride along)' : ''}</button>
+      <button class="btn-primary" id="jrnGoBtn" style="flex: 2;" onclick="journalRelease()">📖 Release to the client page</button>
       <button class="btn-ghost" style="flex: 1;" onclick="closeReview()">✕ Cancel</button>
     </div>
     <div class="hint" style="margin-top: 8px;">Releasing stamps the week, lights the client's lamp on their next visit, and folds past weeks behind one row. Nothing marked personal can ever ride along.</div>
@@ -7841,8 +7844,63 @@ async function openJournal(i) {
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
   _jrnEditIdx = null; _jrnRetractArm = null;
+  renderJrnPhotos();    // 📷 v5.38 — the photo picker fills + loads its thumbnails
   journalAiTidy(aj, c); // 🧙 v5.20 — the Wizard rewrites the raw pull into client-facing bullets
   renderJrnReleased();  // ↩ v5.20 — released weeks: editable, retractable
+}
+// 📷 v5.38 — pick the week's photos RIGHT IN the journal window (no hunting through the log).
+// Tap = stamp toggles on the entry underneath, so release works exactly as before.
+const _jrnPhLinks = {}; // photoPath -> temp link (per session)
+function jrnPhotoList(aj) {
+  const from = new Date(); from.setDate(from.getDate() - 30);
+  return entries.filter(e => e.photoPath && !e.personal && !e.sample && e.job === aj &&
+    (e.jrn && !e.jrnDone || new Date(e.ts) >= from)).slice(0, 24);
+}
+function renderJrnPhotos() {
+  const grid = $('jrnPhGrid');
+  if (!grid || _jrnIdx == null) return;
+  const c = _portalIdx.clients[_jrnIdx];
+  const aj = portalAppJob(c);
+  const list = jrnPhotoList(aj);
+  if (!list.length) { grid.innerHTML = '<span class="hint" style="grid-column: 1 / -1;">No photos on this job in the last 30 days — file some through the Grinder and they show up here.</span>'; }
+  else grid.innerHTML = list.map(e => {
+    const sel = e.jrn && !e.jrnDone;
+    const link = _jrnPhLinks[e.photoPath];
+    return `<button type="button" data-jph="${e.id}" onclick="jrnPhotoTog(${e.id})" aria-pressed="${sel}"
+      style="position: relative; height: 76px; padding: 0; overflow: hidden; cursor: pointer; background: rgba(0,0,0,0.35);
+        border: ${sel ? '3px solid var(--accent)' : '1px solid var(--border)'}; border-radius: 8px;">
+      ${link ? `<img src="${esc(link)}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;${sel ? '' : ' opacity: 0.75;'}">` : '<span style="font-size: 22px;">📷</span>'}
+      ${sel ? '<span style="position: absolute; top: 3px; right: 3px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 800; border-radius: 999px; padding: 1px 6px;">✓ GOES</span>' : ''}
+    </button>`;
+  }).join('');
+  const go = $('jrnGoBtn');
+  if (go) {
+    const n = jrnStamped(aj).filter(e => e.photoPath).length;
+    go.textContent = `📖 Release to the client page${n ? ` (${n} photo${n > 1 ? 's ride' : ' rides'} along)` : ''}`;
+  }
+  jrnPhLoadLinks(list);
+}
+async function jrnPhLoadLinks(list) {
+  for (const e of list) {
+    if (_jrnPhLinks[e.photoPath]) continue;
+    try {
+      const j = await dbxRpc('files/get_temporary_link', { path: e.photoPath });
+      if (j && j.link) {
+        _jrnPhLinks[e.photoPath] = j.link;
+        const cell = document.querySelector(`[data-jph="${e.id}"]`);
+        if (cell) renderJrnPhotos(); // grid still on screen — repaint with the new thumb
+      }
+    } catch (err) { _jrnPhLinks[e.photoPath] = ''; }
+    if (!$('jrnPhGrid')) break; // window closed — stop fetching
+  }
+}
+function jrnPhotoTog(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  if (e.personal) { toast('🔒 Personal never goes near a client', false); return; }
+  e.jrn = !(e.jrn && !e.jrnDone); delete e.jrnDone;
+  scheduleSave();
+  renderJrnPhotos();
 }
 // ↩ v5.20 — NOTHING sent to a client is beyond reach: edit updates their page live,
 // take-back pulls the week off it entirely. Their lamp lights either way.
