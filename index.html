@@ -1275,6 +1275,40 @@
   .plate-btn.noimg { background: var(--accent); color: var(--accent-ink); padding: 13px 10px; }
   .plate-btn.noimg img { display: none; }
   .plate-btn.noimg .plate-txt { display: inline; font-weight: 700; font-size: 15px; }
+  /* 🔗 v5.39 — the two setup shortcuts. Temporary by design; one row, thumb-sized, gold plate. */
+  .sc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 14px; }
+  .sc-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    background: var(--accent); color: var(--accent-ink); border: none; border-radius: 12px;
+    font-family: inherit; font-weight: 800; font-size: 13px; letter-spacing: 0.5px;
+    padding: 13px 8px; cursor: pointer; min-height: 46px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.28);
+  }
+  .sc-btn:active { filter: brightness(1.18); transform: translateY(1px); }
+  body.crew-mode #scRow { display: none; }
+  :root[data-skin="steam"] .sc-btn {
+    border: 2px solid transparent;
+    border-image: linear-gradient(160deg, #f0d79a, #8a6a2a 45%, #f3e0ac 70%, #6b4f1c) 1;
+    border-radius: 0;
+  }
+  /* 📊 v5.39 — texts-per-day meter: today fills left to right, the notch is the average */
+  .tm-wrap { margin: 8px 0 0; }
+  .tm-line { display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink-2);
+    font-variant-numeric: tabular-nums; margin-bottom: 4px; }
+  .tm-bar {
+    position: relative; height: 12px; border-radius: 7px; overflow: hidden;
+    border: 1px solid var(--border); background: var(--chip-gray-bg);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.35);
+  }
+  .tm-fill {
+    position: absolute; left: 0; top: 0; bottom: 0; min-width: 3px;
+    background: var(--accent); transition: width 0.4s ease;
+  }
+  /* over the average gets stripes as well as length — never colour on its own */
+  .tm-fill.over { background: repeating-linear-gradient(135deg, var(--accent) 0 5px, rgba(0,0,0,0.34) 5px 10px); }
+  .tm-avg { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink-1); opacity: 0.8; z-index: 2; }
+  .tm-note { font-size: 10px; color: var(--ink-muted); margin-top: 3px; letter-spacing: 0.4px; }
   /* v4.55 — status goes thin, actions stay big */
   .daytube-card { padding: 8px 12px 6px; margin-bottom: 10px; }
   .dt-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; gap: 10px; padding-right: 48px; }
@@ -2279,6 +2313,13 @@
     </div>
   </div>
 
+  <!-- 🔗 v5.39 — two shortcuts Eric asked for while he's setting the portals up. TEMPORARY:
+       they land in ⚙ Setup with the right section already unfolded. Say the word and they go. -->
+  <div class="sc-row" id="scRow">
+    <button type="button" class="sc-btn" onclick="jumpSetup('portalSec')">🏠 <span>Client portal</span></button>
+    <button type="button" class="sc-btn" onclick="jumpSetup('setCrew')">👷 <span>Crew portal</span></button>
+  </div>
+
 
 
   <div class="card" id="todoCard" style="margin-bottom: 16px;">
@@ -2935,7 +2976,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.38 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.39 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6912,6 +6953,44 @@ function tdRenameDone(num, val) {
   _tdRen = '';
   if ((val || '').trim()) aliasSender(num, val); else renderTextDigest();
 }
+// 📊 v5.39 — the number Eric is trying to drive down. Today's texts fill a thin bar left to
+// right; the notch is his running average, so a short bar is a light day and a striped one
+// that has run past the notch is a heavy day. Average skips today so it can't chase itself.
+function textDayStats() {
+  const all = entries.filter(e => e.texted && !e.sample);
+  if (!all.length) return null;
+  const todayN = all.filter(e => localDay(new Date(e.ts)) === localDay(new Date())).length;
+  const first = all.reduce((m, e) => Math.min(m, +new Date(e.ts)), Infinity);
+  let days = 0, sum = 0;
+  for (let i = 1; i <= 14; i++) {
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+    if (+d + 86400000 <= first) break;      // never divide by days before his first text
+    days++;
+    const ds = localDay(d);
+    sum += all.filter(e => localDay(new Date(e.ts)) === ds).length;
+  }
+  return { todayN, days, avg: days ? sum / days : 0 };
+}
+function textMeterHtml() {
+  const s = textDayStats();
+  if (!s || !s.days) return '';
+  const n = s.todayN, avg = s.avg;
+  const scale = Math.max(avg * 2, n, 1);     // average lands mid-bar until a day blows past it
+  const pct = Math.min(100, (n / scale) * 100);
+  const notch = Math.min(97, (avg / scale) * 100);
+  const over = n > avg, diff = Math.abs(Math.round(n - avg));
+  const word = over ? `▲ ${diff} over an average day`
+    : diff === 0 ? '● right at your average'
+    : `▼ ${diff} under an average day`;
+  return `<div class="tm-wrap">
+    <div class="tm-line"><span>📊 ${n} today</span><span>average ${avg.toFixed(1)}/day · last ${s.days} day${s.days > 1 ? 's' : ''}</span></div>
+    <div class="tm-bar" role="img" aria-label="${n} texts today against an average of ${avg.toFixed(1)} a day">
+      <div class="tm-avg" style="left: ${notch.toFixed(1)}%;"></div>
+      <div class="tm-fill${over ? ' over' : ''}" style="width: ${pct.toFixed(1)}%;"></div>
+    </div>
+    <div class="tm-note">${word} — the notch is your average</div>
+  </div>`;
+}
 function renderTextDigest() {
   const box = $('txtDigest');
   if (!box) return;
@@ -6919,7 +6998,12 @@ function renderTextDigest() {
   const today = localDay(new Date());
   const allTexted = entries.filter(e => e.texted && !e.sample);
   const tx = allTexted.filter(e => localDay(new Date(e.ts)) === today);
-  if (!tx.length) { box.innerHTML = ''; return; }
+  const meter = textMeterHtml();
+  // quiet morning: no texts yet, but the meter still stands there waiting to fill
+  if (!tx.length) {
+    box.innerHTML = meter ? `<div class="card" style="padding: 6px 14px 10px; margin-bottom: 14px;">${meter}</div>` : '';
+    return;
+  }
   const needs = tx.filter(e => !e.personal && NEEDS_ANSWER.test((e.details || '').replace(/^Text from [^:]*: /, '')));
   // sender counts for the filter chips
   const byWho = {};
@@ -6937,6 +7021,7 @@ function renderTextDigest() {
     <b>📬 ${tx.length} text${tx.length > 1 ? 's' : ''} today</b>${needs.length
       ? ` — <b>${needs.length} look${needs.length === 1 ? 's' : ''} like a question</b>`
       : ' — all piled'} <span class="hint" style="margin: 0;">· tap to ${_tdOpen ? 'fold' : 'open'}</span>
+    ${meter}
     ${_tdOpen ? `
     <div class="chips-row" style="margin-top: 8px;" onclick="event.stopPropagation()">
       <button class="pick-chip${_tdSender ? '' : ' sel'}" onclick="tdPick('', event)">${_tdSender ? '' : '✓ '}All (${tx.length})</button>
@@ -6988,6 +7073,17 @@ function initSetupCollapse() {
     if (h) h.addEventListener('click', () => sec.classList.toggle('open'));
   });
   if (!dbx.refreshToken) { const d = $('setDbx'); if (d) d.classList.add('open'); }
+}
+// 🔗 v5.39 — a shortcut lands ON the section, already unfolded, everything else folded shut.
+function jumpSetup(id) {
+  if (isCrew()) return;
+  if (!$('panel-settings').classList.contains('open')) openPanel('settings');
+  else { renderPortalList(); initSetupCollapse(); }
+  const sec = $(id);
+  if (!sec) return;
+  document.querySelectorAll('#panel-settings > .set-section.collapsible').forEach(s => s.classList.remove('open'));
+  sec.classList.add('open');
+  setTimeout(() => sec.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80);
 }
 function crewPreviewToggle() {
   if (CREW_NAME) return; // crew phones have no preview business
