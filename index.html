@@ -1109,6 +1109,11 @@
   .field textarea, textarea.todo-big {
     resize: none; overflow: hidden; line-height: 1.5; width: 100%; display: block;
   }
+  /* 📖 v5.37 — boxes in the review window (journal editor, ✍ answers) hold long text:
+     they scroll INSIDE themselves instead of clipping — phone and PC both */
+  .rev-box textarea {
+    overflow-y: auto !important; max-height: 46vh; -webkit-overflow-scrolling: touch;
+  }
   .btn-file {
     display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
     padding: 14px 16px; min-height: 50px; font-size: 15px; font-weight: 700;
@@ -2930,7 +2935,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.36 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.37 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
