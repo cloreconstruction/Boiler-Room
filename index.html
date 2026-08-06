@@ -2107,6 +2107,15 @@
 
   <button id="crewBadge" style="display: none;" onclick="crewBadgeTap()"></button>
 
+  <!-- 🔗 v5.39 — two shortcuts Eric asked for while he's setting the portals up. TEMPORARY:
+       they land in ⚙ Setup with the right section already unfolded. Say the word and they go.
+       v5.40 — Eric moved them to the VERY top, above the hot strip. -->
+  <div class="sc-row" id="scRow">
+    <button type="button" class="sc-btn" onclick="jumpSetup('portalSec')">🏠 <span>Client portal</span></button>
+    <button type="button" class="sc-btn" onclick="jumpSetup('setCrew')">👷 <span>Crew portal</span></button>
+  </div>
+
+
   <!-- v4.95 — 🔥 hot cards: time-critical texts pinned at the VERY top until Eric deals with them -->
   <div id="hotStrip"></div>
   <!-- 📬 v5.19 — text digest (one card, not thirty) + 📌 evening nudges for question texts -->
@@ -2311,13 +2320,6 @@
       <span class="dt-puffs" id="dtPuffs" aria-hidden="true"><img class="pf-burst" src="steam/puff-burst.webp" alt=""><img class="pf-plume" src="steam/puff-plume.webp" alt=""><img class="pf-small" src="steam/puff-small.webp" alt=""></span>
       <div class="dt-ticks" id="dtTicks"></div>
     </div>
-  </div>
-
-  <!-- 🔗 v5.39 — two shortcuts Eric asked for while he's setting the portals up. TEMPORARY:
-       they land in ⚙ Setup with the right section already unfolded. Say the word and they go. -->
-  <div class="sc-row" id="scRow">
-    <button type="button" class="sc-btn" onclick="jumpSetup('portalSec')">🏠 <span>Client portal</span></button>
-    <button type="button" class="sc-btn" onclick="jumpSetup('setCrew')">👷 <span>Crew portal</span></button>
   </div>
 
 
@@ -2976,7 +2978,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.39 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.40 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
