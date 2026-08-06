@@ -1840,28 +1840,40 @@
   body.crew-mode #pendBanner, body.crew-mode #planBanner { display: none !important; }
   .sum-lock { flex: none; font-size: .72rem; padding: 4px 8px; margin: 0 6px; white-space: nowrap; }
   /* v4.85 — tags: 4-across, every cell identical, easy to hit */
+  /* v5.41 — Eric sets the COLUMNS too, and the letters grow as the chips widen:
+     --chip-base is the phone/PC size, --chip-mul is the width bonus the wheel sets. */
   #qnTagChips, #nTagChips {
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+    display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 6px;
+    --chip-base: 12.5px; --chip-mul: 1;
   }
   #qnTagChips .pick-chip, #nTagChips .pick-chip, #qnTagChips .mini-sel, #nTagChips .mini-sel {
     width: 100%; margin: 0; min-height: 36px; padding: 4px 6px;
     display: flex; align-items: center; justify-content: center; text-align: center;
-    font-size: 12.5px; line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    font-size: calc(var(--chip-base) * var(--chip-mul));
+    line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   }
   /* v5.33 — phone only: grinder tag + who-sees-it letters shrink (PC size is right) */
   @media (max-width: 720px) {
-    #qnTagChips .pick-chip, #nTagChips .pick-chip, #qnTagChips .mini-sel, #nTagChips .mini-sel { font-size: 10.5px; min-height: 32px; }
-    #qnVisChips .pick-chip, #nVisChips .pick-chip, #leVisChips .pick-chip { font-size: 9px; }
+    #qnTagChips, #nTagChips { --chip-base: 10.5px; }
+    #qnTagChips .pick-chip, #nTagChips .pick-chip, #qnTagChips .mini-sel, #nTagChips .mini-sel { min-height: 32px; }
+    #qnVisChips, #nVisChips, #leVisChips { --chip-base: 9px; }
   }
   /* who sees it: same symmetry, a touch smaller */
   #qnVisChips, #nVisChips, #leVisChips {
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+    display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 6px;
+    --chip-base: 10.5px; --chip-mul: 1;
   }
   #qnVisChips .pick-chip, #nVisChips .pick-chip, #leVisChips .pick-chip, #qnVisChips .mini-sel, #nVisChips .mini-sel {
     width: 100%; margin: 0; min-height: 30px; padding: 2px 5px;
     display: flex; align-items: center; justify-content: center; text-align: center;
-    font-size: 10.5px; line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    font-size: calc(var(--chip-base) * var(--chip-mul));
+    line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   }
+  /* the ➕ / ✎ / wheels line never scales with the chips — it's furniture, not a tag */
+  .chip-bar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 2px; }
+  .chip-bar .pick-chip { width: auto !important; flex: 0 0 auto; padding: 4px 12px !important; font-size: 11.5px !important; min-height: 30px !important; }
+  .chip-bar .mini-sel { width: auto !important; flex: 0 0 auto; min-height: 30px !important; padding: 2px 8px !important; font-size: 11px !important; }
+  .chip-bar .sp { flex: 1 1 0; min-width: 0; }
   .crew-gauges { display: flex; gap: 14px; justify-content: space-around; }
   .cg { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
   .cg-tube {
@@ -2978,7 +2990,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.40 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.41 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5075,6 +5087,17 @@ function tagMove(t, dir) {
   prefs.tagPin = true; // his order, his rule
   scheduleSave(); renderTagChips();
 }
+// 🔤 v5.41 — the width wheel. Fewer chips across means each one is wider, so the letters get
+// to grow with it — that's what Eric was after: a name too long at 4-across fits at 3 or 2.
+// The bonus is deliberately less than the width gain, so a 2-across chip is still roomy.
+const CHIP_MUL = { 1: 1.55, 2: 1.38, 3: 1.18, 4: 1, 5: 0.86 };
+const clampCols = n => Math.min(5, Math.max(1, +n || 4));
+const tagCols = () => clampCols(prefs.tagCols || 4);
+const visCols = () => clampCols(prefs.visCols || 4);
+function chipFit(el, cols, mul) {
+  el.style.setProperty('--cols', cols);
+  el.style.setProperty('--chip-mul', mul != null ? mul : (CHIP_MUL[cols] || 1));
+}
 function renderTagChips() {
   const known = knownTags();
   if (_tagEditMode) {
@@ -5086,26 +5109,30 @@ function renderTagChips() {
         <button type="button" style="background: none; border: 0; color: var(--err, #c0392b); font-weight: 800; padding: 2px;" onclick="tagDelete('${escq(t)}')" aria-label="delete ${esc(t)}">✕</button>
       </span>`).join('') +
       `<button type="button" class="pick-chip sel" onclick="tagArrangeToggle()">✓ Done arranging</button>`;
-    ['qnTagChips', 'nTagChips'].forEach(id => { const el = $(id); if (el) el.innerHTML = html; });
+    // arranging needs elbow room for ◀ ▶ ✕ — 2 across at normal letters, whatever the wheel says
+    ['qnTagChips', 'nTagChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, 2, 1); });
     return;
   }
-  // v5.33 — Eric picks how many ROWS of tags show (4 per row, full rows whether used or not);
-  // ➕ / ✎ / the rows wheel live on their own line so the tag rows stay square.
-  const cap = (prefs.tagRows || 2) * 4;
+  // v5.33 — Eric picks how many ROWS of tags show (full rows whether used or not).
+  // v5.41 — and how many COLUMNS. Fewer columns = wider chips, so the letters grow to match:
+  // that's the whole point of the wheel — a long name like Scritchfield gets room to breathe.
+  const cols = tagCols(), cap = (prefs.tagRows || 2) * cols;
   const shown = [...new Set([...qnSel, ...known])].slice(0, Math.max(cap, qnSel.size));
-  const rowsSel = n => `<select class="mini-sel" style="width: auto; flex: 0 0 auto; min-height: 30px; padding: 2px 8px; font-size: 11px;" title="How many rows of tags show"
+  const rowsSel = n => `<select class="mini-sel" title="How many rows of tags show"
       onchange="prefs.tagRows = +this.value; scheduleSave(); renderTagChips();">${[1, 2, 3, 4, 5].map(r => `<option value="${r}"${r === n ? ' selected' : ''}>${r} row${r > 1 ? 's' : ''}</option>`).join('')}</select>`;
+  const colsSel = n => `<select class="mini-sel" title="How many tags across — fewer across means bigger letters"
+      onchange="prefs.tagCols = +this.value; scheduleSave(); renderTagChips();">${[1, 2, 3, 4, 5].map(c => `<option value="${c}"${c === n ? ' selected' : ''}>${c} across</option>`).join('')}</select>`;
   const html = shown.map(t => {
     if (_tagArm === t) return `<button type="button" class="pick-chip" style="border-color: var(--err, #c0392b); color: var(--err, #c0392b); font-weight: 800;" onclick="tagDelete('${escq(t)}')">✕ delete ${esc(t)}?</button>`;
     const on = qnSel.has(t);
     return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="tagToggle('${escq(t)}')" aria-pressed="${on}"
       onpointerdown="tagHoldStart('${escq(t)}')" onpointerup="tagHoldEnd()" onpointerleave="tagHoldEnd()" oncontextmenu="event.preventDefault()">${on ? '✓' : '🏷'} ${esc(t)}</button>`;
   }).join('') +
-    `<div style="grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; margin-top: 2px;">
-      <button type="button" class="pick-chip" style="width: auto; flex: 0 0 auto; padding: 4px 12px;" onclick="tagNewInput(this)">➕ tag</button>
-      <button type="button" class="pick-chip" style="width: auto; flex: 0 0 auto; padding: 4px 12px;" onclick="tagArrangeToggle()" title="reorder or clean up the chips">✎ arrange</button>
-      <span style="flex: 1;"></span>${rowsSel(prefs.tagRows || 2)}</div>`;
-  ['qnTagChips', 'nTagChips'].forEach(id => { const el = $(id); if (el) el.innerHTML = html; });
+    `<div class="chip-bar">
+      <button type="button" class="pick-chip" onclick="tagNewInput(this)">➕ tag</button>
+      <button type="button" class="pick-chip" onclick="tagArrangeToggle()" title="reorder or clean up the chips">✎ arrange</button>
+      <span class="sp"></span>${rowsSel(prefs.tagRows || 2)}${colsSel(cols)}</div>`;
+  ['qnTagChips', 'nTagChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
 }
 // jump straight to "everything tagged X" from any log row
 function logFilterTag(t, ev) {
@@ -7228,7 +7255,7 @@ function renderVisChips() {
   const selOf = v => v === '' ? (!qnVis && !qnVisNames.size) : v === 'crew' ? qnVis === 'crew' : qnVisNames.has(v);
   // v5.33 — same rows wheel as the tags: 4 per row, Eric decides how many rows show.
   // A SELECTED name never hides, no matter the cap.
-  const cap = (prefs.visRows || 2) * 4;
+  const cols = visCols(), cap = (prefs.visRows || 2) * cols;
   const opts = [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
   const capped = opts.filter(([v], i) => i < cap - 1 || selOf(v)); // -1 keeps room for ❓
   const html = capped.map(([v, w]) => {
@@ -7236,13 +7263,15 @@ function renderVisChips() {
     return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="setVis('${escq(v)}')" aria-pressed="${on}">${on ? '✓&nbsp;' : ''}${esc(w)}</button>`;
   }).join('') +
     `<button type="button" class="pick-chip${qnAsk ? ' sel' : ''}" onclick="toggleAsk()" aria-pressed="${qnAsk}" title="Rings their phones and stays up big until somebody answers — then it clears for everyone">${qnAsk ? '✓&nbsp;' : ''}❓ Needs an answer</button>` +
-    `<div style="grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; margin-top: 2px;">
-      <button type="button" class="pick-chip" style="width: auto; flex: 0 0 auto; padding: 3px 12px;" onclick="visNewInput(this)" title="Add a person">➕ person</button>
-      <span style="flex: 1;"></span>
-      <select class="mini-sel" style="width: auto; flex: 0 0 auto; min-height: 28px; padding: 2px 8px; font-size: 11px;" title="How many rows show"
-        onchange="prefs.visRows = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4].map(r => `<option value="${r}"${r === (prefs.visRows || 2) ? ' selected' : ''}>${r} row${r > 1 ? 's' : ''}</option>`).join('')}</select></div>` +
+    `<div class="chip-bar">
+      <button type="button" class="pick-chip" onclick="visNewInput(this)" title="Add a person">➕ person</button>
+      <span class="sp"></span>
+      <select class="mini-sel" title="How many rows show"
+        onchange="prefs.visRows = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4].map(r => `<option value="${r}"${r === (prefs.visRows || 2) ? ' selected' : ''}>${r} row${r > 1 ? 's' : ''}</option>`).join('')}</select>
+      <select class="mini-sel" title="How many across — fewer across means bigger letters"
+        onchange="prefs.visCols = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4, 5].map(c => `<option value="${c}"${c === cols ? ' selected' : ''}>${c} across</option>`).join('')}</select></div>` +
     (qnVisNames.size > 1 ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ goes to ${[...qnVisNames].map(esc).join(' + ')} — each sees it on their own phone</div>` : '');
-  ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (el) el.innerHTML = html; });
+  ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
 }
 function visNewInput(btn) {
   btn.outerHTML = `<input type="text" class="mini-sel" id="visNewBox" placeholder="name…"
