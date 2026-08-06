@@ -177,6 +177,10 @@ function toggleCard(id, ev) {
 // YOUR PICK (glows when the ball's in your court) → PICKED → ORDERED → ARRIVED.
 // Grouped orders (like a full window order) go green + READY TO ORDER when every piece confirms.
 let _mat = null, _matOpenItem = '';
+// v5.36 — room folds live in STATE: every item tap redraws the board, and the redraw
+// used to slam the room shut again (Eric: "it alternates every time I click")
+let _matOpenRooms = new Set();
+function matRoomTog(ri) { _matOpenRooms.has(ri) ? _matOpenRooms.delete(ri) : _matOpenRooms.add(ri); renderMat(); ping('mat:room'); }
 const esc3 = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function matLamp(on, word, glow) {
   return `<span style="display: inline-flex; align-items: center; gap: 3px; margin-right: 8px; font-size: 10px; font-weight: 800; letter-spacing: .4px; color: ${on ? 'var(--gold)' : 'var(--ink2)'}; opacity: ${on ? 1 : 0.45};"><span style="width: 7px; height: 7px; border-radius: 50%; background: ${on ? 'var(--gold)' : 'var(--line)'}; ${glow && on ? 'box-shadow: 0 0 6px var(--gold); animation: lampPulse 2s ease-in-out infinite;' : ''}"></span>${on ? '✓' : ''}${word}</span>`;
@@ -203,8 +207,8 @@ function renderMat() {
   box.innerHTML = _mat.rooms.map((r, ri) => {
     const need = (r.items || []).filter(i => (i.s || 'pick') === 'pick').length;
     const ready = (r.items || []).filter(i => (i.kids || []).length && i.kids.every(k => k.ok)).length;
-    return `<div class="ph" id="mr${ri}">
-      <div class="ph-head" onclick="document.getElementById('mr${ri}').classList.toggle('open'); ping('mat:room')">
+    return `<div class="ph${_matOpenRooms.has(ri) ? ' open' : ''}" id="mr${ri}">
+      <div class="ph-head" onclick="matRoomTog(${ri})">
         <span>${esc3(r.name)}</span>
         <span style="font-size: 12px; font-weight: 800; color: ${need ? 'var(--gold)' : 'var(--ink2)'};">${need ? '● ' + need + ' need' + (need === 1 ? 's' : '') + ' your pick' : '✓ all set'}${ready ? ' · ● READY TO ORDER' : ''}</span>
       </div>
