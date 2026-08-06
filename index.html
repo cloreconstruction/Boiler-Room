@@ -841,6 +841,10 @@
     font-size: 13px; padding: 14px 10px; border: none; cursor: pointer;
     background: var(--accent); color: var(--accent-ink); font-family: inherit; flex: 0 0 auto; }
   #cpFrame { flex: 1; width: 100%; border: 0; background: #fff; }
+  .cp-x { position: absolute; right: 18px; bottom: 18px; z-index: 5; border: none; border-radius: 999px;
+    background: var(--accent); color: var(--accent-ink); font-family: inherit; font-weight: 800;
+    font-size: 15px; letter-spacing: 1px; padding: 14px 22px; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.45); }
   .set-section {
     border: 1px solid var(--border); border-radius: 12px;
     padding: 14px; margin-bottom: 12px;
@@ -2028,6 +2032,8 @@
 <div id="cliPrev">
   <button class="cp-banner" onclick="clientPreviewClose()">👁 CLIENT PREVIEW · TAP HERE TO COME BACK</button>
   <iframe id="cpFrame" title="Client page preview"></iframe>
+  <!-- v5.34 — second exit for the PC: a corner ✕ that can't be missed (Esc works too) -->
+  <button class="cp-x" onclick="clientPreviewClose()" aria-label="Close client preview">✕ CLOSE</button>
 </div>
 <div class="wrap">
   <header>
@@ -2922,7 +2928,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.33 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.34 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7659,6 +7665,10 @@ function clientPreviewClose() {
   $('cliPrev').classList.remove('show');
   $('cpFrame').src = 'about:blank';
 }
+// v5.34 — Esc backs out of the preview on the PC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('cliPrev') && $('cliPrev').classList.contains('show')) clientPreviewClose();
+});
 function portalGuard() { return !!CREW_NAME; } // crew phones never touch client codes
 async function portalCopy(i) {
   if (portalGuard()) return;
@@ -7996,7 +8006,10 @@ function matMgrEditor(it) {
     <div class="field" style="flex: 1 1 100%;"><label>Options for them to pick (one per line: title | link | price)</label><textarea rows="3" class="grow" onchange="matSetOpts('${id}', this.value)">${esc((it.opts || []).map(o => [o.t, o.url || '', o.price || ''].join(' | ').replace(/ \| +$/, '').replace(/ \| $/, '')).join('\n'))}</textarea></div>
     <div class="field"><label>Ordered date</label><input type="date" value="${esc(it.odate || '')}" onchange="matSet('${id}', 'odate', this.value)"></div>
     <div class="field"><label>Expected arrival</label><input type="date" value="${esc(it.eta || '')}" onchange="matSet('${id}', 'eta', this.value)"></div>
-    <div class="field" style="flex: 1 1 100%;"><label><input type="checkbox" ${it.showEta ? 'checked' : ''} onchange="matSet('${id}', 'showEta', this.checked)" style="width: auto; margin-right: 6px;">Show the dates to the client (off = crew-only)</label></div>
+    <div class="field" style="flex: 1 1 100%;">
+      <button type="button" class="pick-chip${it.showEta ? ' sel' : ''}" style="width: 100%; font-weight: 800; letter-spacing: 0.5px;"
+        onclick="matSet('${id}', 'showEta', ${it.showEta ? 'false' : 'true'}); renderMatMgr()" aria-pressed="${!!it.showEta}">
+        ${it.showEta ? '✓ DATES SHOWN TO THE CLIENT — tap to hide' : '○ DATES HIDDEN — crew only · tap to show them'}</button></div>
     <div class="field" style="flex: 1 1 100%;"><label>Grouped pieces — e.g. every window in the order (one per line: name | note)</label><textarea rows="3" class="grow" onchange="matSetKids('${id}', this.value)">${esc((it.kids || []).map(k => k.n + (k.note ? ' | ' + k.note : '')).join('\n'))}</textarea></div>
     ${(it.kids || []).length ? `<div class="field" style="flex: 1 1 100%;"><label>Confirm each piece — all green = READY TO ORDER</label>
       <div class="chips-row">${it.kids.map((k, ki) => `<button type="button" class="pick-chip${k.ok ? ' sel' : ''}" onclick="matKidOk('${id}', ${ki})">${k.ok ? '● ✓ ' : '○ '}${esc(k.n)}</button>`).join('')}</div></div>` : ''}
