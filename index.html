@@ -216,7 +216,7 @@
   :root[data-skin="steam"] .cap-btn { text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; }
   /* Eric's photoreal icon set on the capture bar */
   :root[data-skin="steam"] .cap-btn .ic {
-    font-size: 0; line-height: 0; width: 30px; height: 30px; display: inline-block;
+    font-size: 0; line-height: 0; width: 34px; height: 34px; display: inline-block;
     background-size: cover; background-position: center; border-radius: 7px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.6);
   }
@@ -274,7 +274,7 @@
   @media (max-width: 720px) {
     :root[data-skin="steam"] .cap-btn { text-transform: none; letter-spacing: 0; font-weight: 600; }
     /* the photoreal icons have to shrink too, or eight of them won't sit in one row */
-    :root[data-skin="steam"] .cap-btn .ic { width: 26px; height: 26px; border-radius: 6px; }
+    :root[data-skin="steam"] .cap-btn .ic { width: 30px; height: 30px; border-radius: 6px; }
     :root[data-skin="steam"] .card, :root[data-skin="steam"] .clock-card,
     :root[data-skin="steam"] .kpi, :root[data-skin="steam"] .todo-card { border-width: 11px; }
   }
@@ -706,7 +706,7 @@
       min-width: 0; overflow: hidden; line-height: 1.1; text-align: center;
       white-space: nowrap;
     }
-    .capture .cap-btn .ic { font-size: 20px; }
+    .capture .cap-btn .ic { font-size: 23px; }
     /* the long name is for the desktop bar; the phone gets the short one.
        .capture prefix is deliberate — the base rule below this block would otherwise win on order. */
     .capture .cap-btn .lb-long { display: none; }
@@ -773,7 +773,7 @@
     display: flex; flex-direction: column; align-items: center; gap: 6px;
   }
   .cap-btn:hover { border-color: var(--baseline); }
-  .cap-btn .ic { font-size: 20px; line-height: 1; }
+  .cap-btn .ic { font-size: 23px; line-height: 1; } /* v5.33 — Eric: a little bigger */
   .cap-btn .lb-short { display: none; }
   .cap-btn.active { border-color: var(--accent); }
   .cap-setup { display: none; }
@@ -1804,6 +1804,11 @@
     display: flex; align-items: center; justify-content: center; text-align: center;
     font-size: 12.5px; line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   }
+  /* v5.33 — phone only: grinder tag + who-sees-it letters shrink (PC size is right) */
+  @media (max-width: 720px) {
+    #qnTagChips .pick-chip, #nTagChips .pick-chip, #qnTagChips .mini-sel, #nTagChips .mini-sel { font-size: 10.5px; min-height: 32px; }
+    #qnVisChips .pick-chip, #nVisChips .pick-chip, #leVisChips .pick-chip { font-size: 9px; }
+  }
   /* who sees it: same symmetry, a touch smaller */
   #qnVisChips, #nVisChips, #leVisChips {
     display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
@@ -2120,54 +2125,8 @@
     <div id="askRecent"></div>
   </div>
 
-  <div id="appBanners">
-    <button class="app-banner" id="pendBanner" style="display: none;" onclick="openReview()"></button>
-    <button class="app-banner" id="planBanner" style="display: none;" onclick="openPlanner()"></button>
-  </div>
-  <!-- v4.91 — Eric's open 📢 asks and their status -->
-  <div id="askStrip"></div>
-
-  <!-- crew only: 📢 questions from Eric that need an answer — loud until somebody sends one -->
-  <div class="card" id="crewAskCard" style="display: none;"></div>
-
-  <!-- crew only: notes Eric unlocked or sent to this person -->
-  <div class="card" id="crewSharedCard" style="display: none;">
-    <div class="log-head" style="margin-bottom: 8px;">
-      <span class="card-sub" style="margin: 0;">📨 FROM ERIC</span>
-    </div>
-    <div id="crewSharedList"></div>
-  </div>
-
-  <!-- crew only — v5.18: fill bars retired (the shift gauge + punch tape tell the hours story).
-       This card is just the live wage ticker now, so it only shows while ON the clock. -->
-  <div class="card" id="crewGaugeCard" style="display: none;">
-    <div class="log-head" style="margin-bottom: 10px;">
-      <span class="card-sub" style="margin: 0;">EARNING RIGHT NOW</span>
-    </div>
-    <!-- v4.70 — the live wage ticker: climbs every second on the clock, freezes on break -->
-    <div id="wageTicker" style="display: none; text-align: center; margin-bottom: 12px;">
-      <div id="wageAmt" style="font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.5px;">$0.00</div>
-      <div class="hint" id="wageSub" style="margin: 2px 0 8px;">this shift</div>
-      <select class="mini-sel" id="workCatSel" style="width: 100%; font-size: 15px; padding: 8px;" onchange="setWorkCat(this.value)"></select>
-    </div>
-  </div>
-
-  <div class="card daytube-card" id="dayTubeCard">
-    <div class="dt-head">
-      <span class="card-sub" style="margin: 0;">THE DAY</span>
-      <span class="dt-right"><b id="dtTotal" class="dt-total"></b><img id="dtSign" class="dt-sign" src="steam/sign-quittin.webp" alt="Quittin' time" style="display: none;"></span>
-    </div>
-    <div class="dt-plan" id="dtPlan"></div>
-    <div class="dt-wrap">
-      <div class="dt-tube" id="dtTube"></div>
-      <span class="dt-cap dt-cap--l" aria-hidden="true"></span>
-      <span class="dt-cap dt-cap--r" aria-hidden="true"></span>
-      <img class="dt-whistle" src="steam/whistle-brass.webp" alt="Quittin' whistle" title="Blows steam when the day goal is hit">
-      <span class="dt-puffs" id="dtPuffs" aria-hidden="true"><img class="pf-burst" src="steam/puff-burst.webp" alt=""><img class="pf-plume" src="steam/puff-plume.webp" alt=""><img class="pf-small" src="steam/puff-small.webp" alt=""></span>
-      <div class="dt-ticks" id="dtTicks"></div>
-    </div>
-  </div>
-
+  <!-- v5.33 — Eric: the clock gauge rides just below the grinder/wizard box;
+       review banners + ask strip + THE DAY tube sink below it -->
   <div class="clock-card">
     <div class="clock-left">
       <span class="clock-lamp" id="clockLamp" data-lamp="off" title="Punch lamp — dark when off the clock, breathing while you're on it" aria-hidden="true"></span>
@@ -2258,6 +2217,55 @@
     <!-- v5.15 — today's punch tape: every hit of the button leaves a line; midnight wipes it clean -->
     <div class="punch-log" id="punchLog" aria-label="Today's punches"></div>
   </div>
+
+  <div id="appBanners">
+    <button class="app-banner" id="pendBanner" style="display: none;" onclick="openReview()"></button>
+    <button class="app-banner" id="planBanner" style="display: none;" onclick="openPlanner()"></button>
+  </div>
+  <!-- v4.91 — Eric's open 📢 asks and their status -->
+  <div id="askStrip"></div>
+
+  <!-- crew only: 📢 questions from Eric that need an answer — loud until somebody sends one -->
+  <div class="card" id="crewAskCard" style="display: none;"></div>
+
+  <!-- crew only: notes Eric unlocked or sent to this person -->
+  <div class="card" id="crewSharedCard" style="display: none;">
+    <div class="log-head" style="margin-bottom: 8px;">
+      <span class="card-sub" style="margin: 0;">📨 FROM ERIC</span>
+    </div>
+    <div id="crewSharedList"></div>
+  </div>
+
+  <!-- crew only — v5.18: fill bars retired (the shift gauge + punch tape tell the hours story).
+       This card is just the live wage ticker now, so it only shows while ON the clock. -->
+  <div class="card" id="crewGaugeCard" style="display: none;">
+    <div class="log-head" style="margin-bottom: 10px;">
+      <span class="card-sub" style="margin: 0;">EARNING RIGHT NOW</span>
+    </div>
+    <!-- v4.70 — the live wage ticker: climbs every second on the clock, freezes on break -->
+    <div id="wageTicker" style="display: none; text-align: center; margin-bottom: 12px;">
+      <div id="wageAmt" style="font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.5px;">$0.00</div>
+      <div class="hint" id="wageSub" style="margin: 2px 0 8px;">this shift</div>
+      <select class="mini-sel" id="workCatSel" style="width: 100%; font-size: 15px; padding: 8px;" onchange="setWorkCat(this.value)"></select>
+    </div>
+  </div>
+
+  <div class="card daytube-card" id="dayTubeCard">
+    <div class="dt-head">
+      <span class="card-sub" style="margin: 0;">THE DAY</span>
+      <span class="dt-right"><b id="dtTotal" class="dt-total"></b><img id="dtSign" class="dt-sign" src="steam/sign-quittin.webp" alt="Quittin' time" style="display: none;"></span>
+    </div>
+    <div class="dt-plan" id="dtPlan"></div>
+    <div class="dt-wrap">
+      <div class="dt-tube" id="dtTube"></div>
+      <span class="dt-cap dt-cap--l" aria-hidden="true"></span>
+      <span class="dt-cap dt-cap--r" aria-hidden="true"></span>
+      <img class="dt-whistle" src="steam/whistle-brass.webp" alt="Quittin' whistle" title="Blows steam when the day goal is hit">
+      <span class="dt-puffs" id="dtPuffs" aria-hidden="true"><img class="pf-burst" src="steam/puff-burst.webp" alt=""><img class="pf-plume" src="steam/puff-plume.webp" alt=""><img class="pf-small" src="steam/puff-small.webp" alt=""></span>
+      <div class="dt-ticks" id="dtTicks"></div>
+    </div>
+  </div>
+
 
 
   <div class="card" id="todoCard" style="margin-bottom: 16px;">
@@ -2914,7 +2922,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.32 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.33 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5025,14 +5033,22 @@ function renderTagChips() {
     ['qnTagChips', 'nTagChips'].forEach(id => { const el = $(id); if (el) el.innerHTML = html; });
     return;
   }
-  const shown = [...new Set([...qnSel, ...known])].slice(0, Math.max(6, qnSel.size));
+  // v5.33 — Eric picks how many ROWS of tags show (4 per row, full rows whether used or not);
+  // ➕ / ✎ / the rows wheel live on their own line so the tag rows stay square.
+  const cap = (prefs.tagRows || 2) * 4;
+  const shown = [...new Set([...qnSel, ...known])].slice(0, Math.max(cap, qnSel.size));
+  const rowsSel = n => `<select class="mini-sel" style="width: auto; flex: 0 0 auto; min-height: 30px; padding: 2px 8px; font-size: 11px;" title="How many rows of tags show"
+      onchange="prefs.tagRows = +this.value; scheduleSave(); renderTagChips();">${[1, 2, 3, 4, 5].map(r => `<option value="${r}"${r === n ? ' selected' : ''}>${r} row${r > 1 ? 's' : ''}</option>`).join('')}</select>`;
   const html = shown.map(t => {
     if (_tagArm === t) return `<button type="button" class="pick-chip" style="border-color: var(--err, #c0392b); color: var(--err, #c0392b); font-weight: 800;" onclick="tagDelete('${escq(t)}')">✕ delete ${esc(t)}?</button>`;
     const on = qnSel.has(t);
     return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="tagToggle('${escq(t)}')" aria-pressed="${on}"
       onpointerdown="tagHoldStart('${escq(t)}')" onpointerup="tagHoldEnd()" onpointerleave="tagHoldEnd()" oncontextmenu="event.preventDefault()">${on ? '✓' : '🏷'} ${esc(t)}</button>`;
-  }).join('') + `<button type="button" class="pick-chip" onclick="tagNewInput(this)">➕ tag</button>` +
-    `<button type="button" class="pick-chip" onclick="tagArrangeToggle()" title="reorder or clean up the chips">✎ arrange</button>`;
+  }).join('') +
+    `<div style="grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; margin-top: 2px;">
+      <button type="button" class="pick-chip" style="width: auto; flex: 0 0 auto; padding: 4px 12px;" onclick="tagNewInput(this)">➕ tag</button>
+      <button type="button" class="pick-chip" style="width: auto; flex: 0 0 auto; padding: 4px 12px;" onclick="tagArrangeToggle()" title="reorder or clean up the chips">✎ arrange</button>
+      <span style="flex: 1;"></span>${rowsSel(prefs.tagRows || 2)}</div>`;
   ['qnTagChips', 'nTagChips'].forEach(id => { const el = $(id); if (el) el.innerHTML = html; });
 }
 // jump straight to "everything tagged X" from any log row
@@ -7058,14 +7074,22 @@ function setVis(v) {
 function toggleAsk() { qnAsk = !qnAsk; renderVisChips(); }
 function renderVisChips() {
   const selOf = v => v === '' ? (!qnVis && !qnVisNames.size) : v === 'crew' ? qnVis === 'crew' : qnVisNames.has(v);
+  // v5.33 — same rows wheel as the tags: 4 per row, Eric decides how many rows show.
+  // A SELECTED name never hides, no matter the cap.
+  const cap = (prefs.visRows || 2) * 4;
   const opts = [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
-  const html = opts.map(([v, w]) => {
+  const capped = opts.filter(([v], i) => i < cap - 1 || selOf(v)); // -1 keeps room for ❓
+  const html = capped.map(([v, w]) => {
     const on = selOf(v);
     return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="setVis('${escq(v)}')" aria-pressed="${on}">${on ? '✓&nbsp;' : ''}${esc(w)}</button>`;
   }).join('') +
     `<button type="button" class="pick-chip${qnAsk ? ' sel' : ''}" onclick="toggleAsk()" aria-pressed="${qnAsk}" title="Rings their phones and stays up big until somebody answers — then it clears for everyone">${qnAsk ? '✓&nbsp;' : ''}❓ Needs an answer</button>` +
-    `<button type="button" class="pick-chip" onclick="visNewInput(this)" title="Add a person">➕ person</button>` +
-    (qnVisNames.size > 1 ? `<div class="hint" style="flex: 1 1 100%; margin: 2px 0 0;">→ goes to ${[...qnVisNames].map(esc).join(' + ')} — each sees it on their own phone</div>` : '');
+    `<div style="grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; margin-top: 2px;">
+      <button type="button" class="pick-chip" style="width: auto; flex: 0 0 auto; padding: 3px 12px;" onclick="visNewInput(this)" title="Add a person">➕ person</button>
+      <span style="flex: 1;"></span>
+      <select class="mini-sel" style="width: auto; flex: 0 0 auto; min-height: 28px; padding: 2px 8px; font-size: 11px;" title="How many rows show"
+        onchange="prefs.visRows = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4].map(r => `<option value="${r}"${r === (prefs.visRows || 2) ? ' selected' : ''}>${r} row${r > 1 ? 's' : ''}</option>`).join('')}</select></div>` +
+    (qnVisNames.size > 1 ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ goes to ${[...qnVisNames].map(esc).join(' + ')} — each sees it on their own phone</div>` : '');
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (el) el.innerHTML = html; });
 }
 function visNewInput(btn) {
