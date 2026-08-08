@@ -1779,7 +1779,7 @@
      ➕ tag and ✎ arrange, the same everything. */
   body.crew-mode #dayTubeCard,
   body.crew-mode .ask-foot, body.crew-mode .kpis,
-  body.crew-mode .cap-btn[data-panel="file"], body.crew-mode .cap-btn[data-panel="mileage"],
+  body.crew-mode .cap-btn[data-panel="file"],
   body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"],
   body.crew-mode #coBillRow { display: none !important; }
   /* v4.95 — 🔥 hot card: thick frame + spelled words + slow breathing, never color alone */
@@ -3040,7 +3040,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.50 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.51 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5245,6 +5245,11 @@ function renderMileBody() {
   } else {
     if ($('mTitle')) $('mTitle').textContent = '🚚 Start trip — ' + curTruck;
     box.innerHTML = `
+      ${(() => {
+        // 🚚 v5.51 — the truck is mid-trip on ANOTHER phone: say so before he types a reading
+        const o = CREW_NAME ? (t && t.othersTrip) : _crewTrips[curTruck];
+        return o ? `<div class="hint" style="border: 2px dashed var(--warn, #b3812f); border-radius: 8px; padding: 7px 10px; margin: 0 0 8px;">⚠ <b>${esc(o.by)} has a trip OPEN in ${esc(curTruck)}</b> since ${tripWhen(o.ts)} (started at ${(+o.odo).toLocaleString()}). If you're taking this truck, have them end it first — the odometer hands off cleaner.</div>` : '';
+      })()}
       <div class="set-section fc-sec"><h4>Odometer — start of trip</h4>
         ${last ? `<div class="hint" style="margin: 0 0 6px;">Last reading for ${esc(curTruck)} — ${tripWhen(last.ts)}. Tap the number to change it.</div>` : `<div class="hint" style="margin: 0 0 6px;">First reading for this truck — type it once, it remembers from here.</div>`}
         <input type="number" id="mStartOdo" inputmode="numeric" min="0" step="1" value="${last ? Math.round(+last.odo) : ''}" placeholder="84247" style="font-size: 26px; font-weight: 800; width: 100%; padding: 10px 12px;"></div>
@@ -6104,6 +6109,23 @@ function saveNoteFrom(boxId, fromPanel) {
   if (aiAll) nExtra.ai = aiAll;
   const tags = [...qnSel];
   if (tags.length) nExtra.tags = tags;
+  // 📤 v5.51 — Eric: a "Send to Logan" / "Send to QuickBooks" tag POPS THE SEND SHEET, so
+  // the receipt he just ground can go straight out as a text too. The share sheet must ride
+  // the same finger-tap that saved the note (phones refuse it later), so it fires first and
+  // the filing carries on regardless of whether he sends or closes the sheet.
+  const sendTag = tags.find(g => /^send(?:\s+to)?\s+.+/i.test(g));
+  if (sendTag && navigator.share) {
+    const toWho = sendTag.replace(/^send(?:\s+to)?\s+/i, '');
+    const shareText = `${t} — ${fromPanel ? curJob : (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : '—'}`;
+    try {
+      if (photos.length && navigator.canShare && navigator.canShare({ files: photos })) {
+        navigator.share({ files: photos, text: shareText, title: `For ${toWho}` }).catch(() => {});
+      } else {
+        navigator.share({ text: shareText, title: `For ${toWho}` }).catch(() => {});
+      }
+      toast(`📤 Send sheet up — pick ${toWho} and it's on its way; the copy is filed here either way ✓`);
+    } catch (e) { /* no sheet on this browser — the tag still files it */ }
+  }
   // 🔒 v5.44 — ERIC'S RULE, WORD FOR WORD: "if it says just my log, no one can see it no
   // matter what, including mine, including the crews, even if someone's tagged in it, even
   // if it says send, even if it says needs attention."
@@ -6120,9 +6142,9 @@ function saveNoteFrom(boxId, fromPanel) {
     // v5.44 — the who-sees-it chips are REAL on a crew phone now (v5.43 rendered them but
     // dropped the answer on the floor — this is where it gets written onto the entry).
     if (qnVis || qnVisNames.size) {
-      nExtra.vis = qnVis === 'crew' ? 'crew'
-        : qnVisNames.size === 1 ? [...qnVisNames][0]
-        : qnVisNames.size > 1 ? [...qnVisNames] : 'crew';
+      // v5.51 — crew + names stack: crew unlocks it for everybody, the names land it direct
+      if (qnVis === 'crew') { nExtra.vis = 'crew'; if (qnVisNames.size) nExtra.sendTo = [...qnVisNames]; }
+      else nExtra.vis = qnVisNames.size === 1 ? [...qnVisNames][0] : [...qnVisNames];
     }
     if (!nExtra.vis) {
       nExtra.mine = true;                       // 🔒 this phone, and nowhere else, ever
@@ -6134,8 +6156,10 @@ function saveNoteFrom(boxId, fromPanel) {
     }
   } else if (qnVis || qnVisNames.size || qnAsk) {
     // 🔓 unlocked — travels to the crew folder(s). v5.26: several names = several phones.
-    nExtra.vis = qnVis === 'crew' ? 'crew'
-      : qnVisNames.size === 1 ? [...qnVisNames][0]
+    // v5.51 — crew + names STACK: 'crew' = the whole crew can see it (their Wizards too),
+    // sendTo names = it ALSO lands direct 📨 on those phones. Names alone work as before.
+    if (qnVis === 'crew') { nExtra.vis = 'crew'; if (qnVisNames.size) nExtra.sendTo = [...qnVisNames]; }
+    else nExtra.vis = qnVisNames.size === 1 ? [...qnVisNames][0]
       : qnVisNames.size > 1 ? [...qnVisNames]
       : 'crew';
     if (qnAsk) nExtra.ask = true; // ❓ pops up on their phones until somebody answers
@@ -6818,6 +6842,20 @@ function reviewAct(id, accept) {
         toast(`To-do made from ${pay.from}'s note ✓`);
       } else {
         const extra = { who };
+        // 🚚 v5.51 — a crew trip lands as a real Mileage row in ERIC's book, and the truck's
+        // odometer advances if this reading is past it — that's the handoff: Phil parks it,
+        // Eric's next trip starts where Phil left off.
+        if (pay.type === 'Mileage') {
+          if (pay.miles != null) extra.miles = +pay.miles;
+          if (pay.truck) extra.truck = pay.truck;
+          if (pay.odometer != null) extra.odometer = +pay.odometer;
+          if (pay.startOdometer != null) extra.startOdometer = +pay.startOdometer;
+          if (pay.truck && pay.odometer != null) {
+            const cur = (prefs.lastOdo || {})[pay.truck];
+            if (!cur || +pay.odometer > +cur.odo) setLastOdo(pay.truck, +pay.odometer);
+            if (!trucks.find(t => t.name === pay.truck)) trucks.push({ name: pay.truck, lastOdo: null });
+          }
+        }
         // 🔓 v5.44 — he marked it "all crew": Eric accepting it unlocks it, and the next
         // sweep carries it out to every crew folder. Anything narrower stays Eric's alone —
         // a crew phone can never quietly publish to another man's phone behind Eric's back.
@@ -6826,8 +6864,8 @@ function reviewAct(id, accept) {
         if (pay.category) extra.category = pay.category;
         if (pay.day && /^\d{4}-\d{2}-\d{2}$/.test(pay.day) && pay.day !== localDay(new Date())) extra.ts = new Date(pay.day + 'T12:00:00');
         extra.noSniff = true;
-        addEntry(pay.type === 'Note' ? 'Note' : 'Hours', `${pay.from}: ${pay.text || 'Shift'}`, j, extra);
-        toast(`${pay.from}'s ${pay.type === 'Note' ? 'note' : 'hours'} logged ✓`);
+        addEntry(pay.type === 'Mileage' ? 'Mileage' : pay.type === 'Note' ? 'Note' : 'Hours', `${pay.from}: ${pay.text || (pay.type === 'Mileage' ? 'Trip' : 'Shift')}`, j, extra);
+        toast(`${pay.from}'s ${pay.type === 'Mileage' ? 'miles' : pay.type === 'Note' ? 'note' : 'hours'} logged ✓`);
       }
     } else if (p.kind === 'question') {
       const ansEl = $(`revAns-${p.id}`);
@@ -7334,9 +7372,13 @@ let qnVisNames = new Set();
 let qnVis = ''; // '' = just me
 let qnAsk = false; // v4.90 — ❓ this note is a QUESTION: it pops up on crew phones until somebody answers
 function setVis(v) {
+  // 👥 v5.51 — Eric: "unlock for the crew AND also send it to Phil or Aaron or both."
+  // 🔓 crew and 📨 names STACK now instead of wiping each other: crew = everybody can see
+  // it (and the Wizard on their phones can look it up), the names = it lands DIRECT on
+  // those phones' FROM ERIC card marked 📨. Only 🔒 wipes the slate.
   if (v === '') { qnVis = ''; qnVisNames.clear(); }         // 🔒 just me wipes the slate
-  else if (v === 'crew') { qnVis = 'crew'; qnVisNames.clear(); }
-  else { qnVis = ''; qnVisNames.has(v) ? qnVisNames.delete(v) : qnVisNames.add(v); } // names stack
+  else if (v === 'crew') { qnVis = qnVis === 'crew' ? '' : 'crew'; } // toggles; names stay
+  else { qnVisNames.has(v) ? qnVisNames.delete(v) : qnVisNames.add(v); } // names stack; crew stays
   renderVisChips();
 }
 function toggleAsk() { qnAsk = !qnAsk; renderVisChips(); }
@@ -7366,7 +7408,8 @@ function renderVisChips() {
         onchange="prefs.visRows = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4].map(r => `<option value="${r}"${r === (prefs.visRows || 2) ? ' selected' : ''}>${r} row${r > 1 ? 's' : ''}</option>`).join('')}</select>
       <select class="mini-sel" title="How many across — fewer across means bigger letters"
         onchange="prefs.visCols = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4, 5].map(c => `<option value="${c}"${c === cols ? ' selected' : ''}>${c} across</option>`).join('')}</select></div>` +
-    (qnVisNames.size > 1 ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ goes to ${[...qnVisNames].map(esc).join(' + ')} — each sees it on their own phone</div>` : '');
+    ((qnVis === 'crew' && qnVisNames.size) ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ 🔓 everybody can see it (Wizard too) · lands DIRECT 📨 on ${[...qnVisNames].map(esc).join(' + ')}</div>`
+      : qnVisNames.size > 1 ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ goes to ${[...qnVisNames].map(esc).join(' + ')} — each sees it on their own phone</div>` : '');
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
   lockGate();
 }
@@ -7457,6 +7500,7 @@ function renderLeVisChips() {
   el.classList.toggle('personal-locked', locked);
 }
 let _sharedCache = {};
+const _crewTrips = {}; // 🚚 v5.51 — truck name → open trip on a crew phone
 // 📷 v5.43 — remembers which photos are already copied into whose folder, so a sweep every
 // few minutes doesn't re-copy the same jobsite shot twenty times. '' = tried and couldn't.
 const _crewPhCache = {};
@@ -7483,7 +7527,9 @@ async function publishSharedNotes() {
     for (const e of mineFor.filter(x => !x.ask)) {
       const row = {
         id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, text: e.details, job: e.job,
-        tags: (e.tags && e.tags.length) ? e.tags : undefined, toAll: e.vis === 'crew' || undefined
+        tags: (e.tags && e.tags.length) ? e.tags : undefined, toAll: e.vis === 'crew' || undefined,
+        // 📨 v5.51 — crew-wide note that is ALSO aimed at this man: his card marks it direct
+        direct: (Array.isArray(e.sendTo) && e.sendTo.includes(name)) || undefined
       };
       const src = e.photoPath || (e.photoPaths && e.photoPaths[0]);
       if (src && list.length < 40) {
@@ -7533,8 +7579,15 @@ async function publishSharedNotes() {
         _portalCache[name] = pj;
       }
     } catch (e) { /* offline — next sweep carries it */ }
-    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, unlocks }, null, 1);
-    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(unlocks);
+    // 🚚 v5.51 — THE SHARED MILEAGE BOOK. Eric: "the mileage will still work between us"
+    // when they switch trucks. The truck list and each truck's LAST ODOMETER ride out to
+    // every crew phone, stamped with when the reading was taken. A crew phone keeps the
+    // newer stamp, so whoever ended the last trip is where the next man picks up.
+    const truckBook = trucks.map(t => ({ name: t.name,
+      last: (prefs.lastOdo || {})[t.name] || null,
+      trip: t.trip ? { by: 'Eric', ts: t.trip.ts, odo: t.trip.odo, job: t.trip.job } : null }));
+    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, unlocks, trucks: truckBook }, null, 1);
+    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(unlocks) + ':' + JSON.stringify(truckBook);
     if (_sharedCache[name] === key) continue; // nothing changed for this person
     try {
       await dbxUpload(`${CREW_DIR}/${cleanName(name)}/shared.json`, body);
@@ -7563,6 +7616,24 @@ async function checkSharedNotes() {
     if (!t) return;
     const j = JSON.parse(t);
     crewShared = (j.notes || []).slice(0, 100);
+    // 🚚 v5.51 — take Eric's truck book, keep the NEWER odometer per truck (his sweep vs
+    // a trip just ended on this phone). Trucks Eric added appear; ones he removed go.
+    if (Array.isArray(j.trucks) && j.trucks.length) {
+      const mineByName = Object.fromEntries(trucks.map(t => [t.name, t]));
+      trucks = j.trucks.map(bk => {
+        const t = mineByName[bk.name] || { name: bk.name, lastOdo: null };
+        if (bk.last && bk.last.odo != null) {
+          const mine = (prefs.lastOdo || {})[bk.name];
+          if (!mine || String(bk.last.ts || '') > String(mine.ts || '')) {
+            prefs.lastOdo = prefs.lastOdo || {};
+            prefs.lastOdo[bk.name] = { odo: bk.last.odo, ts: bk.last.ts };
+          }
+        }
+        t.othersTrip = bk.trip && bk.trip.by !== CREW_NAME ? bk.trip : null; // ⚠ someone's mid-trip
+        return t;
+      });
+      scheduleSave();
+    }
     renderCrewShared();
     crewAsks = (j.asks || []).slice(0, 10);
     renderCrewAsks();
@@ -7746,7 +7817,7 @@ function renderCrewShared() {
     const d = new Date(n.ts);
     const id = escq(String(n.id == null ? '' : n.id));
     return `<div class="sum-row" style="cursor: default; font-size: 14.5px; display: block;">
-      <span>${n.toAll ? '🔓' : '📨'} ${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
+      <span>${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${n.ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(n.ph)}')">📷 Open the picture</button>` : ''}
         <button type="button" class="pick-chip" onclick="crewNoteReply('${id}')">✎ Add your notes</button>
@@ -8032,13 +8103,19 @@ async function checkCrewLogs() {
           }
         }
       }
+      // 🚚 v5.51 — a crew phone's OPEN trip shows in Eric's mileage panel, so two men never
+      // start the same truck blind. Read from the trucks array their app uploads.
+      (Array.isArray(j.trucks) ? j.trucks : []).forEach(t => {
+        if (t && t.trip) _crewTrips[t.name] = { by: name, ts: t.trip.ts, odo: t.trip.odo };
+        else if (t && _crewTrips[t.name] && _crewTrips[t.name].by === name) delete _crewTrips[t.name];
+      });
       (j.entries || []).slice(0, 250).forEach(e => {
         // 🔒 v5.44 — belt and suspenders on Eric's side. A locked note should never have
         // reached this file at all; if one ever does (an old build, a hand-edited file),
         // it dies here rather than becoming a review card.
         if (e.mine) return;
         // Done entries only count when they close one of Eric's assigned to-dos (srcRef)
-        if (!['Clock', 'Hours', 'Note'].includes(e.type) && !(e.type === 'Done' && e.srcRef)) return;
+        if (!['Clock', 'Hours', 'Note', 'Mileage'].includes(e.type) && !(e.type === 'Done' && e.srcRef)) return;
         // ↩ an answer closes the 📢 ask by itself — next sweep clears the card off every phone.
         // (The answer text still lands below as a review card for Eric to read.)
         if (e.type === 'Note' && e.askRef != null) {
@@ -8050,6 +8127,7 @@ async function checkCrewLogs() {
         pendingQueue.push({ id: key, kind: 'crew', source: name, payload: {
           from: name, type: e.type, text: e.details || '', job: e.job || '',
           hours: e.hours, category: e.category || '', route: e.route || '', urg: e.urg || '',
+          miles: e.miles, truck: e.truck || '', odometer: e.odometer, startOdometer: e.startOdometer,
           srcRef: e.srcRef || '', day: String(e.ts).slice(0, 10),
           vis: e.vis || '', // 🔓 v5.44 — "pass this round to everybody" rides in with the note
           // 🔥 v5.09 — a crew note aimed at Eric marked NOW gets the fire-card treatment
