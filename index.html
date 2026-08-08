@@ -1285,11 +1285,11 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.28);
   }
   .sc-btn:active { filter: brightness(1.18); transform: translateY(1px); }
-  /* 🏠 v5.44 — the 🏠 plate is BUILT for crew (guard opened, rotate armed, jump allowed)
-     but stays hidden until v5.45 publishes the client list into each crew folder. A crew
-     phone can only see inside its own folder, and the portal index lives in Eric's — so
-     until Eric's phone writes a copy out, this button would open an empty page. */
-  body.crew-mode #scRow { display: none; }
+  /* 🏠 v5.45 — the 🏠 plate is ON for crew now: Eric's phone writes the client-page list
+     into each crew folder, so the button has something real behind it. Only the 🏠 plate —
+     the 👷 Crew portal plate is Eric's roster and folder publisher and stays his. */
+  body.crew-mode #scRow .sc-btn:nth-child(2) { display: none; }
+  body.crew-mode #scRow .sc-btn { flex: 1 1 100%; }
   :root[data-skin="steam"] .sc-btn {
     border: 2px solid transparent;
     border-image: linear-gradient(160deg, #f0d79a, #8a6a2a 45%, #f3e0ac 70%, #6b4f1c) 1;
@@ -1803,7 +1803,7 @@
      notifications, three simple themes. None of Eric's machinery. */
   body.crew-mode #setDayGoal, body.crew-mode #setPipes, body.crew-mode #setJobs,
   body.crew-mode #setTrucks, body.crew-mode #setCrew, body.crew-mode #setBackups, body.crew-mode #setPrivacy,
-  body.crew-mode #portalSec, body.crew-mode #qbSec, body.crew-mode #waguesSec { display: none !important; }
+  body.crew-mode #qbSec, body.crew-mode #waguesSec { display: none !important; }
   body.crew-mode #setAppear .pick-chip { display: none; }
   body.crew-mode #setAppear #skin-default, body.crew-mode #setAppear #skin-daylight,
   body.crew-mode #setAppear #skin-winter { display: inline-block; }
@@ -3026,7 +3026,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.44 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.45 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7409,6 +7409,8 @@ let _sharedCache = {};
 // 📷 v5.43 — remembers which photos are already copied into whose folder, so a sweep every
 // few minutes doesn't re-copy the same jobsite shot twenty times. '' = tried and couldn't.
 const _crewPhCache = {};
+// 🏠 v5.45 — last client-page list written to each crew folder, so a quiet sweep stays quiet
+const _portalCache = {};
 async function publishSharedNotes() {
   if (!dbx.refreshToken || CREW_NAME || !crew.length) return;
   // 🔒 personal entries can NEVER travel — even a stray vis flag doesn't override the wall
@@ -7462,6 +7464,17 @@ async function publishSharedNotes() {
     }));
     // 🔓 v5.18 — day-reopen orders ride along; the crew phone processes each exactly once
     const unlocks = ((prefs.unlockBy || {})[name] || []).slice(-5);
+    // 🏠 v5.45 — the client-page list rides out to each crew folder: job name and code only.
+    // No client phone numbers, no emails, no money — a crew phone opens the page a homeowner
+    // opens, nothing behind it. Rotating a code kills their copy on the next sweep too.
+    try {
+      const cl = ((_portalIdx || {}).clients || []).filter(c => c && c.job && c.code);
+      const pj = cl.length ? JSON.stringify({ clients: cl.map(c => ({ job: c.job, code: c.code })) }) : '';
+      if (pj && _portalCache[name] !== pj) {
+        await dbxUpload(`${CREW_DIR}/${cleanName(name)}/portal.json`, pj);
+        _portalCache[name] = pj;
+      }
+    } catch (e) { /* offline — next sweep carries it */ }
     const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, unlocks }, null, 1);
     const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(unlocks);
     if (_sharedCache[name] === key) continue; // nothing changed for this person
@@ -7972,8 +7985,28 @@ async function checkCrewLogs() {
 let _portalIdx = null;
 async function renderPortalList() {
   const box = $('portalList');
-  if (!box || CREW_NAME) return;
+  if (!box) return;
   if (!dbx.refreshToken) { box.innerHTML = '<span class="hint">Connect Dropbox first.</span>'; return; }
+  // 🏠 v5.45 — A CREW PHONE CANNOT SEE ERIC'S DROPBOX. That's the wall, and it's staying.
+  // So Eric's phone writes a short list of the live client pages into each crew folder, and
+  // the crew phone reads its own copy. What Phil gets is the VIEW: the same page the
+  // homeowner sees, opened inside the app. The buttons that change the books — rotate,
+  // journal, materials — aren't withheld from him as a matter of trust; they write into
+  // Eric's Dropbox and physically cannot run from a crew phone.
+  if (CREW_NAME) {
+    try {
+      const t = await dbxDownload(DBX_ROOT + '/portal.json');
+      _portalIdx = JSON.parse(t);
+    } catch (e) { box.innerHTML = '<span class="hint">No client pages shared with you yet — Eric turns these on from his phone.</span>'; return; }
+    const cl = _portalIdx.clients || [];
+    box.innerHTML = cl.length ? cl.map((c, i) => `
+      <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
+        <span class="sum-title" style="flex: 1 1 100%;">🏠 ${esc(c.job)}</span>
+        <button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>
+      </div>`).join('')
+      : '<span class="hint">No client pages shared with you yet — Eric turns these on from his phone.</span>';
+    return;
+  }
   try {
     const t = await dbxDownload(DBX_ROOT + '/App Data/Client Portal/index.json');
     _portalIdx = JSON.parse(t);
