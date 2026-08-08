@@ -1285,6 +1285,10 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.28);
   }
   .sc-btn:active { filter: brightness(1.18); transform: translateY(1px); }
+  /* 🏠 v5.44 — the 🏠 plate is BUILT for crew (guard opened, rotate armed, jump allowed)
+     but stays hidden until v5.45 publishes the client list into each crew folder. A crew
+     phone can only see inside its own folder, and the portal index lives in Eric's — so
+     until Eric's phone writes a copy out, this button would open an empty page. */
   body.crew-mode #scRow { display: none; }
   :root[data-skin="steam"] .sc-btn {
     border: 2px solid transparent;
@@ -1750,6 +1754,20 @@
   }
   #crewRoute { display: none; }
   body.crew-mode #crewRoute { display: block; }
+  /* 🔒 v5.44 — Eric: "when the locked button is on, gray out the buttons that are tagging
+     someone else or sending to somebody else. You have to click the unlock button and then
+     you can tag or send." So while 🔒 Just my log is picked, the tag chips and the whole
+     send/urgency block go dim AND dead — not dim-but-still-tappable, which would be a lie.
+     The who-sees-it row itself stays live: that row IS the unlock.
+     Never colour alone — the dimming is backed by the 🔒 glyph and a spelled-out line. */
+  body.crew-locked #qnTagChips, body.crew-locked #nTagChips, body.crew-locked #crewRoute {
+    opacity: 0.38; pointer-events: none; filter: saturate(0.15);
+  }
+  .lock-note { display: none; }
+  body.crew-locked .lock-note {
+    display: block; margin: 8px 0 2px; font-size: 12.5px; font-weight: 700;
+    border: 2px dashed var(--ink-muted, #8a8177); border-radius: 8px; padding: 7px 10px;
+  }
   /* 🏷 v5.43 — Eric: "make sure he has all the tags like I do." The tag chips and the
      who-sees-it chips come OFF this hide list — crew get the same wheels, the same
      ➕ tag and ✎ arrange, the same everything. */
@@ -1816,11 +1834,12 @@
   body.crew-mode .wrap > * { order: 50; }
   body.crew-mode .wrap > header { order: 0; }
   body.crew-mode #crewBadge { order: 1; }
-  body.crew-mode #qnCard { order: 2; }          /* ⚙ Grinder + 🧙 Wizard — top of the page */
-  body.crew-mode #crewAskCard { order: 3; }     /* 📢 Eric needs an answer — never buried */
-  body.crew-mode #hotStrip { order: 4; }
-  body.crew-mode #todoCard { order: 5; }
-  body.crew-mode #crewSharedCard { order: 6; }  /* 📨 FROM ERIC — reading matter, but his */
+  body.crew-mode #scRow { order: 2; }           /* 🏠 client portal plate — very top, like Eric's */
+  body.crew-mode #qnCard { order: 3; }          /* ⚙ Grinder + 🧙 Wizard — top of the page */
+  body.crew-mode #crewAskCard { order: 4; }     /* 📢 Eric needs an answer — never buried */
+  body.crew-mode #hotStrip { order: 5; }
+  body.crew-mode #todoCard { order: 6; }
+  body.crew-mode #crewSharedCard { order: 7; }  /* 📨 FROM ERIC — reading matter, but his */
   body.crew-mode .clock-card { order: 80; }     /* ⬇ the two clock faces, bottom of the page */
   body.crew-mode #crewGaugeCard { order: 81; }
   body.crew-mode .wrap > footer { order: 100; }
@@ -2169,6 +2188,7 @@
     <div id="qnVisRow">
       <div class="field" style="margin: 8px 0 4px;"><label>Who sees it</label></div>
       <div class="chips-row" id="qnVisChips"></div>
+      <div class="lock-note" id="qnLockNote">🔒 LOCKED — this one stays on your phone. Tagging and sending are switched off. Tap 📨 Eric or 🔓 All crew above to unlock them.</div>
     </div>
     <!-- crew only: who it's for + how soon -->
     <div id="crewRoute">
@@ -3006,7 +3026,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.43 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.44 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5149,6 +5169,7 @@ function renderTagChips() {
       <button type="button" class="pick-chip" onclick="tagArrangeToggle()" title="reorder or clean up the chips">✎ arrange</button>
       <span class="sp"></span>${rowsSel(prefs.tagRows || 2)}${colsSel(cols)}</div>`;
   ['qnTagChips', 'nTagChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
+  lockGate(); // 🔒 v5.44 — freshly drawn chips have to obey the lock too
 }
 // jump straight to "everything tagged X" from any log row
 function logFilterTag(t, ev) {
@@ -6096,9 +6117,34 @@ function saveNoteFrom(boxId, fromPanel) {
   if (aiAll) nExtra.ai = aiAll;
   const tags = [...qnSel];
   if (tags.length) nExtra.tags = tags;
+  // 🔒 v5.44 — ERIC'S RULE, WORD FOR WORD: "if it says just my log, no one can see it no
+  // matter what, including mine, including the crews, even if someone's tagged in it, even
+  // if it says send, even if it says needs attention."
+  // So the LOCK WINS OVER EVERYTHING. It is not a preference the bell can outvote:
+  //   · the bell is cleared — no review card on Eric's phone
+  //   · the urgency is cleared — nothing rings anybody
+  //   · a tag on it does not carry it anywhere; tags file, they don't send
+  //   · and it is stripped out of the sync payload entirely (see livePayload), so the words
+  //     never reach Dropbox at all. Not hidden — never sent.
+  // The cost is honest and he should know it: a locked note lives on that phone only. Lose
+  // the phone, lose the note. That is the price of a private page, and it's the right price.
+  let _lockedOut = false;
   if (isCrew()) { // routed note: who it's for + how soon ride on the entry for Eric's review cards
-    if (qnRoute && qnRoute !== 'The Grinder') nExtra.route = qnRoute;
-    if (qnUrg) nExtra.urg = qnUrg;
+    // v5.44 — the who-sees-it chips are REAL on a crew phone now (v5.43 rendered them but
+    // dropped the answer on the floor — this is where it gets written onto the entry).
+    if (qnVis || qnVisNames.size) {
+      nExtra.vis = qnVis === 'crew' ? 'crew'
+        : qnVisNames.size === 1 ? [...qnVisNames][0]
+        : qnVisNames.size > 1 ? [...qnVisNames] : 'crew';
+    }
+    if (!nExtra.vis) {
+      nExtra.mine = true;                       // 🔒 this phone, and nowhere else, ever
+      _lockedOut = !!(qnRoute && qnRoute !== 'The Grinder') || !!qnUrg;
+      qnRoute = ''; qnUrg = '';                 // the bell and the siren die here
+    } else {
+      if (qnRoute && qnRoute !== 'The Grinder') nExtra.route = qnRoute;
+      if (qnUrg) nExtra.urg = qnUrg;
+    }
   } else if (qnVis || qnVisNames.size || qnAsk) {
     // 🔓 unlocked — travels to the crew folder(s). v5.26: several names = several phones.
     nExtra.vis = qnVis === 'crew' ? 'crew'
@@ -6124,7 +6170,9 @@ function saveNoteFrom(boxId, fromPanel) {
   }
   qnRoute = ''; qnUrg = ''; renderRouteChips();
   const vis = nExtra.vis || '', wasAsk = qnAsk;
-  qnVis = ''; qnAsk = false; renderVisChips(); // back to 🔒 for the next note
+  qnAsk = false; visReset(); // back to the resting state for the next note
+  // never let him think a bell went out when the lock ate it
+  if (_lockedOut) toast('🔒 Just my log — so nobody was rung and this stays on your phone', false);
   if (vis) publishSharedNotes(); // fire it toward the crew folder right away when online
   if (wasAsk && !isCrew() && prefs.pushSecret) {
     // 📢 an ask rings the phones right now — the card itself rides the sweep
@@ -6783,6 +6831,10 @@ function reviewAct(id, accept) {
         toast(`To-do made from ${pay.from}'s note ✓`);
       } else {
         const extra = { who };
+        // 🔓 v5.44 — he marked it "all crew": Eric accepting it unlocks it, and the next
+        // sweep carries it out to every crew folder. Anything narrower stays Eric's alone —
+        // a crew phone can never quietly publish to another man's phone behind Eric's back.
+        if (pay.vis === 'crew' && pay.type === 'Note') extra.vis = 'crew';
         if (pay.hours != null) extra.hours = +pay.hours;
         if (pay.category) extra.category = pay.category;
         if (pay.day && /^\d{4}-\d{2}-\d{2}$/.test(pay.day) && pay.day !== localDay(new Date())) extra.ts = new Date(pay.day + 'T12:00:00');
@@ -7079,6 +7131,7 @@ function renderTxtNudges() { const box = $('nudgeStrip'); if (box) box.innerHTML
 // ============== 👷 CREW MODE (v4.65) ==============
 function applyRole() {
   document.body.classList.toggle('crew-mode', isCrew());
+  visReset(); // 🔒 v5.44 — crew phones rest on 📨 Eric, Eric's phone rests on 🔒 private
   const badge = $('crewBadge');
   if (badge) {
     badge.style.display = isCrew() ? '' : 'none';
@@ -7110,8 +7163,11 @@ function initSetupCollapse() {
   if (!dbx.refreshToken) { const d = $('setDbx'); if (d) d.classList.add('open'); }
 }
 // 🔗 v5.39 — a shortcut lands ON the section, already unfolded, everything else folded shut.
+// 🏠 v5.44 — Eric: "Phil needs access to the client portal. Put it at the top of the main
+// page like it is on mine." The 🏠 plate and the portal section come on for crew. The 👷 crew
+// plate stays Eric's — that's the roster and the folder publisher, not a jobsite tool.
 function jumpSetup(id) {
-  if (isCrew()) return;
+  if (isCrew() && id !== 'portalSec') return;
   if (!$('panel-settings').classList.contains('open')) openPanel('settings');
   else { renderPortalList(); initSetupCollapse(); }
   const sec = $(id);
@@ -7285,6 +7341,32 @@ function renderVisChips() {
         onchange="prefs.visCols = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4, 5].map(c => `<option value="${c}"${c === cols ? ' selected' : ''}>${c} across</option>`).join('')}</select></div>` +
     (qnVisNames.size > 1 ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ goes to ${[...qnVisNames].map(esc).join(' + ')} — each sees it on their own phone</div>` : '');
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
+  lockGate();
+}
+// 🔒 v5.44 — the gate. While a crew phone has nothing picked in who-sees-it, the note is
+// private, so tagging and sending are dimmed AND disabled. Picking anybody opens them back
+// up. Eric's own phone is never gated — he's the one who unlocks things for everyone else.
+// 🔒 v5.44 — the RESTING STATE. On Eric's phone a note starts 🔒 private, because his log is
+// full of things nobody else should see. On a crew phone it starts 📨 Eric, because reporting
+// to Eric is the entire job of that phone — a man who taps 🔔 Needs Eric's attention and walks
+// away must not discover a week later that it never left his pocket. Locking is a deliberate
+// act there, not a default he has to remember to undo.
+function visReset() {
+  qnVis = ''; qnVisNames.clear();
+  if (isCrew()) qnVisNames.add('Eric');
+  renderVisChips();
+}
+function lockGate() {
+  const locked = isCrew() && !qnVis && !qnVisNames.size;
+  document.body.classList.toggle('crew-locked', locked);
+  // the chips inside really go dead, not just grey — a dim button you can still press lies
+  ['qnTagChips', 'nTagChips', 'routeChips', 'urgChips'].forEach(id => {
+    const el = $(id); if (!el) return;
+    el.querySelectorAll('button, select, input').forEach(b => {
+      if (locked) b.setAttribute('disabled', ''); else b.removeAttribute('disabled');
+    });
+    el.setAttribute('aria-disabled', locked ? 'true' : 'false');
+  });
 }
 function visNewInput(btn) {
   btn.outerHTML = `<input type="text" class="mini-sel" id="visNewBox" placeholder="name…"
@@ -7856,6 +7938,10 @@ async function checkCrewLogs() {
         }
       }
       (j.entries || []).slice(0, 250).forEach(e => {
+        // 🔒 v5.44 — belt and suspenders on Eric's side. A locked note should never have
+        // reached this file at all; if one ever does (an old build, a hand-edited file),
+        // it dies here rather than becoming a review card.
+        if (e.mine) return;
         // Done entries only count when they close one of Eric's assigned to-dos (srcRef)
         if (!['Clock', 'Hours', 'Note'].includes(e.type) && !(e.type === 'Done' && e.srcRef)) return;
         // ↩ an answer closes the 📢 ask by itself — next sweep clears the card off every phone.
@@ -7870,6 +7956,7 @@ async function checkCrewLogs() {
           from: name, type: e.type, text: e.details || '', job: e.job || '',
           hours: e.hours, category: e.category || '', route: e.route || '', urg: e.urg || '',
           srcRef: e.srcRef || '', day: String(e.ts).slice(0, 10),
+          vis: e.vis || '', // 🔓 v5.44 — "pass this round to everybody" rides in with the note
           // 🔥 v5.09 — a crew note aimed at Eric marked NOW gets the fire-card treatment
           hot: (e.type === 'Note' && e.route === 'Eric' && e.urg === 'now') || undefined } });
         if (e.type === 'Note' && e.route) setAck(name, e.id, 'received'); // 📨 receipt stamp #1
@@ -7899,7 +7986,7 @@ async function renderPortalList() {
       <button class="btn-ghost req-x" onclick="portalCopy(${i})">📋 Copy link</button>
       <button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
       <button class="btn-ghost req-x" onclick="portalIntel(${i})">📊 What they look at</button>
-      <button class="btn-ghost req-x" onclick="portalRotate(${i})">🔄 Rotate code</button>
+      <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? This kills their link for good' : '🔄 Rotate code'}</button>
     </div>`).join('') || '<span class="hint">No clients yet.</span>';
 }
 function portalUrl(i) { return location.origin + '/c/?c=' + encodeURIComponent(_portalIdx.clients[i].code); }
@@ -7919,7 +8006,23 @@ function clientPreviewClose() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('cliPrev') && $('cliPrev').classList.contains('show')) clientPreviewClose();
 });
-function portalGuard() { return !!CREW_NAME; } // crew phones never touch client codes
+// 🏠 v5.44 — Eric was asked how much of the portal Phil should get and chose the whole
+// Setup section, contact details and the 🔄 rotate button included. His call, his clients.
+// The guard stays as a named place to put the wall back if he changes his mind.
+function portalGuard() { return false; }
+// 🔄 v5.44 — rotate is the one irreversible button in here: it kills a homeowner's link
+// dead and there is no undo. On a crew phone it takes TWO taps, with the consequence
+// spelled out in words on the button itself, so a phone in a tool bag can't do it.
+let _rotArm = 0;
+function rotateArmed(i) {
+  if (!CREW_NAME) return true;
+  if (_rotArm === i + 1) { _rotArm = 0; return true; }
+  _rotArm = i + 1;
+  renderPortalList();
+  toast('⚠ This KILLS the client\'s current link for good — tap 🔄 again to do it', false);
+  setTimeout(() => { if (_rotArm === i + 1) { _rotArm = 0; renderPortalList(); } }, 6000);
+  return false;
+}
 async function portalCopy(i) {
   if (portalGuard()) return;
   try { await navigator.clipboard.writeText(portalUrl(i)); toast('📋 Link copied — text it to the client ✓'); }
@@ -7943,6 +8046,7 @@ async function portalIntel(i) {
 }
 async function portalRotate(i) {
   if (portalGuard()) return;
+  if (!rotateArmed(i)) return;
   const c = _portalIdx.clients[i];
   const fresh = c.key + '-' + Math.random().toString(16).slice(2, 8);
   try {
@@ -10804,7 +10908,10 @@ function livePayload() {
   return JSON.stringify({
     jobs, trucks, crew, prefs,
     shiftOpen, askLog,
-    entries: entries.filter(e => !e.sample),
+    // 🔒 v5.44 — a crew note marked "🔒 Just my log" is CUT OUT of the sync here. Not
+    // flagged for someone downstream to respect — physically absent from the file that
+    // goes to Dropbox, so there is nothing for Eric or anyone else to find or read.
+    entries: entries.filter(e => !e.sample && !(CREW_NAME && e.mine)),
     todos: todos.filter(t => !t.sample)
   }, null, 1);
 }
