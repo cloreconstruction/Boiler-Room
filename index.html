@@ -1750,11 +1750,14 @@
   }
   #crewRoute { display: none; }
   body.crew-mode #crewRoute { display: block; }
+  /* 🏷 v5.43 — Eric: "make sure he has all the tags like I do." The tag chips and the
+     who-sees-it chips come OFF this hide list — crew get the same wheels, the same
+     ➕ tag and ✎ arrange, the same everything. */
   body.crew-mode #dayTubeCard,
-  body.crew-mode .ask-foot, body.crew-mode #qnTagChips, body.crew-mode .kpis,
+  body.crew-mode .ask-foot, body.crew-mode .kpis,
   body.crew-mode .cap-btn[data-panel="file"], body.crew-mode .cap-btn[data-panel="mileage"],
   body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"],
-  body.crew-mode #qnVisRow, body.crew-mode #nVisChips, body.crew-mode #coBillRow { display: none !important; }
+  body.crew-mode #coBillRow { display: none !important; }
   /* v4.95 — 🔥 hot card: thick frame + spelled words + slow breathing, never color alone */
   .hot-card { border: 3px solid var(--err, #b3452f); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px;
     animation: hotBreathe 2.2s ease-in-out infinite; }
@@ -1804,19 +1807,22 @@
   /* v4.91 — crew mostly ask Eric or Phil, not the Wizard: Grinder stays big, Wizard steps back */
   body.crew-mode .plate-row { align-items: center; }
   body.crew-mode .plate-btn--wiz { flex: 0 0 30%; }
-  /* v5.18 — crew page order: clock first, grinder second, needs-you next; reading matter sinks */
+  /* 🔧 v5.43 — Eric flipped the crew page: "grinder and the wizard at the top, the time
+     clocks at the bottom." A crew phone throws notes and photos at it all day long and
+     pulls the clock lever twice — so the thing used fifty times a day rides on top, and
+     the two clock faces sink to the bottom where they're a deliberate reach.
+     What Eric NEEDS answered still outranks everything: 📢 needs-an-answer stays high. */
   body.crew-mode .wrap { display: flex; flex-direction: column; }
   body.crew-mode .wrap > * { order: 50; }
   body.crew-mode .wrap > header { order: 0; }
   body.crew-mode #crewBadge { order: 1; }
-  body.crew-mode #hotStrip { order: 2; }
-  body.crew-mode .clock-card { order: 3; }
-  body.crew-mode #crewGaugeCard { order: 4; }
-  body.crew-mode #qnCard { order: 5; }
-  body.crew-mode #crewAskCard { order: 6; }
-  body.crew-mode #todoCard { order: 7; }
-  body.crew-mode #dayTubeCard { order: 8; }
-  body.crew-mode #crewSharedCard { order: 30; }
+  body.crew-mode #qnCard { order: 2; }          /* ⚙ Grinder + 🧙 Wizard — top of the page */
+  body.crew-mode #crewAskCard { order: 3; }     /* 📢 Eric needs an answer — never buried */
+  body.crew-mode #hotStrip { order: 4; }
+  body.crew-mode #todoCard { order: 5; }
+  body.crew-mode #crewSharedCard { order: 6; }  /* 📨 FROM ERIC — reading matter, but his */
+  body.crew-mode .clock-card { order: 80; }     /* ⬇ the two clock faces, bottom of the page */
+  body.crew-mode #crewGaugeCard { order: 81; }
   body.crew-mode .wrap > footer { order: 100; }
   /* v5.18 — punch tape lines are tappable: fix hours / times / notes right where you read them
      (v5.24: the RUNNING punch is not — finish it first, or ↩ undo and start over) */
@@ -3000,7 +3006,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.42 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.43 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7256,15 +7262,22 @@ function renderVisChips() {
   // v5.33 — same rows wheel as the tags: 4 per row, Eric decides how many rows show.
   // A SELECTED name never hides, no matter the cap.
   const cols = visCols(), cap = (prefs.visRows || 2) * cols;
-  const opts = [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
-  const capped = opts.filter(([v], i) => i < cap - 1 || selOf(v)); // -1 keeps room for ❓
+  // 👷 v5.43 — a crew phone gets the same row, worded from HIS side of the truck.
+  // 🔒 keeps it in his own log · 📨 Eric is the everyday one · 🔓 asks Eric to pass it round.
+  // He does NOT get ❓ (that's Eric's siren) or ➕ person (the roster is Eric's to keep).
+  const mine = isCrew();
+  const opts = mine
+    ? [['', '🔒 Just my log'], ['Eric', '📨 Eric'], ['crew', '🔓 All crew'],
+       ...crew.filter(c => c !== CREW_NAME).map(c => [c, '📨 ' + c])]
+    : [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
+  const capped = opts.filter(([v], i) => i < cap - (mine ? 0 : 1) || selOf(v)); // room for ❓ on Eric's
   const html = capped.map(([v, w]) => {
     const on = selOf(v);
     return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="setVis('${escq(v)}')" aria-pressed="${on}">${on ? '✓&nbsp;' : ''}${esc(w)}</button>`;
   }).join('') +
-    `<button type="button" class="pick-chip${qnAsk ? ' sel' : ''}" onclick="toggleAsk()" aria-pressed="${qnAsk}" title="Rings their phones and stays up big until somebody answers — then it clears for everyone">${qnAsk ? '✓&nbsp;' : ''}❓ Needs an answer</button>` +
+    (mine ? '' : `<button type="button" class="pick-chip${qnAsk ? ' sel' : ''}" onclick="toggleAsk()" aria-pressed="${qnAsk}" title="Rings their phones and stays up big until somebody answers — then it clears for everyone">${qnAsk ? '✓&nbsp;' : ''}❓ Needs an answer</button>`) +
     `<div class="chip-bar">
-      <button type="button" class="pick-chip" onclick="visNewInput(this)" title="Add a person">➕ person</button>
+      ${mine ? '' : `<button type="button" class="pick-chip" onclick="visNewInput(this)" title="Add a person">➕ person</button>`}
       <span class="sp"></span>
       <select class="mini-sel" title="How many rows show"
         onchange="prefs.visRows = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4].map(r => `<option value="${r}"${r === (prefs.visRows || 2) ? ' selected' : ''}>${r} row${r > 1 ? 's' : ''}</option>`).join('')}</select>
@@ -7311,16 +7324,44 @@ function renderLeVisChips() {
   }).join('');
 }
 let _sharedCache = {};
+// 📷 v5.43 — remembers which photos are already copied into whose folder, so a sweep every
+// few minutes doesn't re-copy the same jobsite shot twenty times. '' = tried and couldn't.
+const _crewPhCache = {};
 async function publishSharedNotes() {
   if (!dbx.refreshToken || CREW_NAME || !crew.length) return;
   // 🔒 personal entries can NEVER travel — even a stray vis flag doesn't override the wall
   const shared = entries.filter(e => e.vis && !e.sample && !e.personal).slice(0, 120);
   for (const name of crew) {
     const mineFor = shared.filter(e => visFor(e, name)); // v5.26 — arrays of names count too
-    const list = mineFor.filter(e => !e.ask).map(e => ({
-      id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, text: e.details, job: e.job,
-      tags: (e.tags && e.tags.length) ? e.tags : undefined, toAll: e.vis === 'crew' || undefined
-    }));
+    // 📷 v5.43 — the PICTURE travels now, not just the words. Eric: "he needs to be able to
+    // open the picture." A crew phone can only see inside its own folder, so the photo gets
+    // COPIED into Crew/<name>/photos/ and he opens his own copy. No share links, ever —
+    // a link would be a door around the wall, and the wall is the whole point.
+    const list = [];
+    for (const e of mineFor.filter(x => !x.ask)) {
+      const row = {
+        id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, text: e.details, job: e.job,
+        tags: (e.tags && e.tags.length) ? e.tags : undefined, toAll: e.vis === 'crew' || undefined
+      };
+      const src = e.photoPath || (e.photoPaths && e.photoPaths[0]);
+      if (src && list.length < 40) {
+        const ck = name + '|' + src;
+        if (_crewPhCache[ck] !== undefined) { if (_crewPhCache[ck]) row.ph = _crewPhCache[ck]; }
+        else {
+          const file = String(src).split('/').pop().replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80);
+          const dest = `${CREW_DIR}/${cleanName(name)}/photos/${file}`;
+          try {
+            await dbxRpc('files/copy_v2', { from_path: src, to_path: dest, autorename: false });
+            _crewPhCache[ck] = dest;
+          } catch (err) {
+            // already copied on an earlier sweep is the common case — treat it as done
+            _crewPhCache[ck] = /conflict/i.test(String(err && err.message)) ? dest : '';
+          }
+          if (_crewPhCache[ck]) row.ph = _crewPhCache[ck];
+        }
+      }
+      list.push(row);
+    }
     // ❓ open asks travel separately and LOUD; an answered ask (askDone) drops off every phone
     const asks = mineFor.filter(e => e.ask && !e.askDone).slice(0, 10).map(e => ({
       id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, q: e.details, job: e.job,
@@ -7524,16 +7565,50 @@ function renderCrewShared() {
   if (!card) return;
   // in Eric's 👁 preview, derive the list from his own entries so he sees exactly what would land
   const list = crewPreview
-    ? entries.filter(e => e.vis && !e.sample).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ ts: e.ts, text: e.details, job: e.job, toAll: e.vis === 'crew' }))
+    ? entries.filter(e => e.vis && !e.sample).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ id: e.id, ts: e.ts, text: e.details, job: e.job, toAll: e.vis === 'crew', ph: e.photoPath || (e.photoPaths || [])[0] }))
     : crewShared;
   card.style.display = (isCrew() && list.length) ? '' : 'none';
   if (!isCrew() || !list.length) return;
+  // 📷 v5.43 — a note Eric sent is no longer read-only wallpaper. If a picture came with it
+  // there's a button to open it full screen, and every row has a ✎ to send words back —
+  // "that's the wrong window", "got it, done Tuesday". His words go to ERIC, not the crew.
   $('crewSharedList').innerHTML = list.slice(0, 40).map(n => {
     const d = new Date(n.ts);
-    return `<div class="sum-row" style="cursor: default; font-size: 14.5px;">
+    const id = escq(String(n.id == null ? '' : n.id));
+    return `<div class="sum-row" style="cursor: default; font-size: 14.5px; display: block;">
       <span>${n.toAll ? '🔓' : '📨'} ${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
+      <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+        ${n.ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(n.ph)}')">📷 Open the picture</button>` : ''}
+        <button type="button" class="pick-chip" onclick="crewNoteReply('${id}')">✎ Add your notes</button>
+      </div>
+      <div id="crRep-${id}"></div>
     </div>`;
   }).join('');
+}
+// ✎ v5.43 — Eric's note stays exactly as he wrote it; Phil's words ride back ATTACHED to it.
+// Nothing gets overwritten from two directions at once, so a correction can never eat the
+// original — and Eric still gets the fix in his log, tied to the thing it's fixing.
+function crewNoteReply(id) {
+  const box = $('crRep-' + id);
+  if (!box) return;
+  if (box.dataset.open) { box.dataset.open = ''; box.innerHTML = ''; return; }
+  box.dataset.open = '1';
+  box.innerHTML = `<textarea id="crRepT-${esc(id)}" rows="2" class="grow" style="width: 100%; margin-top: 6px;"
+      placeholder="what's wrong with it, or what you did — goes straight to Eric"></textarea>
+    <button class="btn-primary" style="margin-top: 6px;" onclick="crewNoteReplySend('${escq(id)}')">↩ Send it to Eric</button>`;
+  const t = $('crRepT-' + id); if (t) t.focus();
+}
+function crewNoteReplySend(id) {
+  if (crewPreview) { toast('👁 Preview — on a crew phone this sends your notes straight to Eric'); return; }
+  const t = $('crRepT-' + id);
+  const txt = (t && t.value.trim()) || '';
+  if (!txt) { toast('Type your notes first', false); if (t) t.focus(); return; }
+  const src = (crewShared || []).find(n => String(n.id) === String(id)) || {};
+  const orig = String(src.text || '').replace(/\s+/g, ' ').slice(0, 90);
+  addEntry('Note', `✎ ${CREW_NAME} on "${orig}": ${txt}`, src.job || curJob,
+    { noSniff: true, vis: 'Eric', replyTo: id, ...(src.ph ? { photoPath: src.ph } : {}) });
+  const box = $('crRep-' + id); if (box) { box.dataset.open = ''; box.innerHTML = ''; }
+  toast('↩ Sent to Eric ✓');
 }
 
 // --- 💵 v4.70 pay grades + live wage ticker ---
