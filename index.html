@@ -3070,7 +3070,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.59 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.60 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8761,8 +8761,17 @@ async function journalRelease() {
 // Per client: /App Data/Client Portal/materials-<code>.json · master template: materials-master.json
 let _matD = null, _matIdx = null, _matEdit = '', _matDirty = false, _matArm = '';
 const MAT_STATES = [['pick', '○ PICK NEEDED'], ['picked', '● PICKED'], ['ordered', '📦 ORDERED'], ['arrived', '✅ ARRIVED']];
+// 📝 v5.60 — Eric runs PLANNING on this board too: permits, plans, bids. Those aren't picks —
+// "the homeowner does not have to pick out the permit." So an item is EITHER a homeowner item
+// (the four pick lamps, on their page) or an office task (TO DO → IN WORK → DONE, theirs to
+// never see). One button flips it: 🏠 Requires homeowner input or choice.
+const TASK_STATES = [['todo', '○ TO DO'], ['work', '⚙ IN WORK'], ['done', '✅ DONE']];
+const matIsHm = it => !!it.hm;
 const MAT_TRADES = ['Electrical', 'Plumbing', 'Tile', 'Doors', 'Windows', 'Paint', 'Cabinets', 'Flooring', 'Siding', 'Roofing', 'Decks', 'Misc'];
-function matWord(s) { return (MAT_STATES.find(x => x[0] === (s || 'pick')) || MAT_STATES[0])[1]; }
+function matWord(s, hm) {
+  const chain = hm === false ? TASK_STATES : MAT_STATES;
+  return (MAT_STATES.find(x => x[0] === s) || TASK_STATES.find(x => x[0] === s) || chain[0])[1];
+}
 async function openMaterials(i) {
   if (portalGuard()) return;
   if (CREW_NAME) { toast('📋 The board is coming to office phones next — it lives in Eric\'s Dropbox and needs its own copy out here first', false); return; }
@@ -8771,6 +8780,18 @@ async function openMaterials(i) {
   toast('⏳ Loading the board…');
   try { _matD = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json') || 'null'); } catch (e) { _matD = null; }
   if (!_matD || !Array.isArray(_matD.rooms)) _matD = { updated: '', rooms: [] };
+  // 🏢 v5.60 — the client file holds only what the homeowner may see; everything Eric marked
+  // on it before v5.60 WAS homeowner-facing, so stamp those. Office tasks live in their own
+  // file the client page never asks for. Merge the two by room name for one board on screen.
+  _matD.rooms.forEach(r => (r.items || []).forEach(x => { if (!x.hm) x.hm = true; }));
+  try {
+    const off = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-office-' + c.code + '.json') || 'null');
+    if (off && Array.isArray(off.rooms)) off.rooms.forEach(orm => {
+      const mine = _matD.rooms.find(r => r.name.toLowerCase() === orm.name.toLowerCase());
+      if (mine) mine.items = [...(mine.items || []), ...(orm.items || [])];
+      else _matD.rooms.push(orm);
+    });
+  } catch (e) { /* no office sheet yet */ }
   renderMatMgr();
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
@@ -8784,7 +8805,7 @@ function matNextId() {
 function renderMatMgr() {
   const c = _portalIdx.clients[_matIdx];
   const box = $('revBox');
-  const need = _matD.rooms.reduce((s, r) => s + (r.items || []).filter(x => (x.s || 'pick') === 'pick').length, 0);
+  const need = _matD.rooms.reduce((s, r) => s + (r.items || []).filter(x => matIsHm(x) && (x.s || 'pick') === 'pick').length, 0);
   box.innerHTML = `<h3>📋 ${esc(c.job)} — materials board${_matDirty ? ' <span style="color: var(--err, #c0392b);">· unsaved</span>' : ''}</h3>
     <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} rooms · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client. Tap a lamp to advance it; ✎ opens the works.` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
     ${_matD.rooms.map((r, ri) => `<div class="set-section fc-sec" style="margin-top: 10px;"><h4>${esc(r.name)}
@@ -8808,8 +8829,8 @@ function matMgrItem(ri, it) {
   const editing = _matEdit === it.id;
   return `<div style="border-top: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent); padding: 7px 0;">
     <div class="frow" style="align-items: center; gap: 6px;">
-      <button class="btn-ghost req-x" style="flex: none; min-width: 118px;" onclick="matCycle('${escq(it.id)}')" title="tap to advance the lamps">${matWord(it.s)}</button>
-      <span style="flex: 1; min-width: 120px;"><b>${esc(it.n)}</b> <span class="hint" style="margin: 0;">· ${esc(it.t || 'Misc')}${kids.length ? ` · ${kids.filter(k => k.ok).length}/${kids.length}` : ''}</span>${ready && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY TO ORDER</b>' : ''}</span>
+      <button class="btn-ghost req-x" style="flex: none; min-width: 118px;" onclick="matCycle('${escq(it.id)}')" title="tap to advance the lamps">${matWord(it.s, matIsHm(it))}</button>
+      <span style="flex: 1; min-width: 120px;"><b>${esc(it.n)}</b> <span class="hint" style="margin: 0;">· ${matIsHm(it) ? '🏠' : '🏢'} ${esc(it.t || 'Misc')}${kids.length ? ` · ${kids.filter(k => k.ok).length}/${kids.length} steps` : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY TO ORDER</b>' : ready && !matIsHm(it) && it.s !== 'done' ? ' <b style="color: var(--accent);">● ALL STEPS DONE</b>' : ''}</span>
       <button class="btn-ghost req-x" onclick="_matEdit = _matEdit === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()">✎</button>
       <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
     </div>
@@ -8819,10 +8840,15 @@ function matMgrItem(ri, it) {
 }
 function matMgrEditor(it) {
   const id = escq(it.id);
+  const hm = matIsHm(it);
   return `<div class="frow" style="margin-top: 8px; gap: 8px;">
+    <div class="field" style="flex: 1 1 100%;">
+      <button type="button" class="pick-chip${hm ? ' sel' : ''}" style="width: 100%; font-weight: 800; letter-spacing: 0.4px;"
+        onclick="matHmToggle('${id}')" aria-pressed="${hm}">
+        ${hm ? '✓ 🏠 REQUIRES HOMEOWNER INPUT OR CHOICE — on their page, pick lamps' : '🏢 OFFICE ONLY — they never see this · tap if they need to pick or approve it'}</button></div>
     <div class="field" style="flex: 2; min-width: 150px;"><label>Item</label><input type="text" value="${esc(it.n)}" onchange="matSet('${id}', 'n', this.value)"></div>
     <div class="field"><label>Trade</label><select onchange="matSet('${id}', 't', this.value)">${MAT_TRADES.map(t => `<option${t === it.t ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
-    <div class="field" style="flex: 1 1 100%;"><label>Their pick (what's decided)</label><input type="text" value="${esc(it.pick || '')}" onchange="matSet('${id}', 'pick', this.value)"></div>
+    ${hm ? `<div class="field" style="flex: 1 1 100%;"><label>Their pick (what's decided)</label><input type="text" value="${esc(it.pick || '')}" onchange="matSet('${id}', 'pick', this.value)"></div>` : ''}
     <div class="field" style="flex: 1 1 100%;"><label>Link</label><input type="text" value="${esc(it.url || '')}" onchange="matSet('${id}', 'url', this.value)"></div>
     <div class="field" style="flex: 1 1 100%;"><label>Status note to the client ("can't get this one — options below")</label><textarea rows="2" class="grow" onchange="matSet('${id}', 'note', this.value)">${esc(it.note || '')}</textarea></div>
     <div class="field" style="flex: 1 1 100%;"><label>Options for them to pick (one per line: title | link | price)</label><textarea rows="3" class="grow" onchange="matSetOpts('${id}', this.value)">${esc((it.opts || []).map(o => [o.t, o.url || '', o.price || ''].join(' | ').replace(/ \| +$/, '').replace(/ \| $/, '')).join('\n'))}</textarea></div>
@@ -8832,8 +8858,8 @@ function matMgrEditor(it) {
       <button type="button" class="pick-chip${it.showEta ? ' sel' : ''}" style="width: 100%; font-weight: 800; letter-spacing: 0.5px;"
         onclick="matSet('${id}', 'showEta', ${it.showEta ? 'false' : 'true'}); renderMatMgr()" aria-pressed="${!!it.showEta}">
         ${it.showEta ? '✓ DATES SHOWN TO THE CLIENT — tap to hide' : '○ DATES HIDDEN — crew only · tap to show them'}</button></div>
-    <div class="field" style="flex: 1 1 100%;"><label>Grouped pieces — e.g. every window in the order (one per line: name | note)</label><textarea rows="3" class="grow" onchange="matSetKids('${id}', this.value)">${esc((it.kids || []).map(k => k.n + (k.note ? ' | ' + k.note : '')).join('\n'))}</textarea></div>
-    ${(it.kids || []).length ? `<div class="field" style="flex: 1 1 100%;"><label>Confirm each piece — all green = READY TO ORDER</label>
+    <div class="field" style="flex: 1 1 100%;"><label>Sub-items — the steps under this one (one per line: step | note)</label><textarea rows="3" class="grow" onchange="matSetKids('${id}', this.value)">${esc((it.kids || []).map(k => k.n + (k.note ? ' | ' + k.note : '')).join('\n'))}</textarea></div>
+    ${(it.kids || []).length ? `<div class="field" style="flex: 1 1 100%;"><label>${hm ? 'Confirm each piece — all green = READY TO ORDER' : 'Check the steps off — all green lights ● ALL STEPS DONE'}</label>
       <div class="chips-row">${it.kids.map((k, ki) => `<button type="button" class="pick-chip${k.ok ? ' sel' : ''}" onclick="matKidOk('${id}', ${ki})">${k.ok ? '● ✓ ' : '○ '}${esc(k.n)}</button>`).join('')}</div></div>` : ''}
     ${(it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">${it.remarks.slice(-4).map(r => `${r.from === 'client' ? '👤 client' : 'you'}: ${esc(r.text)}`).join('<br>')}</div>` : ''}
     <button class="btn-ghost" style="flex: 1 1 100%;" onclick="_matEdit = ''; renderMatMgr()">✓ Done with this item</button>
@@ -8886,9 +8912,24 @@ function matKidOk(id, ki) {
 function matCycle(id) {
   const it = matFindItem(id);
   if (!it) return;
-  const order = ['pick', 'picked', 'ordered', 'arrived'];
-  it.s = order[(order.indexOf(it.s || 'pick') + 1) % 4];
+  const order = matIsHm(it) ? ['pick', 'picked', 'ordered', 'arrived'] : ['todo', 'work', 'done'];
+  const at = order.indexOf(it.s || order[0]);
+  it.s = order[(at + 1) % order.length];
   if (it.s === 'ordered' && !it.odate) it.odate = localDay(new Date());
+  _matDirty = true;
+  renderMatMgr();
+}
+// 🏠↔🏢 flip an item between homeowner-pick and office-task; the lamp maps across sensibly
+function matHmToggle(id) {
+  const it = matFindItem(id);
+  if (!it) return;
+  if (matIsHm(it)) {
+    delete it.hm;
+    it.s = it.s === 'arrived' ? 'done' : it.s === 'ordered' ? 'work' : 'todo';
+  } else {
+    it.hm = true;
+    it.s = it.s === 'done' ? 'arrived' : it.s === 'work' ? 'picked' : 'pick';
+  }
   _matDirty = true;
   renderMatMgr();
 }
@@ -8905,7 +8946,7 @@ function matAddItem(ri) {
   if (!r) return;
   const id = matNextId();
   r.items = r.items || [];
-  r.items.push({ id, n: 'New item', t: 'Misc', s: 'pick' });
+  r.items.push({ id, n: 'New item', t: 'Misc', s: 'todo' }); // office task until the 🏠 button says otherwise
   _matEdit = id; _matDirty = true;
   renderMatMgr();
 }
@@ -8944,7 +8985,13 @@ async function matSave() {
   const c = _portalIdx.clients[_matIdx];
   _matD.updated = localDay(new Date());
   try {
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json', JSON.stringify(_matD));
+    // split at the wall: their file gets 🏠 items only, ours gets the rest — a task named
+    // "argue the permit fee down" never rides to a homeowner's browser at all.
+    const cut = hm => ({ updated: _matD.updated, seq: _matD.seq,
+      rooms: _matD.rooms.map(r => ({ name: r.name, items: (r.items || []).filter(x => !!x.hm === hm) }))
+        .filter(r => r.items.length) });
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json', JSON.stringify(cut(true)));
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-office-' + c.code + '.json', JSON.stringify(cut(false)));
     // bump the page stamp so their lamp lights
     const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
     try { const d = JSON.parse(await dbxDownload(path) || '{}'); d.updated = _matD.updated; await dbxUpload(path, JSON.stringify(d, null, 1)); } catch (e) {}
