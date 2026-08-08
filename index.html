@@ -1831,9 +1831,15 @@
   .wf-q { font-weight: 800; font-size: 13.5px; letter-spacing: .8px; color: var(--ink-2); margin-bottom: 12px; text-transform: uppercase; }
   .wf-foot { padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 2px solid color-mix(in srgb, var(--accent) 34%, transparent); }
   .wf-back { width: 100%; font-size: 17px; padding: 15px; font-weight: 800; letter-spacing: 1px; }
-  .qn-div { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; padding-top: 12px;
-    border-top: 2px solid color-mix(in srgb, var(--accent) 34%, transparent); }
-  .qn-div-label { font-size: 11px; font-weight: 800; letter-spacing: 1.3px; color: var(--ink-2); }
+  /* 📏 v5.55 — Eric: "a harder separation... we're always looking below for the grinder and
+     wizard buttons." The seam is a real brass rail now: double rule, raised plate label,
+     breathing room above it — writing lives above the rail, reading lives below it. */
+  .qn-div { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 22px; padding-top: 12px;
+    border-top: 4px double var(--accent, #a8812c); position: relative; }
+  .qn-div::before { content: ''; position: absolute; top: -8px; left: -14px; right: -14px; height: 3px;
+    background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .qn-div-label { font-size: 11.5px; font-weight: 800; letter-spacing: 1.6px; color: var(--accent-ink, #fff);
+    background: var(--accent, #a8812c); padding: 3px 10px; border-radius: 5px; box-shadow: 0 1px 3px #00000044; }
   /* ✓✓ v5.06 verification lamps: word + glyph + weight, never color alone */
   .vv { white-space: nowrap; letter-spacing: .4px; }
   .vv-on { font-weight: 800; opacity: 1; }
@@ -2194,6 +2200,13 @@
         <span class="plate-txt">🧙 Ask the Wizard</span>
       </button>
     </div>
+    <!-- 📗 v5.55 — Eric: "me and Phil and the crew and everybody need a little button that
+         says to the bookkeeper." Grinds the note + photos like normal AND pops the phone's
+         send sheet labeled for the books, same finger-tap. When the Logan/QB robot address
+         is wired up later, this same button switches from the send sheet to sending direct. -->
+    <button type="button" class="btn-ghost" id="bkkBtn" onclick="toBookkeeper()"
+      style="width: 100%; margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; border-width: 2px;">
+      📗 TO THE BOOKKEEPER — files it here + opens the send sheet</button>
     <div class="frow" style="margin-top: 10px; align-items: center; flex-wrap: nowrap;">
       <!-- v5.26 — Eric kept hunting for this wheel: bigger, bolder, brass-rimmed -->
       <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0; font-size: 16.5px; font-weight: 800; padding: 12px 10px; border: 2px solid var(--accent); border-radius: 10px;"></select>
@@ -3053,7 +3066,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.54 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.55 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5095,6 +5108,30 @@ function tagToggle(n) { qnSel.has(n) ? qnSel.delete(n) : qnSel.add(n); renderTag
 // grays out and goes dead, and the note saves marked personal, which the publish filter
 // already refuses to ship anywhere. Untap the tag and the row unlocks. The 🔒 chip and the
 // spelled-out bar ARE the big lock — same one motion he asked about, no second switch.
+// 📗 v5.55 — one tap: the receipt goes onto the phone's send sheet (text it to Logan) AND
+// grinds into the log tagged Bookkeeper, so "what have I sent the books this month" is one
+// Wizard question. The share must ride THIS tap — phones refuse a sheet that comes later.
+function toBookkeeper() {
+  const t = ($('askText') && $('askText').value.trim()) || '';
+  if (!t && !notePhotos.length) { toast('Type the note or add the receipt photo first, then 📗', false); return; }
+  const jobWord = (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : curJob || '—';
+  const body = `${t || 'Receipt'} — ${jobWord}`;
+  if (navigator.share) {
+    try {
+      if (notePhotos.length && navigator.canShare && navigator.canShare({ files: notePhotos })) {
+        navigator.share({ files: notePhotos.slice(), text: body, title: 'For the bookkeeper' }).catch(() => {});
+      } else {
+        navigator.share({ text: body, title: 'For the bookkeeper' }).catch(() => {});
+      }
+    } catch (e) { /* no sheet — it still files below */ }
+  } else {
+    toast('No send sheet in this browser — filing it here with the 📗 tag ✓', false);
+  }
+  if (!knownTags().some(g => g.toLowerCase() === 'bookkeeper')) prefs.tags.push('Bookkeeper');
+  qnSel.add('Bookkeeper');
+  if (!t) { $('askText').value = 'Receipt'; }
+  saveQuickNote();
+}
 function personalTagOn() {
   return [...qnSel].some(g => g.toLowerCase() === 'personal' ||
     personalFolks().some(pf => g.toLowerCase() === pf.toLowerCase()));
@@ -7132,8 +7169,33 @@ function textMeterHtml() {
   const word = over ? `▲ ${diff} over an average day`
     : diff === 0 ? '● right at your average'
     : `▼ ${diff} under an average day`;
+  // 📈 v5.55 — Eric: "highest day this year, and lowest day of the week — keep that really
+  // small, like the average." One quiet second line under the first; facts, not decoration.
+  const yr = new Date().getFullYear();
+  const byDay = {}, byWk = [0, 0, 0, 0, 0, 0, 0], wkN = [0, 0, 0, 0, 0, 0, 0];
+  entries.forEach(e => {
+    if (!e.texted || e.sample) return;
+    const d = new Date(e.ts);
+    if (d.getFullYear() !== yr) return;
+    const ds = localDay(d);
+    byDay[ds] = (byDay[ds] || 0) + 1;
+  });
+  const today = localDay(new Date());
+  Object.entries(byDay).forEach(([ds, cnt]) => {
+    if (ds === today) return; // today is still filling — it competes once it's done
+    const wd = new Date(ds + 'T12:00:00').getDay();
+    byWk[wd] += cnt; wkN[wd]++;
+  });
+  let recDay = '', recN = 0;
+  Object.entries(byDay).forEach(([ds, cnt]) => { if (cnt > recN) { recN = cnt; recDay = ds; } });
+  let lowWd = -1, lowAvg = Infinity;
+  for (let w = 0; w < 7; w++) if (wkN[w] && byWk[w] / wkN[w] < lowAvg) { lowAvg = byWk[w] / wkN[w]; lowWd = w; }
+  const WD = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
+  const recBit = recN ? `🏆 record ${recN} — ${new Date(recDay + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' })}${recDay === today ? ' (today!)' : ''}` : '';
+  const lowBit = lowWd >= 0 ? `🕊 quietest: ${WD[lowWd]} (${lowAvg.toFixed(1)})` : '';
   return `<div class="tm-wrap">
     <div class="tm-line"><span>📊 ${n} today</span><span>average ${avg.toFixed(1)}/day · last ${s.days} day${s.days > 1 ? 's' : ''}</span></div>
+    ${recBit || lowBit ? `<div class="tm-line" style="opacity: .75;"><span>${recBit}</span><span>${lowBit}</span></div>` : ''}
     <div class="tm-bar" role="img" aria-label="${n} texts today against an average of ${avg.toFixed(1)} a day">
       <div class="tm-avg" style="left: ${notch.toFixed(1)}%;"></div>
       <div class="tm-fill${over ? ' over' : ''}" style="width: ${pct.toFixed(1)}%;"></div>
