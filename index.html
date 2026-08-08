@@ -1289,7 +1289,9 @@
      into each crew folder, so the button has something real behind it. Only the 🏠 plate —
      the 👷 Crew portal plate is Eric's roster and folder publisher and stays his. */
   body.crew-mode #scRow .sc-btn:nth-child(2) { display: none; }
-  body.crew-mode #scRow .sc-btn { flex: 1 1 100%; }
+  /* one plate, so it takes the whole width and reads like the button it is */
+  body.crew-mode #scRow { grid-template-columns: 1fr; }
+  body.crew-mode #scRow .sc-btn { font-size: 15px; min-height: 52px; }
   :root[data-skin="steam"] .sc-btn {
     border: 2px solid transparent;
     border-image: linear-gradient(160deg, #f0d79a, #8a6a2a 45%, #f3e0ac 70%, #6b4f1c) 1;
@@ -3034,7 +3036,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.46 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.47 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
