@@ -3070,7 +3070,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.60 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.61 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8809,7 +8809,10 @@ function renderMatMgr() {
   box.innerHTML = `<h3>📋 ${esc(c.job)} — materials board${_matDirty ? ' <span style="color: var(--err, #c0392b);">· unsaved</span>' : ''}</h3>
     <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} rooms · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client. Tap a lamp to advance it; ✎ opens the works.` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
     ${_matD.rooms.map((r, ri) => `<div class="set-section fc-sec" style="margin-top: 10px;"><h4>${esc(r.name)}
-      <button class="btn-ghost req-x" style="float: right;" onclick="matAddItem(${ri})">➕ item</button></h4>
+      <span style="float: right; display: inline-flex; gap: 6px;">
+        <button class="btn-ghost req-x" onclick="matAddItem(${ri})">➕ item</button>
+        <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelRoom(${ri})">${_matArm === 'room' + ri ? '⚠ SURE? Items go too' : '✕ room'}</button>
+      </span></h4>
       ${(r.items || []).map(it => matMgrItem(ri, it)).join('') || '<span class="hint">no items yet</span>'}
     </div>`).join('')}
     <div class="frow" style="margin-top: 12px;">
@@ -8817,7 +8820,7 @@ function renderMatMgr() {
       <button class="btn-ghost" onclick="matAddRoom()">➕ room</button>
     </div>
     <div class="rev-row" style="margin-top: 12px; flex-wrap: wrap;">
-      <button class="btn-primary" style="flex: 2;" onclick="matSave()">💾 Save to the client's page</button>
+      <button class="btn-primary" style="flex: 2;" onclick="matSave()">💾 Save — 🏠 client portion to their page, 🏢 office stays ours</button>
       ${!_matD.rooms.length ? `<button class="btn-ghost" style="flex: 2;" onclick="matFromMaster()">🧱 Start from the master list</button>` : `<button class="btn-ghost" style="flex: 1;" onclick="matSaveMaster()">${_matArm === 'master' ? '⚠ SURE? Overwrites the master' : '📌 Save as master'}</button>`}
       <button class="btn-ghost" style="flex: 1;" onclick="matClose()">✕ Close</button>
     </div>
@@ -8835,6 +8838,10 @@ function matMgrItem(ri, it) {
       <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
     </div>
     ${(it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
+    ${kids.length && !editing ? `<div class="chips-row" style="margin: 5px 0 0; display: flex; flex-wrap: wrap; gap: 5px;">
+      ${kids.map((k, ki) => `<button type="button" class="pick-chip${k.ok ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;"
+        onclick="matKidOk('${escq(it.id)}', ${ki})" aria-pressed="${!!k.ok}" ${k.note ? `title="${esc(k.note)}"` : ''}>${k.ok ? '☑' : '☐'} ${esc(k.n)}</button>`).join('')}
+    </div>` : ''}
     ${editing ? matMgrEditor(it) : ''}
   </div>`;
 }
@@ -8854,13 +8861,21 @@ function matMgrEditor(it) {
     <div class="field" style="flex: 1 1 100%;"><label>Options for them to pick (one per line: title | link | price)</label><textarea rows="3" class="grow" onchange="matSetOpts('${id}', this.value)">${esc((it.opts || []).map(o => [o.t, o.url || '', o.price || ''].join(' | ').replace(/ \| +$/, '').replace(/ \| $/, '')).join('\n'))}</textarea></div>
     <div class="field"><label>Ordered date</label><input type="date" value="${esc(it.odate || '')}" onchange="matSet('${id}', 'odate', this.value)"></div>
     <div class="field"><label>Expected arrival</label><input type="date" value="${esc(it.eta || '')}" onchange="matSet('${id}', 'eta', this.value)"></div>
-    <div class="field" style="flex: 1 1 100%;">
-      <button type="button" class="pick-chip${it.showEta ? ' sel' : ''}" style="width: 100%; font-weight: 800; letter-spacing: 0.5px;"
-        onclick="matSet('${id}', 'showEta', ${it.showEta ? 'false' : 'true'}); renderMatMgr()" aria-pressed="${!!it.showEta}">
-        ${it.showEta ? '✓ DATES SHOWN TO THE CLIENT — tap to hide' : '○ DATES HIDDEN — crew only · tap to show them'}</button></div>
-    <div class="field" style="flex: 1 1 100%;"><label>Sub-items — the steps under this one (one per line: step | note)</label><textarea rows="3" class="grow" onchange="matSetKids('${id}', this.value)">${esc((it.kids || []).map(k => k.n + (k.note ? ' | ' + k.note : '')).join('\n'))}</textarea></div>
-    ${(it.kids || []).length ? `<div class="field" style="flex: 1 1 100%;"><label>${hm ? 'Confirm each piece — all green = READY TO ORDER' : 'Check the steps off — all green lights ● ALL STEPS DONE'}</label>
-      <div class="chips-row">${it.kids.map((k, ki) => `<button type="button" class="pick-chip${k.ok ? ' sel' : ''}" onclick="matKidOk('${id}', ${ki})">${k.ok ? '● ✓ ' : '○ '}${esc(k.n)}</button>`).join('')}</div></div>` : ''}
+    <div class="field"><label>&nbsp;</label>
+      <button type="button" class="pick-chip${it.showEta ? ' sel' : ''}" style="font-size: 11px; padding: 5px 10px; min-height: 30px; font-weight: 700;"
+        onclick="matSet('${id}', 'showEta', ${it.showEta ? 'false' : 'true'}); renderMatMgr()" aria-pressed="${!!it.showEta}"
+        title="whether the client sees the order and arrival dates">
+        ${it.showEta ? '✓ dates shown to client' : '○ dates hidden — ours'}</button></div>
+    <div class="field" style="flex: 1 1 100%;"><label>Sub-items — ${hm ? 'every piece confirmed = READY TO ORDER' : 'all checked = the main box opens'}</label>
+      ${(it.kids || []).map((k, ki) => `<div class="frow" style="gap: 6px; align-items: center; margin: 3px 0;">
+        <button type="button" class="pick-chip${k.ok ? ' sel' : ''}" style="flex: 1; text-align: left;" onclick="matKidOk('${id}', ${ki})" aria-pressed="${!!k.ok}">${k.ok ? '☑' : '☐'} ${esc(k.n)}${k.note ? ` <span class="hint" style="margin: 0;">— ${esc(k.note)}</span>` : ''}</button>
+        <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelKid('${id}', ${ki})" aria-label="delete step">✕</button>
+      </div>`).join('')}
+      <div class="frow" style="gap: 6px; margin-top: 5px;">
+        <input type="text" id="kidNew-${id}" placeholder="step ${(it.kids || []).length + 1} — what has to happen…" style="flex: 1;"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();matAddKid('${id}');}">
+        <button type="button" class="btn-ghost" onclick="matAddKid('${id}')">➕ Add sub-item</button>
+      </div></div>
     ${(it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">${it.remarks.slice(-4).map(r => `${r.from === 'client' ? '👤 client' : 'you'}: ${esc(r.text)}`).join('<br>')}</div>` : ''}
     <button class="btn-ghost" style="flex: 1 1 100%;" onclick="_matEdit = ''; renderMatMgr()">✓ Done with this item</button>
   </div>`;
@@ -8901,20 +8916,50 @@ function matSetKids(id, txt) {
   _matDirty = true;
   renderMatMgr();
 }
+// ➕ v5.61 — one step at a time, the way Eric asked: type it, ➕, it lands with a checkbox
+function matAddKid(id) {
+  const it = matFindItem(id);
+  const box = $('kidNew-' + id);
+  const n = ((box && box.value) || '').trim().slice(0, 80);
+  if (!it || !n) { if (box) box.focus(); return; }
+  it.kids = it.kids || [];
+  it.kids.push({ n });
+  _matDirty = true;
+  renderMatMgr();
+  const nb = $('kidNew-' + id); if (nb) nb.focus();
+}
+function matDelKid(id, ki) {
+  const it = matFindItem(id);
+  if (!it || !it.kids || !it.kids[ki]) return;
+  it.kids.splice(ki, 1);
+  if (!it.kids.length) delete it.kids;
+  _matDirty = true;
+  renderMatMgr();
+}
 function matKidOk(id, ki) {
   const it = matFindItem(id);
   if (!it || !it.kids || !it.kids[ki]) return;
   it.kids[ki].ok = !it.kids[ki].ok;
   _matDirty = true;
   renderMatMgr();
-  if (it.kids.every(k => k.ok)) toast(`● ALL CONFIRMED — ${it.n} reads READY TO ORDER on their page (after 💾 Save)`);
+  if (it.kids.every(k => k.ok)) toast(matIsHm(it)
+    ? `● ALL CONFIRMED — ${it.n} reads READY TO ORDER on their page (after 💾 Save)`
+    : `● every step checked — ${it.n} is open to mark ✅ DONE`);
 }
 function matCycle(id) {
   const it = matFindItem(id);
   if (!it) return;
   const order = matIsHm(it) ? ['pick', 'picked', 'ordered', 'arrived'] : ['todo', 'work', 'done'];
   const at = order.indexOf(it.s || order[0]);
-  it.s = order[(at + 1) % order.length];
+  const next = order[(at + 1) % order.length];
+  // 🔒 v5.61 — Eric: "once all the sub items are checked, THEN the main one opens for
+  // checking off." A parent with open steps refuses its final lamp and says which ones.
+  if (next === 'done' && (it.kids || []).length && !it.kids.every(k => k.ok)) {
+    const open = it.kids.filter(k => !k.ok);
+    toast(`🔒 ${open.length} step${open.length > 1 ? 's' : ''} still open — ${open.slice(0, 2).map(k => k.n).join(', ')}${open.length > 2 ? '…' : ''}. Check them off first.`, false);
+    return;
+  }
+  it.s = next;
   if (it.s === 'ordered' && !it.odate) it.odate = localDay(new Date());
   _matDirty = true;
   renderMatMgr();
@@ -8940,6 +8985,22 @@ function matDelItem(id) {
   _matD.rooms = _matD.rooms.filter(r => r.items.length || true); // empty rooms stay until saved
   _matDirty = true;
   renderMatMgr();
+}
+// ✕ v5.61 — Eric: "I don't seem to be able to delete the room." Two taps if it has items.
+function matDelRoom(ri) {
+  const r = _matD.rooms[ri];
+  if (!r) return;
+  if ((r.items || []).length && _matArm !== 'room' + ri) {
+    _matArm = 'room' + ri;
+    renderMatMgr();
+    setTimeout(() => { if (_matArm === 'room' + ri) { _matArm = ''; renderMatMgr(); } }, 5000);
+    return;
+  }
+  _matArm = '';
+  _matD.rooms.splice(ri, 1);
+  _matDirty = true;
+  renderMatMgr();
+  toast(`✕ Room gone — ${r.name}. 💾 Save makes it real.`);
 }
 function matAddItem(ri) {
   const r = _matD.rooms[ri];
