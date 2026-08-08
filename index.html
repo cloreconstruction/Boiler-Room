@@ -1765,6 +1765,10 @@
   body.crew-locked #qnTagChips, body.crew-locked #nTagChips, body.crew-locked #crewRoute {
     opacity: 0.38; pointer-events: none; filter: saturate(0.15);
   }
+  /* 🔒 v5.49 — the owner's lock is lighter than the crew's: only the siren dies, so the
+     dimming is scoped to that one chip rather than the whole block. */
+  body.owner-locked #qnVisChips .pick-chip[disabled] { opacity: 0.38; filter: saturate(0.15); pointer-events: none; }
+  #leVisChips.personal-locked .pick-chip[disabled] { opacity: 0.38; filter: saturate(0.15); pointer-events: none; }
   .lock-note { display: none; }
   body.crew-locked .lock-note {
     display: block; margin: 8px 0 2px; font-size: 12.5px; font-weight: 700;
@@ -2151,7 +2155,7 @@
        v5.40 — Eric moved them to the VERY top, above the hot strip. -->
   <div class="sc-row" id="scRow">
     <button type="button" class="sc-btn" onclick="jumpSetup('portalSec')">🏠 <span>Client portal</span></button>
-    <button type="button" class="sc-btn" onclick="jumpSetup('setCrew')">👷 <span>Crew portal</span></button>
+    <button type="button" class="sc-btn" onclick="crewViewMenu()">👷 <span>Crew portal</span></button>
   </div>
 
 
@@ -3036,7 +3040,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.48 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.49 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7193,6 +7197,30 @@ function crewPreviewToggle() {
   applyRole();
   toast(crewPreview ? '👁 Preview on — this is the crew screen. Tap the gold banner to come back.' : 'Back to your app ✓');
 }
+// 👁 v5.49 — Eric: "when I click Crew Portal, I want View as Phil, View as Nathan, view as
+// each employee — so I can see the differences between them." The 👷 plate opens this menu
+// now: one tap per man, straight into that man's screen. Their screens genuinely differ —
+// mates lists, to-dos, FROM ERIC notes, shared photos — so seeing each one matters.
+function crewViewMenu() {
+  if (CREW_NAME) return;
+  if (!crew.length) { jumpSetup('setCrew'); return; } // no crew yet → the old door, to add some
+  const box = $('crewViewSheet');
+  if (box) { box.remove(); return; } // second tap folds it
+  const sheet = document.createElement('div');
+  sheet.id = 'crewViewSheet';
+  sheet.style.cssText = 'margin: 0 0 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;';
+  sheet.innerHTML = crew.map(n =>
+    `<button type="button" class="sc-btn" onclick="crewViewAs('${escq(n)}')">👁 <span>View as ${esc(n)}</span></button>`).join('') +
+    `<button type="button" class="sc-btn" style="grid-column: 1 / -1; opacity: .85;" onclick="jumpSetup('setCrew'); const s = $('crewViewSheet'); if (s) s.remove();">⚙ <span>Crew setup — folders, roster, reopen a day</span></button>`;
+  $('scRow').after(sheet);
+}
+function crewViewAs(name) {
+  prefs.previewAs = name;
+  scheduleSave();
+  const s = $('crewViewSheet'); if (s) s.remove();
+  if (crewPreview) { closePanels(); applyRole(); toast(`👁 Now viewing as ${name} — tap the gold banner to come back`); }
+  else crewPreviewToggle();
+}
 function crewBadgeTap() { if (crewPreview) crewPreviewToggle(); }
 
 // --- Eric's side: stand up one folder per crew member with the shared config in it ---
@@ -7205,7 +7233,10 @@ async function publishCrewFolders() {
     const base = `${CREW_DIR}/${cleanName(name)}`;
     try { await dbxRpc('files/create_folder_v2', { path: base }); } catch (e) { /* exists */ }
     // 🔐 THEIR rates only — wageRatesFor(name) resolves this ONE person; nobody else's numbers ride along
-    try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: { rates: wageRatesFor(name), catGrades: wageCfg().catGrades || {} }, tags: knownTags(), pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1)); } catch (e) {}
+    // 👥 v5.49 — his CREW-MATES ride along (everyone but him). Before this a crew phone had
+    // no idea who else was on the job, so the 🔔 route chips were hardcoded to "Phil" — which
+    // meant Phil's own phone offered to get Phil's attention. Names come from Eric's roster now.
+    try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: { rates: wageRatesFor(name), catGrades: wageCfg().catGrades || {} }, tags: knownTags(), mates: crew.filter(c => c !== name), pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1)); } catch (e) {}
   }
   // 🏠 v5.46 — 📤 is the button Eric already reaches for when a crew phone is missing
   // something, so it pushes the client-page list out too. One tap fixes an empty portal.
@@ -7229,6 +7260,7 @@ async function crewJoin() {
       lsSet('daylog-crew-jobs', JSON.stringify(cfg.jobs || []));
       if (cfg.wage) lsSet('daylog-crew-wage', JSON.stringify(cfg.wage));
       if (Array.isArray(cfg.tags)) lsSet('daylog-crew-tags', JSON.stringify(cfg.tags));
+      if (Array.isArray(cfg.mates)) lsSet('daylog-crew-mates', JSON.stringify(cfg.mates)); // 👥 v5.49
       if (cfg.pushSecret) lsSet('daylog-push-secret', cfg.pushSecret);
       msg.textContent = `✓ This phone is now ${cfg.name}'s. Reloading…`;
       setTimeout(() => location.reload(), 900);
@@ -7265,14 +7297,23 @@ async function refreshCrewCfg() {
 
 // --- routing + urgency on the crew quick note ---
 let qnRoute = '', qnUrg = '';
-const CREW_ROUTES = ['Phil', 'Eric']; // no Grinder chip — the big plate below already grinds it
+// 👥 v5.49 — was hardcoded ['Phil','Eric'], which put "Needs Phil's attention" on Phil's own
+// phone and hid everyone else. Eric is always first (he's who a crew phone reports to), then
+// the mates off crew.json. Never himself. No Grinder chip — the big plate already grinds it.
+function crewMates() {
+  // 👁 in Eric's preview there is no CREW_NAME — the man being previewed is the self
+  const self = CREW_NAME || (crewPreview ? (prefs.previewAs || crew[0] || '') : '');
+  try { const m = JSON.parse(lsGet('daylog-crew-mates') || 'null'); if (Array.isArray(m)) return m.filter(n => n && n !== self); } catch (e) {}
+  return crew.filter(n => n && n !== self);
+}
+function crewRoutes() { return ['Eric', ...crewMates().filter(n => n !== 'Eric')].slice(0, 6); }
 const CREW_URGS = [['now', '🔥 I need it NOW'], ['hours', '⏳ In a few hours'], ['tomorrow', '🌙 Tomorrow']];
 function setRoute(r) { qnRoute = qnRoute === r ? '' : r; renderRouteChips(); }
 function setUrg(u) { qnUrg = qnUrg === u ? '' : u; renderRouteChips(); }
 function renderRouteChips() {
   const rc = $('routeChips'), uc = $('urgChips');
   if (!rc || !uc) return;
-  rc.innerHTML = CREW_ROUTES.map(r =>
+  rc.innerHTML = crewRoutes().map(r =>
     `<button class="pick-chip grid-chip${qnRoute === r ? ' sel' : ''}" onclick="setRoute('${escq(r)}')" aria-pressed="${qnRoute === r}"><span>${qnRoute === r ? '✓ ' : '🔔 '}Needs ${esc(r)}'s attention</span></button>`).join('');
   uc.innerHTML = CREW_URGS.map(([k, w]) =>
     `<button class="pick-chip grid-chip${qnUrg === k ? ' sel' : ''}" onclick="setUrg('${escq(k)}')" aria-pressed="${qnUrg === k}"><span>${qnUrg === k ? '✓&nbsp;' : ''}${esc(w)}</span></button>`).join('');
@@ -7337,7 +7378,7 @@ function renderVisChips() {
   const mine = isCrew();
   const opts = mine
     ? [['', '🔒 Just my log'], ['Eric', '📨 Eric'], ['crew', '🔓 All crew'],
-       ...crew.filter(c => c !== CREW_NAME).map(c => [c, '📨 ' + c])]
+       ...crewMates().filter(c => c !== 'Eric').map(c => [c, '📨 ' + c])]
     : [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
   const capped = opts.filter(([v], i) => i < cap - (mine ? 0 : 1) || selOf(v)); // room for ❓ on Eric's
   const html = capped.map(([v, w]) => {
@@ -7370,7 +7411,8 @@ function visReset() {
   renderVisChips();
 }
 function lockGate() {
-  const locked = isCrew() && !qnVis && !qnVisNames.size;
+  const nobody = !qnVis && !qnVisNames.size;
+  const locked = isCrew() && nobody;
   document.body.classList.toggle('crew-locked', locked);
   // the chips inside really go dead, not just grey — a dim button you can still press lies
   ['qnTagChips', 'nTagChips', 'routeChips', 'urgChips'].forEach(id => {
@@ -7380,6 +7422,19 @@ function lockGate() {
     });
     el.setAttribute('aria-disabled', locked ? 'true' : 'false');
   });
+  // 🔒 v5.49 — Eric wanted the same lock on his phone. His tags stay live (a private note
+  // still gets filed — that's his whole system), but ❓ NEEDS AN ANSWER cannot ride a note
+  // nobody can see: it's a siren aimed at crew phones. Picking 🔒 Just me kills it, and it
+  // says so, rather than sitting there armed and quietly doing nothing on save.
+  const ownerLock = !isCrew() && nobody;
+  document.body.classList.toggle('owner-locked', ownerLock);
+  const askChip = [...document.querySelectorAll('#qnVisChips .pick-chip')]
+    .find(b => /Needs an answer/.test(b.textContent));
+  if (askChip) {
+    if (ownerLock) { askChip.setAttribute('disabled', ''); askChip.setAttribute('aria-disabled', 'true'); askChip.title = '🔒 Just me — a note nobody can see cannot ask anybody anything. Pick 🔓 All crew or a name first.'; }
+    else { askChip.removeAttribute('disabled'); askChip.setAttribute('aria-disabled', 'false'); askChip.title = 'Rings their phones and stays up big until somebody answers — then it clears for everyone'; }
+  }
+  if (ownerLock && qnAsk) qnAsk = false; // never leave the siren armed behind a lock
 }
 function visNewInput(btn) {
   btn.outerHTML = `<input type="text" class="mini-sel" id="visNewBox" placeholder="name…"
@@ -7413,10 +7468,20 @@ function renderLeVisChips() {
   if (!el) return;
   const selOf = v => v === '' ? (!leVis && !leVisNames.size) : v === 'crew' ? leVis === 'crew' : leVisNames.has(v);
   const opts = [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
+  // 🔒 v5.49 — Eric asked for Phil's lock on HIS phone too. This is that, and it's the one
+  // place his side could mislead him: a PERSONAL entry (anything off the personal list —
+  // Shevaun, family) can never travel, the publish filter drops it no matter what. Until
+  // now these chips still let him tap 🔓 All crew and nothing would happen, silently.
+  // Now they're dead, and the reason is spelled out instead of implied.
+  const ent = entries.find(x => x.id === editingLogId);
+  const locked = !!(ent && ent.personal);
   el.innerHTML = opts.map(([v, w]) => {
-    const on = selOf(v);
-    return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="setLeVis('${escq(v)}')" aria-pressed="${on}">${on ? '✓&nbsp;' : ''}${esc(w)}</button>`;
-  }).join('');
+    const on = selOf(v) && !(locked && v !== '');
+    return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="setLeVis('${escq(v)}')" aria-pressed="${on}"${locked && v !== '' ? ' disabled' : ''}>${on ? '✓&nbsp;' : ''}${esc(w)}</button>`;
+  }).join('') + (locked
+    ? `<div class="lock-note" style="display:block; grid-column: 1 / -1;">🔒 PERSONAL — this one can never be shared with anyone, so sharing is switched off. Take the personal flag off it in ⚙ Setup → Privacy if that's wrong.</div>`
+    : '');
+  el.classList.toggle('personal-locked', locked);
 }
 let _sharedCache = {};
 // 📷 v5.43 — remembers which photos are already copied into whose folder, so a sweep every
