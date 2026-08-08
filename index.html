@@ -3040,7 +3040,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.51 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.52 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5075,7 +5075,17 @@ function knownTags() {
   }
   return prefs.tags.filter(Boolean);
 }
-function tagToggle(n) { qnSel.has(n) ? qnSel.delete(n) : qnSel.add(n); renderTagChips(); }
+function tagToggle(n) { qnSel.has(n) ? qnSel.delete(n) : qnSel.add(n); renderTagChips(); renderVisChips(); }
+// 🔒 v5.52 — Eric: "every time we click a personal tag, it also will gray out and lock who
+// sees it." A tag named Personal, or any name on his personal list (⚙ Setup → Privacy —
+// Shevaun, family), is a personal tag. One on the note = the lock is THROWN: who-sees-it
+// grays out and goes dead, and the note saves marked personal, which the publish filter
+// already refuses to ship anywhere. Untap the tag and the row unlocks. The 🔒 chip and the
+// spelled-out bar ARE the big lock — same one motion he asked about, no second switch.
+function personalTagOn() {
+  return [...qnSel].some(g => g.toLowerCase() === 'personal' ||
+    personalFolks().some(pf => g.toLowerCase() === pf.toLowerCase()));
+}
 function tagAdd(raw) {
   const n = (raw || '').trim().slice(0, 40);
   if (!n) { renderTagChips(); return; }
@@ -5092,10 +5102,9 @@ function tagNewInput(btn) {
     onblur="tagAdd(this.value)">`;
   const box = $('tagNewBox'); if (box) box.focus();
 }
-function tagBump(used) { // used tags float to the front so the handiest three stay visible
-  if (!used.length) return;
-  if (prefs.tagPin) return; // 🏷 v5.27 — Eric arranged them by hand: his order stays put
-  prefs.tags = [...used, ...knownTags().filter(t => !used.includes(t))];
+function tagBump(used) {
+  // 🏷 v5.52 — RETIRED on Eric's word: "it rearranges how I had it arranged." Tapping a tag
+  // never moves it again, for anybody. The function stays so old call sites cost nothing.
 }
 // 🏷 v5.27 — junk guard: dates, times and raw phone numbers never become CHIPS.
 // (Entries still tag piles by raw sender; the digest's ✎ rename turns numbers into names.)
@@ -5167,7 +5176,11 @@ function renderTagChips() {
   // v5.41 — and how many COLUMNS. Fewer columns = wider chips, so the letters grow to match:
   // that's the whole point of the wheel — a long name like Scritchfield gets room to breathe.
   const cols = tagCols(), cap = (prefs.tagRows || 2) * cols;
-  const shown = [...new Set([...qnSel, ...known])].slice(0, Math.max(cap, qnSel.size));
+  // 🏷 v5.52 — Eric: "make it light up but not move." A tapped tag stays exactly where he
+  // arranged it. If a picked one lives past the row cap it's APPENDED at the end so it never
+  // hides — but the arranged order itself is never shuffled.
+  const shown = known.slice(0, cap);
+  [...qnSel].forEach(g => { if (!shown.includes(g)) shown.push(g); });
   const rowsSel = n => `<select class="mini-sel" title="How many rows of tags show"
       onchange="prefs.tagRows = +this.value; scheduleSave(); renderTagChips();">${[1, 2, 3, 4, 5].map(r => `<option value="${r}"${r === n ? ' selected' : ''}>${r} row${r > 1 ? 's' : ''}</option>`).join('')}</select>`;
   const colsSel = n => `<select class="mini-sel" title="How many tags across — fewer across means bigger letters"
@@ -6109,6 +6122,10 @@ function saveNoteFrom(boxId, fromPanel) {
   if (aiAll) nExtra.ai = aiAll;
   const tags = [...qnSel];
   if (tags.length) nExtra.tags = tags;
+  // 🔒 v5.52 — a personal tag on the note = personal entry: the publish filter refuses it
+  // forever, whatever else was tapped. The vis wipe below makes the lock honest on save too.
+  const _pTag = typeof personalTagOn === 'function' && personalTagOn();
+  if (_pTag) { nExtra.personal = true; qnVis = ''; qnVisNames.clear(); qnAsk = false; qnRoute = ''; qnUrg = ''; }
   // 📤 v5.51 — Eric: a "Send to Logan" / "Send to QuickBooks" tag POPS THE SEND SHEET, so
   // the receipt he just ground can go straight out as a text too. The share sheet must ride
   // the same finger-tap that saved the note (phones refuse it later), so it fires first and
@@ -7383,6 +7400,9 @@ function setVis(v) {
 }
 function toggleAsk() { qnAsk = !qnAsk; renderVisChips(); }
 function renderVisChips() {
+  // 🔒 v5.52 — a personal tag on the note throws this whole row locked
+  const pLock = typeof personalTagOn === 'function' && personalTagOn();
+  if (pLock && (qnVis || qnVisNames.size)) { qnVis = ''; qnVisNames.clear(); }
   const selOf = v => v === '' ? (!qnVis && !qnVisNames.size) : v === 'crew' ? qnVis === 'crew' : qnVisNames.has(v);
   // v5.33 — same rows wheel as the tags: 4 per row, Eric decides how many rows show.
   // A SELECTED name never hides, no matter the cap.
@@ -7411,6 +7431,20 @@ function renderVisChips() {
     ((qnVis === 'crew' && qnVisNames.size) ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ 🔓 everybody can see it (Wizard too) · lands DIRECT 📨 on ${[...qnVisNames].map(esc).join(' + ')}</div>`
       : qnVisNames.size > 1 ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ goes to ${[...qnVisNames].map(esc).join(' + ')} — each sees it on their own phone</div>` : '');
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
+  // the personal lock: every chip but 🔒 goes dim and dead, with the reason on the glass
+  ['qnVisChips', 'nVisChips'].forEach(id => {
+    const el = $(id); if (!el) return;
+    el.classList.toggle('personal-locked', pLock);
+    if (pLock) {
+      el.querySelectorAll('.pick-chip').forEach(b => {
+        if (!/Just m/.test(b.textContent)) { b.setAttribute('disabled', ''); b.setAttribute('aria-disabled', 'true'); }
+      });
+      const note = document.createElement('div');
+      note.className = 'lock-note'; note.style.display = 'block'; note.style.gridColumn = '1 / -1';
+      note.textContent = '🔒 PERSONAL TAG — locked to this phone. Untap the personal tag to share it.';
+      el.appendChild(note);
+    }
+  });
   lockGate();
 }
 // 🔒 v5.44 — the gate. While a crew phone has nothing picked in who-sees-it, the note is
