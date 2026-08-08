@@ -3066,7 +3066,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.56 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.57 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8314,17 +8314,29 @@ async function renderPortalList() {
     const t = await dbxDownload(DBX_ROOT + '/App Data/Client Portal/index.json');
     _portalIdx = JSON.parse(t);
   } catch (e) { box.innerHTML = '<span class="hint">No portal set up yet — ask Claude to build the client pages.</span>'; return; }
-  box.innerHTML = (_portalIdx.clients || []).map((c, i) => `
-    <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
-      <span class="sum-title" style="flex: 1 1 100%;">🏠 ${esc(c.job)}</span>
+  // 📁 v5.57 — Eric: "buttons hidden and only the job name showing... pick the job name from
+  // the list, and THEN it opens up into Journal, Materials, Copy link, etc." One clean list
+  // of job names; tapping one unfolds ITS buttons and folds the last one shut (accordion —
+  // seven jobs of open buttons was the clutter he was naming). ▸/▾ + words carry the state.
+  box.innerHTML = (_portalIdx.clients || []).map((c, i) => {
+    const open = _portalOpen === i;
+    return `
+    <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px; ${open ? '' : 'padding-bottom: 4px;'}">
+      <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
+        onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}</button>
+      ${open ? `
       <button class="btn-ghost req-x" onclick="openJournal(${i})">📖 Journal</button>
       <button class="btn-ghost req-x" onclick="openMaterials(${i})">📋 Materials</button>
       <button class="btn-ghost req-x" onclick="portalCopy(${i})">📋 Copy link</button>
       <button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
       <button class="btn-ghost req-x" onclick="portalIntel(${i})">📊 What they look at</button>
-      <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? This kills their link for good' : '🔄 Rotate code'}</button>
-    </div>`).join('') || '<span class="hint">No clients yet.</span>';
+      <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? This kills their link for good' : '🔄 Rotate code'}</button>` : ''}
+    </div>`;
+  }).join('') || '<span class="hint">No clients yet.</span>';
 }
+// which job's buttons are unfolded — one at a time, and it remembers within the session
+let _portalOpen = -1;
+function portalFold(i) { _portalOpen = _portalOpen === i ? -1 : i; _rotArm = 0; renderPortalList(); }
 function portalUrl(i) { return location.origin + '/c/?c=' + encodeURIComponent(_portalIdx.clients[i].code); }
 // 👁 v5.29 — the client page opens INSIDE the app, gold banner to come back. window.open
 // hijacked the whole installed app with no way home (and broke the no-external-tabs rule).
