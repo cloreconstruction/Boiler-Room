@@ -1769,6 +1769,16 @@
      dimming is scoped to that one chip rather than the whole block. */
   body.owner-locked #qnVisChips .pick-chip[disabled] { opacity: 0.38; filter: saturate(0.15); pointer-events: none; }
   #leVisChips.personal-locked .pick-chip[disabled] { opacity: 0.38; filter: saturate(0.15); pointer-events: none; }
+  /* 🔒 v5.54 — the personal padlock chip. At rest it reads 🔓 with a dashed hasp; tapped it
+     slams shut: solid heavy border, dark plate, gold letters, the words LOCKED DOWN on the
+     face. Weight + glyph + words carry the state — the colour is only the shine on top. */
+  /* ID-scoped so the chip-sizing rules (which carry IDs) can't out-rank the slam */
+  .pick-chip.lockchip, #qnTagChips .pick-chip.lockchip, #nTagChips .pick-chip.lockchip { border-style: dashed; font-weight: 700; }
+  .pick-chip.lockchip.is-down, #qnTagChips .pick-chip.lockchip.is-down, #nTagChips .pick-chip.lockchip.is-down {
+    border-style: solid; border-width: 2.5px; border-color: var(--accent, #a8812c);
+    background: #241d12; color: #e8c877; font-weight: 800; letter-spacing: 0.4px;
+    box-shadow: inset 0 0 0 1.5px #00000055, 0 1px 4px #00000066;
+  }
   .lock-note { display: none; }
   body.crew-locked .lock-note {
     display: block; margin: 8px 0 2px; font-size: 12.5px; font-weight: 700;
@@ -3043,7 +3053,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.53 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.54 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5188,9 +5198,17 @@ function renderTagChips() {
       onchange="prefs.tagRows = +this.value; scheduleSave(); renderTagChips();">${[1, 2, 3, 4, 5].map(r => `<option value="${r}"${r === n ? ' selected' : ''}>${r} row${r > 1 ? 's' : ''}</option>`).join('')}</select>`;
   const colsSel = n => `<select class="mini-sel" title="How many tags across — fewer across means bigger letters"
       onchange="prefs.tagCols = +this.value; scheduleSave(); renderTagChips();">${[1, 2, 3, 4, 5].map(c => `<option value="${c}"${c === n ? ' selected' : ''}>${c} across</option>`).join('')}</select>`;
+  // 🔒 v5.54 — Eric: personal should SHOW it's a lock. A personal tag wears a padlock at
+  // rest and slams to "LOCKED DOWN" when tapped — glyph + word + weight, never colour alone.
+  const isPersonalTagName = g => g.toLowerCase() === 'personal' ||
+    personalFolks().some(pf => g.toLowerCase() === pf.toLowerCase());
   const html = shown.map(t => {
     if (_tagArm === t) return `<button type="button" class="pick-chip" style="border-color: var(--err, #c0392b); color: var(--err, #c0392b); font-weight: 800;" onclick="tagDelete('${escq(t)}')">✕ delete ${esc(t)}?</button>`;
     const on = qnSel.has(t);
+    const pers = isPersonalTagName(t);
+    if (pers) return `<button type="button" class="pick-chip lockchip${on ? ' sel is-down' : ''}" onclick="tagToggle('${escq(t)}')" aria-pressed="${on}"
+      title="A personal tag locks this note to this phone — nothing sends, nobody sees it"
+      onpointerdown="tagHoldStart('${escq(t)}')" onpointerup="tagHoldEnd()" onpointerleave="tagHoldEnd()" oncontextmenu="event.preventDefault()">${on ? `🔒 ${esc(t)} — LOCKED DOWN` : `🔓 ${esc(t)}`}</button>`;
     return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="tagToggle('${escq(t)}')" aria-pressed="${on}"
       onpointerdown="tagHoldStart('${escq(t)}')" onpointerup="tagHoldEnd()" onpointerleave="tagHoldEnd()" oncontextmenu="event.preventDefault()">${on ? '✓' : '🏷'} ${esc(t)}</button>`;
   }).join('') +
