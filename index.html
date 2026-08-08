@@ -3070,7 +3070,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.61 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.62 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8855,7 +8855,7 @@ function matMgrEditor(it) {
         ${hm ? '✓ 🏠 REQUIRES HOMEOWNER INPUT OR CHOICE — on their page, pick lamps' : '🏢 OFFICE ONLY — they never see this · tap if they need to pick or approve it'}</button></div>
     <div class="field" style="flex: 2; min-width: 150px;"><label>Item</label><input type="text" value="${esc(it.n)}" onchange="matSet('${id}', 'n', this.value)"></div>
     <div class="field"><label>Trade</label><select onchange="matSet('${id}', 't', this.value)">${MAT_TRADES.map(t => `<option${t === it.t ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
-    ${hm ? `<div class="field" style="flex: 1 1 100%;"><label>Their pick (what's decided)</label><input type="text" value="${esc(it.pick || '')}" onchange="matSet('${id}', 'pick', this.value)"></div>` : ''}
+    ${hm ? `<div class="field" style="flex: 1 1 100%;"><label>Their pick (what's decided)</label><input type="text" value="${esc(it.pick || '')}" onchange="matSet('${id}', 'pick', this.value)"></div>
     <div class="field" style="flex: 1 1 100%;"><label>Link</label><input type="text" value="${esc(it.url || '')}" onchange="matSet('${id}', 'url', this.value)"></div>
     <div class="field" style="flex: 1 1 100%;"><label>Status note to the client ("can't get this one — options below")</label><textarea rows="2" class="grow" onchange="matSet('${id}', 'note', this.value)">${esc(it.note || '')}</textarea></div>
     <div class="field" style="flex: 1 1 100%;"><label>Options for them to pick (one per line: title | link | price)</label><textarea rows="3" class="grow" onchange="matSetOpts('${id}', this.value)">${esc((it.opts || []).map(o => [o.t, o.url || '', o.price || ''].join(' | ').replace(/ \| +$/, '').replace(/ \| $/, '')).join('\n'))}</textarea></div>
@@ -8865,18 +8865,23 @@ function matMgrEditor(it) {
       <button type="button" class="pick-chip${it.showEta ? ' sel' : ''}" style="font-size: 11px; padding: 5px 10px; min-height: 30px; font-weight: 700;"
         onclick="matSet('${id}', 'showEta', ${it.showEta ? 'false' : 'true'}); renderMatMgr()" aria-pressed="${!!it.showEta}"
         title="whether the client sees the order and arrival dates">
-        ${it.showEta ? '✓ dates shown to client' : '○ dates hidden — ours'}</button></div>
+        ${it.showEta ? '✓ dates shown to client' : '○ dates hidden — ours'}</button></div>` : ''}
     <div class="field" style="flex: 1 1 100%;"><label>Sub-items — ${hm ? 'every piece confirmed = READY TO ORDER' : 'all checked = the main box opens'}</label>
-      ${(it.kids || []).map((k, ki) => `<div class="frow" style="gap: 6px; align-items: center; margin: 3px 0;">
-        <button type="button" class="pick-chip${k.ok ? ' sel' : ''}" style="flex: 1; text-align: left;" onclick="matKidOk('${id}', ${ki})" aria-pressed="${!!k.ok}">${k.ok ? '☑' : '☐'} ${esc(k.n)}${k.note ? ` <span class="hint" style="margin: 0;">— ${esc(k.note)}</span>` : ''}</button>
-        <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelKid('${id}', ${ki})" aria-label="delete step">✕</button>
+      ${(it.kids || []).map((k, ki) => `<div style="margin: 3px 0 7px;">
+        <div class="frow" style="gap: 6px; align-items: center;">
+          <button type="button" class="pick-chip${k.ok ? ' sel' : ''}" style="flex: 1; text-align: left;" onclick="matKidOk('${id}', ${ki})" aria-pressed="${!!k.ok}">${k.ok ? '☑' : '☐'} ${esc(k.n)}</button>
+          <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelKid('${id}', ${ki})" aria-label="delete step">✕</button>
+        </div>
+        <input type="text" value="${esc(k.note || '')}" placeholder="note — measurements, phone number, what happened…"
+          style="width: calc(100% - 44px); margin: 2px 0 0 4px; font-size: 11.5px; padding: 4px 8px; opacity: ${k.note ? '1' : '.75'};"
+          onchange="matKidNote('${id}', ${ki}, this.value)">
       </div>`).join('')}
       <div class="frow" style="gap: 6px; margin-top: 5px;">
         <input type="text" id="kidNew-${id}" placeholder="step ${(it.kids || []).length + 1} — what has to happen…" style="flex: 1;"
           onkeydown="if(event.key==='Enter'){event.preventDefault();matAddKid('${id}');}">
         <button type="button" class="btn-ghost" onclick="matAddKid('${id}')">➕ Add sub-item</button>
       </div></div>
-    ${(it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">${it.remarks.slice(-4).map(r => `${r.from === 'client' ? '👤 client' : 'you'}: ${esc(r.text)}`).join('<br>')}</div>` : ''}
+    ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">${it.remarks.slice(-4).map(r => `${r.from === 'client' ? '👤 client' : 'you'}: ${esc(r.text)}`).join('<br>')}</div>` : ''}
     <button class="btn-ghost" style="flex: 1 1 100%;" onclick="_matEdit = ''; renderMatMgr()">✓ Done with this item</button>
   </div>`;
 }
@@ -8927,6 +8932,15 @@ function matAddKid(id) {
   _matDirty = true;
   renderMatMgr();
   const nb = $('kidNew-' + id); if (nb) nb.focus();
+}
+// 📝 v5.62 — Eric: "we need to be able to keep notes below each sub note." A small line
+// under every step: the borough's fee, the measurement, who said what on the phone.
+function matKidNote(id, ki, v) {
+  const it = matFindItem(id);
+  if (!it || !it.kids || !it.kids[ki]) return;
+  v = (v || '').trim().slice(0, 160);
+  if (v) it.kids[ki].note = v; else delete it.kids[ki].note;
+  _matDirty = true;
 }
 function matDelKid(id, ki) {
   const it = matFindItem(id);
