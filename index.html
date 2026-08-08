@@ -3036,7 +3036,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.47 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.48 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8038,17 +8038,38 @@ async function renderPortalList() {
   // journal, materials — aren't withheld from him as a matter of trust; they write into
   // Eric's Dropbox and physically cannot run from a crew phone.
   if (CREW_NAME) {
-    try {
-      const t = await dbxDownload(DBX_ROOT + '/portal.json');
-      _portalIdx = JSON.parse(t);
-    } catch (e) { box.innerHTML = '<span class="hint">No client pages shared with you yet — Eric turns these on from his phone.</span>'; return; }
+    // 🏠 v5.48 — DON'T TRUST DBX_ROOT. A crew folder is a MOUNT in the crew member's own
+    // Dropbox, and what it's called on his side is whatever he accepted it as. If the saved
+    // root is stale or renamed, the straight read misses and the page looks empty for no
+    // visible reason. So: try the saved root, then hunt his root folders for the file —
+    // the same way the 👷 crew button hunts for crew.json. Two ways in, not one.
+    const tried = [];
+    let raw = null;
+    const grab = async p => { tried.push(p); try { const t = await dbxDownload(p); if (t) { raw = t; return true; } } catch (e) {} return false; };
+    if (!(await grab(DBX_ROOT + '/portal.json'))) {
+      try {
+        const r = await dbxRpc('files/list_folder', { path: '', recursive: false });
+        for (const f of (r.entries || []).filter(x => x['.tag'] === 'folder').slice(0, 30)) {
+          if (await grab((f.path_display || f.path_lower) + '/portal.json')) break;
+        }
+      } catch (e) {}
+    }
+    try { _portalIdx = JSON.parse(raw); } catch (e) { _portalIdx = null; }
+    if (!_portalIdx) {
+      // say exactly what happened — a blank page teaches nobody anything
+      box.innerHTML = `<span class="hint">No client pages have reached this phone yet.<br>
+        On Eric's phone: <b>⚙ Setup → Crew → 📤 Set up / update crew folders</b>, then tap 🔄 below.<br>
+        <span style="opacity:.75">Looked in: ${tried.length ? tried.map(esc).join(' · ') : 'nowhere — Dropbox would not answer'}</span></span>
+        <div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button></div>`;
+      return;
+    }
     const cl = _portalIdx.clients || [];
     box.innerHTML = cl.length ? cl.map((c, i) => `
       <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
         <span class="sum-title" style="flex: 1 1 100%;">🏠 ${esc(c.job)}</span>
         <button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>
-      </div>`).join('')
-      : '<span class="hint">No client pages shared with you yet — Eric turns these on from his phone.</span>';
+      </div>`).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button></div>`
+      : '<span class="hint">Eric hasn\'t turned any client pages on yet.</span>';
     return;
   }
   try {
@@ -10650,8 +10671,32 @@ async function startConnect() {
   const challenge = b64url(new Uint8Array(digest));
   lsSet('daylog-pkce', pkceVerifier);
   const url = `https://www.dropbox.com/oauth2/authorize?client_id=${encodeURIComponent(key)}&response_type=code&token_access_type=offline&code_challenge=${challenge}&code_challenge_method=S256`;
-  window.open(url, '_blank');
-  $('setupStatus').textContent = 'A Dropbox page opened — approve access, copy the code it shows, paste it below, hit Finish.';
+  // 🔗 v5.48 — BUG: this used to be a bare window.open, which an INSTALLED app on a phone
+  // blocks silently. Tap Connect, nothing happens, no error, no page — which is exactly what
+  // Phil hit. So the link is never assumed: it's printed right here, big and tappable, with
+  // a copy button, and the words never claim a page opened when it might not have.
+  _authUrl = url;
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (!standalone) { try { window.open(url, '_blank'); } catch (e) {} } // a browser tab is fine; the installed app is not
+  $('setupStatus').innerHTML = `
+    <b>Step 1 — open the Dropbox page.</b> Tap the button. If nothing happens, tap 📋 and paste
+    the link into Safari or Chrome yourself.
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 8px;">
+      <a class="btn-primary" style="text-decoration:none; display:inline-flex; align-items:center;"
+         href="${esc(url)}" target="_blank" rel="noopener">🔗 Open the Dropbox page</a>
+      <button type="button" class="btn-ghost" onclick="copyAuthLink()">📋 Copy the link</button>
+    </div>
+    <b>Step 2</b> — sign in as yourself and approve. Dropbox shows you a code.<br>
+    <b>Step 3</b> — come back here, paste that code in the box below, tap <b>Finish</b>.
+    <div style="margin-top:8px; font-size:11px; word-break:break-all; opacity:.7; user-select:all; -webkit-user-select:all;">${esc(url)}</div>`;
+}
+let _authUrl = '';
+// 📋 v5.48 — a phone that won't open a tab will still copy. Falls back to a prompt box he
+// can copy out of by hand, so there is always a way through.
+async function copyAuthLink() {
+  if (!_authUrl) { toast('Tap Connect first', false); return; }
+  try { await navigator.clipboard.writeText(_authUrl); toast('📋 Link copied — paste it into Safari ✓'); }
+  catch (e) { prompt('Copy this link and open it in Safari:', _authUrl); }
 }
 async function finishConnect() {
   const code = $('sCode').value.trim();
