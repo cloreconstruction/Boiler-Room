@@ -2751,7 +2751,7 @@
       <div class="field"><label>Who</label><select id="ptWho"></select></div>
       <div class="field"><label>Due (optional)</label><input type="date" id="ptDue"></div>
       <div class="field"><label>Priority</label><select id="ptPri"><option value="0">Low</option><option value="1" selected>Medium</option><option value="2">High</option><option value="3">Urgent</option></select></div>
-      <div class="field"><label>When in the day</label><select id="ptPart"></select></div>
+      <div class="field" style="display: none;"><label>When in the day</label><select id="ptPart"></select></div><!-- ⏸ v5.50 parked with Day flow -->
       <div class="field" style="flex: 1 1 100%;"><label>Checklist (optional)</label><select id="ptPipe" onchange="ptPipePreview()"></select><div id="ptPipeInfo" class="hint" style="margin-top: 5px;"></div></div>
       <div class="field" style="flex: 1 1 100%;"><label>📝 Where it stands — what you learned trying (optional)</label><textarea id="ptNote" class="grow" rows="2" oninput="fitTa(this)" placeholder="Called Ferguson — they're checking the warehouse. Ask for Dana, she knows the order."></textarea></div>
       <div class="field" style="flex: 1 1 100%;"><label>↳ Plan B — if it doesn't go the normal way (optional)</label><input type="text" id="ptIf" placeholder="If it rains Tuesday, do the interior instead"></div>
@@ -2806,10 +2806,10 @@
         <div class="field"><label>Hours that make a full day</label><input type="number" id="sDayGoal" min="1" max="16" step="0.5" onchange="setDayGoal(this.value)"></div>
       </div>
       <div class="hint">THE DAY tube on the dashboard fills toward this — the whistle blows steam when you hit it.</div>
-      <div class="field" style="margin-top: 14px;"><label>Day flow — name the stretches of your day</label></div>
-      <div id="dayFlowRows"></div>
-      <button class="btn-ghost" onclick="dayFlowAdd()" style="margin-top: 4px;">＋ Add a stretch</button>
-      <div class="hint" style="margin-top: 6px;">Each stretch draws on the meter with a brass divider and its name on the glass. Hours outside your stretches shade dark as 🌙 night. To-dos you assign to a stretch ride as small lamps above the glass.</div>
+      <!-- ⏸ v5.50 — DAY FLOW (named stretches + to-do lamps on the tube) PARKED on Eric's
+           word: "take it out for now, I do want to bring it back eventually." The saved
+           stretches stay in prefs.dayFlow untouched, so bringing it back is wiring, not
+           rebuilding. The full feature description lives in the parking-lot doc. -->
     </div>
     <div class="set-section" id="setPipes">
       <h4>Checklists</h4>
@@ -3040,7 +3040,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.49 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.50 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4967,7 +4967,7 @@ function openPanel(name) {
       if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
       if ($('unlockWho')) $('unlockWho').innerHTML = crew.map(c => `<option>${esc(c)}</option>`).join('');
       renderPortalList(); renderQbLights(); initSetupCollapse(); }
-    if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; $('sAiModel').value = aiMode(); setAiModelHint(); renderDayFlowRows(); renderPipeRows(); }
+    if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; $('sAiModel').value = aiMode(); setAiModelHint(); renderPipeRows(); }
     if (name === 'vault') vaultOpenInit();
     if (name === 'summary') summaryOpenInit();
     if (name === 'find') findOpenInit();
@@ -6012,38 +6012,11 @@ async function saveFiling(shareToo) {
   fcBusy = false; btnIdle('fcSaveBtn');
 }
 // ---------- day flow: named stretches of the day, drawn on THE DAY meter ----------
-function dayFlowGet() {
-  return (Array.isArray(prefs.dayFlow) && prefs.dayFlow.length)
-    ? prefs.dayFlow
-    : [{ n: 'Morning', s: '06:00', e: '12:00' }, { n: 'Afternoon', s: '12:00', e: '18:00' }];
-}
-function renderDayFlowRows() {
-  const box = $('dayFlowRows');
-  if (!box) return;
-  box.innerHTML = dayFlowGet().map((z, i) => `<div class="frow" style="margin-bottom: 6px; align-items: flex-end;">
-    <div class="field" style="flex: 1; min-width: 90px;"><label>Stretch</label><input type="text" value="${esc(z.n || '')}" placeholder="Morning" onchange="dayFlowSet(${i}, 'n', this.value)"></div>
-    <div class="field"><label>From</label><input type="time" value="${esc(z.s || '')}" onchange="dayFlowSet(${i}, 's', this.value)"></div>
-    <div class="field"><label>To</label><input type="time" value="${esc(z.e || '')}" onchange="dayFlowSet(${i}, 'e', this.value)"></div>
-    <button class="btn-ghost" onclick="dayFlowDel(${i})" title="Remove this stretch" aria-label="Remove ${esc(z.n || 'stretch')}">✕</button>
-  </div>`).join('');
-}
-function dayFlowSet(i, k, v) {
-  const f = dayFlowGet().map(z => ({ ...z }));
-  if (!f[i]) return;
-  f[i][k] = v;
-  prefs.dayFlow = f; scheduleSave(); renderDayTube(); renderPipeSelect();
-}
-function dayFlowAdd() {
-  const f = dayFlowGet().map(z => ({ ...z }));
-  const last = f[f.length - 1];
-  f.push({ n: '', s: (last && last.e) || '18:00', e: '20:00' });
-  prefs.dayFlow = f; renderDayFlowRows(); scheduleSave(); renderDayTube(); renderPipeSelect();
-}
-function dayFlowDel(i) {
-  const f = dayFlowGet().map(z => ({ ...z }));
-  f.splice(i, 1);
-  prefs.dayFlow = f; renderDayFlowRows(); scheduleSave(); renderDayTube(); renderPipeSelect();
-}
+// ⏸ v5.50 — Day flow is PARKED, not deleted. prefs.dayFlow keeps whatever Eric built, and
+// this returns [] so every consumer (tube zones, night glass, to-do stretch picker, lamps)
+// goes quiet on its own. Revival = make this return prefs.dayFlow again + restore the Setup
+// rows (see the parking-lot doc).
+function dayFlowGet() { return []; }
 function hOpenInit() {
   // date wheel: a plain select opens as the native scroll wheel on the phone
   const sel = $('hDaySel');
