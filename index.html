@@ -2384,7 +2384,10 @@
     </div>
   </div>
 
-  <div class="card daytube-card" id="dayTubeCard">
+  <!-- ⏸ v5.59 — TABLED at Eric's word, same shelf as the day-flow stretches (v5.50). The
+       markup and renderDayTube() stay whole and wired; only this one line hides the card,
+       so bringing it back later is deleting the style attribute. Nothing was deleted. -->
+  <div class="card daytube-card" id="dayTubeCard" style="display: none !important;">
     <div class="dt-head">
       <span class="card-sub" style="margin: 0;">THE DAY</span>
       <span class="dt-right"><b id="dtTotal" class="dt-total"></b><img id="dtSign" class="dt-sign" src="steam/sign-quittin.webp" alt="Quittin' time" style="display: none;"></span>
@@ -2866,6 +2869,7 @@
       <h4>Crew</h4>
       <div class="hint" style="margin: 0 0 10px;">People you can assign to-dos to. Their tasks get their own section in summaries.</div>
       <div id="crewList" class="job-list"></div>
+      <div class="hint" id="crewOfficeHint" style="margin-top: 8px;"></div>
       <div class="frow" style="margin-top: 10px;">
         <div class="field"><label>New crew member</label><input type="text" id="scName" placeholder="Phil"></div>
         <button class="btn-ghost" onclick="addCrewSettings()">+ Add person</button>
@@ -3064,9 +3068,9 @@
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
-  <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
-  <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.57 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
+       those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
+  <footer>v5.59 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7347,7 +7351,7 @@ async function publishCrewFolders() {
     // 👥 v5.49 — his CREW-MATES ride along (everyone but him). Before this a crew phone had
     // no idea who else was on the job, so the 🔔 route chips were hardcoded to "Phil" — which
     // meant Phil's own phone offered to get Phil's attention. Names come from Eric's roster now.
-    try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: { rates: wageRatesFor(name), catGrades: wageCfg().catGrades || {} }, tags: knownTags(), mates: crew.filter(c => c !== name), pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1)); } catch (e) {}
+    try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: { rates: wageRatesFor(name), catGrades: wageCfg().catGrades || {} }, tags: knownTags(), mates: crew.filter(c => c !== name), office: isOffice(name) || undefined, pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1)); } catch (e) {}
   }
   // 🏠 v5.46 — 📤 is the button Eric already reaches for when a crew phone is missing
   // something, so it pushes the client-page list out too. One tap fixes an empty portal.
@@ -7372,7 +7376,9 @@ async function crewJoin() {
       if (cfg.wage) lsSet('daylog-crew-wage', JSON.stringify(cfg.wage));
       if (Array.isArray(cfg.tags)) lsSet('daylog-crew-tags', JSON.stringify(cfg.tags));
       if (Array.isArray(cfg.mates)) lsSet('daylog-crew-mates', JSON.stringify(cfg.mates)); // 👥 v5.49
+      lsSet('daylog-crew-office', cfg.office ? '1' : ''); // 🏢 v5.58 — office or field
       if (cfg.pushSecret) lsSet('daylog-push-secret', cfg.pushSecret);
+      lsSet('daylog-crew-office', cfg.office ? '1' : '');
       msg.textContent = `✓ This phone is now ${cfg.name}'s. Reloading…`;
       setTimeout(() => location.reload(), 900);
       return;
@@ -8302,11 +8308,19 @@ async function renderPortalList() {
       return;
     }
     const cl = _portalIdx.clients || [];
-    box.innerHTML = cl.length ? cl.map((c, i) => `
+    const off = amOffice();
+    box.innerHTML = cl.length ? cl.map((c, i) => {
+      const open = _portalOpen === i;
+      return `
       <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
-        <span class="sum-title" style="flex: 1 1 100%;">🏠 ${esc(c.job)}</span>
-        <button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>
-      </div>`).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button></div>`
+        <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
+          onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}</button>
+        ${open ? `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>
+        ${off ? `<button class="btn-ghost req-x" onclick="openMaterials(${i})">📋 Materials</button>
+        <button class="btn-ghost req-x" onclick="portalCopy(${i})">📋 Copy link</button>` : ''}` : ''}
+      </div>`;
+    }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button>
+      ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — the materials board is yours too.</span>' : ''}</div>`
       : '<span class="hint">Eric hasn\'t turned any client pages on yet.</span>';
     return;
   }
@@ -8333,16 +8347,65 @@ async function renderPortalList() {
       <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? This kills their link for good' : '🔄 Rotate code'}</button>` : ''}
     </div>`;
   }).join('') || '<span class="hint">No clients yet.</span>';
+  // ➕ v5.58 — THE MISSING BUTTON. Every page in here was hand-built in a chat, which is why
+  // Scritchfield never had one and its QuickBooks money landed nowhere. The nightly refresher
+  // only refreshes pages that ALREADY exist — it matches QB customer names against this list.
+  // No page, no match. Eric makes his own now, off his real job list, in two taps.
+  const have = new Set((_portalIdx.clients || []).map(c => (c.job || '').toLowerCase()));
+  const spare = jobs.filter(j => j && j !== '—' && !have.has(j.toLowerCase()));
+  box.innerHTML += `<div class="set-section fc-sec" style="margin-top: 12px;"><h4>➕ Give a job a client page</h4>
+    <div class="frow">
+      <div class="field" style="flex: 1; min-width: 160px;"><label>Job</label>
+        <select id="npJob">${spare.length ? spare.map(j => `<option>${esc(j)}</option>`).join('') : '<option value="">every job already has one</option>'}</select></div>
+      <div class="field" style="flex: 1; min-width: 160px;"><label>Name the homeowner sees</label>
+        <input type="text" id="npTitle" placeholder="Scritchfield Residence"></div>
+    </div>
+    <label class="hint" style="display: flex; gap: 8px; align-items: center; margin: 8px 0; cursor: pointer;">
+      <input type="checkbox" id="npMoney"> 💵 Show them money — invoiced, paid, what's open
+    </label>
+    <button class="btn-primary" style="width: 100%;" onclick="portalNew()">➕ Build the page</button>
+    <div class="hint" id="npMsg" style="margin-top: 6px;">The page starts empty and fills itself: the nightly QuickBooks run puts the money in, the journal and materials board are yours to fill. The link is unguessable — nobody sees it until you text it.</div></div>`;
 }
 // which job's buttons are unfolded — one at a time, and it remembers within the session
 let _portalOpen = -1;
+// ➕ v5.58 — build a client page from a job Eric already has. Code = key + 6 random hex, the
+// same shape the existing pages use, so 🔄 rotate and the QB refresher both work on it day one.
+async function portalNew() {
+  if (portalGuard()) return;
+  const job = ($('npJob') || {}).value || '';
+  const title = (($('npTitle') || {}).value || '').trim() || job;
+  const msg = $('npMsg');
+  if (!job) { if (msg) msg.textContent = 'Pick a job first — every job on the wheel already has a page.'; return; }
+  const key = cleanName(job).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12) || 'job';
+  const code = key + '-' + Math.random().toString(16).slice(2, 8);
+  const page = { name: title, stage: '', updated: new Date().toISOString().slice(0, 10),
+    show: { money: !!($('npMoney') || {}).checked, phases: !!($('npMoney') || {}).checked },
+    invoiced: 0, paid: 0, open: 0, journal: [], phases: [] };
+  if (msg) msg.textContent = '⏳ Building it…';
+  try {
+    // page first, index second — a page with no index entry is invisible; an index entry with
+    // no page is a dead link a client could hit. Order matters, same lesson as the refresher.
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + code + '.json', JSON.stringify(page, null, 1));
+    _portalIdx.clients = _portalIdx.clients || [];
+    _portalIdx.clients.push({ key, job: title, code });
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/index.json', JSON.stringify(_portalIdx));
+    _portalOpen = _portalIdx.clients.length - 1;
+    renderPortalList();
+    publishSharedNotes(); // the office crew's copy of the list picks it up on this sweep
+    toast(`🏠 ${title} has a page ✓ — 📋 Copy link when you're ready to text it`);
+  } catch (e) {
+    if (msg) msg.textContent = 'Couldn\'t build it — check the connection and try again.';
+  }
+}
 function portalFold(i) { _portalOpen = _portalOpen === i ? -1 : i; _rotArm = 0; renderPortalList(); }
 function portalUrl(i) { return location.origin + '/c/?c=' + encodeURIComponent(_portalIdx.clients[i].code); }
 // 👁 v5.29 — the client page opens INSIDE the app, gold banner to come back. window.open
 // hijacked the whole installed app with no way home (and broke the no-external-tabs rule).
 // &pv=1 keeps Eric's own looks out of the "What they look at" tallies.
 function clientPreviewOpen(i) {
-  if (portalGuard()) return;
+  // 👁 v5.59 — NOT office-gated. Looking at the page a homeowner looks at is the whole point
+  // of giving crew the portal; the office gate belongs on the tools that CHANGE things.
+  if (!_portalIdx || !(_portalIdx.clients || [])[i]) return;
   $('cpFrame').src = portalUrl(i) + '&pv=1';
   $('cliPrev').classList.add('show');
 }
@@ -8357,7 +8420,13 @@ document.addEventListener('keydown', e => {
 // 🏠 v5.44 — Eric was asked how much of the portal Phil should get and chose the whole
 // Setup section, contact details and the 🔄 rotate button included. His call, his clients.
 // The guard stays as a named place to put the wall back if he changes his mind.
-function portalGuard() { return false; }
+function portalGuard() {
+  // 🏢 v5.58 — office phones only. Field crew keep the read-only view of the client's page;
+  // the tools that CHANGE things — journal, materials, rotate, intel, new page — need office.
+  if (amOffice()) return false;
+  toast('🏢 That one is office-side — ask Eric to switch your phone to office in Setup → Crew', false);
+  return true;
+}
 // 🔄 v5.44 — rotate is the one irreversible button in here: it kills a homeowner's link
 // dead and there is no undo. On a crew phone it takes TWO taps, with the consequence
 // spelled out in words on the button itself, so a phone in a tool bag can't do it.
@@ -8696,6 +8765,7 @@ const MAT_TRADES = ['Electrical', 'Plumbing', 'Tile', 'Doors', 'Windows', 'Paint
 function matWord(s) { return (MAT_STATES.find(x => x[0] === (s || 'pick')) || MAT_STATES[0])[1]; }
 async function openMaterials(i) {
   if (portalGuard()) return;
+  if (CREW_NAME) { toast('📋 The board is coming to office phones next — it lives in Eric\'s Dropbox and needs its own copy out here first', false); return; }
   _matIdx = i; _matEdit = ''; _matDirty = false; _matArm = '';
   const c = _portalIdx.clients[i];
   toast('⏳ Loading the board…');
@@ -9669,14 +9739,30 @@ function renderAskRecent() {
   const sel = $('runLogN'); if (sel && +sel.value !== n) sel.value = String(n);
   const f = prefs.rlFilter || '', who = prefs.rlWho || '';
   // the whole day's traffic, typed: kind decides the glyph AND what the filters catch
-  const kindOf = e => e.texted ? 'text'
+  // 📜 v5.59 — Eric: "I want to see EVERYTHING that flows through this app go through that
+  // running log." So besides his own entries and the Wizard, the feed now carries the review
+  // pile too — 👷 crew messages and 🏠 client questions land here the moment they arrive,
+  // BEFORE he's acted on them, marked ⏳ waiting. Tap one and the review card opens.
+  const kindOf = e => /^App feedback:/.test(e.details || '') || (e.tags || []).includes('App Feedback') ? 'fb'
+    : (e.who && e.who !== 'Me' && crew.includes(e.who)) ? 'crew'
+    : e.texted ? 'text'
     : (e.photoPath || (e.photoPaths && e.photoPaths.length) || e.type === 'Photo') ? 'photo'
     : e.ask ? 'wiz' : 'grind';
-  const GLYPH = { text: '📱', photo: '📷', wiz: '❓', grind: '⚙' };
+  const GLYPH = { text: '📱', photo: '📷', wiz: '❓', grind: '⚙', fb: '💬', crew: '👷', client: '🏠' };
   const personOf = e => e.who && e.who !== 'Me' ? e.who : ((e.tags || [])[0] || '');
+  const pendKind = p => p.kind === 'crew' ? 'crew' : p.kind === 'clientask' ? 'client'
+    : p.kind === 'text' ? 'text' : p.kind === 'question' ? 'wiz' : 'grind';
+  const pendWords = p => {
+    const pay = p.payload || {};
+    return (pay.text || pay.q || pay.body || pay.seen || pay.type || '…').slice(0, 64);
+  };
   let items = [
     ...recentAnswers().map((r, i) => ({ ts: +new Date(r.ts), kind: 'wiz', who: '',
       on: `reopenAnswer(${i})`, h: `🧙 <span class="arq">${esc(r.q)}</span>` })),
+    ...(CREW_NAME ? [] : pendingQueue.slice(0, 40)).map(pq => ({
+      ts: +new Date((pq.payload || {}).ts || Date.now() - 1), kind: pendKind(pq), who: pq.source || '',
+      on: `openReview()`,
+      h: `${GLYPH[pendKind(pq)]} <span class="arq"><b>⏳ waiting:</b> ${esc((pq.source ? pq.source + ' — ' : '') + pendWords(pq))}</span>` })),
     ...entries.filter(e => !e.sample).slice(0, 120).map(e => ({
       ts: +new Date(e.ts), kind: kindOf(e), who: personOf(e), on: `openPanel('log')`,
       h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^Text from /, '').slice(0, 70))}</span>` }))
@@ -9689,7 +9775,8 @@ function renderAskRecent() {
   const chip = (v, w) => `<button type="button" class="pick-chip${f === v ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="rlSet('${v}')">${f === v ? '✓ ' : ''}${w}</button>`;
   box.innerHTML = `<div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 4px;">
       <button type="button" class="pick-chip${!f && !who ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; scheduleSave(); renderAskRecent();">${!f && !who ? '✓ ' : ''}✳ All</button>
-      ${chip('grind', '⚙ Grinder')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('photo', '📷 Pictures')}
+      ${chip('grind', '⚙ Grinder')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('photo', '📷 Pictures')}${chip('crew', '👷 Crew')}${chip('client', '🏠 Client')}${chip('fb', '💬 Feedback')}
+      <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="openFeedback()" title="Say what works and what doesn't — it lands right here in the log">➕ 💬 say something</button>
       ${people.length ? `<select class="mini-sel" style="min-height: 26px; font-size: 11px; padding: 2px 6px;" onchange="rlWho(this.value)" title="Just one person's traffic">
         <option value="">👤 person…</option>${people.map(pn => `<option${who === pn ? ' selected' : ''}>${esc(pn)}</option>`).join('')}</select>` : ''}
     </div>` +
@@ -9854,10 +9941,39 @@ function deleteCrew(i) {
   scheduleSave();
   toast(`Removed ${name}. Their existing to-dos keep the name.`);
 }
+// 🏢 v5.58 — THE OFFICE FLAG. Eric: "not the crew, just me and Phil, because we have the
+// client side." Some crew are office: they get the materials board and the client-facing
+// tools. Everybody else is field — hours, notes, photos, their own log, and that's it.
+// One flag, reusable for anything else that's office-not-field later.
+function officeFolks() { return Array.isArray(prefs.office) ? prefs.office : (prefs.office = []); }
+function isOffice(name) { return officeFolks().some(o => o.toLowerCase() === String(name || '').toLowerCase()); }
+// on a crew phone: does THIS phone hold the office key? (Eric is always office on his own.)
+function amOffice() { return !CREW_NAME || lsGet('daylog-crew-office') === '1' || (crewPreview && isOffice(prefs.previewAs || crew[0] || '')); }
+function toggleOffice(i) {
+  const n = crew[i];
+  if (!n) return;
+  const o = officeFolks();
+  const at = o.findIndex(x => x.toLowerCase() === n.toLowerCase());
+  if (at >= 0) o.splice(at, 1); else o.push(n);
+  scheduleSave();
+  renderCrewManager();
+  toast(isOffice(n) ? `🏢 ${n} is OFFICE — gets the materials board and the client side ✓`
+    : `👷 ${n} is FIELD — hours, notes and photos only`);
+}
 function renderCrewManager() {
-  $('crewList').innerHTML = crew.length ? crew.map((c, i) =>
-    `<span class="job-pill">${esc(c)}<button class="jm-del" title="Remove ${esc(c)}" onclick="deleteCrew(${i})">✕</button></span>`
-  ).join('') : '<span class="hint">No crew yet — to-dos default to you.</span>';
+  $('crewList').innerHTML = crew.length ? crew.map((c, i) => {
+    const off = isOffice(c);
+    // brightness + glyph + the spelled word, never colour alone
+    return `<span class="job-pill" style="${off ? 'border-width: 2.5px; font-weight: 800;' : ''}">${esc(c)}
+      <button type="button" class="jm-del" style="color: inherit; font-weight: 700; font-size: 10px; letter-spacing: .4px;"
+        title="${off ? esc(c) + ' is office — tap to make them field' : esc(c) + ' is field — tap to give them the office side'}"
+        onclick="toggleOffice(${i})">${off ? '🏢 OFFICE' : '👷 field'}</button>
+      <button class="jm-del" title="Remove ${esc(c)}" onclick="deleteCrew(${i})">✕</button></span>`;
+  }).join('') : '<span class="hint">No crew yet — to-dos default to you.</span>';
+  const h = $('crewOfficeHint');
+  if (h) { const o = officeFolks().filter(n => crew.includes(n)); h.innerHTML = o.length
+    ? `🏢 <b>Office:</b> ${o.map(esc).join(', ')} — they get the materials board and the client side, same as you. Everyone else sees hours, notes and photos only.`
+    : '🏢 Nobody is office yet. Tap 👷 field on a name to hand them the materials board and the client side.'; }
 }
 function renderWhoSelects() {
   const opts = ['Me', ...crew];
