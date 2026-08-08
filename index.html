@@ -2204,9 +2204,9 @@
          says to the bookkeeper." Grinds the note + photos like normal AND pops the phone's
          send sheet labeled for the books, same finger-tap. When the Logan/QB robot address
          is wired up later, this same button switches from the send sheet to sending direct. -->
-    <button type="button" class="btn-ghost" id="bkkBtn" onclick="toBookkeeper()"
-      style="width: 100%; margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; border-width: 2px;">
-      📗 TO THE BOOKKEEPER — files it here + opens the send sheet</button>
+    <button type="button" class="sc-btn" id="bkkBtn" onclick="toBookkeeper()"
+      style="width: 100%; margin-top: 8px; min-height: 48px; font-size: 14px;">
+      📗 <span>TO THE BOOKKEEPER — files it here + opens the send sheet</span></button>
     <div class="frow" style="margin-top: 10px; align-items: center; flex-wrap: nowrap;">
       <!-- v5.26 — Eric kept hunting for this wheel: bigger, bolder, brass-rimmed -->
       <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0; font-size: 16.5px; font-weight: 800; padding: 12px 10px; border: 2px solid var(--accent); border-radius: 10px;"></select>
@@ -3066,7 +3066,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.55 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.56 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9644,22 +9644,48 @@ function saveRecentAnswer(q, a) {
 }
 // 📜 v5.08 — the RUNNING LOG: recent Wizard answers AND recent Grinder notes, one stream,
 // newest first. The little dropdown picks how many show (3 / 5 / 10).
+// 📜 v5.56 — Eric: "make sure EVERYTHING goes to the running log — questions, texts,
+// incoming pictures, everything — and make it sortable, quick." One feed, everything in it,
+// and a chip row that FILTERS in place: ⚙ ground notes · 🧙 questions · 📱 texts · 📷 pictures,
+// plus a person wheel. Chips are filters, not pages — tap ✳ and it's everything again.
+function rlSet(f) { prefs.rlFilter = prefs.rlFilter === f ? '' : f; scheduleSave(); renderAskRecent(); }
+function rlWho(v) { prefs.rlWho = v || ''; scheduleSave(); renderAskRecent(); }
 function renderAskRecent() {
   const box = $('askRecent');
   if (!box) return;
   const n = [3, 5, 10].includes(+prefs.runLogN) ? +prefs.runLogN : 3;
   const sel = $('runLogN'); if (sel && +sel.value !== n) sel.value = String(n);
-  const items = [
-    ...recentAnswers().map((r, i) => ({ ts: +new Date(r.ts), on: `reopenAnswer(${i})`,
-      h: `🧙 <span class="arq">${esc(r.q)}</span>` })),
-    ...entries.filter(e => !e.sample && e.type === 'Note' && !e.texted).slice(0, n).map(e => ({ ts: +new Date(e.ts), on: `openPanel('log')`, // v5.26 — texts live in the 📬 digest, not here
-      h: `⚙ <span class="arq">${esc((e.details || '').slice(0, 70))}</span>` }))
-  ].filter(it => !isNaN(it.ts)).sort((a, b) => b.ts - a.ts).slice(0, n);
-  box.innerHTML = items.map(it => {
-    const d = new Date(it.ts);
-    const when = sameDay(d, new Date()) ? fmtTime(d) : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    return `<div class="ask-recent-row" onclick="${it.on}">${it.h}<span class="arw">${when}</span></div>`;
-  }).join('');
+  const f = prefs.rlFilter || '', who = prefs.rlWho || '';
+  // the whole day's traffic, typed: kind decides the glyph AND what the filters catch
+  const kindOf = e => e.texted ? 'text'
+    : (e.photoPath || (e.photoPaths && e.photoPaths.length) || e.type === 'Photo') ? 'photo'
+    : e.ask ? 'wiz' : 'grind';
+  const GLYPH = { text: '📱', photo: '📷', wiz: '❓', grind: '⚙' };
+  const personOf = e => e.who && e.who !== 'Me' ? e.who : ((e.tags || [])[0] || '');
+  let items = [
+    ...recentAnswers().map((r, i) => ({ ts: +new Date(r.ts), kind: 'wiz', who: '',
+      on: `reopenAnswer(${i})`, h: `🧙 <span class="arq">${esc(r.q)}</span>` })),
+    ...entries.filter(e => !e.sample).slice(0, 120).map(e => ({
+      ts: +new Date(e.ts), kind: kindOf(e), who: personOf(e), on: `openPanel('log')`,
+      h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^Text from /, '').slice(0, 70))}</span>` }))
+  ].filter(it => !isNaN(it.ts));
+  const people = [...new Set(items.map(it => it.who).filter(Boolean))].slice(0, 20).sort();
+  if (f) items = items.filter(it => it.kind === f || (f === 'wiz' && it.kind === 'wiz'));
+  if (who) items = items.filter(it => it.who === who);
+  items.sort((a, b) => b.ts - a.ts);
+  const shownItems = items.slice(0, n);
+  const chip = (v, w) => `<button type="button" class="pick-chip${f === v ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="rlSet('${v}')">${f === v ? '✓ ' : ''}${w}</button>`;
+  box.innerHTML = `<div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 4px;">
+      <button type="button" class="pick-chip${!f && !who ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; scheduleSave(); renderAskRecent();">${!f && !who ? '✓ ' : ''}✳ All</button>
+      ${chip('grind', '⚙ Grinder')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('photo', '📷 Pictures')}
+      ${people.length ? `<select class="mini-sel" style="min-height: 26px; font-size: 11px; padding: 2px 6px;" onchange="rlWho(this.value)" title="Just one person's traffic">
+        <option value="">👤 person…</option>${people.map(pn => `<option${who === pn ? ' selected' : ''}>${esc(pn)}</option>`).join('')}</select>` : ''}
+    </div>` +
+    (shownItems.length ? shownItems.map(it => {
+      const d = new Date(it.ts);
+      const when = sameDay(d, new Date()) ? fmtTime(d) : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return `<div class="ask-recent-row" onclick="${it.on}">${it.h}<span class="arw">${when}</span></div>`;
+    }).join('') : `<div class="hint" style="margin: 4px 0;">Nothing under that filter yet — ✳ All shows everything.</div>`);
 }
 function reopenAnswer(i) {
   const r = recentAnswers()[i];
