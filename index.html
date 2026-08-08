@@ -2323,9 +2323,17 @@
   <div class="card" id="crewAskCard" style="display: none;"></div>
 
   <!-- crew only: notes Eric unlocked or sent to this person -->
+  <!-- 📨 v5.46 — Eric: "the notes from me need to be collapsible and have the option to
+       select how many are showing." The head folds the whole card, and the wheel caps the
+       list. Fold state is a glyph AND the spelled word, never a caret alone. -->
   <div class="card" id="crewSharedCard" style="display: none;">
-    <div class="log-head" style="margin-bottom: 8px;">
-      <span class="card-sub" style="margin: 0;">📨 FROM ERIC</span>
+    <div class="log-head" style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <button type="button" id="crFoldBtn" class="card-sub" style="margin: 0; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; flex: 1; text-align: left;"
+        onclick="crewSharedFold()" aria-expanded="true">📨 FROM ERIC</button>
+      <select id="crShowN" class="mini-sel" title="How many of Eric's notes show" style="width: auto; min-height: 28px; padding: 2px 8px; font-size: 12px;"
+        onchange="prefs.crewShowN = this.value; scheduleSave(); renderCrewShared();">
+        <option value="3">3</option><option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="all">All</option>
+      </select>
     </div>
     <div id="crewSharedList"></div>
   </div>
@@ -3026,7 +3034,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.45 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.46 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7197,6 +7205,9 @@ async function publishCrewFolders() {
     // 🔐 THEIR rates only — wageRatesFor(name) resolves this ONE person; nobody else's numbers ride along
     try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: { rates: wageRatesFor(name), catGrades: wageCfg().catGrades || {} }, tags: knownTags(), pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1)); } catch (e) {}
   }
+  // 🏠 v5.46 — 📤 is the button Eric already reaches for when a crew phone is missing
+  // something, so it pushes the client-page list out too. One tap fixes an empty portal.
+  await publishSharedNotes();
   toast(`Crew folders ready — ${crew.join(', ')} ✓`);
 }
 // --- crew member's phone: after connecting THEIR Dropbox, find the shared folder by its crew.json ---
@@ -7413,6 +7424,13 @@ const _crewPhCache = {};
 const _portalCache = {};
 async function publishSharedNotes() {
   if (!dbx.refreshToken || CREW_NAME || !crew.length) return;
+  // 🏠 v5.46 — BUG FROM v5.45: the client list only went out if Eric happened to have opened
+  // ⚙ Setup → Client portal that session, because that's the only thing that filled _portalIdx.
+  // If he hadn't, crew phones got an empty portal page. The sweep loads it itself now.
+  if (!_portalIdx) {
+    try { _portalIdx = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/index.json')); }
+    catch (e) { /* no portal built yet — the crew list just stays empty, quietly */ }
+  }
   // 🔒 personal entries can NEVER travel — even a stray vis flag doesn't override the wall
   const shared = entries.filter(e => e.vis && !e.sample && !e.personal).slice(0, 120);
   for (const name of crew) {
@@ -7664,10 +7682,27 @@ function renderCrewShared() {
     : crewShared;
   card.style.display = (isCrew() && list.length) ? '' : 'none';
   if (!isCrew() || !list.length) return;
+  // 📨 v5.46 — the wheel: how many of Eric's notes ride on the page at once
+  const nRaw = prefs.crewShowN == null ? '5' : String(prefs.crewShowN);
+  const cap = nRaw === 'all' ? list.length : Math.max(1, parseInt(nRaw, 10) || 5);
+  const sel = $('crShowN'); if (sel && sel.value !== nRaw) sel.value = nRaw;
+  const folded = prefs.crewFold === true;
+  const btn = $('crFoldBtn');
+  if (btn) {
+    // brightness + glyph + the spelled word: never a bare caret
+    btn.textContent = folded
+      ? `▸ 📨 FROM ERIC — ${list.length} note${list.length === 1 ? '' : 's'}, tap to open`
+      : `▾ 📨 FROM ERIC — showing ${Math.min(cap, list.length)} of ${list.length}, tap to fold`;
+    btn.setAttribute('aria-expanded', folded ? 'false' : 'true');
+  }
+  const bodyEl = $('crewSharedList');
+  if (bodyEl) bodyEl.style.display = folded ? 'none' : '';
+  if (sel) sel.style.display = folded ? 'none' : '';
+  if (folded) return;
   // 📷 v5.43 — a note Eric sent is no longer read-only wallpaper. If a picture came with it
   // there's a button to open it full screen, and every row has a ✎ to send words back —
   // "that's the wrong window", "got it, done Tuesday". His words go to ERIC, not the crew.
-  $('crewSharedList').innerHTML = list.slice(0, 40).map(n => {
+  $('crewSharedList').innerHTML = list.slice(0, cap).map(n => {
     const d = new Date(n.ts);
     const id = escq(String(n.id == null ? '' : n.id));
     return `<div class="sum-row" style="cursor: default; font-size: 14.5px; display: block;">
@@ -7683,6 +7718,13 @@ function renderCrewShared() {
 // ✎ v5.43 — Eric's note stays exactly as he wrote it; Phil's words ride back ATTACHED to it.
 // Nothing gets overwritten from two directions at once, so a correction can never eat the
 // original — and Eric still gets the fix in his log, tied to the thing it's fixing.
+// 📨 v5.46 — fold the whole FROM ERIC card away; it remembers, so a man who wants his page
+// short keeps it short. Folded still says how many are waiting — never a silent hide.
+function crewSharedFold() {
+  prefs.crewFold = !prefs.crewFold;
+  scheduleSave();
+  renderCrewShared();
+}
 function crewNoteReply(id) {
   const box = $('crRep-' + id);
   if (!box) return;
