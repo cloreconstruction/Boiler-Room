@@ -2190,10 +2190,13 @@
     </div>
     <div id="qnPhotoInfo" class="frow" style="gap: 6px; flex-wrap: wrap; margin-top: 6px;"></div>
     <div class="chips-row" id="qnTagChips" style="margin-top: 8px;"></div>
+    <div class="hint" id="tagExplain" style="margin-top: 4px; font-size: 11px; line-height: 1.5;">🏷 Tags FILE it so it's findable later — they never send it anywhere. A <b>Personal</b> tag locks this note to this phone.</div>
     <!-- v4.71 — the lock: private by default; unlock for all crew or hand it to one person -->
     <div id="qnVisRow">
       <div class="field" style="margin: 8px 0 4px;"><label>Who sees it</label></div>
       <div class="chips-row" id="qnVisChips"></div>
+      <!-- 📖 v5.53 — Eric: "little tiny descriptions... so the crew can understand and trust it" -->
+      <div class="hint" id="visExplain" style="margin-top: 4px; font-size: 11px; line-height: 1.5;"></div>
       <div class="lock-note" id="qnLockNote">🔒 LOCKED — this one stays on your phone. Tagging and sending are switched off. Tap 📨 Eric or 🔓 All crew above to unlock them.</div>
     </div>
     <!-- crew only: who it's for + how soon -->
@@ -3040,7 +3043,7 @@
 
   <!-- 💬 v5.26 — the feedback square: Eric, crew, anyone holding the app can say what works -->
   <button type="button" class="btn-ghost" id="fbBtn" style="display: block; margin: 18px auto 4px; font-size: 13.5px;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-  <footer>v5.52 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.53 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7430,6 +7433,11 @@ function renderVisChips() {
         onchange="prefs.visCols = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4, 5].map(c => `<option value="${c}"${c === cols ? ' selected' : ''}>${c} across</option>`).join('')}</select></div>` +
     ((qnVis === 'crew' && qnVisNames.size) ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ 🔓 everybody can see it (Wizard too) · lands DIRECT 📨 on ${[...qnVisNames].map(esc).join(' + ')}</div>`
       : qnVisNames.size > 1 ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ goes to ${[...qnVisNames].map(esc).join(' + ')} — each sees it on their own phone</div>` : '');
+  // 📖 v5.53 — the standing one-liner that builds trust: what each chip DOES, in plain words
+  const ex = $('visExplain');
+  if (ex) ex.innerHTML = mine
+    ? '🔒 stays on <b>this phone only</b> — never syncs · 📨 lands on that person\'s phone · 🔓 the whole crew can see it and their Wizards can look it up.'
+    : '🔒 <b>just yours</b> — nothing sends · 📨 lands on that person\'s phone, marked for them · 🔓 every crew phone sees it and their Wizards can look it up · pick 🔓 <i>and</i> names to do both.';
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
   // the personal lock: every chip but 🔒 goes dim and dead, with the reason on the glass
   ['qnVisChips', 'nVisChips'].forEach(id => {
