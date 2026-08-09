@@ -1779,6 +1779,28 @@
     background: #241d12; color: #e8c877; font-weight: 800; letter-spacing: 0.4px;
     box-shadow: inset 0 0 0 1.5px #00000055, 0 1px 4px #00000066;
   }
+  /* 🌳 v5.65 — THE BOARD GROWS TREE LINES (Eric's mockup, approved). A brass trunk drops
+     from each room, branches reach every item, a thinner trunk hangs the steps. And the
+     GREEN CLIMBS: checked steps turn their branch green, the trunks fill green from the top
+     as work completes, done lamps go green. Never colour alone — every green thing also
+     carries its ☑/✅ glyph and its word, and checked steps dim. */
+  .mat-tree { position: relative; margin-left: 9px; }
+  .mat-tree > .mt-trunk { position: absolute; left: 0; top: 0; bottom: 10px; width: 2.5px; background: var(--accent); border-radius: 2px; }
+  .mat-tree > .mt-trunk > i { position: absolute; left: 0; top: 0; width: 100%; display: block; background: var(--good-text, #2e7d32); border-radius: 2px; }
+  .mat-item { position: relative; padding: 7px 0 4px 22px; }
+  .mat-item::before { content: ''; position: absolute; left: 0; top: 19px; width: 16px; height: 2.5px; background: var(--accent); }
+  .mat-item.mi-done::before { background: var(--good-text, #2e7d32); }
+  .mat-steps { position: relative; margin: 4px 0 0 14px; }
+  .mat-steps > .mt-trunk2 { position: absolute; left: 0; top: -2px; bottom: 8px; width: 1.5px; background: color-mix(in srgb, var(--accent) 65%, transparent); }
+  .mat-steps > .mt-trunk2 > i { position: absolute; left: 0; top: 0; width: 100%; display: block; background: var(--good-text, #2e7d32); }
+  .mat-step { position: relative; padding: 2px 0 2px 16px; }
+  .mat-step::before { content: ''; position: absolute; left: 0; top: 13px; width: 11px; height: 1.5px; background: color-mix(in srgb, var(--accent) 65%, transparent); }
+  .mat-step.ok::before { background: var(--good-text, #2e7d32); }
+  .mat-step.ok .pick-chip { opacity: .6; }
+  .mat-step .pick-chip { font-size: 12px; padding: 4px 10px; min-height: 26px; text-align: left; }
+  .mat-note { margin: 0 0 2px 16px; font-size: 11px; color: var(--ink-muted); }
+  .mat-lamp-done { background: color-mix(in srgb, var(--good-text, #2e7d32) 20%, transparent) !important;
+    border-color: var(--good-text, #2e7d32) !important; font-weight: 800; }
   .lock-note { display: none; }
   body.crew-locked .lock-note {
     display: block; margin: 8px 0 2px; font-size: 12.5px; font-weight: 700;
@@ -3075,7 +3097,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.64 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.65 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8813,13 +8835,19 @@ function renderMatMgr() {
   const need = _matD.rooms.reduce((s, r) => s + (r.items || []).filter(x => matIsHm(x) && (x.s || 'pick') === 'pick').length, 0);
   box.innerHTML = `<h3>📋 ${esc(c.job)} — materials board${_matDirty ? ' <span style="color: var(--err, #c0392b);">· unsaved</span>' : ''}</h3>
     <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} rooms · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client. Tap a lamp to advance it; ✎ opens the works.` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
-    ${_matD.rooms.map((r, ri) => `<div class="set-section fc-sec" style="margin-top: 10px;"><h4>${esc(r.name)}
+    ${_matD.rooms.map(((r, ri) => {
+      const its = r.items || [];
+      const doneN = its.filter(x => x.s === 'done' || x.s === 'arrived').length;
+      const pct = its.length ? Math.round(doneN / its.length * 100) : 0;
+      return `<div class="set-section fc-sec" style="margin-top: 10px;"><h4>${esc(r.name)}
+      ${its.length ? `<span class="hint" style="margin: 0; font-weight: 400;">· ${doneN}/${its.length} done</span>` : ''}
       <span style="float: right; display: inline-flex; gap: 6px;">
         <button class="btn-ghost req-x" onclick="matAddItem(${ri})">➕ item</button>
         <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelRoom(${ri})">${_matArm === 'room' + ri ? '⚠ SURE? Items go too' : '✕ room'}</button>
       </span></h4>
-      ${(r.items || []).map(it => matMgrItem(ri, it)).join('') || '<span class="hint">no items yet</span>'}
-    </div>`).join('')}
+      ${its.length ? `<div class="mat-tree"><span class="mt-trunk" aria-hidden="true"><i style="height: ${pct}%;"></i></span>
+      ${its.map(it => matMgrItem(ri, it)).join('')}</div>` : '<span class="hint">no items yet</span>'}
+    </div>`; })).join('')}
     <div class="frow" style="margin-top: 12px;">
       <div class="field" style="flex: 1;"><input type="text" id="matNewRoom" placeholder="new room name…"></div>
       <button class="btn-ghost" onclick="matAddRoom()">➕ room</button>
@@ -8835,9 +8863,10 @@ function matMgrItem(ri, it) {
   const kids = it.kids || [];
   const ready = kids.length && kids.every(k => k.ok);
   const editing = _matEdit === it.id;
-  return `<div style="border-top: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent); padding: 7px 0;">
+  const itDone = it.s === 'done' || it.s === 'arrived';
+  return `<div class="mat-item${itDone ? ' mi-done' : ''}">
     <div class="frow" style="align-items: center; gap: 6px;">
-      <button class="btn-ghost req-x" style="flex: none; min-width: 118px;" onclick="matCycle('${escq(it.id)}')" title="tap to advance the lamps">${matWord(it.s, matIsHm(it))}</button>
+      <button class="btn-ghost req-x${itDone ? ' mat-lamp-done' : ''}" style="flex: none; min-width: 118px;" onclick="matCycle('${escq(it.id)}')" title="tap to advance the lamps">${matWord(it.s, matIsHm(it))}</button>
       <span style="flex: 1; min-width: 120px;"><b>${esc(it.n)}</b> <span class="hint" style="margin: 0;">· ${matIsHm(it) ? '🏠' : '🏢'} ${esc(it.t || 'Misc')}${kids.length ? ` · ${kids.filter(k => k.ok).length}/${kids.length} steps` : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY TO ORDER</b>' : ready && !matIsHm(it) && it.s !== 'done' ? ' <b style="color: var(--accent);">● ALL STEPS DONE</b>' : ''}</span>
       <button class="btn-ghost req-x" onclick="_matEdit = _matEdit === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()">✎</button>
       <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
@@ -8846,10 +8875,14 @@ function matMgrItem(ri, it) {
     ${(it.phs || []).length && !editing ? `<div class="chips-row" style="margin: 4px 0 0; display: flex; gap: 5px;">
       ${it.phs.map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
     </div>` : ''}
-    ${kids.length && !editing ? `<div class="chips-row" style="margin: 5px 0 0; display: flex; flex-wrap: wrap; gap: 5px;">
-      ${kids.map((k, ki) => `<button type="button" class="pick-chip${k.ok ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;"
-        onclick="matKidOk('${escq(it.id)}', ${ki})" aria-pressed="${!!k.ok}" ${k.note ? `title="${esc(k.note)}"` : ''}>${k.ok ? '☑' : '☐'} ${esc(k.n)}</button>`).join('')}
-    </div>` : ''}
+    ${kids.length && !editing ? (() => {
+      const okN = kids.filter(k => k.ok).length;
+      const spct = Math.round(okN / kids.length * 100);
+      return `<div class="mat-steps"><span class="mt-trunk2" aria-hidden="true"><i style="height: ${spct}%;"></i></span>
+      ${kids.map((k, ki) => `<div class="mat-step${k.ok ? ' ok' : ''}">
+        <button type="button" class="pick-chip${k.ok ? ' sel' : ''}" onclick="matKidOk('${escq(it.id)}', ${ki})" aria-pressed="${!!k.ok}">${k.ok ? '☑' : '☐'} ${esc(k.n)}</button>
+        ${k.note ? `<div class="mat-note">${esc(k.note)}</div>` : ''}
+      </div>`).join('')}</div>`; })() : ''}
     ${editing ? matMgrEditor(it) : ''}
   </div>`;
 }
