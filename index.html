@@ -3070,7 +3070,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.62 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.63 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8838,6 +8838,9 @@ function matMgrItem(ri, it) {
       <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
     </div>
     ${(it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
+    ${(it.phs || []).length && !editing ? `<div class="chips-row" style="margin: 4px 0 0; display: flex; gap: 5px;">
+      ${it.phs.map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
+    </div>` : ''}
     ${kids.length && !editing ? `<div class="chips-row" style="margin: 5px 0 0; display: flex; flex-wrap: wrap; gap: 5px;">
       ${kids.map((k, ki) => `<button type="button" class="pick-chip${k.ok ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;"
         onclick="matKidOk('${escq(it.id)}', ${ki})" aria-pressed="${!!k.ok}" ${k.note ? `title="${esc(k.note)}"` : ''}>${k.ok ? '☑' : '☐'} ${esc(k.n)}</button>`).join('')}
@@ -8882,8 +8885,56 @@ function matMgrEditor(it) {
         <button type="button" class="btn-ghost" onclick="matAddKid('${id}')">➕ Add sub-item</button>
       </div></div>
     ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">${it.remarks.slice(-4).map(r => `${r.from === 'client' ? '👤 client' : 'you'}: ${esc(r.text)}`).join('<br>')}</div>` : ''}
+    <div class="field" style="flex: 1 1 100%;">
+      <div id="matDrop-${id}" style="border: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; font-size: 12.5px;"
+        onclick="$('matPh-${id}').click()"
+        ondragover="event.preventDefault(); this.style.borderStyle = 'solid';"
+        ondragleave="this.style.borderStyle = 'dashed';"
+        ondrop="event.preventDefault(); this.style.borderStyle = 'dashed'; matAddPhotos('${id}', event.dataTransfer.files)">
+        📷 <b>Add photos</b> — drag them here, or tap to pick${(it.phs || []).length ? ` · ${it.phs.length} on it` : ''}</div>
+      <input type="file" id="matPh-${id}" accept="image/*" multiple style="display: none;" onchange="matAddPhotos('${id}', this.files)">
+      ${(it.phs || []).length ? `<div class="chips-row" style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px;">
+        ${it.phs.map((ph, pi) => `<span style="display: inline-flex; gap: 4px; align-items: center;">
+          <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1} — look</button>
+          <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelPhoto('${id}', ${pi})" aria-label="take photo ${pi + 1} off this item">✕</button></span>`).join('')}
+      </div>` : ''}
+    </div>
     <button class="btn-ghost" style="flex: 1 1 100%;" onclick="_matEdit = ''; renderMatMgr()">✓ Done with this item</button>
   </div>`;
+}
+// 📷 v5.63 — Eric: "I need to be able to add photos... click and drag." Straight onto the
+// item: dragged on the PC or picked on the phone, uploaded full-size into this client's own
+// mat-photos folder, and the item carries the paths. ✕ unlinks a photo from the item; the
+// file itself stays in Dropbox (nothing here deletes, same as everywhere else in the app).
+async function matAddPhotos(id, files) {
+  const it = matFindItem(id);
+  const c = _portalIdx.clients[_matIdx];
+  if (!it || !c || !files || !files.length) return;
+  if (!dbx.refreshToken) { toast('Connect Dropbox first (⚙ Setup)', false); return; }
+  const imgs = [...files].filter(f => /^image\//.test(f.type)).slice(0, 8);
+  if (!imgs.length) { toast('Those weren\'t photos — images only here', false); return; }
+  it.phs = it.phs || [];
+  let n = 0;
+  for (const f of imgs) {
+    toast(`⏳ Photo ${++n} of ${imgs.length} going up…`);
+    const clean = (f.name || 'photo.jpg').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
+    const path = `${DBX_ROOT}/App Data/Client Portal/mat-photos-${c.code}/${it.id} ${clean}`;
+    try {
+      const r = await dbxUpload(path, f, true); // keepBoth: a same-named photo autorenames
+      it.phs.push(r.path_display || path);
+    } catch (e) { toast(`⚠ ${clean} didn't make it — check the connection`, false); }
+  }
+  _matDirty = true;
+  renderMatMgr();
+  toast(`📷 ${it.phs.length} photo${it.phs.length > 1 ? 's' : ''} on ${it.n} — 💾 Save makes it stick ✓`);
+}
+function matDelPhoto(id, pi) {
+  const it = matFindItem(id);
+  if (!it || !it.phs || !it.phs[pi]) return;
+  it.phs.splice(pi, 1);
+  if (!it.phs.length) delete it.phs;
+  _matDirty = true;
+  renderMatMgr();
 }
 function matFindItem(id) { for (const r of _matD.rooms) { const f = (r.items || []).find(x => x.id === id); if (f) return f; } }
 function matSet(id, k, v) {
