@@ -3097,7 +3097,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.65 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.66 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8834,7 +8834,7 @@ function renderMatMgr() {
   const box = $('revBox');
   const need = _matD.rooms.reduce((s, r) => s + (r.items || []).filter(x => matIsHm(x) && (x.s || 'pick') === 'pick').length, 0);
   box.innerHTML = `<h3>📋 ${esc(c.job)} — materials board${_matDirty ? ' <span style="color: var(--err, #c0392b);">· unsaved</span>' : ''}</h3>
-    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} rooms · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client. Tap a lamp to advance it; ✎ opens the works.` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
+    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} rooms · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client. Tap a lamp to advance it; ✎ opens the works; HOLD a step or a name to edit it in place.` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
     ${_matD.rooms.map(((r, ri) => {
       const its = r.items || [];
       const doneN = its.filter(x => x.s === 'done' || x.s === 'arrived').length;
@@ -8867,7 +8867,7 @@ function matMgrItem(ri, it) {
   return `<div class="mat-item${itDone ? ' mi-done' : ''}">
     <div class="frow" style="align-items: center; gap: 6px;">
       <button class="btn-ghost req-x${itDone ? ' mat-lamp-done' : ''}" style="flex: none; min-width: 118px;" onclick="matCycle('${escq(it.id)}')" title="tap to advance the lamps">${matWord(it.s, matIsHm(it))}</button>
-      <span style="flex: 1; min-width: 120px;"><b>${esc(it.n)}</b> <span class="hint" style="margin: 0;">· ${matIsHm(it) ? '🏠' : '🏢'} ${esc(it.t || 'Misc')}${kids.length ? ` · ${kids.filter(k => k.ok).length}/${kids.length} steps` : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY TO ORDER</b>' : ready && !matIsHm(it) && it.s !== 'done' ? ' <b style="color: var(--accent);">● ALL STEPS DONE</b>' : ''}</span>
+      <span style="flex: 1; min-width: 120px;" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="hold to open the works"><b>${esc(it.n)}</b> <span class="hint" style="margin: 0;">· ${matIsHm(it) ? '🏠' : '🏢'} ${esc(it.t || 'Misc')}${kids.length ? ` · ${kids.filter(k => k.ok).length}/${kids.length} steps` : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY TO ORDER</b>' : ready && !matIsHm(it) && it.s !== 'done' ? ' <b style="color: var(--accent);">● ALL STEPS DONE</b>' : ''}</span>
       <button class="btn-ghost req-x" onclick="_matEdit = _matEdit === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()">✎</button>
       <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
     </div>
@@ -8880,7 +8880,13 @@ function matMgrItem(ri, it) {
       const spct = Math.round(okN / kids.length * 100);
       return `<div class="mat-steps"><span class="mt-trunk2" aria-hidden="true"><i style="height: ${spct}%;"></i></span>
       ${kids.map((k, ki) => `<div class="mat-step${k.ok ? ' ok' : ''}">
-        <button type="button" class="pick-chip${k.ok ? ' sel' : ''}" onclick="matKidOk('${escq(it.id)}', ${ki})" aria-pressed="${!!k.ok}">${k.ok ? '☑' : '☐'} ${esc(k.n)}</button>
+        ${_kidEdit === it.id + ':' + ki
+          ? `<input type="text" id="kidEd-${escq(it.id)}-${ki}" value="${esc(k.n)}" style="width: calc(100% - 20px); font-size: 12.5px; padding: 4px 8px;"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();matKidRename('${escq(it.id)}', ${ki}, this.value);}"
+              onblur="matKidRename('${escq(it.id)}', ${ki}, this.value)">`
+          : `<button type="button" class="pick-chip${k.ok ? ' sel' : ''}" onclick="matKidTap('${escq(it.id)}', ${ki})" aria-pressed="${!!k.ok}"
+              onpointerdown="matKidHoldStart('${escq(it.id)}', ${ki})" onpointerup="matKidHoldEnd()" onpointerleave="matKidHoldEnd()"
+              oncontextmenu="event.preventDefault()" title="tap = check it off · hold = edit the words">${k.ok ? '☑' : '☐'} ${esc(k.n)}</button>`}
         ${k.note ? `<div class="mat-note">${esc(k.note)}</div>` : ''}
       </div>`).join('')}</div>`; })() : ''}
     ${editing ? matMgrEditor(it) : ''}
@@ -8910,7 +8916,8 @@ function matMgrEditor(it) {
     <div class="field" style="flex: 1 1 100%;"><label>Sub-items — ${hm ? 'every piece confirmed = READY TO ORDER' : 'all checked = the main box opens'}</label>
       ${(it.kids || []).map((k, ki) => `<div style="margin: 3px 0 7px;">
         <div class="frow" style="gap: 6px; align-items: center;">
-          <button type="button" class="pick-chip${k.ok ? ' sel' : ''}" style="flex: 1; text-align: left;" onclick="matKidOk('${id}', ${ki})" aria-pressed="${!!k.ok}">${k.ok ? '☑' : '☐'} ${esc(k.n)}</button>
+          <button type="button" class="pick-chip${k.ok ? ' sel' : ''}" style="flex: none; min-width: 40px;" onclick="matKidOk('${id}', ${ki})" aria-pressed="${!!k.ok}" title="check it off">${k.ok ? '☑' : '☐'}</button>
+          <input type="text" value="${esc(k.n)}" style="flex: 1; font-size: 12.5px; padding: 5px 8px;" onchange="matKidRename('${id}', ${ki}, this.value)">
           <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelKid('${id}', ${ki})" aria-label="delete step">✕</button>
         </div>
         <input type="text" value="${esc(k.note || '')}" placeholder="note — measurements, phone number, what happened…"
@@ -9010,6 +9017,39 @@ function matSetKids(id, txt) {
   _matDirty = true;
   renderMatMgr();
 }
+// ✋ v5.66 — Eric: "always be able to edit with a click and hold." Hold a step on the board
+// and it turns into a text box right where it sits; hold an item's name and its ✎ editor
+// opens. A plain tap still checks the box — the hold is the edit, everywhere, one habit.
+let _kidTimer = null, _kidHeld = false, _kidEdit = '';
+function matKidHoldStart(id, ki) {
+  _kidHeld = false;
+  clearTimeout(_kidTimer);
+  _kidTimer = setTimeout(() => {
+    _kidHeld = true;
+    _kidEdit = id + ':' + ki;
+    renderMatMgr();
+    setTimeout(() => { const b = $('kidEd-' + id + '-' + ki); if (b) { b.focus(); b.select(); } }, 60);
+  }, 550);
+}
+function matKidHoldEnd() { clearTimeout(_kidTimer); }
+function matKidTap(id, ki) {
+  if (_kidHeld) { _kidHeld = false; return; } // the hold already did its job
+  matKidOk(id, ki);
+}
+function matKidRename(id, ki, v) {
+  const it = matFindItem(id);
+  if (!it || !it.kids || !it.kids[ki]) return;
+  v = (v || '').trim().slice(0, 80);
+  if (v && v !== it.kids[ki].n) { it.kids[ki].n = v; _matDirty = true; }
+  if (_kidEdit === id + ':' + ki) _kidEdit = '';
+  renderMatMgr();
+}
+let _itTimer = null;
+function matItemHoldStart(id) {
+  clearTimeout(_itTimer);
+  _itTimer = setTimeout(() => { _matEdit = id; renderMatMgr(); }, 550);
+}
+function matItemHoldEnd() { clearTimeout(_itTimer); }
 // ➕ v5.61 — one step at a time, the way Eric asked: type it, ➕, it lands with a checkbox
 function matAddKid(id) {
   const it = matFindItem(id);
