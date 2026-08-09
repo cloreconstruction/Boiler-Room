@@ -2097,7 +2097,12 @@
     <button class="btn-ghost" style="background: var(--surface-1);" id="lbShare" onclick="event.stopPropagation(); sharePhotoOut()">📤 Send it on</button>
   </div>
 </div>
-<div class="rev-modal" id="revModal" onclick="if(event.target===this)closeReview()">
+<!-- 🖱 v5.64 — closing needs the press to START on the backdrop, not just end there.
+     Before this, dragging to highlight text in a box and letting go outside it counted as
+     a backdrop click and slammed the whole window shut mid-edit (Eric hit it on the board). -->
+<div class="rev-modal" id="revModal"
+  onpointerdown="this._pd = (event.target === this)"
+  onclick="if(event.target===this && this._pd)closeReview(); this._pd = false">
   <div class="rev-box" id="revBox"></div>
 </div>
 <div class="rev-modal" id="planModal" onclick="if(event.target===this)closePlanner()">
@@ -3070,7 +3075,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.63 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.64 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
