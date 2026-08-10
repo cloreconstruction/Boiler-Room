@@ -223,7 +223,9 @@ function matItemHtml(it) {
   return `<div style="border-top: 1px dashed var(--line); padding: 8px 0;">
     <div style="cursor: pointer; color: var(--ink);" onclick="_matOpenItem = _matOpenItem === '${esc3(it.id)}' ? '' : '${esc3(it.id)}'; renderMat(); ping('mat:item')">
       <b>${esc3(it.n)}</b>${kids.length ? ` <span style="font-size: 11px; color: var(--ink2);">(${okKids}/${kids.length} confirmed)</span>` : ''}<br>${matLampRow(it)}
+      <div style="font-size: 11.5px; color: var(--ink2); margin-top: 2px;">${(it.s || 'pick') === 'pick' ? 'the ball is in your court — tap this item to pick or ask' : 'the lamps light up as Eric moves it along — tap for details'}</div>
     </div>
+    ${kids.length ? `<div style="margin: 6px 0 0;">${kids.map(k => `<div style="font-size: 13px; margin: 3px 0;"><span style="color: ${k.ok ? 'var(--gold)' : 'var(--ink2)'};">${k.ok ? '☑' : '☐'}</span> ${esc3(k.n)}${k.note ? ` <span style="color: var(--ink2);">— ${esc3(k.note)}</span>` : ''}</div>`).join('')}</div>` : ''}
     ${open ? `<div style="margin-top: 6px;">
       ${it.note ? `<div style="white-space: pre-wrap; margin-bottom: 6px;">${esc3(it.note)}</div>` : ''}
       ${it.pick ? `<div style="margin-bottom: 6px;">✓ <b>Picked:</b> ${esc3(it.pick)}${it.url ? ` · <a href="${esc3(it.url)}" target="_blank" rel="noopener" style="color: var(--gold);">see it ↗</a>` : ''}</div>` : it.url ? `<div style="margin-bottom: 6px;"><a href="${esc3(it.url)}" target="_blank" rel="noopener" style="color: var(--gold);">see it ↗</a></div>` : ''}
@@ -234,8 +236,7 @@ function matItemHtml(it) {
       </div>`).join('') : ''}
       ${(it.s || 'pick') === 'pick' && !kids.length ? `<div style="margin: 6px 0;"><input type="text" id="mp-${esc3(it.id)}" placeholder="or type your pick…" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);">
         <button class="theme-btn" style="margin-top: 6px;" onclick="matPickText('${esc3(it.id)}')">✓ That's my pick</button></div>` : ''}
-      ${kids.length ? `<div style="margin: 6px 0;">${kids.map(k => `<div style="font-size: 13px; margin: 3px 0;"><span style="color: ${k.ok ? 'var(--gold)' : 'var(--ink2)'};">${k.ok ? '● ✓' : '○'}</span> ${esc3(k.n)}${k.note ? ` <span style="color: var(--ink2);">— ${esc3(k.note)}</span>` : ''}</div>`).join('')}
-        ${kids.every(k => k.ok) ? `<div style="font-weight: 800; color: var(--gold); margin-top: 4px;">● ALL CONFIRMED — READY TO ORDER</div>` : `<div style="font-size: 12px; color: var(--ink2);">Eric confirms each piece as it's settled — all green means ready to order.</div>`}</div>` : ''}
+      ${kids.length && kids.every(k => k.ok) ? `<div style="font-weight: 800; color: var(--gold); margin: 6px 0;">● ALL CONFIRMED — READY TO ORDER</div>` : ''}
       ${(it.remarks || []).slice(-4).map(rm => `<div style="font-size: 12.5px; color: var(--ink2); margin: 3px 0;">${rm.from === 'client' ? 'You' : 'Eric'}: ${esc3(rm.text)}</div>`).join('')}
       <div style="margin-top: 6px;"><input type="text" id="mr-${esc3(it.id)}" placeholder="question or remark on this item…" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);">
         <button class="theme-btn" style="margin-top: 6px;" onclick="matRemark('${esc3(it.id)}')">💬 Send</button></div>
