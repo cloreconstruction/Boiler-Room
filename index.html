@@ -3097,7 +3097,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.67 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.68 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8841,13 +8841,16 @@ function renderMatMgr() {
       const its = r.items || [];
       const doneN = its.filter(x => x.s === 'done' || x.s === 'arrived').length;
       const pct = its.length ? Math.round(doneN / its.length * 100) : 0;
-      return `<div class="set-section fc-sec" style="margin-top: 10px;"><h4>${esc(r.name)}
-      ${its.length ? `<span class="hint" style="margin: 0; font-weight: 400;">· ${doneN}/${its.length} done</span>` : ''}
+      const shut = _matRmShut.has(ri);
+      const openIts = its.filter(x => !(x.s === 'done' || x.s === 'arrived')).length;
+      return `<div class="set-section fc-sec" style="margin-top: 10px;"><h4>
+      <button type="button" style="background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;" onclick="matRmToggle(${ri})" aria-expanded="${!shut}">${shut ? '▸' : '▾'} ${esc(r.name)}</button>
+      ${its.length ? `<span class="hint" style="margin: 0; font-weight: 400;">· ${doneN}/${its.length} done${shut && openIts ? ` · <b>${openIts} open</b>` : ''}</span>` : ''}
       <span style="float: right; display: inline-flex; gap: 6px;">
         <button class="btn-ghost req-x" onclick="matAddItem(${ri})">➕ item</button>
         <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelRoom(${ri})">${_matArm === 'room' + ri ? '⚠ SURE? Items go too' : '✕ room'}</button>
       </span></h4>
-      ${its.length ? `<div class="mat-tree"><span class="mt-trunk" aria-hidden="true"><i style="height: ${pct}%;"></i></span>
+      ${shut ? '' : its.length ? `<div class="mat-tree"><span class="mt-trunk" aria-hidden="true"><i style="height: ${pct}%;"></i></span>
       ${its.map(it => matMgrItem(ri, it)).join('')}</div>` : '<span class="hint">no items yet</span>'}
     </div>`; })).join('')}
     <div class="frow" style="margin-top: 12px;">
@@ -8861,24 +8864,41 @@ function renderMatMgr() {
     </div>
     <div class="hint" style="margin-top: 8px;">Per-client setup: 🧱 start from the master, ✕ what this job doesn't need, ➕ what's special. Order/arrival dates stay crew-only unless "show dates" is checked on the item.</div>`;
 }
+// 🎛 v5.68 — ONE LINE PER ITEM (Eric: "your To Do already says what it is... everything
+// needs to be collapsible"). The row is chevron · lamp glyph · THE NAME · a small trail of
+// facts (state word, open-step count, 📷/📁 counts). The big state button is gone — the name
+// took its place, the light sits beside it, and the word rides small so nothing is colour
+// or glyph alone. ▸ means there's more below; an unfinished count is BOLD so it nags.
+let _matItOpen = new Set();
+function matItToggle(id) { _matItOpen.has(id) ? _matItOpen.delete(id) : _matItOpen.add(id); renderMatMgr(); }
+let _matRmShut = new Set();
+function matRmToggle(ri) { _matRmShut.has(ri) ? _matRmShut.delete(ri) : _matRmShut.add(ri); renderMatMgr(); }
 function matMgrItem(ri, it) {
   const kids = it.kids || [];
   const ready = kids.length && kids.every(k => k.ok);
   const editing = _matEdit === it.id;
   const itDone = it.s === 'done' || it.s === 'arrived';
+  const open = editing || _matItOpen.has(it.id);
+  const w = matWord(it.s, matIsHm(it));
+  const glyph = w.split(' ')[0];
+  const word = w.slice(glyph.length).trim().toLowerCase();
+  const openN = kids.filter(k => !k.ok).length;
+  const pktN = ((it.pkt || {}).docs || []).length + ((it.pkt || {}).notes ? 1 : 0);
   return `<div class="mat-item${itDone ? ' mi-done' : ''}">
-    <div class="frow" style="align-items: center; gap: 6px;">
-      <button class="btn-ghost req-x${itDone ? ' mat-lamp-done' : ''}" style="flex: none; min-width: 118px;" onclick="matCycle('${escq(it.id)}')" title="tap to advance the lamps">${matWord(it.s, matIsHm(it))}</button>
-      <span style="flex: 1; min-width: 120px;" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="hold to open the works"><b>${esc(it.n)}</b> <span class="hint" style="margin: 0;">· ${matIsHm(it) ? '🏠' : '🏢'} ${esc(it.t || 'Misc')}${kids.length ? ` · ${kids.filter(k => k.ok).length}/${kids.length} steps` : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY TO ORDER</b>' : ready && !matIsHm(it) && it.s !== 'done' ? ' <b style="color: var(--accent);">● ALL STEPS DONE</b>' : ''}</span>
+    <div class="frow" style="align-items: center; gap: 5px; flex-wrap: nowrap;">
+      <button type="button" class="btn-ghost req-x" style="flex: none; min-width: 32px; padding: 6px 7px;" onclick="matItToggle('${escq(it.id)}')" aria-expanded="${open}" title="${open ? 'fold this item away' : 'open this item up'}">${open ? '▾' : '▸'}</button>
+      <button class="btn-ghost req-x${itDone ? ' mat-lamp-done' : ''}" style="flex: none; min-width: 38px; font-size: 15px; padding: 6px 8px;" onclick="matCycle('${escq(it.id)}')" title="${esc(word)} — tap to advance the light">${glyph}</button>
+      <span style="flex: 1; min-width: 0; line-height: 1.3;" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="hold to open the works"><b>${esc(it.n)}</b>
+        <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · 🏠' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>
       <button class="btn-ghost req-x" onclick="_matEdit = _matEdit === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()">✎</button>
       <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
     </div>
-    ${(it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
-    ${((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0; display: flex; gap: 5px; flex-wrap: wrap;">
+    ${open && (it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0 37px;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
+    ${open && ((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 37px; display: flex; gap: 5px; flex-wrap: wrap;">
       ${(it.phs || []).map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
       ${matPktChip(it)}
     </div>${matPktBody(it)}` : ''}
-    ${kids.length && !editing ? (() => {
+    ${open && kids.length && !editing ? (() => {
       const okN = kids.filter(k => k.ok).length;
       const spct = Math.round(okN / kids.length * 100);
       return `<div class="mat-steps"><span class="mt-trunk2" aria-hidden="true"><i style="height: ${spct}%;"></i></span>
