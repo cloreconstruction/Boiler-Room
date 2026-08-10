@@ -3109,7 +3109,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.73 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.74 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8852,7 +8852,26 @@ async function openMaterials(i) {
   try {
     const off = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-office-' + c.code + '.json') || 'null');
     // 💾 v5.69 — a full-board office file IS the truth; the client file is just the last publish
-    if (off && off.full && Array.isArray(off.rooms)) { _matD = { updated: off.updated, seq: off.seq, rooms: off.rooms, hist: off.hist || [] }; renderMatMgr(); $('revModal').classList.add('show', 'mat-full'); document.body.classList.add('modal-open'); return; }
+    if (off && off.full && Array.isArray(off.rooms)) {
+      _matD = { updated: off.updated, seq: off.seq, rooms: off.rooms, hist: off.hist || [] };
+      // 💬 v5.74 — the CLIENT writes into her published file (picks, remarks). Since the
+      // office file became the working truth (v5.69), those answers have to be merged BACK
+      // in here, or Eric's board never hears her. Pick + state + remarks, by item id.
+      try {
+        const cli = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json') || 'null');
+        const map = {};
+        if (cli && Array.isArray(cli.rooms)) cli.rooms.forEach(cr => (cr.items || []).forEach(x => map[x.id] = x));
+        _matD.rooms.forEach(r => (r.items || []).forEach(x => {
+          const c2 = map[x.id];
+          if (!c2) return;
+          if (c2.pick && !x.pick) { x.pick = c2.pick; if (x.s === 'pick' && c2.s === 'picked') x.s = 'picked'; matLog(`👤 client picked "${c2.pick}" (${x.n})`); }
+          (c2.remarks || []).forEach(rm => {
+            x.remarks = x.remarks || [];
+            if (!x.remarks.some(e2 => e2.ts === rm.ts && e2.text === rm.text)) x.remarks.push(rm);
+          });
+        }));
+      } catch (e) { /* nothing published yet */ }
+      renderMatMgr(); $('revModal').classList.add('show', 'mat-full'); document.body.classList.add('modal-open'); return; }
     if (off && Array.isArray(off.rooms)) off.rooms.forEach(orm => {
       const mine = _matD.rooms.find(r => r.name.toLowerCase() === orm.name.toLowerCase());
       if (mine) mine.items = [...(mine.items || []), ...(orm.items || [])];
