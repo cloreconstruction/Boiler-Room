@@ -2272,12 +2272,33 @@
       <div id="myReqStrip"></div>
     </div>
     <!-- v5.08 — hard divider: everything above is WRITING, everything below is the RUNNING LOG -->
+    <!-- 📜 v5.78 — Eric: "I don't need multiple logs." This IS the log now — the whole book,
+         newest first, everything that passes through the app. Tap 🔍 and the searches open right here. -->
     <div class="qn-div">
       <span class="qn-div-label">📜 RUNNING LOG</span>
       <span style="display: flex; align-items: center; gap: 6px;">
-        <select id="runLogN" class="mini-sel" title="How many recent items show here" style="width: auto; min-height: 28px; padding: 2px 8px; font-size: 12px;" onchange="prefs.runLogN = +this.value; scheduleSave(); renderAskRecent();"><option>3</option><option>5</option><option>10</option></select>
+        <span class="hint" id="rlCount" style="margin: 0; font-size: 11px;"></span>
+        <button type="button" class="pick-chip" id="rlSearchBtn" style="font-size: 12px; padding: 4px 10px; min-height: 28px;" onclick="rlSearchToggle()">🔍 Search</button>
         <a href="javascript:void(0)" style="font-size: 12px;" onclick="openPanel('summary')">All answers →</a>
       </span>
+    </div>
+    <div id="rlSearchWrap" style="display: none; margin-top: 8px;">
+      <div class="frow" style="margin-bottom: 8px;">
+        <input type="text" id="logSearch" class="mini-sel" placeholder="🔍 Search — vendor, job, truck, folder, date…" style="flex: 1; min-width: 180px;" oninput="logQuery = this.value; window._rlN = 12; renderAskRecent();">
+        <button class="btn-ghost" id="exportBtn">Export CSV</button>
+      </div>
+      <div class="frow" style="margin-bottom: 4px;">
+        <div class="field"><label>Job</label><select id="lfJob" onchange="renderAskRecent()"></select></div>
+        <div class="field"><label>Type</label><select id="lfType" onchange="renderAskRecent()">
+          <option value="All">All types</option><option value="Filed">🗄 Filed</option><option value="Mileage">🚚 Mileage</option><option value="Hours">⏱ Hours</option><option value="Note">📝 Notes</option><option value="Done">✅ Done</option>
+        </select></div>
+        <div class="field"><label>Who</label><select id="lfWho" onchange="renderAskRecent()"></select></div>
+        <div class="field"><label>Category</label><select id="lfCat" onchange="renderAskRecent()"></select></div>
+        <div class="field"><label>Tag</label><select id="lfTag" onchange="renderAskRecent()"></select></div>
+        <div class="field"><label>From</label><input type="date" id="lfFrom" onchange="renderAskRecent()"></div>
+        <div class="field"><label>To</label><input type="date" id="lfTo" onchange="renderAskRecent()"></div>
+      </div>
+      <div id="logDayBanner"></div>
     </div>
     <div class="ask-foot">
       <span id="askStatus" class="hint" style="margin-top: 0;">⚙ grinds it into the log · 🧙 answers from it.</span>
@@ -2288,6 +2309,7 @@
       <div class="ask-inline__foot"><a href="javascript:void(0)" onclick="openAnswerFull()">Open full screen →</a></div>
     </div>
     <div id="askRecent"></div>
+    <div id="logDbxHits"></div>
   </div>
 
   <!-- v5.33 — Eric: the clock gauge rides just below the grinder/wizard box;
@@ -3062,16 +3084,8 @@
         <div class="chart-tip" id="chartTip"></div>
       </div>
     </div>
-    <div class="card">
-      <div class="log-head">
-        <div>
-          <h2>Running log</h2>
-          <div class="card-sub">Today's captures</div>
-        </div>
-        <button class="btn-ghost" id="logViewAll" onclick="openPanel('log')">View full log →</button>
-      </div>
-      <div id="logBody"></div>
-    </div>
+    <!-- 📜 v5.78 — the "Today's captures" card is gone. Eric: "I don't need multiple logs."
+         The one running log lives under the Grinder/Wizard box now. -->
   </div>
 
   <div class="kpis">
@@ -3081,27 +3095,8 @@
     <div class="kpi"><div class="label">Items captured</div><div class="value" id="kpiItems">0</div></div>
   </div>
 
-  <div class="panel" id="panel-log">
-    <h3>Running log — everything</h3>
-    <div class="frow" style="margin-bottom: 8px;">
-      <input type="text" id="logSearch" class="mini-sel" placeholder="🔍 Search — vendor, job, truck, folder, date…" style="flex: 1; min-width: 180px;" oninput="logQuery = this.value; renderLog();">
-      <button class="btn-ghost" id="exportBtn">Export CSV</button>
-    </div>
-    <div class="frow" style="margin-bottom: 8px;">
-      <div class="field"><label>Job</label><select id="lfJob" onchange="renderLog()"></select></div>
-      <div class="field"><label>Type</label><select id="lfType" onchange="renderLog()">
-        <option value="All">All types</option><option value="Filed">🗄 Filed</option><option value="Mileage">🚚 Mileage</option><option value="Hours">⏱ Hours</option><option value="Note">📝 Notes</option><option value="Done">✅ Done</option>
-      </select></div>
-      <div class="field"><label>Who</label><select id="lfWho" onchange="renderLog()"></select></div>
-      <div class="field"><label>Category</label><select id="lfCat" onchange="renderLog()"></select></div>
-      <div class="field"><label>Tag</label><select id="lfTag" onchange="renderLog()"></select></div>
-      <div class="field"><label>From</label><input type="date" id="lfFrom" onchange="renderLog()"></div>
-      <div class="field"><label>To</label><input type="date" id="lfTo" onchange="renderLog()"></div>
-    </div>
-    <div id="logDayBanner"></div>
-    <div id="logBodyFull"></div>
-    <div id="logDbxHits"></div>
-  </div>
+  <!-- 📜 v5.78 — panel-log retired. The one running log (with its searches) lives in the
+       Grinder/Wizard card. openPanel('log') now opens the searches right there. -->
 
   <div class="brand-emblem"><img src="logo-badge.webp" alt="Clore Construction" onclick="lbShow('logo-badge.webp')"></div>
 
@@ -3109,7 +3104,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.77 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.78 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5019,6 +5014,14 @@ function renderBreakBtn() {
 
 // ---------- capture forms ----------
 function openPanel(name) {
+  // 📜 v5.78 — ONE log. "Open the log" means: open the searches on the running log itself.
+  if (name === 'log') {
+    closePanels();
+    rlSearchShow(true);
+    const d = document.querySelector('.qn-div');
+    if (d && d.scrollIntoView) d.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    return;
+  }
   if (name === 'hours' && !window._mhBypass) name = 'myhours'; // v5.18 — EVERYONE'S Hours = the My Hours screen (Eric asked for the crew look)
   window._mhBypass = false;
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('open', p.id === 'panel-' + name && !p.classList.contains('open')));
@@ -10157,6 +10160,10 @@ function pickModel(kind, text) {
   if (m === 'smart') return AI_SMART;                     // Eric forced the smart one
   if (kind === 'photo') return AI_FAST;                   // receipts and jobsite shots — quick is plenty
   if (kind === 'advice' || kind === 'journal') return AI_SMART; // a client reads these
+  // 🧠 v5.78 — Eric: "the wizard doesn't seem very bright lately." It was — short questions
+  // without money-words were riding the ⚡ quick brain. The Wizard is where he ASKS things,
+  // so every Wizard question gets the 🧠 smart brain now. Photos stay quick.
+  if (kind === 'wizard') return AI_SMART;
   const t = String(text || '');
   return (t.length > 220 || SMART_HINTS.test(t)) ? AI_SMART : AI_FAST;
 }
@@ -10248,7 +10255,7 @@ function setAiModelHint() {
     ? '⚡ <b>Always the quick one.</b> Cheapest and fastest. Fine for photos and lookups — money math and long questions may come back thin.'
     : m === 'smart'
     ? '🧠 <b>Always the smart one.</b> Thinks harder on everything, including photo labels that never needed it. Costs more per question.'
-    : '<b>Let it pick.</b> Photos, receipts and plain lookups go to the ⚡ quick brain. Money math, date ranges, comparisons, "why", pasted emails and anything a client reads go to the 🧠 smart brain. Every answer says which one took it.';
+    : '<b>Let it pick.</b> Photos and receipts get labeled by the ⚡ quick brain. Every 🧙 Wizard question, plus anything a client reads, goes to the 🧠 smart brain. Every answer says which one took it.';
 }
 // v4.80 — the Wizard reads the QUESTION first. Ask about dates and it gets the entries
 // FROM those dates out of the full log on this phone — this year, last year, any year.
@@ -10515,14 +10522,57 @@ function saveRecentAnswer(q, a) {
 // incoming pictures, everything — and make it sortable, quick." One feed, everything in it,
 // and a chip row that FILTERS in place: ⚙ ground notes · 🧙 questions · 📱 texts · 📷 pictures,
 // plus a person wheel. Chips are filters, not pages — tap ✳ and it's everything again.
-function rlSet(f) { prefs.rlFilter = prefs.rlFilter === f ? '' : f; scheduleSave(); renderAskRecent(); }
-function rlWho(v) { prefs.rlWho = v || ''; scheduleSave(); renderAskRecent(); }
+function rlSet(f) { prefs.rlFilter = prefs.rlFilter === f ? '' : f; window._rlN = 12; scheduleSave(); renderAskRecent(); }
+function rlWho(v) { prefs.rlWho = v || ''; window._rlN = 12; scheduleSave(); renderAskRecent(); }
+// 🔍 v5.78 — Eric: "when I click on it have the searches." The old full-log search bar and
+// filter row fold open right under the RUNNING LOG divider. Same searches, same ids, one log.
+function rlSearchShow(open) {
+  const w = $('rlSearchWrap'); if (!w) return;
+  const show = open === undefined ? w.style.display === 'none' : !!open;
+  w.style.display = show ? '' : 'none';
+  const b = $('rlSearchBtn');
+  if (b) { b.classList.toggle('sel', show); b.textContent = show ? '✕ Close search' : '🔍 Search'; }
+  if (show) { logOpenInit(); const s = $('logSearch'); if (s) setTimeout(() => s.focus(), 150); }
+  renderAskRecent();
+}
+function rlSearchToggle() { rlSearchShow(); }
+// tap a book entry in the feed → it unfolds into the full detailed row (✏️ edit, 📷, tags, ✓✓)
+function rlFlip(id) {
+  window._rlOpen = window._rlOpen || new Set();
+  _rlOpen.has(id) ? _rlOpen.delete(id) : _rlOpen.add(id);
+  renderAskRecent();
+}
+function rlMore(n) { window._rlN = n ? (window._rlN || 12) + n : 1e9; renderAskRecent(); }
+// 📜 v5.78 — Eric: "I don't need multiple logs. I just want the full log to record absolutely
+// everything that passes through there and be up there." This renders THE log — every book
+// entry ever captured, plus Wizard answers and the ⏳ waiting pile, one stream, newest first,
+// 12 at a time with a ⬇ more button so the whole book is reachable without drowning the page.
 function renderAskRecent() {
   const box = $('askRecent');
   if (!box) return;
-  const n = [3, 5, 10].includes(+prefs.runLogN) ? +prefs.runLogN : 3;
-  const sel = $('runLogN'); if (sel && +sel.value !== n) sel.value = String(n);
+  window._rlN = window._rlN || 12;
+  window._rlOpen = window._rlOpen || new Set();
   const f = prefs.rlFilter || '', who = prefs.rlWho || '';
+  // ⬇ the searches — the same fields the old full-log panel used, applied to the one log
+  const q = (logQuery || '').trim().toLowerCase();
+  const val = id => { const el = $(id); return el ? (el.value || 'All') : 'All'; };
+  const fJob = val('lfJob'), fType = val('lfType'), fWho = val('lfWho'), fCat = val('lfCat'), fTag = val('lfTag');
+  const fFrom = $('lfFrom') ? $('lfFrom').value : '', fTo = $('lfTo') ? $('lfTo').value : '';
+  const TYPE_GROUPS = { Filed: ['Filed', 'Expense'], Mileage: ['Mileage'], Hours: ['Hours', 'Clock'], Note: ['Note'], Done: ['Done'] };
+  const entryPass = e => {
+    if (fJob !== 'All' && e.job !== fJob) return false;
+    if (fType !== 'All' && !(TYPE_GROUPS[fType] || []).includes(e.type)) return false;
+    if (fWho !== 'All' && (e.who || 'Me') !== fWho) return false;
+    if (fCat !== 'All' && e.category !== fCat && !(e.cats || []).includes(fCat)) return false;
+    if (fTag !== 'All' && !(e.tags || []).includes(fTag)) return false;
+    const ds = localDay(e.ts);
+    if (fFrom && ds < fFrom) return false;
+    if (fTo && ds > fTo) return false;
+    if (q && ![e.details, e.job, e.type, e.filedTo, e.truck || '', e.who || '', (e.tags || []).join(' '), e.ocr || '', e.ai || '', e.ts.toLocaleDateString()].join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  };
+  const hardFiltersOn = fJob !== 'All' || fType !== 'All' || fWho !== 'All' || fCat !== 'All' || fTag !== 'All' || !!fFrom || !!fTo;
+  const filtersOn = !!q || hardFiltersOn;
   // the whole day's traffic, typed: kind decides the glyph AND what the filters catch
   // 📜 v5.59 — Eric: "I want to see EVERYTHING that flows through this app go through that
   // running log." So besides his own entries and the Wizard, the feed now carries the review
@@ -10541,35 +10591,70 @@ function renderAskRecent() {
     const pay = p.payload || {};
     return (pay.text || pay.q || pay.body || pay.seen || pay.type || '…').slice(0, 64);
   };
+  const shownEntries = entries.filter(e => !e.sample && entryPass(e));
+  window._logShown = shownEntries; // 📤 Export CSV exports exactly what the searches show
   let items = [
-    ...recentAnswers().map((r, i) => ({ ts: +new Date(r.ts), kind: 'wiz', who: '',
-      on: `reopenAnswer(${i})`, h: `🧙 <span class="arq">${esc(r.q)}</span>` })),
-    ...(CREW_NAME ? [] : pendingQueue.slice(0, 40)).map(pq => ({
-      ts: +new Date((pq.payload || {}).ts || Date.now() - 1), kind: pendKind(pq), who: pq.source || '',
-      on: `openReview()`,
-      h: `${GLYPH[pendKind(pq)]} <span class="arq"><b>⏳ waiting:</b> ${esc((pq.source ? pq.source + ' — ' : '') + pendWords(pq))}</span>` })),
-    ...entries.filter(e => !e.sample).slice(0, 120).map(e => ({
-      ts: +new Date(e.ts), kind: kindOf(e), who: personOf(e), on: `openPanel('log')`,
+    // job/type/category/date searches are BOOK-entry facts — with one set, only book entries can match
+    ...(hardFiltersOn ? [] : recentAnswers().map((r, i) => ({ r, i }))
+      .filter(x => !q || ((x.r.q || '') + ' ' + (x.r.a || '')).toLowerCase().includes(q))
+      .map(x => ({ ts: +new Date(x.r.ts), kind: 'wiz', who: '',
+        on: `reopenAnswer(${x.i})`, h: `🧙 <span class="arq">${esc(x.r.q)}</span>` }))),
+    ...(hardFiltersOn || CREW_NAME ? [] : pendingQueue.slice(0, 40))
+      .filter(pq => !q || ((pq.source || '') + ' ' + pendWords(pq)).toLowerCase().includes(q))
+      .map(pq => ({
+        ts: +new Date((pq.payload || {}).ts || Date.now() - 1), kind: pendKind(pq), who: pq.source || '',
+        on: `openReview()`,
+        h: `${GLYPH[pendKind(pq)]} <span class="arq"><b>⏳ waiting:</b> ${esc((pq.source ? pq.source + ' — ' : '') + pendWords(pq))}</span>` })),
+    ...shownEntries.map(e => ({
+      ts: +new Date(e.ts), kind: kindOf(e), who: personOf(e), e,
       h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^Text from /, '').slice(0, 70))}</span>` }))
   ].filter(it => !isNaN(it.ts));
   const people = [...new Set(items.map(it => it.who).filter(Boolean))].slice(0, 20).sort();
-  if (f) items = items.filter(it => it.kind === f || (f === 'wiz' && it.kind === 'wiz'));
+  if (f) items = items.filter(it => it.kind === f);
   if (who) items = items.filter(it => it.who === who);
   items.sort((a, b) => b.ts - a.ts);
-  const shownItems = items.slice(0, n);
+  const page = items.slice(0, window._rlN);
+  // the head count on the divider — the whole book, or how much of it the searches caught
+  const cnt = $('rlCount');
+  if (cnt) cnt.textContent = (filtersOn || f || who) ? `${items.length} showing` : `${items.length} on record`;
+  // 🔎 the searches' receipt: totals of what they caught + the clear button
+  const banner = $('logDayBanner');
+  if (banner) {
+    if (filtersOn) {
+      const money = shownEntries.reduce((s, e) => s + (e.amount || 0), 0);
+      const hrs = shownEntries.reduce((s, e) => s + (e.hours || 0), 0);
+      const mi = shownEntries.reduce((s, e) => s + (e.miles || 0), 0);
+      const bits = [`${shownEntries.length} ${shownEntries.length === 1 ? 'entry' : 'entries'}`];
+      if (money) bits.push(fmtMoney(money) + ' out');
+      if (hrs) bits.push(hrs.toFixed(1) + ' hrs');
+      if (mi) bits.push(mi.toFixed(1) + ' mi');
+      banner.className = 'log-day-banner';
+      banner.innerHTML = `<span>🔎 ${bits.join(' · ')}</span><button onclick="clearLogFilters()">Clear filters ✕</button>`;
+    } else { banner.className = ''; banner.innerHTML = ''; }
+  }
   const chip = (v, w) => `<button type="button" class="pick-chip${f === v ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="rlSet('${v}')">${f === v ? '✓ ' : ''}${w}</button>`;
   box.innerHTML = `<div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 4px;">
-      <button type="button" class="pick-chip${!f && !who ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; scheduleSave(); renderAskRecent();">${!f && !who ? '✓ ' : ''}✳ All</button>
+      <button type="button" class="pick-chip${!f && !who ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; window._rlN = 12; scheduleSave(); renderAskRecent();">${!f && !who ? '✓ ' : ''}✳ All</button>
       ${chip('grind', '⚙ Grinder')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('photo', '📷 Pictures')}${chip('crew', '👷 Crew')}${chip('client', '🏠 Client')}${chip('fb', '💬 Feedback')}
       <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="openFeedback()" title="Say what works and what doesn't — it lands right here in the log">➕ 💬 say something</button>
       ${people.length ? `<select class="mini-sel" style="min-height: 26px; font-size: 11px; padding: 2px 6px;" onchange="rlWho(this.value)" title="Just one person's traffic">
         <option value="">👤 person…</option>${people.map(pn => `<option${who === pn ? ' selected' : ''}>${esc(pn)}</option>`).join('')}</select>` : ''}
     </div>` +
-    (shownItems.length ? shownItems.map(it => {
+    (page.length ? page.map(it => {
+      // an unfolded book entry wears the full detailed row — ✏️ edit, 📷, tags, ✓ FIELD / ✓ QB
+      if (it.e && _rlOpen.has(it.e.id)) {
+        return `<div class="rl-openrow">${logRowHtml(it.e)}<div style="text-align: center; margin: 2px 0 6px;"><button type="button" class="btn-ghost" style="font-size: 11px; min-height: 24px; padding: 2px 16px;" onclick="rlFlip(${it.e.id})">▴ fold</button></div></div>`;
+      }
       const d = new Date(it.ts);
       const when = sameDay(d, new Date()) ? fmtTime(d) : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-      return `<div class="ask-recent-row" onclick="${it.on}">${it.h}<span class="arw">${when}</span></div>`;
-    }).join('') : `<div class="hint" style="margin: 4px 0;">Nothing under that filter yet — ✳ All shows everything.</div>`);
+      const on = it.e ? `rlFlip(${it.e.id})` : it.on;
+      return `<div class="ask-recent-row" onclick="${on}">${it.h}<span class="arw">${when}</span></div>`;
+    }).join('') : `<div class="hint" style="margin: 4px 0;">${filtersOn ? 'Nothing matches those searches — Clear filters ✕ shows everything again.' : 'Nothing under that filter yet — ✳ All shows everything.'}</div>`) +
+    (items.length > page.length ? `<div style="display: flex; gap: 8px; justify-content: center; margin: 8px 0 2px; flex-wrap: wrap;">
+      <button type="button" class="btn-ghost" onclick="rlMore(30)">⬇ 30 more (${items.length - page.length} below)</button>
+      <button type="button" class="btn-ghost" onclick="rlMore(0)">Show all ${items.length}</button>
+    </div>` : '');
+  scheduleDbxSearch(q); // 📁 matching Dropbox filenames ride the same search box
 }
 function reopenAnswer(i) {
   const r = recentAnswers()[i];
@@ -11542,33 +11627,13 @@ function renderKpis() {
   $('kpiTodos').textContent = topTodos().filter(t => !t.done && !isDormant(t)).length;
   $('kpiItems').textContent = tEntries.length;
 }
-function renderLog() {
-  const chipClass = { Mileage: 'chip-mileage', Expense: 'chip-expense', Filed: 'chip-expense', Hours: 'chip-hours', Clock: 'chip-hours', Note: 'chip-note', Done: 'chip-aqua-done' };
-  const chipIcon = { Mileage: '🚚', Expense: '🧾', Filed: '🗄', Hours: '⏱', Clock: '⏱', Note: '📝', Done: '✅' };
-  const q = logQuery.trim().toLowerCase();
-  const fJob = $('lfJob') ? ($('lfJob').value || 'All') : 'All';
-  const fType = $('lfType') ? ($('lfType').value || 'All') : 'All';
-  const fWho = $('lfWho') ? ($('lfWho').value || 'All') : 'All';
-  const fCat = $('lfCat') ? ($('lfCat').value || 'All') : 'All';
-  const fTag = $('lfTag') ? ($('lfTag').value || 'All') : 'All';
-  const fFrom = $('lfFrom') ? $('lfFrom').value : '';
-  const fTo = $('lfTo') ? $('lfTo').value : '';
-  const TYPE_GROUPS = { Filed: ['Filed', 'Expense'], Mileage: ['Mileage'], Hours: ['Hours', 'Clock'], Note: ['Note'], Done: ['Done'] };
-  const shown = entries.filter(e => {
-    if (fJob !== 'All' && e.job !== fJob) return false;
-    if (fType !== 'All' && !(TYPE_GROUPS[fType] || []).includes(e.type)) return false;
-    if (fWho !== 'All' && (e.who || 'Me') !== fWho) return false;
-    if (fCat !== 'All' && e.category !== fCat && !(e.cats || []).includes(fCat)) return false;
-    if (fTag !== 'All' && !(e.tags || []).includes(fTag)) return false;
-    const ds = localDay(e.ts);
-    if (fFrom && ds < fFrom) return false;
-    if (fTo && ds > fTo) return false;
-    if (q && ![e.details, e.job, e.type, e.filedTo, e.truck || '', e.who || '', (e.tags || []).join(' '), e.ocr || '', e.ai || '', e.ts.toLocaleDateString()].join(' ').toLowerCase().includes(q)) return false;
-    return true;
-  });
-  const filtersOn = !!(q || fJob !== 'All' || fType !== 'All' || fWho !== 'All' || fCat !== 'All' || fTag !== 'All' || fFrom || fTo);
-  window._logShown = shown;
-  const logRowHtml = e => {
+// 🧾 v5.78 — the one true detailed row, hoisted out of the old panel renderer so the
+// running log's unfolded entries wear the exact same line (chips, tags, ✓✓, ✏️ edit).
+const LOG_CHIP_CLASS = { Mileage: 'chip-mileage', Expense: 'chip-expense', Filed: 'chip-expense', Hours: 'chip-hours', Clock: 'chip-hours', Note: 'chip-note', Done: 'chip-aqua-done' };
+const LOG_CHIP_ICON = { Mileage: '🚚', Expense: '🧾', Filed: '🗄', Hours: '⏱', Clock: '⏱', Note: '📝', Done: '✅' };
+function logRowHtml(e) {
+  const chipClass = LOG_CHIP_CLASS, chipIcon = LOG_CHIP_ICON;
+  {
     const when = sameDay(e.ts, new Date()) ? fmtTime(e.ts) : e.ts.toLocaleDateString([], {month: 'short', day: 'numeric'});
     const qty = e.miles != null ? `${e.miles.toFixed(1)} mi` : e.amount != null ? fmtMoney(e.amount) : e.hours != null ? `${e.hours.toFixed(1)} hrs` : '';
     const sync = e.sample ? '<span class="sdot na" title="Sample entry — never syncs">–</span>'
@@ -11591,29 +11656,10 @@ function renderLog() {
       </div>
       <div class="log-savedcell"><button class="log-edit" title="Edit this entry" onclick="openLogEdit(${e.id}, event)">✏️</button>${sync}</div>
     </div>`;
-  };
-  const banner = $('logDayBanner');
-  if (entries.length) {
-    const money = shown.reduce((s, e) => s + (e.amount || 0), 0);
-    const hrs = shown.reduce((s, e) => s + (e.hours || 0), 0);
-    const mi = shown.reduce((s, e) => s + (e.miles || 0), 0);
-    const bits = [`${shown.length} ${shown.length === 1 ? 'entry' : 'entries'}`];
-    if (money) bits.push(fmtMoney(money) + ' out');
-    if (hrs) bits.push(hrs.toFixed(1) + ' hrs');
-    if (mi) bits.push(mi.toFixed(1) + ' mi');
-    banner.className = 'log-day-banner';
-    banner.innerHTML = `<span>${filtersOn ? '🔎 ' : ''}${bits.join(' · ')}</span>${filtersOn ? '<button onclick="clearLogFilters()">Clear filters ✕</button>' : ''}`;
-  } else {
-    banner.className = ''; banner.innerHTML = '';
   }
-  $('logBodyFull').innerHTML = shown.map(logRowHtml).join('') ||
-    `<div class="hint" style="padding: 8px 2px;">${filtersOn ? 'No matches — tap Clear filters to see everything.' : 'Nothing captured yet.'}</div>`;
-  const todayRows = entries.filter(e => sameDay(e.ts, new Date()));
-  $('logBody').innerHTML = todayRows.slice(0, 8).map(logRowHtml).join('') ||
-    `<div class="hint" style="padding: 8px 2px;">Nothing captured today yet.</div>`;
-  $('logViewAll').textContent = `View full log (${entries.length}) →`;
-  scheduleDbxSearch(q); // v4.50 — filenames ride the same search box
 }
+// 📜 v5.78 — renderLog stays as a name the rest of the app calls; there is ONE log now
+function renderLog() { renderAskRecent(); }
 function renderChart() {
   const svg = $('weekChart');
   const start = weekStart(new Date());
@@ -11683,6 +11729,7 @@ function filterLogToDay(d) {
 }
 function clearLogFilters() {
   logQuery = '';
+  window._rlN = 12;
   $('logSearch').value = '';
   ['lfJob', 'lfType', 'lfWho', 'lfCat', 'lfTag'].forEach(id => { if ($(id)) $(id).value = 'All'; });
   $('lfFrom').value = ''; $('lfTo').value = '';
