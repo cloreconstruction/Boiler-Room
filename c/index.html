@@ -233,7 +233,13 @@ function renderItemFS() {
     ${kids.length ? `<div style="margin: 8px 0;">${kids.map(k => `<div style="font-size: 13px; margin: 3px 0;"><span style="color: ${k.ok ? 'var(--gold)' : 'var(--ink2)'};">${k.ok ? '☑' : '☐'}</span> ${esc3(k.n)}${k.note ? ` <span style="color: var(--ink2);">— ${esc3(k.note)}</span>` : ''}</div>`).join('')}</div>` : ''}
     ${(it.remarks || []).slice(-8).map(rm => `<div style="font-size: 12.5px; color: var(--ink2); margin: 3px 0;">${rm.from === 'client' ? 'You' : 'Eric'}: ${esc3(rm.text)}</div>`).join('')}
     <div style="margin-top: 8px;"><input type="text" id="mr-${esc3(it.id)}" placeholder="question or remark on this item…" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);">
-      <button class="theme-btn" style="margin-top: 6px;" onclick="matRemark('${esc3(it.id)}')">💬 Send</button></div>`;
+      <button class="theme-btn" style="margin-top: 6px;" onclick="matRemark('${esc3(it.id)}')">💬 Send</button></div>
+    <div style="margin-top: 8px; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px;" ondragover="event.preventDefault()" ondrop="matDrop(event, '${esc3(it.id)}')">
+      <input type="file" id="mf-${esc3(it.id)}" accept="image/*" style="display: none;" onchange="matPhoto('${esc3(it.id)}', this.files[0]); this.value = '';">
+      <button class="theme-btn" onclick="document.getElementById('mf-${esc3(it.id)}').click()">📎 Send a picture of what you picked</button>
+      <span style="font-size: 11.5px; color: var(--ink2);"> — or drag &amp; drop it here</span>
+      <div id="mfs-${esc3(it.id)}" style="font-size: 12.5px; color: var(--gold); margin-top: 4px;"></div>
+    </div>`;
   fs.style.display = 'block';
 }
 async function matDecline(id, oi) {

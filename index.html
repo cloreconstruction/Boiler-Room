@@ -3109,7 +3109,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.74 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.75 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6762,11 +6762,10 @@ function renderReview() {
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Check it off my list too</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
         : p.kind === 'clientask'
-        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'answer')">✍ Send the answer</button>
-           ${p.payload.onit ? '' : `<button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'onit')">● I'm on it — light their lamp</button>`}
-           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
-           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'todo')">➕ To-do</button>
-           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
+        ? `${p.payload.answer ? `<div class="hint" style="flex: 1 1 100%; margin: 0 0 4px;">you replied: ${esc(p.payload.answer)}</div>` : ''}
+           <button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'answer')">💬 Reply</button>
+           ${p.payload.tag === 'Materials' && _portalIdx ? `<button class="btn-ghost" onclick="caOpenBoard('${escq(p.payload.code || '')}')">📋 Open on the board</button>` : ''}
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕</button>`
         : (p.kind === 'text' || p.kind === 'crew')
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'todo')">➕ Make it a to-do</button>
@@ -6891,6 +6890,7 @@ function reviewAct(id, accept) {
         addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { noSniff: true, ...phBits, ...(who ? { who } : {}) });
         toast('Text logged ✓');
       }
+    } else if (p.kind === 'clientask' && false) { // v5.75 — onit/log/todo retired; ledger logs everything
     } else if (p.kind === 'clientask') {
       // 💬 v5.19 — a client wrote through their portal page. v5.25 — the three lamps:
       // SENT is theirs; ● ON IT is Eric's to light; ✍ ANSWERED carries the words back.
@@ -8960,7 +8960,8 @@ function matMgrItem(ri, it) {
     ${open && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px;">
       <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px;" onclick="_matEdit = '${escq(it.id)}'; renderMatMgr()">✎ edit</button>
       <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px; color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕ delete'}</button>
-    </div>` : ''}
+      ${(it.pick || (it.remarks || []).some(rm => rm.from === 'client')) ? `<button type="button" class="pick-chip${_matConvo === it.id ? ' sel' : ''}" style="font-size: 11px; padding: 4px 10px; min-height: 26px; box-shadow: inset 0 0 0 1.5px var(--client-blue);" onclick="_matConvo = _matConvo === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()">💬 Response from the client</button>` : ''}
+    </div>${matConvoHtml(it)}${_matConvo === it.id ? '' : matLampRowMgr(it)}` : ''}
     ${open && (it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0 34px;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
     ${open && ((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px; flex-wrap: wrap;">
       ${(it.phs || []).map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
@@ -9251,6 +9252,83 @@ function matKidTap(id, ki) {
   _kidMenu = _kidMenu === id + ':' + ki ? '' : id + ':' + ki;
   _kidSubAdd = '';
   renderMatMgr();
+}
+// 🚦 v5.75 — TAPPABLE LAMPS WITH A LOCK. Eric: "click on each lamp, it will light up and
+// ask if I want to lock it." First tap arms it in words; second tap locks the state, stamps
+// the order date, writes the ledger, and PUBLISHES the client portion so her page moves the
+// same minute — the lock IS the approval. 💬 the convo window rides the same item: her pick,
+// the thread, a reply box that lands on her page, and these lamps.
+let _lampArm = '', _matConvo = '';
+function caOpenBoard(code) {
+  const i = ((_portalIdx || {}).clients || []).findIndex(x => x.code === code);
+  if (i < 0) { toast('That job\'s board isn\'t loadable right now', false); return; }
+  closeReview();
+  openMaterials(i);
+}
+async function matLampTap(id, st) {
+  const it = matFindItem(id);
+  if (!it) return;
+  const key = id + ':' + st;
+  if (_lampArm !== key) {
+    _lampArm = key;
+    renderMatMgr();
+    toast(`Tap again to LOCK ${matWord(st, matIsHm(it))} on ${it.n}`);
+    setTimeout(() => { if (_lampArm === key) { _lampArm = ''; renderMatMgr(); } }, 5000);
+    return;
+  }
+  _lampArm = '';
+  it.s = st;
+  if (st === 'ordered' && !it.odate) it.odate = localDay(new Date());
+  matLog(`🔒 locked ${matWord(st, matIsHm(it))} — ${it.n}`);
+  _matDirty = true;
+  renderMatMgr();
+  if (matIsHm(it)) { await matSave(); } // her lamps move now — the lock is the approval
+}
+function matLampRowMgr(it) {
+  const chain = matIsHm(it) ? ['pick', 'picked', 'ordered', 'arrived'] : ['todo', 'work', 'done'];
+  return `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; flex-wrap: wrap; gap: 4px;">
+    ${chain.map(st => {
+      const w = matWord(st, matIsHm(it));
+      const on = (it.s || chain[0]) === st;
+      const armed = _lampArm === it.id + ':' + st;
+      return `<button type="button" class="pick-chip${on ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;${armed ? ' border-width: 2.5px; font-weight: 800;' : ''}"
+        onclick="matLampTap('${escq(it.id)}', '${st}')" aria-pressed="${on}">${armed ? '🔒 lock ' + esc(w) + '?' : esc(w)}</button>`;
+    }).join('')}</div>`;
+}
+async function matReplySend(id) {
+  const it = matFindItem(id);
+  const box = $('cvR-' + id);
+  const txt = ((box && box.value) || '').trim().slice(0, 600);
+  if (!it || !txt) { if (box) box.focus(); return; }
+  const rm = { from: 'eric', text: txt, ts: new Date().toISOString() };
+  it.remarks = [...(it.remarks || []), rm].slice(-20);
+  matLog(`💬 replied on ${it.n}: ${txt.slice(0, 60)}`);
+  _matDirty = true;
+  // her copy: the reply lands in the published file so her thread shows it right away
+  try {
+    const c = _portalIdx.clients[_matIdx];
+    const mpath = DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json';
+    const cli = JSON.parse(await dbxDownload(mpath) || 'null');
+    if (cli && Array.isArray(cli.rooms)) {
+      for (const r of cli.rooms) { const f = (r.items || []).find(x => x.id === id); if (f) { f.remarks = [...(f.remarks || []), rm].slice(-20); break; } }
+      await dbxUpload(mpath, JSON.stringify(cli));
+    }
+  } catch (e) { /* not published yet — the reply rides the next 📤 */ }
+  renderMatMgr();
+  toast('💬 Reply is on her page ✓');
+}
+function matConvoHtml(it) {
+  if (_matConvo !== it.id) return '';
+  return `<div class="set-section fc-sec" style="margin: 6px 0 0 34px;">
+    ${(it.phs || []).length ? `<button type="button" class="pick-chip" style="font-size: 11px;" onclick="showPhoto('${escq(it.phs[0])}')">📷 the picture</button>` : ''}
+    ${it.pick ? `<div class="hint" style="margin: 4px 0;">✓ <b>Her pick:</b> ${esc(it.pick)}</div>` : ''}
+    ${(it.remarks || []).slice(-8).map(rm => `<div class="hint" style="margin: 3px 0;">${rm.from === 'client' ? '👤 client' : 'you'}: ${esc(rm.text)}</div>`).join('') || '<span class="hint">no words yet</span>'}
+    <div class="frow" style="gap: 5px; margin-top: 5px;">
+      <input type="text" id="cvR-${escq(it.id)}" placeholder="reply — lands on her page…" style="flex: 1; font-size: 12.5px; padding: 6px 8px;">
+      <button type="button" class="btn-ghost req-x" onclick="matReplySend('${escq(it.id)}')">💬 Reply</button>
+    </div>
+    ${matLampRowMgr(it)}
+  </div>`;
 }
 // 🎚 v5.71 — the step tools Eric asked for: arrows to rearrange, a client-sees flag, and a
 // tap-menu with a dead-end kit — add a sub-box under a step, or fly a 🚩 so the next man
