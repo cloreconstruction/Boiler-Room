@@ -186,11 +186,18 @@ function matLamp(on, word, glow) {
   return `<span style="display: inline-flex; align-items: center; gap: 3px; margin-right: 8px; font-size: 10px; font-weight: 800; letter-spacing: .4px; color: ${on ? 'var(--gold)' : 'var(--ink2)'}; opacity: ${on ? 1 : 0.45};"><span style="width: 7px; height: 7px; border-radius: 50%; background: ${on ? 'var(--gold)' : 'var(--line)'}; ${glow && on ? 'box-shadow: 0 0 6px var(--gold); animation: lampPulse 2s ease-in-out infinite;' : ''}"></span>${on ? '✓' : ''}${word}</span>`;
 }
 function matLampRow(it) {
+  // 🚦 v5.73b — Eric's wording for the client's chain: NEEDS A DECISION glows while the
+  // ball is theirs → their pick reads SENT FOR APPROVAL → turns green ✓ APPROVED the moment
+  // Eric or Phil moves it on → ORDERED when the office hits ordered → ARRIVED.
   const kidsReady = (it.kids || []).length > 0 && it.kids.every(k => k.ok);
   const s = it.s || 'pick';
   const past = st => ['pick', 'picked', 'ordered', 'arrived'].indexOf(s) >= ['pick', 'picked', 'ordered', 'arrived'].indexOf(st);
-  return matLamp(s === 'pick', 'YOUR PICK', true) + matLamp(s !== 'pick', 'PICKED') +
-    matLamp(past('ordered') && s !== 'pick' && s !== 'picked', 'ORDERED') + matLamp(s === 'arrived', 'ARRIVED') +
+  const approved = past('ordered') && s !== 'pick' && s !== 'picked';
+  return matLamp(s === 'pick', 'NEEDS A DECISION', true) +
+    (approved
+      ? `<span style="display: inline-flex; align-items: center; gap: 3px; margin-right: 8px; font-size: 10px; font-weight: 800; letter-spacing: .4px; color: #3fa34d;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #3fa34d;"></span>✓ APPROVED</span>`
+      : matLamp(s === 'picked', 'SENT FOR APPROVAL', true)) +
+    matLamp(approved, 'ORDERED') + matLamp(s === 'arrived', 'ARRIVED') +
     (kidsReady && s === 'pick' ? `<span style="font-size: 10px; font-weight: 800; color: var(--gold);">● READY TO ORDER</span>` : '');
 }
 async function loadMat() {
@@ -223,7 +230,7 @@ function matItemHtml(it) {
   return `<div style="border-top: 1px dashed var(--line); padding: 8px 0;">
     <div style="cursor: pointer; color: var(--ink);" onclick="_matOpenItem = _matOpenItem === '${esc3(it.id)}' ? '' : '${esc3(it.id)}'; renderMat(); ping('mat:item')">
       <b>${esc3(it.n)}</b>${kids.length ? ` <span style="font-size: 11px; color: var(--ink2);">(${okKids}/${kids.length} confirmed)</span>` : ''}<br>${matLampRow(it)}
-      <div style="font-size: 11.5px; color: var(--ink2); margin-top: 2px;">${(it.s || 'pick') === 'pick' ? 'the ball is in your court — tap this item to pick or ask' : 'the lamps light up as Eric moves it along — tap for details'}</div>
+      <div style="font-size: 11.5px; color: var(--ink2); margin-top: 2px;">${(it.s || 'pick') === 'pick' ? 'needs your decision — tap this item to pick or ask' : (it.s === 'picked') ? 'your pick is in — waiting on Eric or Phil to approve it' : 'approved ✓ — the lamps light up as it moves along'}</div>
     </div>
     ${kids.length ? `<div style="margin: 6px 0 0;">${kids.map(k => `<div style="font-size: 13px; margin: 3px 0;"><span style="color: ${k.ok ? 'var(--gold)' : 'var(--ink2)'};">${k.ok ? '☑' : '☐'}</span> ${esc3(k.n)}${k.note ? ` <span style="color: var(--ink2);">— ${esc3(k.note)}</span>` : ''}</div>`).join('')}</div>` : ''}
     ${open ? `<div style="margin-top: 6px;">
