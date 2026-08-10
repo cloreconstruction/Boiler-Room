@@ -1784,11 +1784,11 @@
      GREEN CLIMBS: checked steps turn their branch green, the trunks fill green from the top
      as work completes, done lamps go green. Never colour alone — every green thing also
      carries its ☑/✅ glyph and its word, and checked steps dim. */
-  .mat-tree { position: relative; margin-left: 9px; }
+  .mat-tree { position: relative; margin-left: 5px; }
   .mat-tree > .mt-trunk { position: absolute; left: 0; top: 0; bottom: 10px; width: 2.5px; background: var(--accent); border-radius: 2px; }
   .mat-tree > .mt-trunk > i { position: absolute; left: 0; top: 0; width: 100%; display: block; background: var(--good-text, #2e7d32); border-radius: 2px; }
-  .mat-item { position: relative; padding: 7px 0 4px 22px; }
-  .mat-item::before { content: ''; position: absolute; left: 0; top: 19px; width: 16px; height: 2.5px; background: var(--accent); }
+  .mat-item { position: relative; padding: 7px 0 4px 15px; }
+  .mat-item::before { content: ''; position: absolute; left: 0; top: 19px; width: 10px; height: 2.5px; background: var(--accent); }
   .mat-item.mi-done::before { background: var(--good-text, #2e7d32); }
   .mat-steps { position: relative; margin: 4px 0 0 14px; }
   .mat-steps > .mt-trunk2 { position: absolute; left: 0; top: -2px; bottom: 8px; width: 1.5px; background: color-mix(in srgb, var(--accent) 65%, transparent); }
@@ -3097,7 +3097,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.68 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.69 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8787,6 +8787,31 @@ async function journalRelease() {
 // orders (kids) that go READY TO ORDER when every piece is confirmed.
 // Per client: /App Data/Client Portal/materials-<code>.json · master template: materials-master.json
 let _matD = null, _matIdx = null, _matEdit = '', _matDirty = false, _matArm = '';
+// 💾 v5.69 — THE BOARD AUTO-SAVES. Eric: "there's no need to push save in order to save."
+// Every change lands in the OFFICE file (the full working board, full: true) a beat and a
+// half after he stops touching it. The button's only job now is PUBLISHING the 🏠 portion
+// to the client's page — saving and showing the client are different acts.
+let _matSaveT = null, _matSaving = false;
+function scheduleMatSave() {
+  clearTimeout(_matSaveT);
+  _matSaveT = setTimeout(matAutoSave, 1500);
+}
+async function matAutoSave() {
+  if (!_matDirty || _matSaving || !_matD || _matIdx == null) return;
+  const c = (_portalIdx && _portalIdx.clients || [])[_matIdx];
+  if (!c || !dbx.refreshToken) return; // offline: dirty stays set, next change retries
+  _matSaving = true;
+  try {
+    _matD.updated = localDay(new Date());
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-office-' + c.code + '.json',
+      JSON.stringify({ full: true, updated: _matD.updated, seq: _matD.seq, rooms: _matD.rooms }));
+    _matDirty = false;
+    const h = $('matSaveWord'); if (h) h.textContent = '✓ saved';
+  } catch (e) {
+    const h = $('matSaveWord'); if (h) h.textContent = '⚠ not saved — connection?';
+  }
+  _matSaving = false;
+}
 const MAT_STATES = [['pick', '○ PICK NEEDED'], ['picked', '● PICKED'], ['ordered', '📦 ORDERED'], ['arrived', '✅ ARRIVED']];
 // 📝 v5.60 — Eric runs PLANNING on this board too: permits, plans, bids. Those aren't picks —
 // "the homeowner does not have to pick out the permit." So an item is EITHER a homeowner item
@@ -8813,6 +8838,8 @@ async function openMaterials(i) {
   _matD.rooms.forEach(r => (r.items || []).forEach(x => { if (!x.hm) x.hm = true; }));
   try {
     const off = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-office-' + c.code + '.json') || 'null');
+    // 💾 v5.69 — a full-board office file IS the truth; the client file is just the last publish
+    if (off && off.full && Array.isArray(off.rooms)) { _matD = { updated: off.updated, seq: off.seq, rooms: off.rooms }; renderMatMgr(); $('revModal').classList.add('show'); document.body.classList.add('modal-open'); return; }
     if (off && Array.isArray(off.rooms)) off.rooms.forEach(orm => {
       const mine = _matD.rooms.find(r => r.name.toLowerCase() === orm.name.toLowerCase());
       if (mine) mine.items = [...(mine.items || []), ...(orm.items || [])];
@@ -8832,10 +8859,11 @@ function matNextId() {
   return 'm' + _matD.seq;
 }
 function renderMatMgr() {
+  if (_matDirty) scheduleMatSave(); // 💾 v5.69 — any change that redraws also lands on disk
   const c = _portalIdx.clients[_matIdx];
   const box = $('revBox');
   const need = _matD.rooms.reduce((s, r) => s + (r.items || []).filter(x => matIsHm(x) && (x.s || 'pick') === 'pick').length, 0);
-  box.innerHTML = `<h3>📋 ${esc(c.job)} — materials board${_matDirty ? ' <span style="color: var(--err, #c0392b);">· unsaved</span>' : ''}</h3>
+  box.innerHTML = `<h3>📋 ${esc(c.job)} — materials board <span id="matSaveWord" class="hint" style="margin: 0; font-size: 11px;">${_matDirty ? '⏳ saving…' : '✓ saved'}</span></h3>
     <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} rooms · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client. Tap a lamp to advance it; ✎ opens the works; HOLD a step or a name to edit it in place.` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
     ${_matD.rooms.map(((r, ri) => {
       const its = r.items || [];
@@ -8858,11 +8886,11 @@ function renderMatMgr() {
       <button class="btn-ghost" onclick="matAddRoom()">➕ room</button>
     </div>
     <div class="rev-row" style="margin-top: 12px; flex-wrap: wrap;">
-      <button class="btn-primary" style="flex: 2;" onclick="matSave()">💾 Save — 🏠 client portion to their page, 🏢 office stays ours</button>
+      <button class="btn-primary" style="flex: 2;" onclick="matSave()">📤 Send 🏠 client portion to the client's page</button>
       ${!_matD.rooms.length ? `<button class="btn-ghost" style="flex: 2;" onclick="matFromMaster()">🧱 Start from the master list</button>` : `<button class="btn-ghost" style="flex: 1;" onclick="matSaveMaster()">${_matArm === 'master' ? '⚠ SURE? Overwrites the master' : '📌 Save as master'}</button>`}
       <button class="btn-ghost" style="flex: 1;" onclick="matClose()">✕ Close</button>
     </div>
-    <div class="hint" style="margin-top: 8px;">Per-client setup: 🧱 start from the master, ✕ what this job doesn't need, ➕ what's special. Order/arrival dates stay crew-only unless "show dates" is checked on the item.</div>`;
+    <div class="hint" style="margin-top: 8px;">Everything here saves ITSELF as you work — 📤 is only for showing the client. Per-client setup: 🧱 start from the master, ✕ what this job doesn't need, ➕ what's special.</div>`;
 }
 // 🎛 v5.68 — ONE LINE PER ITEM (Eric: "your To Do already says what it is... everything
 // needs to be collapsible"). The row is chevron · lamp glyph · THE NAME · a small trail of
@@ -8885,13 +8913,13 @@ function matMgrItem(ri, it) {
   const openN = kids.filter(k => !k.ok).length;
   const pktN = ((it.pkt || {}).docs || []).length + ((it.pkt || {}).notes ? 1 : 0);
   return `<div class="mat-item${itDone ? ' mi-done' : ''}">
-    <div class="frow" style="align-items: center; gap: 5px; flex-wrap: nowrap;">
-      <button type="button" class="btn-ghost req-x" style="flex: none; min-width: 32px; padding: 6px 7px;" onclick="matItToggle('${escq(it.id)}')" aria-expanded="${open}" title="${open ? 'fold this item away' : 'open this item up'}">${open ? '▾' : '▸'}</button>
-      <button class="btn-ghost req-x${itDone ? ' mat-lamp-done' : ''}" style="flex: none; min-width: 38px; font-size: 15px; padding: 6px 8px;" onclick="matCycle('${escq(it.id)}')" title="${esc(word)} — tap to advance the light">${glyph}</button>
+    <div class="frow" style="align-items: center; gap: 4px; flex-wrap: nowrap;">
+      <button class="btn-ghost req-x${itDone ? ' mat-lamp-done' : ''}" style="flex: none; min-width: 36px; font-size: 15px; padding: 6px 7px;" onclick="matCycle('${escq(it.id)}')" title="${esc(word)} — tap to advance the light">${glyph}</button>
+      <button type="button" class="btn-ghost req-x" style="flex: none; min-width: 28px; padding: 6px 5px;" onclick="matItToggle('${escq(it.id)}')" aria-expanded="${open}" title="${open ? 'fold this item away' : 'open this item up'}">${open ? '▾' : '▸'}</button>
       <span style="flex: 1; min-width: 0; line-height: 1.3;" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="hold to open the works"><b>${esc(it.n)}</b>
         <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · 🏠' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>
-      <button class="btn-ghost req-x" onclick="_matEdit = _matEdit === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()">✎</button>
-      <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
+      <button class="btn-ghost req-x" style="padding: 6px 6px; min-width: 28px;" onclick="_matEdit = _matEdit === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()">✎</button>
+      <button class="btn-ghost req-x" style="padding: 6px 6px; min-width: 28px; color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
     </div>
     ${open && (it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0 37px;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
     ${open && ((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 37px; display: flex; gap: 5px; flex-wrap: wrap;">
@@ -9023,6 +9051,7 @@ function matDelPhoto(id, pi) {
 }
 function matFindItem(id) { for (const r of _matD.rooms) { const f = (r.items || []).find(x => x.id === id); if (f) return f; } }
 function matSet(id, k, v) {
+  scheduleMatSave();
   const it = matFindItem(id);
   if (!it) return;
   if (typeof v === 'string') v = v.trim();
@@ -9114,6 +9143,7 @@ function matDelDoc(id, di) {
   renderMatMgr();
 }
 function matPktNotes(id, v) {
+  scheduleMatSave();
   const it = matFindItem(id);
   if (!it) return;
   v = (v || '').trim().slice(0, 2000);
@@ -9184,6 +9214,7 @@ function matAddKid(id) {
 // 📝 v5.62 — Eric: "we need to be able to keep notes below each sub note." A small line
 // under every step: the borough's fee, the measurement, who said what on the phone.
 function matKidNote(id, ki, v) {
+  scheduleMatSave();
   const it = matFindItem(id);
   if (!it || !it.kids || !it.kids[ki]) return;
   v = (v || '').trim().slice(0, 160);
@@ -9316,6 +9347,7 @@ async function matSave() {
         .filter(r => r.items.length) });
     // 📁 v5.67 — a 🏠 item's pocket (bids! estimates!) rides the OFFICE file keyed by item id
     const offCut = cut(false);
+    offCut.full = true; offCut.rooms = _matD.rooms; // v5.69 — office file = the whole working board
     const hmPkts = {};
     _matD.rooms.forEach(r => (r.items || []).forEach(x => { if (x.hm && x.pkt) hmPkts[x.id] = x.pkt; }));
     if (Object.keys(hmPkts).length) offCut.pkts = hmPkts;
@@ -9326,11 +9358,14 @@ async function matSave() {
     try { const d = JSON.parse(await dbxDownload(path) || '{}'); d.updated = _matD.updated; await dbxUpload(path, JSON.stringify(d, null, 1)); } catch (e) {}
     _matDirty = false;
     renderMatMgr();
-    toast(`📋 Board saved — live on ${c.job}'s page ✓`);
+    toast(`📤 Client portion is live on ${c.job}'s page ✓ (the board itself saves on its own)`);
   } catch (e) { toast('Couldn\'t save — check the connection and try again', false); }
 }
 function matClose() {
-  if (_matDirty && _matArm !== 'close') { _matArm = 'close'; toast('⚠ Unsaved changes — tap ✕ Close again to leave without saving', false); setTimeout(() => { if (_matArm === 'close') _matArm = ''; }, 4000); return; }
+  // 💾 v5.69 — the old are-you-sure guard is retired: the board saves itself, so closing
+  // just flushes whatever's pending and goes. Nothing to lose means nothing to warn about.
+  clearTimeout(_matSaveT);
+  if (_matDirty) matAutoSave();
   _matArm = '';
   closeReview();
 }
