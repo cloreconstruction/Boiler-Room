@@ -3097,7 +3097,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.69 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.70 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8915,14 +8915,15 @@ function matMgrItem(ri, it) {
   return `<div class="mat-item${itDone ? ' mi-done' : ''}">
     <div class="frow" style="align-items: center; gap: 4px; flex-wrap: nowrap;">
       <button class="btn-ghost req-x${itDone ? ' mat-lamp-done' : ''}" style="flex: none; min-width: 36px; font-size: 15px; padding: 6px 7px;" onclick="matCycle('${escq(it.id)}')" title="${esc(word)} — tap to advance the light">${glyph}</button>
-      <button type="button" class="btn-ghost req-x" style="flex: none; min-width: 28px; padding: 6px 5px;" onclick="matItToggle('${escq(it.id)}')" aria-expanded="${open}" title="${open ? 'fold this item away' : 'open this item up'}">${open ? '▾' : '▸'}</button>
-      <span style="flex: 1; min-width: 0; line-height: 1.3;" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="hold to open the works"><b>${esc(it.n)}</b>
+      <span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap to ${open ? 'fold' : 'open'} · hold for the works">${open ? '▾' : '▸'} <b>${esc(it.n)}</b>
         <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · 🏠' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>
-      <button class="btn-ghost req-x" style="padding: 6px 6px; min-width: 28px;" onclick="_matEdit = _matEdit === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()">✎</button>
-      <button class="btn-ghost req-x" style="padding: 6px 6px; min-width: 28px; color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
     </div>
-    ${open && (it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0 37px;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
-    ${open && ((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 37px; display: flex; gap: 5px; flex-wrap: wrap;">
+    ${open && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px;">
+      <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px;" onclick="_matEdit = '${escq(it.id)}'; renderMatMgr()">✎ edit</button>
+      <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px; color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕ delete'}</button>
+    </div>` : ''}
+    ${open && (it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0 34px;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
+    ${open && ((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px; flex-wrap: wrap;">
       ${(it.phs || []).map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
       ${matPktChip(it)}
     </div>${matPktBody(it)}` : ''}
@@ -9193,12 +9194,19 @@ function matKidRename(id, ki, v) {
   if (_kidEdit === id + ':' + ki) _kidEdit = '';
   renderMatMgr();
 }
-let _itTimer = null;
+let _itTimer = null, _itHeld = false;
 function matItemHoldStart(id) {
+  _itHeld = false;
   clearTimeout(_itTimer);
-  _itTimer = setTimeout(() => { _matEdit = id; renderMatMgr(); }, 550);
+  _itTimer = setTimeout(() => { _itHeld = true; _matEdit = id; renderMatMgr(); }, 550);
 }
 function matItemHoldEnd() { clearTimeout(_itTimer); }
+// 🎛 v5.70 — the chevron button is gone: the NAME is the handle. Tap = open/fold, hold =
+// the works. The tap that trails a fired hold is swallowed, same habit as the steps.
+function matItRowTap(id) {
+  if (_itHeld) { _itHeld = false; return; }
+  matItToggle(id);
+}
 // ➕ v5.61 — one step at a time, the way Eric asked: type it, ➕, it lands with a checkbox
 function matAddKid(id) {
   const it = matFindItem(id);
