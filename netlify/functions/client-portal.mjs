@@ -113,6 +113,7 @@ const portal = async req => {
         await up(t, `${BASE}/mat-uploads-${c}/${fname}`, buf);
         phPath = `mat-uploads-${c}/${fname}`;
         item.remarks = [...(item.remarks || []), { from: 'client', text: '📎 sent a picture', ts: now }].slice(-20);
+        item.cph = phPath; // 🖼 v5.76 — the board shows her picture big, so the path rides the item
       }
       // 🙅 v5.75 — "No, thank you" on an option: grayed on her page, undoable, told to Eric
       if (declineOpt != null && (item.opts || [])[declineOpt]) {

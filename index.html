@@ -3109,7 +3109,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.75 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.76 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8865,6 +8865,7 @@ async function openMaterials(i) {
           const c2 = map[x.id];
           if (!c2) return;
           if (c2.pick && !x.pick) { x.pick = c2.pick; if (x.s === 'pick' && c2.s === 'picked') x.s = 'picked'; matLog(`👤 client picked "${c2.pick}" (${x.n})`); }
+          if (c2.cph && !x.cph) x.cph = c2.cph; // her picture's path
           (c2.remarks || []).forEach(rm => {
             x.remarks = x.remarks || [];
             if (!x.remarks.some(e2 => e2.ts === rm.ts && e2.text === rm.text)) x.remarks.push(rm);
@@ -9317,16 +9318,59 @@ async function matReplySend(id) {
   renderMatMgr();
   toast('💬 Reply is on her page ✓');
 }
+// 🖼 v5.76 — Eric held up the review card and said THIS is the layout: picture big on top,
+// the What-is-it chip, one clean box, big buttons. The board's per-item window wears it now.
+const _cvImgCache = {};
+async function matConvoImg(path, elId) {
+  if (_cvImgCache[path]) { const el = $(elId); if (el) el.src = _cvImgCache[path]; return; }
+  try {
+    const t = await getToken();
+    const r = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + t,
+        'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w1024h768' } }) } });
+    if (!r.ok) return;
+    _cvImgCache[path] = URL.createObjectURL(await r.blob());
+    const el = $(elId); if (el) el.src = _cvImgCache[path];
+  } catch (e) {}
+}
+async function matWhatIs(id) {
+  const it = matFindItem(id);
+  const ph = it && (it.cph ? DBX_ROOT + '/App Data/Client Portal/' + it.cph : (it.phs || [])[0]);
+  const out = $('cvAI-' + id);
+  if (!it || !ph || !aiKey()) { toast(!aiKey() ? 'Needs the Claude key (⚙ Setup → Ask Claude)' : 'No picture on this one', false); return; }
+  if (out) out.textContent = '🔮 reading the picture…';
+  try {
+    const t = await getToken();
+    const r0 = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + t,
+        'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path: ph }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w1024h768' } }) } });
+    const blob = await r0.blob();
+    const b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(blob); });
+    const { r } = await aiCall({ max_tokens: 400,
+      system: 'A homeowner client sent this screenshot or photo of a product they picked for their construction project. Tell the contractor what it is (brand/model/price if visible), anything to check before ordering (sizing, compatibility, lead time), and one-line advice.',
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+        { type: 'text', text: 'Read this for me.' } ] }]
+    }, 'advice');
+    if (!r.ok) throw new Error();
+    const jj = await r.json();
+    if (out) out.textContent = (jj.content || []).map(c2 => c2.text || '').join('').trim() || 'Nothing readable in it.';
+  } catch (e) { if (out) out.textContent = 'Couldn\'t read it — check the connection and the key.'; }
+}
 function matConvoHtml(it) {
   if (_matConvo !== it.id) return '';
-  return `<div class="set-section fc-sec" style="margin: 6px 0 0 34px;">
-    ${(it.phs || []).length ? `<button type="button" class="pick-chip" style="font-size: 11px;" onclick="showPhoto('${escq(it.phs[0])}')">📷 the picture</button>` : ''}
-    ${it.pick ? `<div class="hint" style="margin: 4px 0;">✓ <b>Her pick:</b> ${esc(it.pick)}</div>` : ''}
-    ${(it.remarks || []).slice(-8).map(rm => `<div class="hint" style="margin: 3px 0;">${rm.from === 'client' ? '👤 client' : 'you'}: ${esc(rm.text)}</div>`).join('') || '<span class="hint">no words yet</span>'}
-    <div class="frow" style="gap: 5px; margin-top: 5px;">
-      <input type="text" id="cvR-${escq(it.id)}" placeholder="reply — lands on her page…" style="flex: 1; font-size: 12.5px; padding: 6px 8px;">
-      <button type="button" class="btn-ghost req-x" onclick="matReplySend('${escq(it.id)}')">💬 Reply</button>
-    </div>
+  const ph = it.cph ? DBX_ROOT + '/App Data/Client Portal/' + it.cph : (it.phs || [])[0];
+  if (ph) setTimeout(() => matConvoImg(ph, 'cvImg-' + it.id), 30);
+  return `<div class="set-section fc-sec" style="margin: 6px 0 0 20px; padding: 12px;">
+    <div style="font-weight: 800; margin-bottom: 6px;">💬 ${esc(it.n)} — from the client</div>
+    ${ph ? `<img id="cvImg-${escq(it.id)}" alt="what the client sent" style="width: 100%; border-radius: 10px; cursor: pointer; background: #00000014; min-height: 60px;" onclick="showPhoto('${escq(ph)}')">` : ''}
+    ${it.pick ? `<div style="margin: 6px 0;">✓ <b>Her pick:</b> ${esc(it.pick)}</div>` : ''}
+    <button type="button" class="pick-chip" style="font-size: 12px; margin: 6px 0;" onclick="matWhatIs('${escq(it.id)}')">🔮 What is it? — details + suggestions</button>
+    <div class="hint" id="cvAI-${escq(it.id)}" style="margin: 2px 0 6px; white-space: pre-wrap;"></div>
+    ${(it.remarks || []).slice(-8).map(rm => `<div class="hint" style="margin: 3px 0;">${rm.from === 'client' ? '👤 client' : '✍ you'}: ${esc(rm.text)}</div>`).join('')}
+    <div class="hint" style="margin: 8px 0 4px;">✍ Reply — goes straight onto their page</div>
+    <textarea id="cvR-${escq(it.id)}" rows="2" class="grow" style="width: 100%; font-size: 13px;" placeholder="type it and hit 💬 Reply…"></textarea>
+    <button type="button" class="btn-primary" style="width: 100%; margin-top: 6px; font-weight: 800;" onclick="matReplySend('${escq(it.id)}')">💬 Reply</button>
     ${matLampRowMgr(it)}
   </div>`;
 }
