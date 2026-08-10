@@ -200,6 +200,51 @@ function matLampRow(it) {
     matLamp(approved, 'ORDERED') + matLamp(s === 'arrived', 'ARRIVED') +
     (kidsReady && s === 'pick' ? `<span style="font-size: 10px; font-weight: 800; color: var(--gold);">● READY TO ORDER</span>` : '');
 }
+// 🪟 v5.75 — Eric: tap NEEDS A DECISION and "this little window pops up... all the options
+// just for that one item." One item, full attention: lamps, options, the back-and-forth.
+function renderItemFS() {
+  let fs = document.getElementById('matItemFS');
+  if (!fs) {
+    fs = document.createElement('div');
+    fs.id = 'matItemFS';
+    fs.style.cssText = 'display:none;position:fixed;inset:0;z-index:70;background:var(--bg);overflow:auto;padding:16px 16px 40px;';
+    document.body.appendChild(fs);
+  }
+  let it = null;
+  if (_mat) for (const r of _mat.rooms) { const f = (r.items || []).find(x => x.id === _matOpenItem); if (f) { it = f; break; } }
+  if (!it) { fs.style.display = 'none'; return; }
+  const kids = it.kids || [];
+  fs.innerHTML = `<button class="theme-btn" style="margin-bottom: 10px;" onclick="document.getElementById('matItemFS').style.display='none'; _matOpenItem=''; renderMat()">‹ Back to the board</button>
+    <h3 style="margin: 0 0 4px;">${esc3(it.n)}</h3>
+    <div>${matLampRow(it)}</div>
+    <div style="font-size: 12px; color: var(--ink2); margin: 4px 0 10px;">${(it.s || 'pick') === 'pick' ? 'needs your decision — pick below, say no thank you, or ask a question' : (it.s === 'picked') ? 'your pick is in — waiting on Eric or Phil to approve it' : 'approved ✓ — the lamps light up as it moves along'}</div>
+    ${it.note ? `<div style="white-space: pre-wrap; margin-bottom: 8px;">${esc3(it.note)}</div>` : ''}
+    ${it.pick ? `<div style="margin-bottom: 8px;">✓ <b>Your pick:</b> ${esc3(it.pick)}</div>` : ''}
+    ${(it.opts || []).length && (it.s || 'pick') === 'pick' ? it.opts.map((o, oi) => o.no ? `<div style="border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px; margin: 6px 0; opacity: .45;">
+        🙅 ${esc3(o.t)} — <b>no thank you</b> <button class="theme-btn" style="margin-left: 6px; padding: 3px 9px; font-size: 12px;" onclick="matDecline('${esc3(it.id)}', ${oi})">↩ undo</button></div>`
+      : `<div style="border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 6px 0;">
+        ${esc3(o.t)}${o.price ? ' — ' + esc3(o.price) : ''}${o.url ? ` · <a href="${esc3(o.url)}" target="_blank" rel="noopener" style="color: var(--gold);">look ↗</a>` : ''}
+        <div style="display: flex; gap: 6px; margin-top: 6px;">
+          <button class="theme-btn" onclick="matPick('${esc3(it.id)}', ${oi})">✓ Pick this one</button>
+          <button class="theme-btn" style="opacity: .8;" onclick="matDecline('${esc3(it.id)}', ${oi})">✕ No, thank you</button>
+        </div></div>`).join('') : ''}
+    ${(it.s || 'pick') === 'pick' ? `<div style="margin: 8px 0;"><input type="text" id="mp-${esc3(it.id)}" placeholder="or type your pick…" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);">
+      <button class="theme-btn" style="margin-top: 6px;" onclick="matPickText('${esc3(it.id)}')">✓ That's my pick</button></div>` : ''}
+    ${kids.length ? `<div style="margin: 8px 0;">${kids.map(k => `<div style="font-size: 13px; margin: 3px 0;"><span style="color: ${k.ok ? 'var(--gold)' : 'var(--ink2)'};">${k.ok ? '☑' : '☐'}</span> ${esc3(k.n)}${k.note ? ` <span style="color: var(--ink2);">— ${esc3(k.note)}</span>` : ''}</div>`).join('')}</div>` : ''}
+    ${(it.remarks || []).slice(-8).map(rm => `<div style="font-size: 12.5px; color: var(--ink2); margin: 3px 0;">${rm.from === 'client' ? 'You' : 'Eric'}: ${esc3(rm.text)}</div>`).join('')}
+    <div style="margin-top: 8px;"><input type="text" id="mr-${esc3(it.id)}" placeholder="question or remark on this item…" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);">
+      <button class="theme-btn" style="margin-top: 6px;" onclick="matRemark('${esc3(it.id)}')">💬 Send</button></div>`;
+  fs.style.display = 'block';
+}
+async function matDecline(id, oi) {
+  const it = matFind(id);
+  const o = it && (it.opts || [])[oi];
+  if (!o) return;
+  o.no = !o.no; if (!o.no) delete o.no; // instant on screen; the server call makes it stick
+  renderMat(); if (_matOpenItem) renderItemFS();
+  if (!await matPost({ id, declineOpt: oi })) alert("Couldn't send it — try again in a minute.");
+  ping('mat:decline');
+}
 async function loadMat() {
   try { _mat = await (await fetch(FN + '?c=' + encodeURIComponent(code) + '&mat=1')).json(); } catch (e) { _mat = null; }
   if (!_mat || !Array.isArray(_mat.rooms)) _mat = null;
@@ -228,18 +273,23 @@ function matItemHtml(it) {
   const kids = it.kids || [];
   const okKids = kids.filter(k => k.ok).length;
   return `<div style="border-top: 1px dashed var(--line); padding: 8px 0;">
-    <div style="cursor: pointer; color: var(--ink);" onclick="_matOpenItem = _matOpenItem === '${esc3(it.id)}' ? '' : '${esc3(it.id)}'; renderMat(); ping('mat:item')">
+    <div style="cursor: pointer; color: var(--ink);" onclick="_matOpenItem = '${esc3(it.id)}'; renderItemFS(); ping('mat:item')">
       <b>${esc3(it.n)}</b>${kids.length ? ` <span style="font-size: 11px; color: var(--ink2);">(${okKids}/${kids.length} confirmed)</span>` : ''}<br>${matLampRow(it)}
       <div style="font-size: 11.5px; color: var(--ink2); margin-top: 2px;">${(it.s || 'pick') === 'pick' ? 'needs your decision — tap this item to pick or ask' : (it.s === 'picked') ? 'your pick is in — waiting on Eric or Phil to approve it' : 'approved ✓ — the lamps light up as it moves along'}</div>
     </div>
     ${kids.length ? `<div style="margin: 6px 0 0;">${kids.map(k => `<div style="font-size: 13px; margin: 3px 0;"><span style="color: ${k.ok ? 'var(--gold)' : 'var(--ink2)'};">${k.ok ? '☑' : '☐'}</span> ${esc3(k.n)}${k.note ? ` <span style="color: var(--ink2);">— ${esc3(k.note)}</span>` : ''}</div>`).join('')}</div>` : ''}
-    ${open ? `<div style="margin-top: 6px;">
+    ${false ? `<div style="margin-top: 6px;">
       ${it.note ? `<div style="white-space: pre-wrap; margin-bottom: 6px;">${esc3(it.note)}</div>` : ''}
       ${it.pick ? `<div style="margin-bottom: 6px;">✓ <b>Picked:</b> ${esc3(it.pick)}${it.url ? ` · <a href="${esc3(it.url)}" target="_blank" rel="noopener" style="color: var(--gold);">see it ↗</a>` : ''}</div>` : it.url ? `<div style="margin-bottom: 6px;"><a href="${esc3(it.url)}" target="_blank" rel="noopener" style="color: var(--gold);">see it ↗</a></div>` : ''}
       ${(it.s === 'ordered' || it.s === 'arrived') && it.showEta && (it.odate || it.eta) ? `<div style="font-size: 12.5px; color: var(--ink2); margin-bottom: 6px;">${it.odate ? 'Ordered ' + esc3(it.odate) : ''}${it.eta ? ' · arriving ~' + esc3(it.eta) : ''}</div>` : ''}
-      ${(it.opts || []).length && (it.s || 'pick') === 'pick' ? it.opts.map((o, oi) => `<div style="border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 6px 0;">
+      ${(it.opts || []).length && (it.s || 'pick') === 'pick' ? it.opts.map((o, oi) => o.no ? `<div style="border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px; margin: 6px 0; opacity: .45;">
+        🙅 ${esc3(o.t)} — <b>no thank you</b> <button class="theme-btn" style="margin-left: 6px; padding: 3px 9px; font-size: 12px;" onclick="matDecline('${esc3(it.id)}', ${oi})">↩ undo</button>
+      </div>` : `<div style="border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 6px 0;">
         ${esc3(o.t)}${o.price ? ' — ' + esc3(o.price) : ''}${o.url ? ` · <a href="${esc3(o.url)}" target="_blank" rel="noopener" style="color: var(--gold);">look ↗</a>` : ''}
-        <button class="theme-btn" style="display: block; margin-top: 6px;" onclick="matPick('${esc3(it.id)}', ${oi})">✓ Pick this one</button>
+        <div style="display: flex; gap: 6px; margin-top: 6px;">
+          <button class="theme-btn" onclick="matPick('${esc3(it.id)}', ${oi})">✓ Pick this one</button>
+          <button class="theme-btn" style="opacity: .8;" onclick="matDecline('${esc3(it.id)}', ${oi})">✕ No, thank you</button>
+        </div>
       </div>`).join('') : ''}
       ${(it.s || 'pick') === 'pick' && !kids.length ? `<div style="margin: 6px 0;"><input type="text" id="mp-${esc3(it.id)}" placeholder="or type your pick…" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);">
         <button class="theme-btn" style="margin-top: 6px;" onclick="matPickText('${esc3(it.id)}')">✓ That's my pick</button></div>` : ''}
@@ -315,7 +365,7 @@ async function matPick(id, oi) {
   const o = (it.opts || [])[oi];
   if (!o) return;
   it.s = 'picked'; it.pick = o.t; if (o.url) it.url = o.url;
-  renderMat(); updateMatTile();
+  renderMat(); updateMatTile(); if (_matOpenItem) renderItemFS();
   if (!await matPost({ id, pick: o.t })) alert("Couldn't send the pick — try again in a minute.");
 }
 async function matPickText(id) {
@@ -323,7 +373,7 @@ async function matPickText(id) {
   if (!v.trim()) return;
   const it = matFind(id);
   it.s = 'picked'; it.pick = v.trim();
-  renderMat(); updateMatTile();
+  renderMat(); updateMatTile(); if (_matOpenItem) renderItemFS();
   if (!await matPost({ id, pick: v.trim() })) alert("Couldn't send the pick — try again in a minute.");
 }
 async function matRemark(id) {
@@ -333,7 +383,7 @@ async function matRemark(id) {
   const it = matFind(id);
   it.remarks = [...(it.remarks || []), { from: 'client', text: v }];
   el.value = '';
-  renderMat();
+  renderMat(); if (_matOpenItem) renderItemFS();
   if (!await matPost({ id, remark: v })) alert("Couldn't send it — try again in a minute.");
 }
 function updateMatTile() {

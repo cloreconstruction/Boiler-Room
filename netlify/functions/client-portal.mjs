@@ -92,7 +92,8 @@ const portal = async req => {
       const remark = String(b.mat.remark || '').slice(0, 600).trim();
       // 📎 v5.35 — a picture of their pick (client-side shrunk JPEG, base64)
       const photo = b.mat.photo && typeof b.mat.photo === 'object' && typeof b.mat.photo.b64 === 'string' ? b.mat.photo : null;
-      if (!id || (!pick && !remark && !photo)) return new Response('bad', { status: 400 });
+      const declineOpt = Number.isInteger(b.mat.declineOpt) ? b.mat.declineOpt : null;
+      if (!id || (!pick && !remark && !photo && declineOpt == null)) return new Response('bad', { status: 400 });
       if (photo && photo.b64.length > 6_000_000) return new Response('too big', { status: 413 });
       const mpath = `${BASE}/materials-${c}.json`;
       let mat = null;
@@ -113,6 +114,12 @@ const portal = async req => {
         phPath = `mat-uploads-${c}/${fname}`;
         item.remarks = [...(item.remarks || []), { from: 'client', text: '📎 sent a picture', ts: now }].slice(-20);
       }
+      // 🙅 v5.75 — "No, thank you" on an option: grayed on her page, undoable, told to Eric
+      if (declineOpt != null && (item.opts || [])[declineOpt]) {
+        item.opts[declineOpt].no = !item.opts[declineOpt].no;
+        if (!item.opts[declineOpt].no) delete item.opts[declineOpt].no;
+        item.remarks = [...(item.remarks || []), { from: 'client', text: `${item.opts[declineOpt].no ? '🙅 No thank you to' : '↩ un-declined'}: ${item.opts[declineOpt].t}`, ts: now }].slice(-20);
+      }
       if (pick) { item.s = 'picked'; item.pick = pick; item.pickedTs = now.slice(0, 10); }
       if (remark) item.remarks = [...(item.remarks || []), { from: 'client', text: remark, ts: now }].slice(-20);
       mat.updated = now.slice(0, 10);
@@ -123,7 +130,7 @@ const portal = async req => {
       try { arr = JSON.parse(await dl(t, apath) || '[]'); } catch (e) {}
       if (!Array.isArray(arr)) arr = [];
       arr.unshift({ tag: 'Materials',
-        text: pick ? `📋 PICKED — ${item.n}: ${pick}` : remark ? `📋 ${item.n}: ${remark}` : `📎 ${item.n}: sent a picture of their pick`,
+        text: pick ? `📋 PICKED — ${item.n}: ${pick}` : remark ? `📋 ${item.n}: ${remark}` : declineOpt != null ? `📋 ${item.n}: ${(item.opts[declineOpt] || {}).no ? '🙅 no-thank-you to' : 'un-declined'} "${(item.opts[declineOpt] || {}).t}"` : `📎 ${item.n}: sent a picture of their pick`,
         ts: now, ...(phPath ? { photo: phPath } : {}) });
       await up(t, apath, JSON.stringify(arr.slice(0, 200)));
       return new Response('ok');
