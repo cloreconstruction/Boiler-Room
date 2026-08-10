@@ -3109,7 +3109,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.71 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.72 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8378,9 +8378,9 @@ async function renderPortalList() {
       <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
         onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}</button>
       ${open ? `
-      <button class="btn-ghost req-x" onclick="openJournal(${i})">📖 Journal</button>
-      <button class="btn-ghost req-x" onclick="openMaterials(${i})">📋 Materials</button>
-      <button class="btn-ghost req-x" onclick="portalCopy(${i})">📋 Copy link</button>
+      <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openJournal(${i})">📖 Journal</button>
+      <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openMaterials(${i})">📋 Materials</button>
+      <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="portalCopy(${i})">📋 Copy link</button>
       <button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
       <button class="btn-ghost req-x" onclick="portalIntel(${i})">📊 What they look at</button>
       <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? This kills their link for good' : '🔄 Rotate code'}</button>` : ''}
@@ -8803,7 +8803,7 @@ let _matD = null, _matIdx = null, _matEdit = '', _matDirty = false, _matArm = ''
 // Every change lands in the OFFICE file (the full working board, full: true) a beat and a
 // half after he stops touching it. The button's only job now is PUBLISHING the 🏠 portion
 // to the client's page — saving and showing the client are different acts.
-let _matSaveT = null, _matSaving = false;
+let _matSaveT = null, _matSaving = false, _matPubDirty = false;
 function scheduleMatSave() {
   clearTimeout(_matSaveT);
   _matSaveT = setTimeout(matAutoSave, 1500);
@@ -8902,7 +8902,7 @@ function renderMatMgr() {
       <button class="btn-ghost" onclick="matAddRoom()">➕ category</button>
     </div>
     <div class="rev-row" style="margin-top: 12px; flex-wrap: wrap;">
-      <button class="btn-primary" style="flex: 2;" onclick="matSave()">📤 Send 🏠 client portion to the client's page</button>
+      <button class="btn-primary" style="flex: 2;" onclick="matSave()">📤 Send 🏠 client portion to the client's page${_matPubDirty ? ' — <b>changes waiting</b>' : ''}</button>
       ${!_matD.rooms.length ? `<button class="btn-ghost" style="flex: 2;" onclick="matFromMaster()">🧱 Start from the master list</button>` : `<button class="btn-ghost" style="flex: 1;" onclick="matSaveMaster()">${_matArm === 'master' ? '⚠ SURE? Overwrites the master' : '📌 Save as master'}</button>`}
       <button class="btn-ghost" style="flex: 1;" onclick="matClose()">✕ Close</button>
     </div>
@@ -9247,9 +9247,18 @@ function matKidCv(id, ki) {
   it.kids[ki].cv = !it.kids[ki].cv;
   matLog(`${it.kids[ki].cv ? '🏠 sent to client page' : '🏠 removed from client page'}: "${it.kids[ki].n}" (${it.n})`);
   if (!it.kids[ki].cv) delete it.kids[ki].cv;
+  // 🏠 v5.72 — ERIC HIT THE TRAP: a flagged step under an office item published NOTHING,
+  // because the item itself wasn't on the page. Sending a step to the client now LIFTS its
+  // item onto the page automatically — that's what the tap meant. Said out loud, logged.
+  if (it.kids[ki].cv && !matIsHm(it)) {
+    it.hm = true;
+    it.s = it.s === 'done' ? 'arrived' : it.s === 'work' ? 'picked' : 'pick';
+    matLog(`🏠 item lifted onto the client page (a step under it was sent): ${it.n}`);
+    toast(`🏠 ${it.n} went onto the client page too — a step can't show without its item ✓`);
+  }
   _matDirty = true;
+  _matPubDirty = true;
   renderMatMgr();
-  if (it.kids[ki].cv && !matIsHm(it)) toast('🏠 Flagged for the client — the ITEM is still office-only; tap the 🏠 button on the item to put it on their page', false);
 }
 let _kidMenu = '', _kidSubAdd = '';
 function matKidMenuCheck(id, ki) {
@@ -9336,7 +9345,7 @@ function matKidFlag(id, ki, who) {
 function matKidRename(id, ki, v) {
   const it = matFindItem(id);
   if (!it || !it.kids || !it.kids[ki]) return;
-  v = (v || '').trim().slice(0, 80);
+  v = (v || '').trim().slice(0, 200);
   if (v && v !== it.kids[ki].n) { matLog(`✎ step "${it.kids[ki].n}" → "${v}" (${it.n})`); it.kids[ki].n = v; _matDirty = true; }
   if (_kidEdit === id + ':' + ki) _kidEdit = '';
   renderMatMgr();
@@ -9358,7 +9367,7 @@ function matItRowTap(id) {
 function matAddKid(id) {
   const it = matFindItem(id);
   const box = $('kidNew-' + id);
-  const n = ((box && box.value) || '').trim().slice(0, 80);
+  const n = ((box && box.value) || '').trim().slice(0, 200);
   if (!it || !n) { if (box) box.focus(); return; }
   it.kids = it.kids || [];
   it.kids.push({ n });
@@ -9423,6 +9432,7 @@ function matCycle(id) {
 function matHmToggle(id) {
   const it = matFindItem(id);
   if (!it) return;
+  _matPubDirty = true;
   matLog(`${matIsHm(it) ? '🏢 pulled OFF the client page' : '🏠 put ON the client page'}: ${it.n}`);
   if (matIsHm(it)) {
     delete it.hm;
@@ -9538,6 +9548,7 @@ async function matSave() {
     const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
     try { const d = JSON.parse(await dbxDownload(path) || '{}'); d.updated = _matD.updated; await dbxUpload(path, JSON.stringify(d, null, 1)); } catch (e) {}
     _matDirty = false;
+    _matPubDirty = false;
     renderMatMgr();
     toast(`📤 Client portion is live on ${c.job}'s page ✓ (the board itself saves on its own)`);
   } catch (e) { toast('Couldn\'t save — check the connection and try again', false); }
