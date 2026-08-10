@@ -3097,7 +3097,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.66 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.67 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8818,6 +8818,8 @@ async function openMaterials(i) {
       if (mine) mine.items = [...(mine.items || []), ...(orm.items || [])];
       else _matD.rooms.push(orm);
     });
+    // 📁 v5.67 — hand each 🏠 item its pocket back from the office file
+    if (off && off.pkts) _matD.rooms.forEach(r => (r.items || []).forEach(x => { if (off.pkts[x.id]) x.pkt = off.pkts[x.id]; }));
   } catch (e) { /* no office sheet yet */ }
   renderMatMgr();
   $('revModal').classList.add('show');
@@ -8872,9 +8874,10 @@ function matMgrItem(ri, it) {
       <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕'}</button>
     </div>
     ${(it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
-    ${(it.phs || []).length && !editing ? `<div class="chips-row" style="margin: 4px 0 0; display: flex; gap: 5px;">
-      ${it.phs.map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
-    </div>` : ''}
+    ${((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0; display: flex; gap: 5px; flex-wrap: wrap;">
+      ${(it.phs || []).map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
+      ${matPktChip(it)}
+    </div>${matPktBody(it)}` : ''}
     ${kids.length && !editing ? (() => {
       const okN = kids.filter(k => k.ok).length;
       const spct = Math.round(okN / kids.length * 100);
@@ -8943,6 +8946,23 @@ function matMgrEditor(it) {
           <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1} — look</button>
           <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelPhoto('${id}', ${pi})" aria-label="take photo ${pi + 1} off this item">✕</button></span>`).join('')}
       </div>` : ''}
+    </div>
+    <div class="field" style="flex: 1 1 100%;">
+      <div id="matPkt-${id}" style="border: 2px dashed color-mix(in srgb, var(--ink-muted, #8a8177) 60%, transparent); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; font-size: 12.5px;"
+        onclick="$('matPd-${id}').click()"
+        ondragover="event.preventDefault(); this.style.borderStyle = 'solid';"
+        ondragleave="this.style.borderStyle = 'dashed';"
+        ondrop="event.preventDefault(); this.style.borderStyle = 'dashed'; matAddDocs('${id}', event.dataTransfer.files)">
+        📁 <b>The pocket</b> — bids, estimates, papers. Drag PDFs or photos here, or tap to pick${((it.pkt || {}).docs || []).length ? ` · ${it.pkt.docs.length} in it` : ''}</div>
+      <input type="file" id="matPd-${id}" accept="image/*,.pdf,application/pdf" multiple style="display: none;" onchange="matAddDocs('${id}', this.files)">
+      ${((it.pkt || {}).docs || []).length ? `<div class="chips-row" style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px;">
+        ${it.pkt.docs.map((d, di) => `<span style="display: inline-flex; gap: 4px; align-items: center;">
+          <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="matOpenDoc('${escq(d.path)}')">📄 ${esc(d.name)}</button>
+          <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelDoc('${id}', ${di})" aria-label="take ${esc(d.name)} out of the pocket">✕</button></span>`).join('')}
+      </div>` : ''}
+      <textarea rows="3" class="grow" style="width: 100%; margin-top: 6px; font-size: 12.5px;"
+        placeholder="🗒 standing notes — the rep's name, quote good through, price-match, anything worth keeping…"
+        onchange="matPktNotes('${id}', this.value)">${esc((it.pkt || {}).notes || '')}</textarea>
     </div>
     <button class="btn-ghost" style="flex: 1 1 100%;" onclick="_matEdit = ''; renderMatMgr()">✓ Done with this item</button>
   </div>`;
@@ -9016,6 +9036,85 @@ function matSetKids(id, txt) {
   if (kids.length) it.kids = kids; else delete it.kids;
   _matDirty = true;
   renderMatMgr();
+}
+// 📁 v5.67 — THE PAPERWORK POCKET. Eric: bids, estimates, standing notes — "things that
+// have to do with it but don't necessarily need to be checked off." Every item gets a
+// pocket: documents (photos AND PDFs) plus one free-text notes pad. Folded to a small chip
+// on the row, one tap open, never touches the lamps or the done-gate. Bids are money talk,
+// so a 🏠 item's pocket is STRIPPED from the client file at save and rides the office file
+// instead — a homeowner's browser never receives it at all.
+let _pktOpen = '';
+function matPktChip(it) {
+  const k = it.pkt || {};
+  const n = (k.docs || []).length + (k.notes ? 1 : 0);
+  if (!n) return '';
+  const open = _pktOpen === it.id;
+  return `<button type="button" class="pick-chip${open ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;"
+    onclick="_pktOpen = _pktOpen === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()" aria-expanded="${open}"
+    title="the item's papers — bids, estimates, standing notes">${open ? '▾' : '▸'} 📁 papers · ${n}</button>`;
+}
+function matPktBody(it) {
+  if (_pktOpen !== it.id) return '';
+  const k = it.pkt || {};
+  return `<div class="mat-steps" style="margin-top: 4px;"><span class="mt-trunk2" aria-hidden="true" style="opacity:.45;"></span>
+    ${(k.docs || []).map((d, di) => `<div class="mat-step"><button type="button" class="pick-chip" onclick="matOpenDoc('${escq(d.path)}')">📄 ${esc(d.name)}</button></div>`).join('')}
+    ${k.notes ? `<div class="mat-step"><div class="mat-note" style="margin-left: 0; white-space: pre-wrap; font-size: 12px; color: var(--ink-2);">🗒 ${esc(k.notes)}</div></div>` : ''}
+  </div>`;
+}
+async function matAddDocs(id, files) {
+  const it = matFindItem(id);
+  const c = _portalIdx.clients[_matIdx];
+  if (!it || !c || !files || !files.length) return;
+  if (!dbx.refreshToken) { toast('Connect Dropbox first (⚙ Setup)', false); return; }
+  const ok = [...files].filter(f => /^image\//.test(f.type) || f.type === 'application/pdf').slice(0, 8);
+  if (!ok.length) { toast('Photos and PDFs only in the pocket', false); return; }
+  it.pkt = it.pkt || {};
+  it.pkt.docs = it.pkt.docs || [];
+  let n = 0;
+  for (const f of ok) {
+    toast(`⏳ Paper ${++n} of ${ok.length} going in…`);
+    const clean = (f.name || 'paper').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
+    const path = `${DBX_ROOT}/App Data/Client Portal/mat-files-${c.code}/${it.id} ${clean}`;
+    try {
+      const r = await dbxUpload(path, f, true);
+      it.pkt.docs.push({ path: r.path_display || path, name: clean });
+    } catch (e) { toast(`⚠ ${clean} didn't make it — check the connection`, false); }
+  }
+  _matDirty = true;
+  renderMatMgr();
+  toast(`📁 In the pocket — ${it.pkt.docs.length} paper${it.pkt.docs.length > 1 ? 's' : ''} on ${it.n} ✓`);
+}
+function matDelDoc(id, di) {
+  const it = matFindItem(id);
+  if (!it || !it.pkt || !it.pkt.docs || !it.pkt.docs[di]) return;
+  it.pkt.docs.splice(di, 1);
+  if (!it.pkt.docs.length) delete it.pkt.docs;
+  if (!it.pkt.docs && !it.pkt.notes) delete it.pkt;
+  _matDirty = true;
+  renderMatMgr();
+}
+function matPktNotes(id, v) {
+  const it = matFindItem(id);
+  if (!it) return;
+  v = (v || '').trim().slice(0, 2000);
+  it.pkt = it.pkt || {};
+  if (v) it.pkt.notes = v; else { delete it.pkt.notes; if (!(it.pkt.docs || []).length) delete it.pkt; }
+  _matDirty = true;
+}
+// 📄 open a pocket paper INSIDE the app: images ride the photo lightbox; a PDF is fetched
+// whole and shown in the client-preview frame as a blob — no external tab, ever (PWA rule).
+async function matOpenDoc(path) {
+  if (/\.(jpe?g|png|gif|webp|heic)$/i.test(path)) return showPhoto(path);
+  try {
+    toast('⏳ Opening the paper…');
+    const t = await getToken();
+    const r = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Dropbox-API-Arg': hsafe({ path }) } });
+    if (!r.ok) throw new Error();
+    const url = URL.createObjectURL(await r.blob());
+    $('cpFrame').src = url;
+    $('cliPrev').classList.add('show');
+  } catch (e) { toast('Couldn\'t open it — check the connection', false); }
 }
 // ✋ v5.66 — Eric: "always be able to edit with a click and hold." Hold a step on the board
 // and it turns into a text box right where it sits; hold an item's name and its ✎ editor
@@ -9192,10 +9291,16 @@ async function matSave() {
     // split at the wall: their file gets 🏠 items only, ours gets the rest — a task named
     // "argue the permit fee down" never rides to a homeowner's browser at all.
     const cut = hm => ({ updated: _matD.updated, seq: _matD.seq,
-      rooms: _matD.rooms.map(r => ({ name: r.name, items: (r.items || []).filter(x => !!x.hm === hm) }))
+      rooms: _matD.rooms.map(r => ({ name: r.name, items: (r.items || []).filter(x => !!x.hm === hm)
+        .map(x => { if (hm && x.pkt) { const { pkt, ...rest } = x; return rest; } return x; }) }))
         .filter(r => r.items.length) });
+    // 📁 v5.67 — a 🏠 item's pocket (bids! estimates!) rides the OFFICE file keyed by item id
+    const offCut = cut(false);
+    const hmPkts = {};
+    _matD.rooms.forEach(r => (r.items || []).forEach(x => { if (x.hm && x.pkt) hmPkts[x.id] = x.pkt; }));
+    if (Object.keys(hmPkts).length) offCut.pkts = hmPkts;
     await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json', JSON.stringify(cut(true)));
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-office-' + c.code + '.json', JSON.stringify(cut(false)));
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-office-' + c.code + '.json', JSON.stringify(offCut));
     // bump the page stamp so their lamp lights
     const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
     try { const d = JSON.parse(await dbxDownload(path) || '{}'); d.updated = _matD.updated; await dbxUpload(path, JSON.stringify(d, null, 1)); } catch (e) {}
