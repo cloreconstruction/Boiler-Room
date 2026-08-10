@@ -3109,7 +3109,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.72 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.73 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8842,6 +8842,7 @@ async function openMaterials(i) {
   _matIdx = i; _matEdit = ''; _matDirty = false; _matArm = '';
   const c = _portalIdx.clients[i];
   toast('⏳ Loading the board…');
+  matTplLoad();
   try { _matD = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json') || 'null'); } catch (e) { _matD = null; }
   if (!_matD || !Array.isArray(_matD.rooms)) _matD = { updated: '', rooms: [] };
   // 🏢 v5.60 — the client file holds only what the homeowner may see; everything Eric marked
@@ -8891,6 +8892,7 @@ function renderMatMgr() {
       <span style="float: right; display: inline-flex; gap: 4px;">
         <button class="btn-ghost req-x" style="padding: 5px 6px; min-width: 26px;" onclick="matRoomMove(${ri}, -1)" aria-label="move category up" ${ri === 0 ? 'disabled' : ''}>▲</button>
         <button class="btn-ghost req-x" style="padding: 5px 6px; min-width: 26px;" onclick="matRoomMove(${ri}, 1)" aria-label="move category down" ${ri === _matD.rooms.length - 1 ? 'disabled' : ''}>▼</button>
+        <button class="btn-ghost req-x" style="padding: 5px 6px;" title="save this category as a reusable process template" onclick="matTplSave(${ri})">📑</button>
         <button class="btn-ghost req-x" onclick="matAddItem(${ri})">➕ item</button>
         <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelRoom(${ri})">${_matArm === 'room' + ri ? '⚠ SURE? Items go too' : '✕'}</button>
       </span></h4>
@@ -8900,10 +8902,12 @@ function renderMatMgr() {
     <div class="frow" style="margin-top: 12px;">
       <div class="field" style="flex: 1;"><input type="text" id="matNewRoom" placeholder="new category — Planning, Foundation, Framing…"></div>
       <button class="btn-ghost" onclick="matAddRoom()">➕ category</button>
+      ${_matTpl.length ? `<div class="field"><select id="matTplSel">${_matTpl.map(t => `<option>${esc(t.name)}</option>`).join('')}</select></div>
+      <button class="btn-ghost" onclick="matTplInsert()">📑 from template</button>` : ''}
     </div>
     <div class="rev-row" style="margin-top: 12px; flex-wrap: wrap;">
       <button class="btn-primary" style="flex: 2;" onclick="matSave()">📤 Send 🏠 client portion to the client's page${_matPubDirty ? ' — <b>changes waiting</b>' : ''}</button>
-      ${!_matD.rooms.length ? `<button class="btn-ghost" style="flex: 2;" onclick="matFromMaster()">🧱 Start from the master list</button>` : `<button class="btn-ghost" style="flex: 1;" onclick="matSaveMaster()">${_matArm === 'master' ? '⚠ SURE? Overwrites the master' : '📌 Save as master'}</button>`}
+      ${!_matD.rooms.length ? `<button class="btn-ghost" style="flex: 2;" onclick="matFromMaster()">🧱 Start from the master list</button>` : ''}
       <button class="btn-ghost" style="flex: 1;" onclick="matClose()">✕ Close</button>
     </div>
     <div class="hint" style="margin-top: 8px;">Everything here saves ITSELF as you work — 📤 is only for showing the client. Per-client setup: 🧱 start from the master, ✕ what this job doesn't need, ➕ what's special.</div>`;
@@ -9455,6 +9459,41 @@ function matDelItem(id) {
 // ✕ v5.61 — Eric: "I don't seem to be able to delete the room." Two taps if it has items.
 // 🧱 v5.71 — rooms are CONSTRUCTION CATEGORIES (Eric: "so I can put things semi-in order
 // that they happen in the project"), and ▲▼ walks one up or down the build.
+// 📑 v5.73 — CATEGORY TEMPLATES. Eric: "our processes are going to be the same... maybe I
+// can make [the master] out of smaller pieces." Save any category — Windows, Flooring — as
+// a reusable process: items and steps kept, checks/flags/photos/picks scrubbed (a template
+// is the PROCESS, not one job's history). Insert into any board from the wheel. The whole-
+// board Save-as-master button is parked at Eric's word; the master can grow from pieces.
+let _matTpl = [];
+async function matTplLoad() {
+  try { const t = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-templates.json') || '[]'); if (Array.isArray(t)) _matTpl = t; } catch (e) { _matTpl = []; }
+}
+async function matTplSave(ri) {
+  const r = _matD.rooms[ri];
+  if (!r || !(r.items || []).length) { toast('Nothing in that category to save yet', false); return; }
+  const scrub = it => ({ n: it.n, t: it.t || 'Misc', ...(it.hm ? { hm: true } : {}),
+    ...(it.kids && it.kids.length ? { kids: it.kids.map(k => ({ n: k.n, ...(k.note ? { note: k.note } : {}), ...(k.cv ? { cv: true } : {}) })) } : {}) });
+  _matTpl = _matTpl.filter(t => t.name.toLowerCase() !== r.name.toLowerCase());
+  _matTpl.push({ name: r.name, items: (r.items || []).map(scrub) });
+  try {
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-templates.json', JSON.stringify(_matTpl));
+    matLog(`📑 saved "${r.name}" as a template (${r.items.length} items)`);
+    renderMatMgr();
+    toast(`📑 "${r.name}" is a template now — every job gets the same process from here ✓`);
+  } catch (e) { toast('Couldn\'t save the template — check the connection', false); }
+}
+function matTplInsert() {
+  const sel = $('matTplSel');
+  const tpl = _matTpl.find(t => t.name === (sel && sel.value));
+  if (!tpl) { toast('Pick a template first', false); return; }
+  _matD.rooms.push({ name: tpl.name, items: tpl.items.map(it => ({
+    id: matNextId(), n: it.n, t: it.t, s: it.hm ? 'pick' : 'todo', ...(it.hm ? { hm: true } : {}),
+    ...(it.kids ? { kids: it.kids.map(k => ({ ...k })) } : {}) })) });
+  matLog(`📑 added category "${tpl.name}" from template`);
+  _matDirty = true;
+  renderMatMgr();
+  toast(`📑 ${tpl.name} added — fresh lamps, same process ✓`);
+}
 function matRoomMove(ri, dir) {
   const j = ri + dir;
   if (j < 0 || j >= _matD.rooms.length) return;
