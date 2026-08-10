@@ -3109,7 +3109,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.76 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.77 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8961,8 +8961,7 @@ function matMgrItem(ri, it) {
     ${open && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px;">
       <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px;" onclick="_matEdit = '${escq(it.id)}'; renderMatMgr()">✎ edit</button>
       <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px; color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕ delete'}</button>
-      ${(it.pick || (it.remarks || []).some(rm => rm.from === 'client')) ? `<button type="button" class="pick-chip${_matConvo === it.id ? ' sel' : ''}" style="font-size: 11px; padding: 4px 10px; min-height: 26px; box-shadow: inset 0 0 0 1.5px var(--client-blue);" onclick="_matConvo = _matConvo === '${escq(it.id)}' ? '' : '${escq(it.id)}'; renderMatMgr()">💬 Response from the client</button>` : ''}
-    </div>${matConvoHtml(it)}${_matConvo === it.id ? '' : matLampRowMgr(it)}` : ''}
+    </div>${matConvoHtml(it)}${matLampRowMgr(it)}` : ''}
     ${open && (it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0 34px;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
     ${open && ((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px; flex-wrap: wrap;">
       ${(it.phs || []).map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
@@ -9358,20 +9357,23 @@ async function matWhatIs(id) {
   } catch (e) { if (out) out.textContent = 'Couldn\'t read it — check the connection and the key.'; }
 }
 function matConvoHtml(it) {
-  if (_matConvo !== it.id) return '';
+  // 🖼 v5.77 — MERGED, at Eric's word: the card view IS the open item now. Photo big,
+  // What-is-it, her pick, the thread, the reply box — inline with the lamps and steps,
+  // one tap to see everything. Renders whenever there's a picture or a client to talk to.
   const ph = it.cph ? DBX_ROOT + '/App Data/Client Portal/' + it.cph : (it.phs || [])[0];
+  const talk = matIsHm(it);
+  if (!ph && !talk && !(it.remarks || []).length) return '';
   if (ph) setTimeout(() => matConvoImg(ph, 'cvImg-' + it.id), 30);
   return `<div class="set-section fc-sec" style="margin: 6px 0 0 20px; padding: 12px;">
-    <div style="font-weight: 800; margin-bottom: 6px;">💬 ${esc(it.n)} — from the client</div>
+    ${(it.remarks || []).some(rm => rm.from === 'client') ? `<div style="font-weight: 800; margin-bottom: 6px;">💬 from the client</div>` : ''}
     ${ph ? `<img id="cvImg-${escq(it.id)}" alt="what the client sent" style="width: 100%; border-radius: 10px; cursor: pointer; background: #00000014; min-height: 60px;" onclick="showPhoto('${escq(ph)}')">` : ''}
     ${it.pick ? `<div style="margin: 6px 0;">✓ <b>Her pick:</b> ${esc(it.pick)}</div>` : ''}
-    <button type="button" class="pick-chip" style="font-size: 12px; margin: 6px 0;" onclick="matWhatIs('${escq(it.id)}')">🔮 What is it? — details + suggestions</button>
-    <div class="hint" id="cvAI-${escq(it.id)}" style="margin: 2px 0 6px; white-space: pre-wrap;"></div>
+    ${ph ? `<button type="button" class="pick-chip" style="font-size: 12px; margin: 6px 0;" onclick="matWhatIs('${escq(it.id)}')">🔮 What is it? — details + suggestions</button>
+    <div class="hint" id="cvAI-${escq(it.id)}" style="margin: 2px 0 6px; white-space: pre-wrap;"></div>` : ''}
     ${(it.remarks || []).slice(-8).map(rm => `<div class="hint" style="margin: 3px 0;">${rm.from === 'client' ? '👤 client' : '✍ you'}: ${esc(rm.text)}</div>`).join('')}
-    <div class="hint" style="margin: 8px 0 4px;">✍ Reply — goes straight onto their page</div>
+    ${talk ? `<div class="hint" style="margin: 8px 0 4px;">✍ Reply — goes straight onto their page</div>
     <textarea id="cvR-${escq(it.id)}" rows="2" class="grow" style="width: 100%; font-size: 13px;" placeholder="type it and hit 💬 Reply…"></textarea>
-    <button type="button" class="btn-primary" style="width: 100%; margin-top: 6px; font-weight: 800;" onclick="matReplySend('${escq(it.id)}')">💬 Reply</button>
-    ${matLampRowMgr(it)}
+    <button type="button" class="btn-primary" style="width: 100%; margin-top: 6px; font-weight: 800;" onclick="matReplySend('${escq(it.id)}')">💬 Reply</button>` : ''}
   </div>`;
 }
 // 🎚 v5.71 — the step tools Eric asked for: arrows to rearrange, a client-sees flag, and a
