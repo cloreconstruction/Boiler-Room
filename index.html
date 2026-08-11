@@ -1889,9 +1889,13 @@
   body.crew-mode #scRow { order: 2; }           /* 🏠 client portal plate — very top, like Eric's */
   body.crew-mode #qnCard { order: 3; }          /* ⚙ Grinder + 🧙 Wizard — top of the page */
   body.crew-mode #crewAskCard { order: 4; }     /* 📢 Eric needs an answer — never buried */
-  body.crew-mode #hotStrip { order: 5; }
-  body.crew-mode #todoCard { order: 6; }
-  body.crew-mode #crewSharedCard { order: 7; }  /* 📨 FROM ERIC — reading matter, but his */
+  /* 📨 v5.80 — Eric: "On Phil's page, I want the From Eric to be below the grinder window.
+     Then the running log, then the to-dos." (📢 keeps its standing rule and stays high —
+     it only shows when Eric is waiting on an answer.) */
+  body.crew-mode #crewSharedCard { order: 5; }  /* 📨 FROM ERIC — right below the grinder */
+  body.crew-mode #runLogCard { order: 6; }      /* 📜 the one running log */
+  body.crew-mode #hotStrip { order: 7; }
+  body.crew-mode #todoCard { order: 8; }        /* ✅ to-dos ride under the log */
   body.crew-mode .clock-card { order: 80; }     /* ⬇ the two clock faces, bottom of the page */
   body.crew-mode #crewGaugeCard { order: 81; }
   body.crew-mode .wrap > footer { order: 100; }
@@ -2232,23 +2236,10 @@
       <input type="file" id="qnPhoto" accept="image/*" multiple onchange="noteAddPhotos(this)" style="display: none;">
       <button type="button" class="btn-ghost cam-btn cam-btn--tall" onclick="$('qnPhoto').click()" aria-label="Add photos or files — or drag them onto this card" title="Add photos or files — or drag them onto this card"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"></button>
     </div>
-    <div class="plate-row">
-      <button type="button" class="plate-btn plate-btn--grind" onclick="saveQuickNote()" aria-label="To the grinder — save as a note" title="Save as a note — job + tags stamp on">
-        <img src="steam/btn-grinder.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
-        <span class="plate-txt">⚙ To the grinder</span>
-      </button>
-      <button type="button" class="plate-btn plate-btn--wiz" onclick="askClaude()" aria-label="Ask the Wizard" title="Ask the Wizard">
-        <img src="steam/btn-wizard.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
-        <span class="plate-txt">🧙 Ask the Wizard</span>
-      </button>
-    </div>
-    <!-- 📗 v5.55 — Eric: "me and Phil and the crew and everybody need a little button that
-         says to the bookkeeper." Grinds the note + photos like normal AND pops the phone's
-         send sheet labeled for the books, same finger-tap. When the Logan/QB robot address
-         is wired up later, this same button switches from the send sheet to sending direct. -->
-    <button type="button" class="sc-btn" id="bkkBtn" onclick="toBookkeeper()"
-      style="width: 100%; margin-top: 8px; min-height: 48px; font-size: 14px;">
-      📗 <span>TO THE BOOKKEEPER — files it here + opens the send sheet</span></button>
+    <!-- ⬇ v5.80 — Eric: "move the grinder and ask wizard button down so it's between the
+         'who sees it' and the running log" (and on Phil's phone: "below all of the tags").
+         The two plates + the bookkeeper button now ride at the BOTTOM of this card, after
+         every tag, who-sees-it and send-to section. Write → file → THEN pull the lever. -->
     <div class="frow" style="margin-top: 10px; align-items: center; flex-wrap: nowrap;">
       <!-- v5.26 — Eric kept hunting for this wheel: bigger, bolder, brass-rimmed -->
       <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0; font-size: 16.5px; font-weight: 800; padding: 12px 10px; border: 2px solid var(--accent); border-radius: 10px;"></select>
@@ -2274,10 +2265,38 @@
       <!-- v4.91 — your sent requests + their live status lamps -->
       <div id="myReqStrip"></div>
     </div>
-    <!-- v5.08 — hard divider: everything above is WRITING, everything below is the RUNNING LOG -->
-    <!-- 📜 v5.78 — Eric: "I don't need multiple logs." This IS the log now — the whole book,
-         newest first, everything that passes through the app. Tap 🔍 and the searches open right here. -->
-    <div class="qn-div">
+    <div class="plate-row" style="margin-top: 12px;">
+      <button type="button" class="plate-btn plate-btn--grind" onclick="saveQuickNote()" aria-label="To the grinder — save as a note" title="Save as a note — job + tags stamp on">
+        <img src="steam/btn-grinder.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
+        <span class="plate-txt">⚙ To the grinder</span>
+      </button>
+      <button type="button" class="plate-btn plate-btn--wiz" onclick="askClaude()" aria-label="Ask the Wizard" title="Ask the Wizard">
+        <img src="steam/btn-wizard.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
+        <span class="plate-txt">🧙 Ask the Wizard</span>
+      </button>
+    </div>
+    <!-- 📗 v5.55 — Eric: "me and Phil and the crew and everybody need a little button that
+         says to the bookkeeper." Grinds the note + photos like normal AND pops the phone's
+         send sheet labeled for the books, same finger-tap. When the Logan/QB robot address
+         is wired up later, this same button switches from the send sheet to sending direct. -->
+    <button type="button" class="sc-btn" id="bkkBtn" onclick="toBookkeeper()"
+      style="width: 100%; margin-top: 8px; min-height: 48px; font-size: 14px;">
+      📗 <span>TO THE BOOKKEEPER — files it here + opens the send sheet</span></button>
+    <div class="ask-foot">
+      <span id="askStatus" class="hint" style="margin-top: 0;">⚙ grinds it into the log · 🧙 answers from it.</span>
+    </div>
+    <div class="ask-inline" id="askInline" style="display: none;">
+      <div class="ask-inline__head">🧙 <span id="aiQ"></span><button type="button" class="ask-inline__x" onclick="hideInlineAnswer()" aria-label="Close answer">✕</button></div>
+      <div class="ask-inline__body" id="aiBody"></div>
+      <div class="ask-inline__foot"><a href="javascript:void(0)" onclick="openAnswerFull()">Open full screen →</a></div>
+    </div>
+  </div>
+
+  <!-- 📜 v5.80 — Eric: "Detach that running log from the grinder window. Make them separate."
+       The one log is its OWN card now, right below the grinder. v5.78 still holds inside it:
+       the whole book, newest first, tap 🔍 and the searches open right here. -->
+  <div class="card ask-card" id="runLogCard">
+    <div class="qn-div" style="border-top: 0; margin-top: 0; padding-top: 0;">
       <span class="qn-div-label">📜 RUNNING LOG</span>
       <span style="display: flex; align-items: center; gap: 6px;">
         <span class="hint" id="rlCount" style="margin: 0; font-size: 11px;"></span>
@@ -2302,14 +2321,6 @@
         <div class="field"><label>To</label><input type="date" id="lfTo" onchange="renderAskRecent()"></div>
       </div>
       <div id="logDayBanner"></div>
-    </div>
-    <div class="ask-foot">
-      <span id="askStatus" class="hint" style="margin-top: 0;">⚙ grinds it into the log · 🧙 answers from it.</span>
-    </div>
-    <div class="ask-inline" id="askInline" style="display: none;">
-      <div class="ask-inline__head">🧙 <span id="aiQ"></span><button type="button" class="ask-inline__x" onclick="hideInlineAnswer()" aria-label="Close answer">✕</button></div>
-      <div class="ask-inline__body" id="aiBody"></div>
-      <div class="ask-inline__foot"><a href="javascript:void(0)" onclick="openAnswerFull()">Open full screen →</a></div>
     </div>
     <div id="askRecent"></div>
     <div id="logDbxHits"></div>
@@ -3107,7 +3118,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.79 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.80 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7957,15 +7968,25 @@ function answerAsk(id, job) {
   renderCrewAsks();
   toast('↩ Answer sent to Eric ✓');
 }
+let _crFEJob = '', _crFETag = '';
 function renderCrewShared() {
   const card = $('crewSharedCard');
   if (!card) return;
   // in Eric's 👁 preview, derive the list from his own entries so he sees exactly what would land
-  const list = crewPreview
-    ? entries.filter(e => e.vis && !e.sample).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ id: e.id, ts: e.ts, text: e.details, job: e.job, toAll: e.vis === 'crew', ph: e.photoPath || (e.photoPaths || [])[0] }))
+  const all = crewPreview
+    ? entries.filter(e => e.vis && !e.sample).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ id: e.id, ts: e.ts, text: e.details, job: e.job, tags: e.tags, toAll: e.vis === 'crew', ph: e.photoPath || (e.photoPaths || [])[0] }))
     : crewShared;
-  card.style.display = (isCrew() && list.length) ? '' : 'none';
-  if (!isCrew() || !list.length) return;
+  card.style.display = (isCrew() && all.length) ? '' : 'none';
+  if (!isCrew() || !all.length) return;
+  // 🧭 v5.80 — Eric: "Phil should be able to sort my From Erics by job or by tag."
+  const feJobs = [...new Set(all.map(n => n.job).filter(j => j && j !== '—'))].sort();
+  const feTags = [...new Set(all.flatMap(n => n.tags || []))].sort();
+  if (_crFEJob && !feJobs.includes(_crFEJob)) _crFEJob = '';
+  if (_crFETag && !feTags.includes(_crFETag)) _crFETag = '';
+  let list = all;
+  if (_crFEJob) list = list.filter(n => n.job === _crFEJob);
+  if (_crFETag) list = list.filter(n => (n.tags || []).includes(_crFETag));
+  const sorted = _crFEJob || _crFETag;
   // 📨 v5.46 — the wheel: how many of Eric's notes ride on the page at once
   const nRaw = prefs.crewShowN == null ? '5' : String(prefs.crewShowN);
   const cap = nRaw === 'all' ? list.length : Math.max(1, parseInt(nRaw, 10) || 5);
@@ -7975,8 +7996,8 @@ function renderCrewShared() {
   if (btn) {
     // brightness + glyph + the spelled word: never a bare caret
     btn.textContent = folded
-      ? `▸ 📨 FROM ERIC — ${list.length} note${list.length === 1 ? '' : 's'}, tap to open`
-      : `▾ 📨 FROM ERIC — showing ${Math.min(cap, list.length)} of ${list.length}, tap to fold`;
+      ? `▸ 📨 FROM ERIC — ${all.length} note${all.length === 1 ? '' : 's'}, tap to open`
+      : `▾ 📨 FROM ERIC — showing ${Math.min(cap, list.length)} of ${all.length}${sorted ? ' (sorted)' : ''}, tap to fold`;
     btn.setAttribute('aria-expanded', folded ? 'false' : 'true');
   }
   const bodyEl = $('crewSharedList');
@@ -7986,11 +8007,18 @@ function renderCrewShared() {
   // 📷 v5.43 — a note Eric sent is no longer read-only wallpaper. If a picture came with it
   // there's a button to open it full screen, and every row has a ✎ to send words back —
   // "that's the wrong window", "got it, done Tuesday". His words go to ERIC, not the crew.
-  $('crewSharedList').innerHTML = list.slice(0, cap).map(n => {
+  const feSort = (feJobs.length > 1 || feTags.length) ? `<div class="frow" style="gap: 6px; margin-bottom: 8px; flex-wrap: wrap; align-items: center;">
+      ${feJobs.length > 1 ? `<select class="mini-sel" style="flex: 1; min-width: 110px;" title="Just one job's notes" onchange="_crFEJob = this.value; renderCrewShared()">
+        <option value="">📂 every job</option>${feJobs.map(j => `<option value="${esc(j)}"${_crFEJob === j ? ' selected' : ''}>${esc(j)}</option>`).join('')}</select>` : ''}
+      ${feTags.length ? `<select class="mini-sel" style="flex: 1; min-width: 110px;" title="Just one tag's notes" onchange="_crFETag = this.value; renderCrewShared()">
+        <option value="">🏷 every tag</option>${feTags.map(t => `<option value="${esc(t)}"${_crFETag === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>` : ''}
+      ${sorted ? `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 28px;" onclick="_crFEJob = ''; _crFETag = ''; renderCrewShared()">✳ all</button>` : ''}
+    </div>` : '';
+  $('crewSharedList').innerHTML = feSort + (list.length ? '' : `<div class="hint" style="margin: 4px 0;">Nothing under that sort — ✳ all brings every note back.</div>`) + list.slice(0, cap).map(n => {
     const d = new Date(n.ts);
     const id = escq(String(n.id == null ? '' : n.id));
     return `<div class="sum-row" style="cursor: default; font-size: 14.5px; display: block;">
-      <span>${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
+      <span>${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${(n.tags || []).length ? ' · 🏷 ' + esc(n.tags.join(', ')) : ''}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${n.ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(n.ph)}')">📷 Open the picture</button>` : ''}
         <button type="button" class="pick-chip" onclick="crewNoteReply('${id}')">✎ Add your notes</button>
@@ -8389,7 +8417,14 @@ async function renderPortalList() {
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="portalCopy(${i})">📋 Copy link</button>
       <button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
       <button class="btn-ghost req-x" onclick="portalIntel(${i})">📊 What they look at</button>
-      <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? This kills their link for good' : '🔄 Rotate code'}</button>` : ''}
+      <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? This kills their link for good' : '🔄 Rotate code'}</button>
+      <button class="btn-ghost req-x" onclick="portalEditStart(${i})">✎ Rename</button>
+      <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="portalDelete(${i})">${_portalDelArm === i + 1 ? '⚠ SURE? The page comes down' : '✕ Remove page'}</button>
+      ${_portalEdit === i ? `<div class="frow" style="flex: 1 1 100%; gap: 6px;">
+        <input type="text" id="peName-${i}" value="${esc(c.job)}" style="flex: 1; min-width: 120px; font-weight: 700;">
+        <button class="btn-ghost" onclick="portalRenameSave(${i})">✓ Save name</button>
+        <button class="btn-ghost" onclick="_portalEdit = -1; renderPortalList()">✕</button>
+      </div>` : ''}` : ''}
     </div>`;
   }).join('') || '<span class="hint">No clients yet.</span>';
   // ➕ v5.58 — THE MISSING BUTTON. Every page in here was hand-built in a chat, which is why
@@ -8442,7 +8477,66 @@ async function portalNew() {
     if (msg) msg.textContent = 'Couldn\'t build it — check the connection and try again.';
   }
 }
-function portalFold(i) { _portalOpen = _portalOpen === i ? -1 : i; _rotArm = 0; renderPortalList(); }
+function portalFold(i) { _portalOpen = _portalOpen === i ? -1 : i; _rotArm = 0; _portalDelArm = 0; _portalEdit = -1; renderPortalList(); }
+// ✎✕ v5.80 — Eric: "I need to be able to edit and delete the client pages. I accidentally
+// have two for Gilbreath." Rename fixes the name everywhere (index + the page the homeowner
+// reads) and keeps the same link. Remove is a two-tap; the page and its board files MOVE to
+// Archive/portal-removed — nothing is destroyed, the link just goes dead. Office phones only.
+let _portalEdit = -1, _portalDelArm = 0;
+function portalEditStart(i) {
+  if (portalGuard()) return;
+  _portalEdit = i; _portalDelArm = 0;
+  renderPortalList();
+  setTimeout(() => { const b = $('peName-' + i); if (b) { b.focus(); b.select(); } }, 80);
+}
+async function portalRenameSave(i) {
+  if (portalGuard()) return;
+  const c = (_portalIdx.clients || [])[i];
+  if (!c) return;
+  const v = (($('peName-' + i) || {}).value || '').trim().slice(0, 60);
+  if (!v || v === c.job) { _portalEdit = -1; renderPortalList(); return; }
+  const old = c.job;
+  c.job = v;
+  try {
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/index.json', JSON.stringify(_portalIdx));
+    try { // the page the homeowner reads follows the new name
+      const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
+      if (pg) { pg.name = v; await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json', JSON.stringify(pg, null, 1)); }
+    } catch (e) { /* page missing — index rename still stands */ }
+    _portalEdit = -1;
+    renderPortalList();
+    publishSharedNotes();
+    toast(`✎ "${old}" is now "${v}" — same link, same code`);
+  } catch (e) {
+    c.job = old;
+    toast('Couldn\'t save the new name — check the connection', false);
+  }
+}
+async function portalDelete(i) {
+  if (portalGuard()) return;
+  const c = (_portalIdx.clients || [])[i];
+  if (!c) return;
+  if (_portalDelArm !== i + 1) {
+    _portalDelArm = i + 1;
+    renderPortalList();
+    setTimeout(() => { if (_portalDelArm === i + 1) { _portalDelArm = 0; renderPortalList(); } }, 6000);
+    return;
+  }
+  _portalDelArm = 0;
+  const CP = DBX_ROOT + '/App Data/Client Portal/';
+  const arc = async p => { try { await dbxRpc('files/move_v2', { from_path: CP + p, to_path: DBX_ROOT + '/Archive/portal-removed/' + p, autorename: true }); } catch (e) { /* not there — fine */ } };
+  try {
+    await arc(c.code + '.json');
+    await arc('materials-' + c.code + '.json');
+    await arc('materials-office-' + c.code + '.json');
+    _portalIdx.clients.splice(i, 1);
+    await dbxUpload(CP + 'index.json', JSON.stringify(_portalIdx));
+    _portalOpen = -1;
+    renderPortalList();
+    publishSharedNotes();
+    toast(`✕ ${c.job} came down — its files moved to Archive/portal-removed, the link is dead`);
+  } catch (e) { toast('Couldn\'t take the page down — check the connection', false); }
+}
 function portalUrl(i) { return location.origin + '/c/?c=' + encodeURIComponent(_portalIdx.clients[i].code); }
 // 👁 v5.29 — the client page opens INSIDE the app, gold banner to come back. window.open
 // hijacked the whole installed app with no way home (and broke the no-external-tabs rule).
@@ -8838,6 +8932,37 @@ const MAT_STATES = [['pick', '○ PICK NEEDED'], ['picked', '● PICKED'], ['ord
 const TASK_STATES = [['todo', '○ TO DO'], ['work', '⚙ IN WORK'], ['done', '✅ DONE']];
 const matIsHm = it => !!it.hm;
 const MAT_TRADES = ['Electrical', 'Plumbing', 'Tile', 'Doors', 'Windows', 'Paint', 'Cabinets', 'Flooring', 'Siding', 'Roofing', 'Decks', 'Misc'];
+// 🏷 v5.80 — Eric: "I don't think I want the drop-down menu for the trade... only tags very
+// similar to the tags on the main page where I can add and sort. If we pick out a toilet but
+// it needs a plug-in, I hit the Electric tag so the electrician sees it on their list."
+// An item wears any number of tags; the old single Trade folds in as the first tag. The old
+// `t` field stays synced to the first tag so templates, the master and the client page never notice.
+let _matTagF = '';
+function matItemTags(it) { return it.tg || (it.t && it.t !== 'Misc' ? [it.t] : []); }
+function matTagBank(it) {
+  const inBoard = ((_matD && _matD.rooms) || []).flatMap(r => (r.items || []).flatMap(x => matItemTags(x)));
+  return [...new Set([...MAT_TRADES.filter(t => t !== 'Misc'), ...(prefs.matTags || []), ...inBoard, ...(it ? matItemTags(it) : [])])];
+}
+function matItTagToggle(id, tg) {
+  const it = matFindItem(id);
+  if (!it) return;
+  it.tg = matItemTags(it).slice();
+  const i = it.tg.indexOf(tg);
+  if (i >= 0) it.tg.splice(i, 1); else it.tg.push(tg);
+  it.t = it.tg[0] || 'Misc';
+  matLog(`🏷 ${i >= 0 ? 'untagged' : 'tagged'} ${it.n}: ${tg}`);
+  _matDirty = true;
+  renderMatMgr();
+}
+function matItTagAdd(id) {
+  const box = $('matNewTag-' + id);
+  const v = ((box && box.value) || '').trim().slice(0, 24);
+  if (!v) { if (box) box.focus(); return; }
+  prefs.matTags = [...new Set([...(prefs.matTags || []), v])];
+  scheduleSave();
+  matItTagToggle(id, v);
+  const nb = $('matNewTag-' + id); if (nb) nb.focus();
+}
 function matWord(s, hm) {
   const chain = hm === false ? TASK_STATES : MAT_STATES;
   return (MAT_STATES.find(x => x[0] === s) || TASK_STATES.find(x => x[0] === s) || chain[0])[1];
@@ -8845,7 +8970,7 @@ function matWord(s, hm) {
 async function openMaterials(i) {
   if (portalGuard()) return;
   if (CREW_NAME) { toast('📋 The board is coming to office phones next — it lives in Eric\'s Dropbox and needs its own copy out here first', false); return; }
-  _matIdx = i; _matEdit = ''; _matDirty = false; _matArm = '';
+  _matIdx = i; _matEdit = ''; _matDirty = false; _matArm = ''; _matTagF = '';
   const c = _portalIdx.clients[i];
   toast('⏳ Loading the board…');
   matTplLoad();
@@ -8903,11 +9028,25 @@ function renderMatMgr() {
   const box = $('revBox');
   const need = _matD.rooms.reduce((s, r) => s + (r.items || []).filter(x => matIsHm(x) && (x.s || 'pick') === 'pick').length, 0);
   box.innerHTML = `<h3>📋 ${esc(c.job)} — materials board <span id="matSaveWord" class="hint" style="margin: 0; font-size: 11px;">${_matDirty ? '⏳ saving…' : '✓ saved'}</span>
-    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 11px;" onclick="_matHistShow = !_matHistShow; renderMatMgr()" aria-expanded="${_matHistShow}">${_matHistShow ? '▾' : '▸'} 🕘 history</button></h3>
+    <span style="float: right; display: inline-flex; gap: 6px; align-items: center;">
+      <button type="button" class="btn-ghost req-x" style="font-size: 11px;" onclick="_matHistShow = !_matHistShow; renderMatMgr()" aria-expanded="${_matHistShow}">${_matHistShow ? '▾' : '▸'} 🕘 history</button>
+      <button type="button" class="btn-ghost req-x" style="font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="matClose()" aria-label="close the board" title="close the board">✕</button>
+    </span></h3>
     ${_matHistShow ? matHistHtml() : ''}
     <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client. Tap a lamp to advance it; ✎ opens the works; HOLD a step or a name to edit it in place.` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
+    ${(() => { // 🏷 v5.80 — the sort: tap a tag, see that trade's list (the electrician's list)
+      const used = {};
+      _matD.rooms.forEach(r => (r.items || []).forEach(x => matItemTags(x).forEach(tg => { used[tg] = (used[tg] || 0) + 1; })));
+      const names = Object.keys(used).sort();
+      if (_matTagF && !used[_matTagF]) _matTagF = '';
+      if (!names.length) return '';
+      return `<div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px;">
+        <button type="button" class="pick-chip${!_matTagF ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="_matTagF = ''; renderMatMgr()">${!_matTagF ? '✓ ' : ''}✳ whole board</button>
+        ${names.map(tg => `<button type="button" class="pick-chip${_matTagF === tg ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="_matTagF = _matTagF === '${escq(tg)}' ? '' : '${escq(tg)}'; renderMatMgr()">${_matTagF === tg ? '✓ ' : ''}🏷 ${esc(tg)} (${used[tg]})</button>`).join('')}
+      </div>`; })()}
     ${_matD.rooms.map(((r, ri) => {
-      const its = r.items || [];
+      const its = (r.items || []).filter(x => !_matTagF || matItemTags(x).includes(_matTagF));
+      if (_matTagF && !its.length) return ''; // this category has nothing for that trade
       const doneN = its.filter(x => x.s === 'done' || x.s === 'arrived').length;
       const pct = its.length ? Math.round(doneN / its.length * 100) : 0;
       const shut = _matRmShut.has(ri);
@@ -8932,10 +9071,12 @@ function renderMatMgr() {
       ${_matTpl.length ? `<div class="field"><select id="matTplSel">${_matTpl.map(t => `<option>${esc(t.name)}</option>`).join('')}</select></div>
       <button class="btn-ghost" onclick="matTplInsert()">📑 from template</button>` : ''}
     </div>
+    <!-- 🔘 v5.80 — Eric: "the bottom buttons are kind of transparent... The close button,
+         especially, is very difficult to see." Solid plates now, on every theme. -->
     <div class="rev-row" style="margin-top: 12px; flex-wrap: wrap;">
-      <button class="btn-primary" style="flex: 2;" onclick="matSave()">📤 Send 🏠 client portion to the client's page${_matPubDirty ? ' — <b>changes waiting</b>' : ''}</button>
-      ${!_matD.rooms.length ? `<button class="btn-ghost" style="flex: 2;" onclick="matFromMaster()">🧱 Start from the master list</button>` : ''}
-      <button class="btn-ghost" style="flex: 1;" onclick="matClose()">✕ Close</button>
+      <button class="btn-primary" style="flex: 2; background: var(--accent); color: #fff; border: 2px solid var(--accent); font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,.35);" onclick="matSave()">📤 Send 🏠 client portion to the client's page${_matPubDirty ? ' — <b>changes waiting</b>' : ''}</button>
+      ${!_matD.rooms.length ? `<button class="btn-ghost" style="flex: 2; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800;" onclick="matFromMaster()">🧱 Start from the master list</button>` : ''}
+      <button class="btn-ghost" style="flex: 1; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800; font-size: 14.5px; box-shadow: 0 2px 8px rgba(0,0,0,.25);" onclick="matClose()">✕ Close</button>
     </div>
     <div class="hint" style="margin-top: 8px;">Everything here saves ITSELF as you work — 📤 is only for showing the client. Per-client setup: 🧱 start from the master, ✕ what this job doesn't need, ➕ what's special.</div>`;
 }
@@ -8968,7 +9109,7 @@ function matMgrItem(ri, it) {
           onchange="matSet('${escq(it.id)}', 'n', this.value)"
           onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></span>` :
       `<span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap to ${open ? 'fold' : 'open'} · hold for the works">${open ? '▾' : '▸'} <b>${esc(it.n)}</b>
-        <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
+        <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
     </div>
     ${open && !editing && matIsHm(it) ? matConvoHtml(it) : ''}
     ${open && kids.length && !editing ? (() => {
@@ -9023,7 +9164,12 @@ function matMgrEditor(it) {
         ${hm ? '✓ 🏠 REQUIRES HOMEOWNER INPUT OR CHOICE — on their page, pick lamps' : '🏢 OFFICE ONLY — they never see this · tap if they need to pick or approve it'}</button></div>
     <!-- ✎ v5.79 — the name box moved UP into the item's top row, bold, next to the chevron
          (Eric: "soon as i push new and it has text box ready to name the main name") -->
-    <div class="field"><label>Trade</label><select onchange="matSet('${id}', 't', this.value)">${MAT_TRADES.map(t => `<option${t === it.t ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
+    <div class="field" style="flex: 1 1 100%;"><label>🏷 Tags — who needs to see this item on their list (tap to light · ➕ your own)</label>
+      <div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
+        ${matTagBank(it).map(tg => { const on = matItemTags(it).includes(tg); return `<button type="button" class="pick-chip${on ? ' sel' : ''}" style="font-size: 11.5px; padding: 5px 10px; min-height: 30px;" onclick="matItTagToggle('${id}', '${escq(tg)}')" aria-pressed="${on}">${on ? '✓ ' : ''}🏷 ${esc(tg)}</button>`; }).join('')}
+        <input type="text" id="matNewTag-${id}" placeholder="➕ new tag" style="width: 96px; font-size: 12px; padding: 6px 8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();matItTagAdd('${id}');}">
+        <button type="button" class="btn-ghost req-x" onclick="matItTagAdd('${id}')" aria-label="add the tag">➕</button>
+      </div></div>
     ${hm ? `<div class="field" style="flex: 1 1 100%;"><label>Their pick (what's decided)</label><input type="text" value="${esc(it.pick || '')}" onchange="matSet('${id}', 'pick', this.value)"></div>
     <div class="field" style="flex: 1 1 100%;"><label>Link</label><input type="text" value="${esc(it.url || '')}" onchange="matSet('${id}', 'url', this.value)"></div>
     <div class="field" style="flex: 1 1 100%;"><label>Status note to the client ("can't get this one — options below")</label><textarea rows="2" class="grow" onchange="matSet('${id}', 'note', this.value)">${esc(it.note || '')}</textarea></div>
@@ -9632,7 +9778,7 @@ async function matTplLoad() {
 async function matTplSave(ri) {
   const r = _matD.rooms[ri];
   if (!r || !(r.items || []).length) { toast('Nothing in that category to save yet', false); return; }
-  const scrub = it => ({ n: it.n, t: it.t || 'Misc', ...(it.hm ? { hm: true } : {}),
+  const scrub = it => ({ n: it.n, t: it.t || 'Misc', ...(matItemTags(it).length ? { tg: matItemTags(it) } : {}), ...(it.hm ? { hm: true } : {}),
     ...(it.kids && it.kids.length ? { kids: it.kids.map(k => ({ n: k.n, ...(k.note ? { note: k.note } : {}), ...(k.cv ? { cv: true } : {}) })) } : {}) });
   _matTpl = _matTpl.filter(t => t.name.toLowerCase() !== r.name.toLowerCase());
   _matTpl.push({ name: r.name, items: (r.items || []).map(scrub) });
@@ -9648,7 +9794,7 @@ function matTplInsert() {
   const tpl = _matTpl.find(t => t.name === (sel && sel.value));
   if (!tpl) { toast('Pick a template first', false); return; }
   _matD.rooms.push({ name: tpl.name, items: tpl.items.map(it => ({
-    id: matNextId(), n: it.n, t: it.t, s: it.hm ? 'pick' : 'todo', ...(it.hm ? { hm: true } : {}),
+    id: matNextId(), n: it.n, t: it.t, s: it.hm ? 'pick' : 'todo', ...(it.tg ? { tg: [...it.tg] } : {}), ...(it.hm ? { hm: true } : {}),
     ...(it.kids ? { kids: it.kids.map(k => ({ ...k })) } : {}) })) });
   matLog(`📑 added category "${tpl.name}" from template`);
   _matDirty = true;
