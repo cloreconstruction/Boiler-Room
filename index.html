@@ -2065,6 +2065,9 @@
   /* 🖥 v5.71 — the materials board takes the WHOLE screen (Eric's ask): no frame, no
      backdrop peeking through, edge to edge with room to work */
   .rev-modal.mat-full { padding: 0; align-items: stretch; }
+  /* 🗂 v5.79 — category drag-merge: the grip won't scroll the page, the drop target glows */
+  .mat-grip { cursor: grab; touch-action: none; }
+  .fc-sec.rm-drop { outline: 3px dashed var(--accent); outline-offset: 2px; border-radius: 10px; }
   .rev-modal.mat-full .rev-box { max-width: 100%; width: 100%; height: 100%; max-height: 100%; border-radius: 0; margin: 0; }
   .rev-sub { font-size: 12.5px; color: var(--ink-muted); margin-bottom: 6px; }
   .rev-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 13px; margin-top: 10px; }
@@ -3104,7 +3107,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.78 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.79 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8909,10 +8912,11 @@ function renderMatMgr() {
       const pct = its.length ? Math.round(doneN / its.length * 100) : 0;
       const shut = _matRmShut.has(ri);
       const openIts = its.filter(x => !(x.s === 'done' || x.s === 'arrived')).length;
-      return `<div class="set-section fc-sec" style="margin-top: 10px;"><h4>
+      return `<div class="set-section fc-sec" data-ri="${ri}" style="margin-top: 10px;"><h4>
       <button type="button" style="background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;" onclick="matRmToggle(${ri})" aria-expanded="${!shut}">${shut ? '▸' : '▾'} ${esc(r.name)}</button>
       ${its.length ? `<span class="hint" style="margin: 0; font-weight: 400;">· ${doneN}/${its.length} done${shut && openIts ? ` · <b>${openIts} open</b>` : ''}</span>` : ''}
       <span style="float: right; display: inline-flex; gap: 4px;">
+        <button class="btn-ghost req-x mat-grip" style="padding: 5px 6px; min-width: 26px;" onpointerdown="matRoomDragStart(event, ${ri})" oncontextmenu="event.preventDefault()" aria-label="drag this category onto another to fold it in" title="drag onto another category — its items and steps move over">⠿</button>
         <button class="btn-ghost req-x" style="padding: 5px 6px; min-width: 26px;" onclick="matRoomMove(${ri}, -1)" aria-label="move category up" ${ri === 0 ? 'disabled' : ''}>▲</button>
         <button class="btn-ghost req-x" style="padding: 5px 6px; min-width: 26px;" onclick="matRoomMove(${ri}, 1)" aria-label="move category down" ${ri === _matD.rooms.length - 1 ? 'disabled' : ''}>▼</button>
         <button class="btn-ghost req-x" style="padding: 5px 6px;" title="save this category as a reusable process template" onclick="matTplSave(${ri})">📑</button>
@@ -8958,18 +8962,15 @@ function matMgrItem(ri, it) {
   return `<div class="mat-item${itDone ? ' mi-done' : ''}${matIsHm(it) ? ' mi-hm' : ''}">
     <div class="frow" style="align-items: center; gap: 4px; flex-wrap: nowrap;">
       <button class="btn-ghost req-x${itDone ? ' mat-lamp-done' : ''}" style="flex: none; min-width: 36px; font-size: 15px; padding: 6px 7px;" onclick="matCycle('${escq(it.id)}')" title="${esc(word)} — tap to advance the light">${glyph}</button>
-      <span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap to ${open ? 'fold' : 'open'} · hold for the works">${open ? '▾' : '▸'} <b>${esc(it.n)}</b>
-        <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>
+      ${editing ? `<span style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px;">▾
+        <input type="text" id="matNm-${escq(it.id)}" value="${esc(it.n)}" placeholder="name it — what is this item?"
+          style="flex: 1; min-width: 0; font-weight: 800; font-size: 15px; padding: 7px 10px;"
+          onchange="matSet('${escq(it.id)}', 'n', this.value)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></span>` :
+      `<span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap to ${open ? 'fold' : 'open'} · hold for the works">${open ? '▾' : '▸'} <b>${esc(it.n)}</b>
+        <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
     </div>
-    ${open && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px;">
-      <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px;" onclick="_matEdit = '${escq(it.id)}'; renderMatMgr()">✎ edit</button>
-      <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px; color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕ delete'}</button>
-    </div>${matConvoHtml(it)}${matLampRowMgr(it)}` : ''}
-    ${open && (it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0 34px;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
-    ${open && ((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px; flex-wrap: wrap;">
-      ${(it.phs || []).map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
-      ${matPktChip(it)}
-    </div>${matPktBody(it)}` : ''}
+    ${open && !editing && matIsHm(it) ? matConvoHtml(it) : ''}
     ${open && kids.length && !editing ? (() => {
       const okN = kids.filter(k => k.ok).length;
       const spct = Math.round(okN / kids.length * 100);
@@ -9002,6 +9003,13 @@ function matMgrItem(ri, it) {
         ${(k.subs || []).map((sb, si) => `<div class="mat-note" style="margin-left: 24px; cursor: pointer;" onclick="matKidSubOk('${escq(it.id)}', ${ki}, ${si})" role="button" aria-pressed="${!!sb.ok}">${sb.ok ? '☑' : '☐'} ${esc(sb.n)}</div>`).join('')}
         ${k.note ? `<div class="mat-note">${esc(k.note)}</div>` : ''}
       </div>`).join('')}</div>`; })() : ''}
+    ${open && (it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0 34px;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
+    ${open && ((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px; flex-wrap: wrap;">
+      ${(it.phs || []).map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
+      ${matPktChip(it)}
+    </div>${matPktBody(it)}` : ''}
+    ${open && !editing && !matIsHm(it) ? matConvoHtml(it) : ''}
+    ${open && !editing ? matLampRowMgr(it) : ''}
     ${editing ? matMgrEditor(it) : ''}
   </div>`;
 }
@@ -9013,7 +9021,8 @@ function matMgrEditor(it) {
       <button type="button" class="pick-chip${hm ? ' sel' : ''}" style="width: 100%; font-weight: 800; letter-spacing: 0.4px;"
         onclick="matHmToggle('${id}')" aria-pressed="${hm}">
         ${hm ? '✓ 🏠 REQUIRES HOMEOWNER INPUT OR CHOICE — on their page, pick lamps' : '🏢 OFFICE ONLY — they never see this · tap if they need to pick or approve it'}</button></div>
-    <div class="field" style="flex: 2; min-width: 150px;"><label>Item</label><input type="text" value="${esc(it.n)}" onchange="matSet('${id}', 'n', this.value)"></div>
+    <!-- ✎ v5.79 — the name box moved UP into the item's top row, bold, next to the chevron
+         (Eric: "soon as i push new and it has text box ready to name the main name") -->
     <div class="field"><label>Trade</label><select onchange="matSet('${id}', 't', this.value)">${MAT_TRADES.map(t => `<option${t === it.t ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
     ${hm ? `<div class="field" style="flex: 1 1 100%;"><label>Their pick (what's decided)</label><input type="text" value="${esc(it.pick || '')}" onchange="matSet('${id}', 'pick', this.value)"></div>
     <div class="field" style="flex: 1 1 100%;"><label>Link</label><input type="text" value="${esc(it.url || '')}" onchange="matSet('${id}', 'url', this.value)"></div>
@@ -9288,15 +9297,21 @@ async function matLampTap(id, st) {
   if (matIsHm(it)) { await matSave(); } // her lamps move now — the lock is the approval
 }
 function matLampRowMgr(it) {
+  // 🎛 v5.79 — Eric: "the edit, delete, todo in work and done buttons are too distracting,
+  // move them off to the right." One quiet row, tucked right at the bottom of the open item:
+  // the lamp chain + ✎ edit + ✕ delete. The sub checklist got their old spot up top.
   const chain = matIsHm(it) ? ['pick', 'picked', 'ordered', 'arrived'] : ['todo', 'work', 'done'];
-  return `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; flex-wrap: wrap; gap: 4px;">
+  return `<div class="chips-row" style="margin: 6px 0 0 34px; display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; opacity: .8;">
     ${chain.map(st => {
       const w = matWord(st, matIsHm(it));
       const on = (it.s || chain[0]) === st;
       const armed = _lampArm === it.id + ':' + st;
       return `<button type="button" class="pick-chip${on ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;${armed ? ' border-width: 2.5px; font-weight: 800;' : ''}"
         onclick="matLampTap('${escq(it.id)}', '${st}')" aria-pressed="${on}">${armed ? '🔒 lock ' + esc(w) + '?' : esc(w)}</button>`;
-    }).join('')}</div>`;
+    }).join('')}
+    <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px;" onclick="_matEdit = '${escq(it.id)}'; renderMatMgr(); setTimeout(() => { const b = $('matNm-' + '${escq(it.id)}'); if (b) b.focus(); }, 60)">✎ edit</button>
+    <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px; color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕ delete'}</button>
+  </div>`;
 }
 async function matReplySend(id) {
   const it = matFindItem(id);
@@ -9648,6 +9663,65 @@ function matRoomMove(ri, dir) {
   _matDirty = true;
   renderMatMgr();
 }
+// 🗂 v5.79 — Eric: "click on the shower window at the top and drag it into the bathroom
+// window and it will become a set of items and sub items in the bathroom window rather than
+// be a shower category with items." Grab the ⠿ grip, drag onto another category, let go —
+// every item moves over with its steps, subs, photos and pockets intact; the empty category
+// goes away; the 🕘 ledger says who did it. Works with a finger or a mouse.
+let _rmDrag = null;
+function matRoomDragStart(ev, ri) {
+  ev.preventDefault();
+  if (!_matD.rooms[ri]) return;
+  _rmDrag = { ri };
+  const g = document.createElement('div');
+  g.id = 'rmGhost';
+  g.textContent = '🗂 ' + _matD.rooms[ri].name;
+  g.style.cssText = 'position: fixed; z-index: 9999; pointer-events: none; padding: 7px 14px; border-radius: 9px; background: var(--accent, #b8860b); color: #fff; font-weight: 800; letter-spacing: .3px; box-shadow: 0 4px 14px rgba(0,0,0,.4); transform: translate(-50%, -130%); white-space: nowrap;';
+  document.body.appendChild(g);
+  matRoomDragMove(ev);
+  window.addEventListener('pointermove', matRoomDragMove);
+  window.addEventListener('pointerup', matRoomDragEnd, { once: true });
+  window.addEventListener('pointercancel', matRoomDragEnd, { once: true });
+}
+function matRoomDropTarget(ev) {
+  const el = document.elementFromPoint(ev.clientX, ev.clientY);
+  const sec = el && el.closest ? el.closest('.fc-sec[data-ri]') : null;
+  if (!sec) return null;
+  const ri = +sec.dataset.ri;
+  return (_rmDrag && ri !== _rmDrag.ri) ? { el: sec, ri } : null;
+}
+function matRoomDragMove(ev) {
+  const g = $('rmGhost');
+  if (g) { g.style.left = ev.clientX + 'px'; g.style.top = ev.clientY + 'px'; }
+  // creep the board when the finger rides an edge, so far-away categories are reachable
+  const m = $('revModal');
+  if (m) {
+    if (ev.clientY < 80) m.scrollTop -= 14;
+    else if (ev.clientY > window.innerHeight - 80) m.scrollTop += 14;
+  }
+  const t = matRoomDropTarget(ev);
+  document.querySelectorAll('.fc-sec.rm-drop').forEach(el => el.classList.remove('rm-drop'));
+  if (t) t.el.classList.add('rm-drop');
+}
+function matRoomDragEnd(ev) {
+  window.removeEventListener('pointermove', matRoomDragMove);
+  document.querySelectorAll('.fc-sec.rm-drop').forEach(el => el.classList.remove('rm-drop'));
+  const g = $('rmGhost'); if (g) g.remove();
+  const t = matRoomDropTarget(ev);
+  const from = _rmDrag && _matD.rooms[_rmDrag.ri];
+  _rmDrag = null;
+  if (!t || !from) return;
+  const into = _matD.rooms[t.ri];
+  if (!into || into === from) return;
+  const n = (from.items || []).length;
+  into.items = [...(into.items || []), ...(from.items || [])];
+  _matD.rooms.splice(_matD.rooms.indexOf(from), 1);
+  _matRmShut = new Set(); // category numbers shifted — unfold everything so nothing hides
+  matLog(`🗂 folded category ${from.name} into ${into.name} — ${n} item${n === 1 ? '' : 's'} moved over`);
+  _matDirty = true;
+  renderMatMgr();
+  toast(`🗂 ${from.name} folded into ${into.name} — ${n} item${n === 1 ? '' : 's'} moved over, steps and all`);
+}
 function matDelRoom(ri) {
   const r = _matD.rooms[ri];
   if (!r) return;
@@ -9672,6 +9746,8 @@ function matAddItem(ri) {
   matLog(`➕ item in ${r.name}`);
   _matEdit = id; _matDirty = true;
   renderMatMgr();
+  // ✎ v5.79 — the name box is ready at the top of the item, words selected: just type
+  setTimeout(() => { const b = $('matNm-' + id); if (b) { b.focus(); b.select(); } }, 60);
 }
 function matAddRoom() {
   const v = ($('matNewRoom').value || '').trim().slice(0, 40);
