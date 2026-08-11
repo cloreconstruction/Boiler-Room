@@ -3118,7 +3118,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.81 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.82 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -10744,7 +10744,22 @@ function saveRecentAnswer(q, a) {
 // incoming pictures, everything — and make it sortable, quick." One feed, everything in it,
 // and a chip row that FILTERS in place: ⚙ ground notes · 🧙 questions · 📱 texts · 📷 pictures,
 // plus a person wheel. Chips are filters, not pages — tap ✳ and it's everything again.
-function rlSet(f) { prefs.rlFilter = prefs.rlFilter === f ? '' : f; window._rlN = 12; scheduleSave(); renderAskRecent(); }
+// 🎚 v5.82 — Eric: "I also want a third click... take the text out and still see everything
+// else. Everything needs to have a third click." Every chip cycles three ways now:
+// tap 1 = ONLY that kind · tap 2 = 🚫 HIDE just that kind (everything else shows) · tap 3 = back in.
+// More than one kind can be 🚫 hidden at once — no texts AND no pictures, say.
+function rlSet(f) {
+  prefs.rlHide = prefs.rlHide || [];
+  if (prefs.rlFilter === f) {
+    prefs.rlFilter = '';
+    if (!prefs.rlHide.includes(f)) prefs.rlHide.push(f);
+  } else if (prefs.rlHide.includes(f)) {
+    prefs.rlHide = prefs.rlHide.filter(x => x !== f);
+  } else {
+    prefs.rlFilter = f;
+  }
+  window._rlN = 12; scheduleSave(); renderAskRecent();
+}
 function rlWho(v) { prefs.rlWho = v || ''; window._rlN = 12; scheduleSave(); renderAskRecent(); }
 // 🔍 v5.78 — Eric: "when I click on it have the searches." The old full-log search bar and
 // filter row fold open right under the RUNNING LOG divider. Same searches, same ids, one log.
@@ -10774,7 +10789,7 @@ function renderAskRecent() {
   if (!box) return;
   window._rlN = window._rlN || 12;
   window._rlOpen = window._rlOpen || new Set();
-  const f = prefs.rlFilter || '', who = prefs.rlWho || '';
+  const f = prefs.rlFilter || '', who = prefs.rlWho || '', hide = prefs.rlHide || [];
   // ⬇ the searches — the same fields the old full-log panel used, applied to the one log
   const q = (logQuery || '').trim().toLowerCase();
   const val = id => { const el = $(id); return el ? (el.value || 'All') : 'All'; };
@@ -10833,12 +10848,13 @@ function renderAskRecent() {
   ].filter(it => !isNaN(it.ts));
   const people = [...new Set(items.map(it => it.who).filter(Boolean))].slice(0, 20).sort();
   if (f) items = items.filter(it => it.kind === f);
+  else if (hide.length) items = items.filter(it => !hide.includes(it.kind)); // 🚫 the third click
   if (who) items = items.filter(it => it.who === who);
   items.sort((a, b) => b.ts - a.ts);
   const page = items.slice(0, window._rlN);
   // the head count on the divider — the whole book, or how much of it the searches caught
   const cnt = $('rlCount');
-  if (cnt) cnt.textContent = (filtersOn || f || who) ? `${items.length} showing` : `${items.length} on record`;
+  if (cnt) cnt.textContent = (filtersOn || f || who || hide.length) ? `${items.length} showing` : `${items.length} on record`;
   // 🔎 the searches' receipt: totals of what they caught + the clear button
   const banner = $('logDayBanner');
   if (banner) {
@@ -10854,9 +10870,14 @@ function renderAskRecent() {
       banner.innerHTML = `<span>🔎 ${bits.join(' · ')}</span><button onclick="clearLogFilters()">Clear filters ✕</button>`;
     } else { banner.className = ''; banner.innerHTML = ''; }
   }
-  const chip = (v, w) => `<button type="button" class="pick-chip${f === v ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="rlSet('${v}')">${f === v ? '✓ ' : ''}${w}</button>`;
+  const chip = (v, w) => {
+    const only = f === v, off = !only && hide.includes(v);
+    return `<button type="button" class="pick-chip${only ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;${off ? ' opacity: .5; border-style: dashed;' : ''}"
+      title="${only ? 'tap again: 🚫 hide these' : off ? 'hidden — tap: let them back in' : 'tap: only these · tap tap: hide these'}"
+      onclick="rlSet('${v}')">${only ? '✓ ' : off ? '🚫 ' : ''}${w}</button>`;
+  };
   box.innerHTML = `<div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 4px;">
-      <button type="button" class="pick-chip${!f && !who ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; window._rlN = 12; scheduleSave(); renderAskRecent();">${!f && !who ? '✓ ' : ''}✳ All</button>
+      <button type="button" class="pick-chip${!f && !who && !hide.length ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; prefs.rlHide = []; window._rlN = 12; scheduleSave(); renderAskRecent();">${!f && !who && !hide.length ? '✓ ' : ''}✳ All</button>
       ${chip('grind', '⚙ Grinder')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('photo', '📷 Pictures')}${chip('crew', '👷 Crew')}${chip('client', '🏠 Client')}${chip('fb', '💬 Feedback')}
       <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="openFeedback()" title="Say what works and what doesn't — it lands right here in the log">➕ 💬 say something</button>
       ${people.length ? `<select class="mini-sel" style="min-height: 26px; font-size: 11px; padding: 2px 6px;" onchange="rlWho(this.value)" title="Just one person's traffic">
