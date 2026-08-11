@@ -2072,7 +2072,10 @@
   /* 🗂 v5.79 — category drag-merge: the grip won't scroll the page, the drop target glows */
   .mat-grip { cursor: grab; touch-action: none; }
   .fc-sec.rm-drop { outline: 3px dashed var(--accent); outline-offset: 2px; border-radius: 10px; }
-  .rev-modal.mat-full .rev-box { max-width: 100%; width: 100%; height: 100%; max-height: 100%; border-radius: 0; margin: 0; }
+  /* 📏 v5.83 — Eric: "it goes past the brown background... I can see the main page behind
+     it." height:100% capped the brown at one screen; a long Build List scrolled out past the
+     bottom of it. min-height + auto lets the background grow WITH the list. */
+  .rev-modal.mat-full .rev-box { max-width: 100%; width: 100%; height: auto; min-height: 100%; max-height: none; border-radius: 0; margin: 0; }
   .rev-sub { font-size: 12.5px; color: var(--ink-muted); margin-bottom: 6px; }
   .rev-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 13px; margin-top: 10px; }
   .rev-kind { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--ink-muted); text-transform: uppercase; }
@@ -2216,7 +2219,7 @@
        they land in ⚙ Setup with the right section already unfolded. Say the word and they go.
        v5.40 — Eric moved them to the VERY top, above the hot strip. -->
   <div class="sc-row" id="scRow">
-    <button type="button" class="sc-btn" onclick="jumpSetup('portalSec')">🏠 <span>Client portal</span></button>
+    <button type="button" class="sc-btn" onclick="jumpSetup('portalSec')">🏠 <span>Project portal</span></button>
     <button type="button" class="sc-btn" onclick="crewViewMenu()">👷 <span>Crew portal</span></button>
   </div>
 
@@ -2985,7 +2988,7 @@
     </div>
     <!-- v5.10 — 🏠 CLIENT PORTAL: one live page per job, the code IS the key -->
         <div class="set-section" id="portalSec">
-          <h4>🏠 Client portal — live project pages</h4>
+          <h4>🏠 Project portal — live project pages</h4>
           <div class="hint">Each job gets a page at an unguessable address. Text the link once; it updates as the books do. 🔄 rotate kills the old link instantly.</div>
           <div id="portalList" style="margin-top: 8px;"><span class="hint">Open ⚙ Setup while online to load…</span></div>
         </div>
@@ -3118,7 +3121,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.82 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.83 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8412,14 +8415,17 @@ async function renderPortalList() {
       <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
         onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}</button>
       ${open ? `
+      <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openPlanRack(${i})">📐 Plans</button>
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openJournal(${i})">📖 Journal</button>
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openMaterials(${i})">📋 Build List</button>
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="portalCopy(${i})">📋 Copy link</button>
-      <button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
-      <button class="btn-ghost req-x" onclick="portalIntel(${i})">📊 What they look at</button>
-      <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? This kills their link for good' : '🔄 Rotate code'}</button>
-      <button class="btn-ghost req-x" onclick="portalEditStart(${i})">✎ Rename</button>
-      <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="portalDelete(${i})">${_portalDelArm === i + 1 ? '⚠ SURE? The page comes down' : '✕ Remove page'}</button>
+      <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
+      <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="portalIntel(${i})">📊 What they look at</button>
+      <span style="display: flex; flex-direction: column; gap: 4px; margin-left: auto; align-items: stretch;">
+        <button class="btn-ghost req-x" style="font-size: 11px;" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? Kills their link' : '🔄 Rotate code'}</button>
+        <button class="btn-ghost req-x" style="font-size: 11px;" onclick="portalEditStart(${i})">✎ Rename</button>
+        <button class="btn-ghost req-x" style="font-size: 11px; color: var(--err, #c0392b);" onclick="portalDelete(${i})">${_portalDelArm === i + 1 ? '⚠ SURE? Comes down' : '✕ Remove page'}</button>
+      </span>
       ${_portalEdit === i ? `<div class="frow" style="flex: 1 1 100%; gap: 6px;">
         <input type="text" id="peName-${i}" value="${esc(c.job)}" style="flex: 1; min-width: 120px; font-weight: 700;">
         <button class="btn-ghost" onclick="portalRenameSave(${i})">✓ Save name</button>
@@ -8478,6 +8484,151 @@ async function portalNew() {
   }
 }
 function portalFold(i) { _portalOpen = _portalOpen === i ? -1 : i; _rotArm = 0; _portalDelArm = 0; _portalEdit = -1; renderPortalList(); }
+// 📐 v5.83 — THE PLAN RACK. Eric: "we never know what's the most recent plan... It can't
+// say Final because every time I put Final Plans on it, something changes." So no names at
+// all: each job has slots (Whole project · Trusses · Windows · add your own), each slot holds
+// exactly ONE current set. Drop a new one in and it MAKES you say what changed; the old set
+// slides into history with a ⚠ SUPERSEDED banner when opened. Only current and numbered
+// history — the word Final is banned by design. Revisions auto-stamp R1, R2, R3 + date.
+let _pkIdx = -1, _pkD = null, _pkPend = {}, _pkHistShow = new Set(), _pkArm = '';
+const PK_SEED = [{ key: 'whole', name: 'Whole project' }, { key: 'trusses', name: 'Trusses' }, { key: 'windows', name: 'Windows' }];
+function pkPath(code) { return DBX_ROOT + '/App Data/Client Portal/plans-' + code + '.json'; }
+async function openPlanRack(i) {
+  if (portalGuard()) return;
+  if (CREW_NAME) { toast('📐 The rack lives in Eric\'s Dropbox — the crew copy is the next screw to turn', false); return; }
+  _pkIdx = i; _pkPend = {}; _pkHistShow = new Set(); _pkArm = '';
+  const c = _portalIdx.clients[i];
+  toast('⏳ Opening the rack…');
+  try { _pkD = JSON.parse(await dbxDownload(pkPath(c.code)) || 'null'); } catch (e) { _pkD = null; }
+  if (!_pkD || !Array.isArray(_pkD.slots)) _pkD = { slots: PK_SEED.map(s => ({ key: s.key, name: s.name, cur: null, hist: [] })) };
+  renderPlanRack();
+  $('revModal').classList.add('show', 'mat-full');
+  document.body.classList.add('modal-open');
+}
+function closePlanRack() {
+  $('revModal').classList.remove('show', 'mat-full');
+  document.body.classList.remove('modal-open');
+  _pkIdx = -1; _pkD = null; _pkPend = {};
+}
+async function pkSave() {
+  const c = _portalIdx.clients[_pkIdx];
+  if (!c || !_pkD) return;
+  try { await dbxUpload(pkPath(c.code), JSON.stringify(_pkD, null, 1)); }
+  catch (e) { toast('Couldn\'t save the rack — check the connection', false); }
+}
+function renderPlanRack() {
+  const c = _portalIdx.clients[_pkIdx];
+  if (!c || !_pkD) return;
+  const box = $('revBox');
+  box.innerHTML = `<h3>📐 ${esc(c.job)} — plan rack
+    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closePlanRack()" aria-label="close the rack">✕</button></h3>
+    <div class="hint" style="margin: 0 0 10px;">One current set per slot — whatever sits in the slot IS the plan. Drop a new set in and say what changed; the old one slides into history. Nothing here is ever called Final.</div>
+    ${_pkD.slots.map((s, si) => {
+      const cur = s.cur;
+      const pend = _pkPend[s.key];
+      const showH = _pkHistShow.has(s.key);
+      return `<div class="set-section fc-sec" style="margin-top: 10px;"><h4>📐 ${esc(s.name)}
+        ${cur ? `<span style="font-weight: 800; letter-spacing: .5px;">· R${cur.rev} · ${esc(cur.date)}</span>` : '<span class="hint" style="margin: 0; font-weight: 400;">· no set yet</span>'}
+        <span style="float: right;">
+          <button type="button" class="btn-ghost req-x" style="font-size: 11px; color: var(--err, #c0392b);" onclick="pkDelSlot(${si})">${_pkArm === 'slot' + si ? '⚠ SURE? Slot only — files stay' : '✕'}</button>
+        </span></h4>
+        ${cur ? `<button type="button" class="btn-primary" style="width: 100%; font-weight: 800; font-size: 15px; padding: 13px; background: var(--accent); color: #fff; border: 2px solid var(--accent);" onclick="pkOpen('${escq(s.key)}')">📄 OPEN THE CURRENT SET — R${cur.rev}</button>
+        ${cur.note ? `<div class="hint" style="margin: 5px 0 0;">R${cur.rev} went up ${esc(cur.date)} — <b>${esc(cur.note)}</b></div>` : ''}` : ''}
+        ${pend ? `<div class="frow" style="gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+          <div class="hint" style="flex: 1 1 100%; margin: 0;">📄 <b>${esc(pend.name)}</b> ready to go in as <b>R${(cur ? cur.rev : 0) + 1}</b>. What changed${cur ? ` from R${cur.rev}` : ''}? <b>(required — this is the line the crew reads)</b></div>
+          <input type="text" id="pkNote-${escq(s.key)}" placeholder="${cur ? 'heel height 12→14, garage header moved…' : 'first set — say what it covers'}" style="flex: 1; min-width: 150px;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();pkStamp('${escq(s.key)}');}">
+          <button type="button" class="btn-primary" style="font-weight: 800;" onclick="pkStamp('${escq(s.key)}')">✓ Stamp it R${(cur ? cur.rev : 0) + 1}</button>
+          <button type="button" class="btn-ghost req-x" onclick="delete _pkPend['${escq(s.key)}']; renderPlanRack()">✕</button>
+        </div>` : `<div class="chips-row" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
+          <button type="button" class="btn-ghost" onclick="$('pkFile-${escq(s.key)}').click()">⬆ Drop in a new set${cur ? ` (replaces R${cur.rev})` : ''}</button>
+          <input type="file" id="pkFile-${escq(s.key)}" accept="application/pdf,image/*" style="display: none;" onchange="pkPick('${escq(s.key)}', this.files)">
+          ${(s.hist || []).length ? `<button type="button" class="btn-ghost req-x" onclick="pkHistToggle('${escq(s.key)}')" aria-expanded="${showH}">${showH ? '▾' : '▸'} 🕘 ${s.hist.length} old set${s.hist.length === 1 ? '' : 's'} + changes</button>` : ''}
+        </div>`}
+        ${showH && (s.hist || []).length ? `<div style="margin-top: 6px;">
+          ${s.hist.map((h, hi) => `<div class="sum-row" style="cursor: default; font-size: 13px;">
+            <span>⚠ <b>R${h.rev}</b> · ${esc(h.date)}${h.note ? ` — ${esc(h.note)}` : ''} <span class="hint" style="margin: 0;">superseded${cur ? ' by R' + cur.rev : ''}</span></span>
+            <button type="button" class="pick-chip" style="font-size: 11px;" onclick="pkOpenOld('${escq(s.key)}', ${hi})">📄 look</button>
+          </div>`).join('')}
+        </div>` : ''}
+      </div>`; }).join('')}
+    <div class="frow" style="margin-top: 12px;">
+      <div class="field" style="flex: 1;"><input type="text" id="pkNewSlot" placeholder="new slot — Septic, Electrical layout, Site plan…" onkeydown="if(event.key==='Enter'){event.preventDefault();pkAddSlot();}"></div>
+      <button class="btn-ghost" onclick="pkAddSlot()">➕ slot</button>
+    </div>
+    <div class="rev-row" style="margin-top: 12px;">
+      <button class="btn-ghost" style="flex: 1; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800; font-size: 14.5px;" onclick="closePlanRack()">✕ Close</button>
+    </div>`;
+}
+function pkPick(key, files) {
+  const f = files && files[0];
+  if (!f) return;
+  _pkPend[key] = f;
+  renderPlanRack();
+  setTimeout(() => { const b = $('pkNote-' + key); if (b) b.focus(); }, 80);
+}
+async function pkStamp(key) {
+  const s = _pkD.slots.find(x => x.key === key);
+  const f = _pkPend[key];
+  const c = _portalIdx.clients[_pkIdx];
+  if (!s || !f || !c) return;
+  const note = (($('pkNote-' + key) || {}).value || '').trim().slice(0, 200);
+  if (!note) { toast('Say what changed first — that line is the whole point', false); const b = $('pkNote-' + key); if (b) b.focus(); return; }
+  const rev = (s.cur ? s.cur.rev : 0) + 1;
+  const clean = (f.name || 'plan.pdf').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
+  const path = `${DBX_ROOT}/Plans/${c.code}/${s.key}/R${rev} ${clean}`;
+  toast(`⏳ R${rev} going up…`);
+  try {
+    const r = await dbxUpload(path, f, true);
+    if (s.cur) s.hist = [s.cur, ...(s.hist || [])];
+    s.cur = { rev, date: localDay(new Date()), file: r.path_display || path, fname: clean, note };
+    delete _pkPend[key];
+    await pkSave();
+    renderPlanRack();
+    toast(`📐 ${s.name} is on R${rev} now — old set slid into history ✓`);
+  } catch (e) { toast('Couldn\'t put the set up — check the connection', false); }
+}
+function pkOpen(key) {
+  const s = _pkD.slots.find(x => x.key === key);
+  if (!s || !s.cur) return;
+  const b = document.querySelector('.cp-banner');
+  if (b) b.textContent = `📐 CURRENT — ${s.name.toUpperCase()} R${s.cur.rev} · ${s.cur.date} · TAP TO COME BACK`;
+  matOpenDoc(s.cur.file);
+}
+function pkOpenOld(key, hi) {
+  const s = _pkD.slots.find(x => x.key === key);
+  const h = s && (s.hist || [])[hi];
+  if (!h) return;
+  const b = document.querySelector('.cp-banner');
+  if (b) b.textContent = `⚠ OLD SET — R${h.rev}, SUPERSEDED${s.cur ? ' BY R' + s.cur.rev : ''} · DO NOT BUILD FROM THIS · TAP TO COME BACK`;
+  toast(`⚠ That's R${h.rev} — the current set is R${s.cur ? s.cur.rev : '?'}`, false);
+  matOpenDoc(h.file);
+}
+function pkHistToggle(key) { _pkHistShow.has(key) ? _pkHistShow.delete(key) : _pkHistShow.add(key); renderPlanRack(); }
+async function pkAddSlot() {
+  const v = (($('pkNewSlot') || {}).value || '').trim().slice(0, 40);
+  if (!v) return;
+  const key = v.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || ('slot' + _pkD.slots.length);
+  if (_pkD.slots.some(s => s.key === key)) { toast('That slot already exists', false); return; }
+  _pkD.slots.push({ key, name: v, cur: null, hist: [] });
+  await pkSave();
+  renderPlanRack();
+}
+async function pkDelSlot(si) {
+  const s = _pkD.slots[si];
+  if (!s) return;
+  if ((s.cur || (s.hist || []).length) && _pkArm !== 'slot' + si) {
+    _pkArm = 'slot' + si;
+    renderPlanRack();
+    setTimeout(() => { if (_pkArm === 'slot' + si) { _pkArm = ''; renderPlanRack(); } }, 5000);
+    return;
+  }
+  _pkArm = '';
+  _pkD.slots.splice(si, 1);
+  await pkSave();
+  renderPlanRack();
+  toast(`✕ ${s.name} slot gone — the files themselves stay in Dropbox under Plans`);
+}
 // ✎✕ v5.80 — Eric: "I need to be able to edit and delete the client pages. I accidentally
 // have two for Gilbreath." Rename fixes the name everywhere (index + the page the homeowner
 // reads) and keeps the same link. Remove is a two-tap; the page and its board files MOVE to
@@ -8529,6 +8680,7 @@ async function portalDelete(i) {
     await arc(c.code + '.json');
     await arc('materials-' + c.code + '.json');
     await arc('materials-office-' + c.code + '.json');
+    await arc('plans-' + c.code + '.json'); // 📐 the rack index; the plan files themselves stay under /Plans
     _portalIdx.clients.splice(i, 1);
     await dbxUpload(CP + 'index.json', JSON.stringify(_portalIdx));
     _portalOpen = -1;
@@ -8551,6 +8703,9 @@ function clientPreviewOpen(i) {
 function clientPreviewClose() {
   $('cliPrev').classList.remove('show');
   $('cpFrame').src = 'about:blank';
+  // 📐 v5.83 — the rack borrows this banner for CURRENT/SUPERSEDED words; hand it back
+  const b = document.querySelector('.cp-banner');
+  if (b) b.textContent = '👁 CLIENT PREVIEW · TAP HERE TO COME BACK';
 }
 // v5.34 — Esc backs out of the preview on the PC
 document.addEventListener('keydown', e => {
@@ -8691,8 +8846,9 @@ async function openJournal(i) {
     <!-- 📷 v5.38 — ALL the job's photos live HERE: tap the ones that ride with this week -->
     <div class="field" style="margin: 8px 0 2px;"><label>📷 Job photos — tap the ones to send with this week</label></div>
     <div id="jrnPhGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;"></div>
-    <div class="hint" style="margin: 10px 0 0;">What the draft pulls in — flip one and it redrafts (hand edits reset):</div>
+    <div class="hint" style="margin: 10px 0 0;">What the draft pulls in — flip one and it redrafts. Your hand edits are saved first — ↩ Undo brings them back.</div>
     <div class="frow" style="margin: 8px 0;">${chk('notes', 'work notes')}${chk('hours', 'hours on site')}${chk('photos', 'photo count')}${chk('money', 'money moved')}</div>
+    ${_jrnUndo && _jrnUndo.code === c.code ? `<button type="button" class="btn-ghost" style="width: 100%; margin: 0 0 8px; font-weight: 800; border: 2.5px solid var(--accent); background: var(--surface-1); color: var(--ink);" onclick="jrnUndoBack()">↩ UNDO — bring back what I wrote</button>` : ''}
     <div class="field"><label>The entry — edit anything before it goes out</label>
       <div class="hint" id="jrnAiHint" style="margin: 0 0 4px;"></div>
       <textarea id="jrnText" rows="10" class="grow" style="width: 100%;">${esc(journalDraft(aj, c.code))}</textarea></div>
@@ -8840,10 +8996,25 @@ async function journalAiTidy(aj, c) {
     if (hint) hint.textContent = '(Wizard couldn\'t tidy it — this is the raw pull; trim what doesn\'t belong.)';
   }
 }
+// 📖 v5.83 — Eric: "I pushed photo count to take the photo count off. It rewrote everything
+// I just wrote." Flipping a draft ingredient SNAPSHOTS his words first; ↩ UNDO brings them
+// straight back into the box. The snapshot lives until he undoes or releases.
+let _jrnUndo = null;
 function jrnFilter(k, v) {
   const c = _portalIdx.clients[_jrnIdx];
+  const box = $('jrnText');
+  if (box && box.value.trim()) _jrnUndo = { code: c.code, text: box.value };
   journalPrefs(c.code)[k] = !!v;
   scheduleSave(); openJournal(_jrnIdx);
+}
+function jrnUndoBack() {
+  const c = _portalIdx.clients[_jrnIdx];
+  if (!_jrnUndo || !c || _jrnUndo.code !== c.code) return;
+  const box = $('jrnText');
+  if (box) { box.value = _jrnUndo.text; fitTa(box); }
+  _jrnUndo = null;
+  if (typeof event !== 'undefined' && event && event.target && event.target.style) event.target.style.display = 'none';
+  toast('↩ Your words are back — nothing lost');
 }
 async function journalRelease() {
   if (portalGuard() || _jrnIdx == null) return;
