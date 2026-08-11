@@ -3118,7 +3118,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.80 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.81 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8389,11 +8389,11 @@ async function renderPortalList() {
         <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
           onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}</button>
         ${open ? `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>
-        ${off ? `<button class="btn-ghost req-x" onclick="openMaterials(${i})">📋 Materials</button>
+        ${off ? `<button class="btn-ghost req-x" onclick="openMaterials(${i})">📋 Build List</button>
         <button class="btn-ghost req-x" onclick="portalCopy(${i})">📋 Copy link</button>` : ''}` : ''}
       </div>`;
     }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button>
-      ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — the materials board is yours too.</span>' : ''}</div>`
+      ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — the Build List is yours too.</span>' : ''}</div>`
       : '<span class="hint">Eric hasn\'t turned any client pages on yet.</span>';
     return;
   }
@@ -8413,7 +8413,7 @@ async function renderPortalList() {
         onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}</button>
       ${open ? `
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openJournal(${i})">📖 Journal</button>
-      <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openMaterials(${i})">📋 Materials</button>
+      <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openMaterials(${i})">📋 Build List</button>
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="portalCopy(${i})">📋 Copy link</button>
       <button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
       <button class="btn-ghost req-x" onclick="portalIntel(${i})">📊 What they look at</button>
@@ -8444,7 +8444,7 @@ async function renderPortalList() {
       <input type="checkbox" id="npMoney"> 💵 Show them money — invoiced, paid, what's open
     </label>
     <button class="btn-primary" style="width: 100%;" onclick="portalNew()">➕ Build the page</button>
-    <div class="hint" id="npMsg" style="margin-top: 6px;">The page starts empty and fills itself: the nightly QuickBooks run puts the money in, the journal and materials board are yours to fill. The link is unguessable — nobody sees it until you text it.</div></div>`;
+    <div class="hint" id="npMsg" style="margin-top: 6px;">The page starts empty and fills itself: the nightly QuickBooks run puts the money in, the journal and Build List are yours to fill. The link is unguessable — nobody sees it until you text it.</div></div>`;
 }
 // which job's buttons are unfolded — one at a time, and it remembers within the session
 let _portalOpen = -1;
@@ -9027,7 +9027,7 @@ function renderMatMgr() {
   const c = _portalIdx.clients[_matIdx];
   const box = $('revBox');
   const need = _matD.rooms.reduce((s, r) => s + (r.items || []).filter(x => matIsHm(x) && (x.s || 'pick') === 'pick').length, 0);
-  box.innerHTML = `<h3>📋 ${esc(c.job)} — materials board <span id="matSaveWord" class="hint" style="margin: 0; font-size: 11px;">${_matDirty ? '⏳ saving…' : '✓ saved'}</span>
+  box.innerHTML = `<h3>📋 ${esc(c.job)} — Build List <span id="matSaveWord" class="hint" style="margin: 0; font-size: 11px;">${_matDirty ? '⏳ saving…' : '✓ saved'}</span>
     <span style="float: right; display: inline-flex; gap: 6px; align-items: center;">
       <button type="button" class="btn-ghost req-x" style="font-size: 11px;" onclick="_matHistShow = !_matHistShow; renderMatMgr()" aria-expanded="${_matHistShow}">${_matHistShow ? '▾' : '▸'} 🕘 history</button>
       <button type="button" class="btn-ghost req-x" style="font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="matClose()" aria-label="close the board" title="close the board">✕</button>
@@ -11049,7 +11049,7 @@ function toggleOffice(i) {
   if (at >= 0) o.splice(at, 1); else o.push(n);
   scheduleSave();
   renderCrewManager();
-  toast(isOffice(n) ? `🏢 ${n} is OFFICE — gets the materials board and the client side ✓`
+  toast(isOffice(n) ? `🏢 ${n} is OFFICE — gets the Build List and the client side ✓`
     : `👷 ${n} is FIELD — hours, notes and photos only`);
 }
 function renderCrewManager() {
@@ -11064,8 +11064,8 @@ function renderCrewManager() {
   }).join('') : '<span class="hint">No crew yet — to-dos default to you.</span>';
   const h = $('crewOfficeHint');
   if (h) { const o = officeFolks().filter(n => crew.includes(n)); h.innerHTML = o.length
-    ? `🏢 <b>Office:</b> ${o.map(esc).join(', ')} — they get the materials board and the client side, same as you. Everyone else sees hours, notes and photos only.`
-    : '🏢 Nobody is office yet. Tap 👷 field on a name to hand them the materials board and the client side.'; }
+    ? `🏢 <b>Office:</b> ${o.map(esc).join(', ')} — they get the Build List and the client side, same as you. Everyone else sees hours, notes and photos only.`
+    : '🏢 Nobody is office yet. Tap 👷 field on a name to hand them the Build List and the client side.'; }
 }
 function renderWhoSelects() {
   const opts = ['Me', ...crew];

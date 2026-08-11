@@ -424,9 +424,9 @@ async function boot() {
         ? `<div class="soon live" onclick="toggleCard('photoCard', 'photos')"><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">${allShots.length} progress picture${allShots.length > 1 ? 's' : ''}</div></div></div>`
         : `<div class="soon" onclick="ping('soon:photos')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">progress pictures from the job</div></div></div>`}
       <div class="soon live" onclick="toggleCard('askCard', 'ask:open')"><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>
-      <div class="soon" id="matTile" onclick="ping('soon:materials')"><div class="ribbon" id="matRibbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Materials Board</div><div class="s" id="matTileSub">lists & picks, card by card</div></div></div>
+      <div class="soon" id="matTile" onclick="ping('soon:materials')"><div class="ribbon" id="matRibbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Build List</div><div class="s" id="matTileSub">the job's checklist — lists & picks</div></div></div>
     </div>
-    <div class="card" id="matCard" style="display: none;"><div class="mat-head"><h3>📋 MATERIALS BOARD</h3><button class="mat-close" onclick="matCloseFS()">✕ Back</button></div><div id="matBody"></div></div>
+    <div class="card" id="matCard" style="display: none;"><div class="mat-head"><h3>📋 BUILD LIST</h3><button class="mat-close" onclick="matCloseFS()">✕ Back</button></div><div id="matBody"></div></div>
     <div class="card" id="askCard" style="display: none;">
       <h3>💬 ASK OR REMARK</h3>
       <div style="display: flex; gap: 8px; margin-bottom: 10px;">
