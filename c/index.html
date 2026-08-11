@@ -462,11 +462,21 @@ async function boot() {
         </div>`).join('') + `</div></div>` : '') + `</div>`;
   }
   if (d.show && d.show.money) {
+    // 💵 open-balance breakdown — tap the number, see what the bill is FOR (categories only,
+    // matched to what they see happening on site). Renders only when Eric's books provide it.
+    const brk = (d.open > 0 && Array.isArray(d.openBrk) && d.openBrk.length) ? d.openBrk : null;
     h += `<div class="card" onclick="ping('money')"><h3>WHERE IT STANDS</h3><div class="money">
       <div class="m"><div class="v">${money(d.invoiced)}</div><div class="l">INVOICED TO DATE</div></div>
       <div class="m"><div class="v">${money(d.paid)}</div><div class="l">PAID — THANK YOU</div></div>
-      <div class="m"><div class="v">${money(d.open)}</div><div class="l">OPEN BALANCE</div></div>
-    </div></div>`;
+      <div class="m${brk ? '" style="cursor: pointer;" onclick="event.stopPropagation(); document.getElementById(\'obBrk\').classList.toggle(\'open\'); ping(\'money:openbrk\')"' : '"'}>
+        <div class="v">${money(d.open)}</div><div class="l">OPEN BALANCE${brk ? ' · ▾ TAP — WHAT IT\'S FOR' : ''}</div></div>
+    </div>
+    ${brk ? `<div class="ph" id="obBrk" style="margin-top: 10px;">
+      <div class="ph-head" onclick="event.stopPropagation(); document.getElementById('obBrk').classList.toggle('open'); ping('money:openbrk')">
+        <span>WHAT THE OPEN BALANCE COVERS</span><span>${money(d.open)}</span></div>
+      <div class="ph-cats">${d.openBrk.map(c => `${esc(c[0])} — ${money(c[1])}`).join('<br>')}
+        <br><span style="opacity:.75">Your invoice is the itemized record — this is the quick picture of what's on it.</span></div>
+    </div>` : ''}</div>`;
   }
   if (d.show && d.show.phases && (d.phases || []).length) {
     h += `<div class="card"><h3>WORK BY PHASE — tap a phase for detail</h3>` +
