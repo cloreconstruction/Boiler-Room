@@ -55,6 +55,17 @@ const portal = async req => {
     const p = String(url.searchParams.get('p') || '').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80);
     if (p) {
       if (await dl(t, `${BASE}/${c}.json`) == null) return new Response('nope', { status: 404 });
+      // 📷 v5.84 — serve a Dropbox-rendered JPEG, not the raw file: iPhone HEIC shots render
+      // in EVERY homeowner's browser this way. Raw bytes only as the fallback.
+      const th = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${t}`,
+          'Dropbox-API-Arg': JSON.stringify({ resource: { '.tag': 'path', path: `${BASE}/photos-${c}/${p}` }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w2048h1536' } }) }
+      });
+      if (th.ok) {
+        const buf = await th.arrayBuffer();
+        return new Response(buf, { headers: { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=86400' } });
+      }
       const r = await dlRaw(t, `${BASE}/photos-${c}/${p}`);
       if (!r.ok) return new Response('no photo', { status: 404 });
       const buf = await r.arrayBuffer();

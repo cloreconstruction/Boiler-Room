@@ -3121,7 +3121,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.83 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.84 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8846,12 +8846,16 @@ async function openJournal(i) {
     <!-- 📷 v5.38 — ALL the job's photos live HERE: tap the ones that ride with this week -->
     <div class="field" style="margin: 8px 0 2px;"><label>📷 Job photos — tap the ones to send with this week</label></div>
     <div id="jrnPhGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;"></div>
-    <div class="hint" style="margin: 10px 0 0;">What the draft pulls in — flip one and it redrafts. Your hand edits are saved first — ↩ Undo brings them back.</div>
+    <!-- ✍ v5.84 — Eric: "auto write default off so that i can type myself or make my inclusion
+         selections and then ask it to help write if i want suggestions." The box starts EMPTY
+         and belongs to him. Chips only choose what ✍ Draft pulls in — they never touch his words. -->
+    <div class="hint" style="margin: 10px 0 0;">What ✍ Draft it pulls in when you ask — the chips never touch what you've written:</div>
     <div class="frow" style="margin: 8px 0;">${chk('notes', 'work notes')}${chk('hours', 'hours on site')}${chk('photos', 'photo count')}${chk('money', 'money moved')}</div>
+    <button type="button" class="btn-ghost" style="width: 100%; margin: 0 0 8px; font-weight: 800; font-size: 14.5px; padding: 11px; border: 2.5px solid var(--accent); background: var(--surface-1); color: var(--ink);" onclick="jrnDraftGo()">✍ Draft it for me — from my picks (the Wizard polishes it)</button>
     ${_jrnUndo && _jrnUndo.code === c.code ? `<button type="button" class="btn-ghost" style="width: 100%; margin: 0 0 8px; font-weight: 800; border: 2.5px solid var(--accent); background: var(--surface-1); color: var(--ink);" onclick="jrnUndoBack()">↩ UNDO — bring back what I wrote</button>` : ''}
-    <div class="field"><label>The entry — edit anything before it goes out</label>
+    <div class="field"><label>The entry — your words, in your voice</label>
       <div class="hint" id="jrnAiHint" style="margin: 0 0 4px;"></div>
-      <textarea id="jrnText" rows="10" class="grow" style="width: 100%;">${esc(journalDraft(aj, c.code))}</textarea></div>
+      <textarea id="jrnText" rows="10" class="grow" style="width: 100%;" placeholder="Write the week in your own words — or tap ✍ Draft it for me and fix what it gets wrong."></textarea></div>
     <div class="rev-row" style="margin-top: 10px;">
       <button class="btn-primary" id="jrnGoBtn" style="flex: 2;" onclick="journalRelease()">📖 Release to the client page</button>
       <button class="btn-ghost" style="flex: 1;" onclick="closeReview()">✕ Cancel</button>
@@ -8862,9 +8866,24 @@ async function openJournal(i) {
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
   _jrnEditIdx = null; _jrnRetractArm = null;
+  // ✍ v5.84 — a chip flip or draft re-render hands Eric's words straight back to the box
+  if (_jrnKeepText != null) { const b = $('jrnText'); if (b) { b.value = _jrnKeepText; fitTa(b); } _jrnKeepText = null; }
   renderJrnPhotos();    // 📷 v5.38 — the photo picker fills + loads its thumbnails
-  journalAiTidy(aj, c); // 🧙 v5.20 — the Wizard rewrites the raw pull into client-facing bullets
+  // 🧙 v5.20's auto-tidy retired v5.84 — the Wizard only writes when ✍ Draft it is tapped
   renderJrnReleased();  // ↩ v5.20 — released weeks: editable, retractable
+}
+// ✍ v5.84 — the on-request draft: snapshot Eric's words (↩ UNDO), pull the raw draft from
+// his picks, then hand it to the Wizard to polish. Offline / no key → the raw pull stands.
+let _jrnKeepText = null;
+function jrnDraftGo() {
+  const c = _portalIdx.clients[_jrnIdx];
+  if (!c) return;
+  const aj = portalAppJob(c);
+  const box = $('jrnText');
+  if (box && box.value.trim()) _jrnUndo = { code: c.code, text: box.value };
+  _jrnKeepText = journalDraft(aj, c.code);
+  openJournal(_jrnIdx); // redraw shows ↩ UNDO; the fresh raw draft rides _jrnKeepText into the box
+  journalAiTidy(aj, c); // the polish only lands if the box is untouched since the raw draft
 }
 // 📷 v5.38 — pick the week's photos RIGHT IN the journal window (no hunting through the log).
 // Tap = stamp toggles on the entry underneath, so release works exactly as before.
@@ -8899,16 +8918,25 @@ function renderJrnPhotos() {
   jrnPhLoadLinks(list);
 }
 async function jrnPhLoadLinks(list) {
+  // 📷 v5.84 — Eric: "many of the photos in the job photos dont show up." They were iPhone
+  // HEIC files behind raw temp links — browsers can't draw those. Dropbox's thumbnail door
+  // converts ANY format to jpeg server-side (same door the board photos use), and a failed
+  // fetch is no longer cached forever — reopening the journal retries it.
   for (const e of list) {
     if (_jrnPhLinks[e.photoPath]) continue;
     try {
-      const j = await dbxRpc('files/get_temporary_link', { path: e.photoPath });
-      if (j && j.link) {
-        _jrnPhLinks[e.photoPath] = j.link;
+      const t = await getToken();
+      const r = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + t,
+          'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path: e.photoPath }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w480h320' } }) }
+      });
+      if (r.ok) {
+        _jrnPhLinks[e.photoPath] = URL.createObjectURL(await r.blob());
         const cell = document.querySelector(`[data-jph="${e.id}"]`);
         if (cell) renderJrnPhotos(); // grid still on screen — repaint with the new thumb
       }
-    } catch (err) { _jrnPhLinks[e.photoPath] = ''; }
+    } catch (err) { /* left un-cached on purpose — next open tries again */ }
     if (!$('jrnPhGrid')) break; // window closed — stop fetching
   }
 }
@@ -9001,9 +9029,10 @@ async function journalAiTidy(aj, c) {
 // straight back into the box. The snapshot lives until he undoes or releases.
 let _jrnUndo = null;
 function jrnFilter(k, v) {
+  // ✍ v5.84 — chips only record the picks now. Eric's words ride through untouched.
   const c = _portalIdx.clients[_jrnIdx];
   const box = $('jrnText');
-  if (box && box.value.trim()) _jrnUndo = { code: c.code, text: box.value };
+  _jrnKeepText = box ? box.value : null;
   journalPrefs(c.code)[k] = !!v;
   scheduleSave(); openJournal(_jrnIdx);
 }
