@@ -3072,6 +3072,10 @@
         <input type="checkbox" id="sAiPhotos" onchange="prefs.aiPhotos = this.checked; scheduleSave();">
         🔮 Read photos automatically — receipts fill themselves in (📅 date · 🏪 place · 💵 cost) and feed the bill radar. Jobsite photos are NEVER auto-described — tap 🔮 describe on a log entry when you want a line (about ¼¢ per look)
       </label>
+      <label class="hint" style="display: flex; gap: 8px; align-items: center; margin-top: 10px; cursor: pointer;">
+        <input type="checkbox" id="sRobotSkip" onchange="prefs.robotSkip = this.checked; scheduleSave(); renderTextDigest();">
+        🤖 Skip the robot texts — verification codes, "do not reply" and short-code numbers (262966) never reach the log. Your crew, anyone personal, and any number you've named are NEVER skipped, and skipped ones still land in Dropbox under Texts / Robots
+      </label>
       <div class="frow" style="margin-top: 12px;">
         <div class="field"><label>🧠 Which brain answers</label>
           <select id="sAiModel" style="min-width: 250px;" onchange="prefs.aiModel = this.value; scheduleSave(); setAiModelHint();">
@@ -3133,7 +3137,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.98 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.99 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5068,7 +5072,7 @@ function openPanel(name) {
       if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
       if ($('unlockWho')) $('unlockWho').innerHTML = crew.map(c => `<option>${esc(c)}</option>`).join('');
       renderPortalList(); renderQbLights(); initSetupCollapse(); }
-    if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; $('sAiModel').value = aiMode(); setAiModelHint(); renderPipeRows(); }
+    if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; $('sRobotSkip').checked = robotSkipOn(); $('sAiModel').value = aiMode(); setAiModelHint(); renderPipeRows(); }
     if (name === 'vault') vaultOpenInit();
     if (name === 'summary') summaryOpenInit();
     if (name === 'find') findOpenInit();
@@ -7121,15 +7125,51 @@ function reviewAct(id, accept) {
   renderReview();
   savePendingSoon();
 }
-async function archiveText(path) {
+async function archiveText(path, robot) {
   try {
     await dbxRpc('files/move_v2', {
       from_path: path,
-      to_path: DBX_ROOT + '/Texts/' + path.split('/').pop(),
+      to_path: DBX_ROOT + '/Texts/' + (robot ? 'Robots/' : '') + path.split('/').pop(),
       autorename: true
     });
     return true;
   } catch (e) { return false; } // v5.98 — a failed move retries itself on the next sync
+}
+// 🤖 v5.99 — ALL SENDERS means the machines write too. Eric: skip the robots entirely.
+// Deliberately narrow, because a wrong guess means he never sees that text:
+//   · a SHORT CODE sender (3–6 digits — 262966, 74454; a real phone is 10+), or
+//   · the plain marks of a machine: a verification code, "do not reply", "reply STOP".
+// Anyone he KNOWS is never skipped — crew, a personal sender, a number he's taught a name
+// to, or a name already on his chip row. Delivery and supplier notices are NOT filtered:
+// "your order shipped" from the lumber yard is a text he wants. Skipped texts still land
+// in Dropbox under /Texts/Robots — not logged, never destroyed. ⚙ Setup turns it off.
+const ROBOT_MARKS = /\b(?:verification|security|one[-\s]?time|confirmation|access|login|authentication)\s+code\b|\bcode\s+is\s*:?\s*\d{3,8}\b|\b\d{3,8}\s+is\s+your\b[\s\S]{0,24}\bcode\b|\bdo\s*not\s+reply\b|\bno[-\s]?reply\b|\breply\s+STOP\b|\btext\s+STOP\b|\bmsg\s*&\s*data\s+rates\b|\bmessage\s+and\s+data\s+rates\b|\bto\s+unsubscribe\b/i;
+function robotSkipOn() { return prefs.robotSkip !== false; } // on by default — Eric's call
+function isShortCode(from) {
+  const raw = String(from || '').trim();
+  const d = raw.replace(/\D/g, '');
+  return /^[\d\s()+.-]+$/.test(raw) && d.length >= 3 && d.length <= 6;
+}
+function textIsRobot(from, body) {
+  if (!robotSkipOn()) return false;
+  const nm = senderName(from); // a number he's taught already wears its name here
+  if (isPersonalSender(nm)) return false;                                   // his people, always
+  if ((crew || []).some(c => String(c).toLowerCase() === String(nm).toLowerCase())) return false;
+  // 🛡 THE SAFETY: a sender with a NAME is never filtered — his contacts, his crew, the
+  // suppliers in his phone, any number he's renamed. Only bare numbers can be robots.
+  if (!/^[\d\s()+.\-]+$/.test(String(nm).trim())) return false;
+  if (isShortCode(nm)) return true;             // 3–6 digits = a machine, always
+  return ROBOT_MARKS.test(body || '');          // an unknown NUMBER writing machine words
+}
+function robotSkipped() {
+  const today = localDay(new Date());
+  const r = prefs.robotDay || {};
+  return r.d === today ? (+r.n || 0) : 0;
+}
+function noteRobotSkip() {
+  const today = localDay(new Date());
+  const r = prefs.robotDay || {};
+  prefs.robotDay = { d: today, n: (r.d === today ? (+r.n || 0) : 0) + 1 };
 }
 // 🔁 v5.98 — THE SAME TEXT CAN NEVER LAND TWICE. Eric: "when I get a text that is not on
 // the share list, it will just send me a repeat of a text I've already gotten from somebody
@@ -7147,12 +7187,18 @@ function textBodyOf(e) {
 function textAlreadyLogged(from, body, srcTs) {
   const fp = textFP(senderName(from), body);
   const day = srcTs ? localDay(new Date(srcTs)) : '';
+  const wordy = String(body || '').trim().length >= 10; // "ok" twice is two texts, always
   return entries.some(e => {
     if (!e.texted || e.sample) return false;
     if (textFP((e.tags || [])[0], textBodyOf(e)) !== fp) return false;
-    if (e.textTs && srcTs) return e.textTs === srcTs;      // exact: the same file, read twice
+    if (e.textTs && srcTs) {
+      if (e.textTs === srcTs) return true;                // the same file, read twice
+      // 🪟 v5.99 — two automations can catch ONE message and write two files a breath apart.
+      // Same person, same words, inside two minutes = one text. Short replies are exempt.
+      return wordy && Math.abs(+new Date(srcTs) - +new Date(e.textTs)) <= 120000;
+    }
     // an entry from before v5.98 has no stamp — same words on the same day is the same text
-    return String(body || '').trim().length >= 10 && day && localDay(new Date(e.ts)) === day;
+    return wordy && day && localDay(new Date(e.ts)) === day;
   });
 }
 // texts saved into /Inbox by the phone's Shortcuts automations become review cards.
@@ -7215,6 +7261,14 @@ async function checkInboxTexts() {
       const body = txt.replace(/^FROM:.*$/im, '').trim();
       const photos = [];
       for (const im of mine) { claimed.add(im.name); photos.push(await claim(im)); }
+      // 🤖 v5.99 — a machine wrote this one: filed under /Texts/Robots, never into the log
+      if (textIsRobot(from, body)) {
+        pendMarkDone(id);
+        _txtCache.delete(f.name);
+        noteRobotSkip();
+        archiveText(f.path_lower, true);
+        continue;
+      }
       const hot = hotScan(body) || undefined; // 🔥 time-critical commitment → pinned + ding
       const personal = isPersonalSender(from) || undefined; // 🔒 Eric's eyes only, forever
       // 📬 v5.19 TEXT TRIAGE — review stops filling with texts. Only HOT still pins a card.
@@ -7242,6 +7296,7 @@ async function checkInboxTexts() {
       if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) continue;
       const fm = im.name.match(/^text\s*-\s*([^-]+)/i);
       const oFrom = fm ? fm[1].trim() : '?';
+      if (textIsRobot(oFrom, '')) { pendMarkDone(id); noteRobotSkip(); continue; } // 🤖 short-code picture
       autoLogText(oFrom, '', [await claim(im)], isPersonalSender(oFrom) || undefined, im.server_modified);
       pendMarkDone(id); // v5.98 — written down, same as the worded ones
     }
@@ -7442,6 +7497,7 @@ function renderTextDigest() {
       (shown.length > 40 ? `<div class="hint" style="margin: 3px 0;">…and ${shown.length - 40} more (ask the Wizard for the full ${esc(_tdSender || 'text')} list)</div>` : '') + `
     </div>
     <div class="hint" style="margin: 8px 0 0;" onclick="event.stopPropagation()">📈 past days: ${hist.join(' · ')}</div>` : ''}
+    ${robotSkipped() ? `<div class="hint" style="margin: 6px 0 0;" onclick="event.stopPropagation()">🤖 ${robotSkipped()} robot text${robotSkipped() > 1 ? 's' : ''} skipped today — codes and no-reply numbers, filed in Dropbox under Texts / Robots. ⚙ Setup keeps them if you'd rather.</div>` : ''}
   </div>`;
 }
 // 📌 v5.25 — the evening-nudge strip is RETIRED (Eric: too much clutter; idea parked for a
