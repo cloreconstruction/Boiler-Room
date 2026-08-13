@@ -3176,7 +3176,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.06 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.07 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6952,7 +6952,7 @@ async function loadCaPhotos() {
     const rel = box.dataset.path || '';
     if (!rel || rel.includes('..')) continue;
     try {
-      const j = await dbxRpc('files/get_temporary_link', { path: DBX_ROOT + '/App Data/Client Portal/' + rel });
+      const j = await dbxRpc('files/get_temporary_link', { path: portalRoot() + '/' + rel });
       if (!j.link) throw new Error();
       box.innerHTML = `<img src="${esc(j.link)}" alt="client's picture" style="max-width: 100%; max-height: 300px; border-radius: 10px; display: block;">` +
         (aiOn() ? `<button class="btn-ghost req-x" style="margin-top: 6px;" onclick="caAiRead(this, '${escq(rel)}')">🔮 What is it? — details + suggestions</button><div class="ca-ai hint" style="white-space: pre-wrap;"></div>` : '');
@@ -6963,7 +6963,7 @@ async function caAiRead(btn, rel) {
   const out = btn.parentElement.querySelector('.ca-ai');
   btn.disabled = true; btn.textContent = '🔮 reading…';
   try {
-    const j = await dbxRpc('files/get_temporary_link', { path: DBX_ROOT + '/App Data/Client Portal/' + rel });
+    const j = await dbxRpc('files/get_temporary_link', { path: portalRoot() + '/' + rel });
     const blob = await (await fetch(j.link)).blob();
     const b64 = await shrinkForAi(blob);
     // 🧠 v5.42 — reading it is easy; the ORDERING advice is a judgement call, so this one
@@ -7942,7 +7942,7 @@ async function publishSharedNotes() {
   // ⚙ Setup → Client portal that session, because that's the only thing that filled _portalIdx.
   // If he hadn't, crew phones got an empty portal page. The sweep loads it itself now.
   if (!_portalIdx) {
-    try { _portalIdx = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/index.json')); }
+    try { _portalIdx = JSON.parse(await dbxDownload(portalRoot() + '/index.json')); }
     catch (e) { /* no portal built yet — the crew list just stays empty, quietly */ }
   }
   // 🔒 personal entries can NEVER travel — even a stray vis flag doesn't override the wall
@@ -8008,7 +8008,7 @@ async function publishSharedNotes() {
       // phone said "no client pages have reached this phone yet." Load it here instead of
       // hoping he visited a screen first.
       if (!_portalIdx) {
-        try { _portalIdx = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/index.json') || 'null'); } catch (e) {}
+        try { _portalIdx = JSON.parse(await dbxDownload(portalRoot() + '/index.json') || 'null'); } catch (e) {}
       }
       const cl = ((_portalIdx || {}).clients || []).filter(c => c && c.job && c.code);
       const pj = cl.length ? JSON.stringify({ clients: cl.map(c => ({ job: c.job, code: c.code })) }) : '';
@@ -8609,6 +8609,7 @@ async function renderPortalList() {
   // journal, materials — aren't withheld from him as a matter of trust; they write into
   // Eric's Dropbox and physically cannot run from a crew phone.
   if (CREW_NAME) {
+    if (amOffice()) await findPortalRoot();   // 🏢 v6.07 — locate Eric's shared Client Portal folder
     // 🏠 v5.48 — DON'T TRUST DBX_ROOT. A crew folder is a MOUNT in the crew member's own
     // Dropbox, and what it's called on his side is whatever he accepted it as. If the saved
     // root is stale or renamed, the straight read misses and the page looks empty for no
@@ -8642,9 +8643,17 @@ async function renderPortalList() {
       <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
         <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
           onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}</button>
-        ${open ? `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>
-        ${off ? `<button class="btn-ghost req-x" onclick="openMaterials(${i})">📋 Build List</button>
-        <button class="btn-ghost req-x" onclick="portalCopy(${i})">📋 Copy link</button>` : ''}` : ''}
+        ${open ? (off ? `
+        <!-- 🏢 v6.07 — an OFFICE phone (Phil) gets the same fold Eric gets: lists, boxes, bids. -->
+        <div class="pf-acts">
+          <button class="btn-ghost" onclick="openPlanRack(${i})">📐 Plans</button>
+          <button class="btn-ghost" onclick="openJournal(${i})">📖 Journal</button>
+          <button class="btn-ghost" onclick="openMaterials(${i})">📋 Build List</button>
+          <button class="btn-ghost" onclick="openEstimates(${i})">💰 Estimates</button>
+          <button class="btn-ghost" onclick="portalCopy(${i})">📋 Copy link</button>
+          <button class="btn-ghost" onclick="portalIntel(${i})">📊 What they look at</button>
+          <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
+        </div>` : `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>`) : ''}
       </div>`;
     }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button>
       ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — the Build List is yours too.</span>' : ''}</div>`
@@ -8652,7 +8661,7 @@ async function renderPortalList() {
     return;
   }
   try {
-    const t = await dbxDownload(DBX_ROOT + '/App Data/Client Portal/index.json');
+    const t = await dbxDownload(portalRoot() + '/index.json');
     _portalIdx = JSON.parse(t);
   } catch (e) { box.innerHTML = '<span class="hint">No portal set up yet — ask Claude to build the client pages.</span>'; return; }
   // 📁 v5.57 — Eric: "buttons hidden and only the job name showing... pick the job name from
@@ -8736,10 +8745,10 @@ async function portalNew() {
   try {
     // page first, index second — a page with no index entry is invisible; an index entry with
     // no page is a dead link a client could hit. Order matters, same lesson as the refresher.
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + code + '.json', JSON.stringify(page, null, 1));
+    await dbxUpload(portalRoot() + '/' + code + '.json', JSON.stringify(page, null, 1));
     _portalIdx.clients = _portalIdx.clients || [];
     _portalIdx.clients.push({ key, job: title, code });
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/index.json', JSON.stringify(_portalIdx));
+    await dbxUpload(portalRoot() + '/index.json', JSON.stringify(_portalIdx));
     _portalOpen = _portalIdx.clients.length - 1;
     renderPortalList();
     publishSharedNotes(); // the office crew's copy of the list picks it up on this sweep
@@ -8759,7 +8768,7 @@ async function portalVisLoad(i) {
   const c = (_portalIdx && _portalIdx.clients || [])[i];
   if (!c || _visCache[c.code]) return;
   try {
-    const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
+    const pg = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null');
     if (pg) { _visCache[c.code] = pg.show || {}; if (_portalOpen === i) renderPortalList(); }
   } catch (e) { /* offline — chips stay at ⏳ */ }
 }
@@ -8767,13 +8776,13 @@ async function portalVis(i, k) {
   if (portalGuard()) return;
   const c = _portalIdx.clients[i];
   try {
-    const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
+    const pg = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null');
     if (!pg) { toast('Their page didn\'t answer — check the connection', false); return; }
     pg.show = pg.show || {};
     const on = visOn(pg.show, k);
     pg.show[k] = !on;
     pg.updated = localDay(new Date());
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json', JSON.stringify(pg, null, 1));
+    await dbxUpload(portalRoot() + '/' + c.code + '.json', JSON.stringify(pg, null, 1));
     _visCache[c.code] = pg.show;
     renderPortalList();
     const lab = (VIS_KEYS.find(x => x[0] === k) || [k, k])[1];
@@ -8788,7 +8797,7 @@ async function portalVis(i, k) {
 // history — the word Final is banned by design. Revisions auto-stamp R1, R2, R3 + date.
 let _pkIdx = -1, _pkD = null, _pkPend = {}, _pkHistShow = new Set(), _pkArm = '';
 const PK_SEED = [{ key: 'whole', name: 'Whole project' }, { key: 'trusses', name: 'Trusses' }, { key: 'windows', name: 'Windows' }];
-function pkPath(code) { return DBX_ROOT + '/App Data/Client Portal/plans-' + code + '.json'; }
+function pkPath(code) { return portalRoot() + '/plans-' + code + '.json'; }
 async function openPlanRack(i) {
   if (portalGuard()) return;
   if (CREW_NAME) { toast('📐 The rack lives in Eric\'s Dropbox — the crew copy is the next screw to turn', false); return; }
@@ -8930,7 +8939,7 @@ function estScore(qbName, catName) {
   const full = hit === Math.min(q.length, c.length);
   return hit ? (full ? 100 + hit : hit) : 0;
 }
-function estPath(code) { return DBX_ROOT + '/App Data/Client Portal/estimates-' + code + '.json'; }
+function estPath(code) { return portalRoot() + '/estimates-' + code + '.json'; }
 // a category's number = the bid Eric ACCEPTED (Estimate 1 + Estimate 2 together)
 function estAccBid(x) { return (x.bids || []).find(b => b.acc) || null; }
 function estRaw(x) { const b = estAccBid(x); return b ? (+b.e1 || 0) + (+b.e2 || 0) : 0; }
@@ -8953,12 +8962,14 @@ function estOpts(x) { return (x.bids || []).filter(b => b.opt); }
 let _estOpenCats = new Set();
 async function openEstimates(i) {
   if (portalGuard()) return;
-  if (CREW_NAME) { toast('💰 Estimates live in Eric\'s Dropbox — the office-phone copy is a later screw', false); return; }
+  // 💰 v6.07 — this used to turn away every crew phone. An OFFICE phone reads and writes the
+  // same estimate files Eric does, through the folder he shares to that person's Dropbox.
+  if (CREW_NAME && !amOffice()) { toast('💰 Estimates are office-side — ask Eric to switch your phone to office in Setup → Crew', false); return; }
   _estIdx = i; _estArm = ''; _estOpenCats = new Set();
   const c = _portalIdx.clients[i];
   toast('⏳ Opening the estimates…');
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
-  try { _estPage = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null'); } catch (e) { _estPage = null; }
+  try { _estPage = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (e) { _estPage = null; }
   if (!_estD || !Array.isArray(_estD.cats)) _estD = { updated: '', cats: [] };
   // 💹 v5.90 — Eric: "click Markup, set the markup... every number the homeowner ever sees
   // always has to include the markup but not show it. Default always on." Board-level %,
@@ -9412,7 +9423,7 @@ async function estSave() {
 // the approved cut: category name + the ACCEPTED number only. Bids, notes, papers stay home.
 async function estPublish(c, cut) {
   try {
-    const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
+    const pg = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null');
     if (!pg) return;
     // 🏠 v5.91 — the homeowner's own pick SURVIVES a republish (it's their choice, not ours)
     // 🔒 v5.93 — and so does their lock
@@ -9421,7 +9432,7 @@ async function estPublish(c, cut) {
     cut.forEach(b => { if (b.opts && oldPick[b.n] && oldPick[b.n].p < b.opts.length) { b.pick = oldPick[b.n].p; if (oldPick[b.n].lk) b.lk = true; } });
     if (cut.length) pg.budget = cut; else delete pg.budget;
     pg.updated = localDay(new Date());
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json', JSON.stringify(pg, null, 1));
+    await dbxUpload(portalRoot() + '/' + c.code + '.json', JSON.stringify(pg, null, 1));
     _estPage = pg;
   } catch (e) { toast('Saved here, but their page didn\'t take the update — try the lamp again', false); }
 }
@@ -9436,7 +9447,7 @@ async function estAddDocs(ci, bi, files) {
   for (const f of ok) {
     toast(`⏳ Bid paper ${++n} of ${ok.length} going in…`);
     const clean = (f.name || 'bid').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
-    const path = `${DBX_ROOT}/App Data/Client Portal/est-files-${c.code}/${_estD.cats[ci].n.replace(/[^a-zA-Z0-9 ]/g, '')} ${clean}`;
+    const path = `${portalRoot()}/est-files-${c.code}/${_estD.cats[ci].n.replace(/[^a-zA-Z0-9 ]/g, '')} ${clean}`;
     try {
       const r = await dbxUpload(path, f, true);
       b.docs.push({ path: r.path_display || path, name: clean });
@@ -9496,10 +9507,10 @@ async function portalRenameSave(i) {
   const old = c.job;
   c.job = v;
   try {
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/index.json', JSON.stringify(_portalIdx));
+    await dbxUpload(portalRoot() + '/index.json', JSON.stringify(_portalIdx));
     try { // the page the homeowner reads follows the new name
-      const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
-      if (pg) { pg.name = v; await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json', JSON.stringify(pg, null, 1)); }
+      const pg = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null');
+      if (pg) { pg.name = v; await dbxUpload(portalRoot() + '/' + c.code + '.json', JSON.stringify(pg, null, 1)); }
     } catch (e) { /* page missing — index rename still stands */ }
     _portalEdit = -1;
     renderPortalList();
@@ -9521,7 +9532,7 @@ async function portalDelete(i) {
     return;
   }
   _portalDelArm = 0;
-  const CP = DBX_ROOT + '/App Data/Client Portal/';
+  const CP = portalRoot() + '/';
   const arc = async p => { try { await dbxRpc('files/move_v2', { from_path: CP + p, to_path: DBX_ROOT + '/Archive/portal-removed/' + p, autorename: true }); } catch (e) { /* not there — fine */ } };
   try {
     await arc(c.code + '.json');
@@ -9591,7 +9602,7 @@ async function portalIntel(i) {
   if (portalGuard()) return;
   const c = _portalIdx.clients[i];
   try {
-    const t = await dbxDownload(DBX_ROOT + '/App Data/Client Portal/clicks-' + c.code + '.json');
+    const t = await dbxDownload(portalRoot() + '/clicks-' + c.code + '.json');
     const arr = JSON.parse(t || '[]');
     if (!arr.length) { toast(`${c.job}: no visits yet`, false); return; }
     const wk = Date.now() - 7 * 86400000;
@@ -9609,12 +9620,12 @@ async function portalRotate(i) {
   const c = _portalIdx.clients[i];
   const fresh = c.key + '-' + Math.random().toString(16).slice(2, 8);
   try {
-    await dbxRpc('files/move_v2', { from_path: (DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json').toLowerCase(), to_path: DBX_ROOT + '/App Data/Client Portal/' + fresh + '.json' });
-    try { await dbxRpc('files/move_v2', { from_path: (DBX_ROOT + '/App Data/Client Portal/clicks-' + c.code + '.json').toLowerCase(), to_path: DBX_ROOT + '/App Data/Client Portal/clicks-' + fresh + '.json' }); } catch (e) {}
-    try { await dbxRpc('files/move_v2', { from_path: (DBX_ROOT + '/App Data/Client Portal/photos-' + c.code).toLowerCase(), to_path: DBX_ROOT + '/App Data/Client Portal/photos-' + fresh }); } catch (e) {}
-    try { await dbxRpc('files/move_v2', { from_path: (DBX_ROOT + '/App Data/Client Portal/asks-' + c.code + '.json').toLowerCase(), to_path: DBX_ROOT + '/App Data/Client Portal/asks-' + fresh + '.json' }); } catch (e) {}
+    await dbxRpc('files/move_v2', { from_path: (portalRoot() + '/' + c.code + '.json').toLowerCase(), to_path: portalRoot() + '/' + fresh + '.json' });
+    try { await dbxRpc('files/move_v2', { from_path: (portalRoot() + '/clicks-' + c.code + '.json').toLowerCase(), to_path: portalRoot() + '/clicks-' + fresh + '.json' }); } catch (e) {}
+    try { await dbxRpc('files/move_v2', { from_path: (portalRoot() + '/photos-' + c.code).toLowerCase(), to_path: portalRoot() + '/photos-' + fresh }); } catch (e) {}
+    try { await dbxRpc('files/move_v2', { from_path: (portalRoot() + '/asks-' + c.code + '.json').toLowerCase(), to_path: portalRoot() + '/asks-' + fresh + '.json' }); } catch (e) {}
     c.code = fresh;
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/index.json', JSON.stringify(_portalIdx));
+    await dbxUpload(portalRoot() + '/index.json', JSON.stringify(_portalIdx));
     renderPortalList();
     try { await navigator.clipboard.writeText(portalUrl(i)); } catch (e) {}
     toast('🔄 Old link is DEAD. New link copied — text it to the client ✓');
@@ -9821,7 +9832,7 @@ async function renderJrnReleased() {
   if (!box || _jrnIdx == null) return;
   const c = _portalIdx.clients[_jrnIdx];
   let d = null;
-  try { d = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || '{}'); } catch (e) {}
+  try { d = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || '{}'); } catch (e) {}
   const js = (d && d.journal) || [];
   if (!js.length) { box.innerHTML = '<span class="hint">Nothing released to their page yet.</span>'; return; }
   box.innerHTML = `<div class="field" style="margin: 0 0 2px;"><label>📤 On their page now — ✎ edit it or ↩ take it back</label></div>` +
@@ -9834,7 +9845,7 @@ async function renderJrnReleased() {
 async function jrnEditRel(i) {
   const c = _portalIdx.clients[_jrnIdx];
   try {
-    const d = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || '{}');
+    const d = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || '{}');
     const j = (d.journal || [])[i];
     if (!j) { toast('That week is gone from their page already', false); return; }
     _jrnEditIdx = i; _jrnRetractArm = null;
@@ -9849,7 +9860,7 @@ async function jrnRetract(i) {
   _jrnRetractArm = null;
   const c = _portalIdx.clients[_jrnIdx];
   try {
-    const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
+    const path = portalRoot() + '/' + c.code + '.json';
     const d = JSON.parse(await dbxDownload(path) || '{}');
     const gone = (d.journal || []).splice(i, 1)[0];
     d.updated = new Date().toISOString().slice(0, 10);
@@ -9915,7 +9926,7 @@ async function journalRelease() {
   const c = _portalIdx.clients[_jrnIdx];
   const text = ($('jrnText').value || '').trim();
   if (!text) { toast('Nothing to release', false); return; }
-  const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
+  const path = portalRoot() + '/' + c.code + '.json';
   // ✎ v5.20 — edit mode: rewrite the already-released week in place, live on their page
   if (_jrnEditIdx != null) {
     try {
@@ -9941,7 +9952,7 @@ async function journalRelease() {
       const name = String(e.photoPath).split('/').pop().replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80);
       if (!name) continue;
       try {
-        await dbxRpc('files/copy_v2', { from_path: e.photoPath, to_path: DBX_ROOT + '/App Data/Client Portal/photos-' + c.code + '/' + name });
+        await dbxRpc('files/copy_v2', { from_path: e.photoPath, to_path: portalRoot() + '/photos-' + c.code + '/' + name });
         photos.push(name);
       } catch (err) { photos.push(name); /* already there from an earlier try */ }
     }
@@ -9987,7 +9998,7 @@ async function matAutoSave() {
   _matSaving = true;
   try {
     _matD.updated = localDay(new Date());
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-office-' + c.code + '.json',
+    await dbxUpload(portalRoot() + '/materials-office-' + c.code + '.json',
       JSON.stringify({ full: true, updated: _matD.updated, seq: _matD.seq, rooms: _matD.rooms, hist: _matD.hist || [] }));
     _matDirty = false;
     const h = $('matSaveWord'); if (h) h.textContent = '✓ saved';
@@ -10046,14 +10057,14 @@ async function openMaterials(i) {
   const c = _portalIdx.clients[i];
   toast('⏳ Loading the board…');
   matTplLoad();
-  try { _matD = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json') || 'null'); } catch (e) { _matD = null; }
+  try { _matD = JSON.parse(await dbxDownload(portalRoot() + '/materials-' + c.code + '.json') || 'null'); } catch (e) { _matD = null; }
   if (!_matD || !Array.isArray(_matD.rooms)) _matD = { updated: '', rooms: [] };
   // 🏢 v5.60 — the client file holds only what the homeowner may see; everything Eric marked
   // on it before v5.60 WAS homeowner-facing, so stamp those. Office tasks live in their own
   // file the client page never asks for. Merge the two by room name for one board on screen.
   _matD.rooms.forEach(r => (r.items || []).forEach(x => { if (!x.hm) x.hm = true; }));
   try {
-    const off = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-office-' + c.code + '.json') || 'null');
+    const off = JSON.parse(await dbxDownload(portalRoot() + '/materials-office-' + c.code + '.json') || 'null');
     // 💾 v5.69 — a full-board office file IS the truth; the client file is just the last publish
     if (off && off.full && Array.isArray(off.rooms)) {
       _matD = { updated: off.updated, seq: off.seq, rooms: off.rooms, hist: off.hist || [] };
@@ -10061,7 +10072,7 @@ async function openMaterials(i) {
       // office file became the working truth (v5.69), those answers have to be merged BACK
       // in here, or Eric's board never hears her. Pick + state + remarks, by item id.
       try {
-        const cli = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json') || 'null');
+        const cli = JSON.parse(await dbxDownload(portalRoot() + '/materials-' + c.code + '.json') || 'null');
         const map = {};
         if (cli && Array.isArray(cli.rooms)) cli.rooms.forEach(cr => (cr.items || []).forEach(x => map[x.id] = x));
         _matD.rooms.forEach(r => (r.items || []).forEach(x => {
@@ -10323,7 +10334,7 @@ async function matAddPhotos(id, files) {
   for (const f of imgs) {
     toast(`⏳ Photo ${++n} of ${imgs.length} going up…`);
     const clean = (f.name || 'photo.jpg').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
-    const path = `${DBX_ROOT}/App Data/Client Portal/mat-photos-${c.code}/${it.id} ${clean}`;
+    const path = `${portalRoot()}/mat-photos-${c.code}/${it.id} ${clean}`;
     try {
       const r = await dbxUpload(path, f, true); // keepBoth: a same-named photo autorenames
       it.phs.push(r.path_display || path);
@@ -10416,7 +10427,7 @@ async function matAddDocs(id, files) {
   for (const f of ok) {
     toast(`⏳ Paper ${++n} of ${ok.length} going in…`);
     const clean = (f.name || 'paper').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
-    const path = `${DBX_ROOT}/App Data/Client Portal/mat-files-${c.code}/${it.id} ${clean}`;
+    const path = `${portalRoot()}/mat-files-${c.code}/${it.id} ${clean}`;
     try {
       const r = await dbxUpload(path, f, true);
       it.pkt.docs.push({ path: r.path_display || path, name: clean });
@@ -10546,7 +10557,7 @@ async function matReplySend(id) {
   // her copy: the reply lands in the published file so her thread shows it right away
   try {
     const c = _portalIdx.clients[_matIdx];
-    const mpath = DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json';
+    const mpath = portalRoot() + '/materials-' + c.code + '.json';
     const cli = JSON.parse(await dbxDownload(mpath) || 'null');
     if (cli && Array.isArray(cli.rooms)) {
       for (const r of cli.rooms) { const f = (r.items || []).find(x => x.id === id); if (f) { f.remarks = [...(f.remarks || []), rm].slice(-20); break; } }
@@ -10573,7 +10584,7 @@ async function matConvoImg(path, elId) {
 }
 async function matWhatIs(id) {
   const it = matFindItem(id);
-  const ph = it && (it.cph ? DBX_ROOT + '/App Data/Client Portal/' + it.cph : (it.phs || [])[0]);
+  const ph = it && (it.cph ? portalRoot() + '/' + it.cph : (it.phs || [])[0]);
   const out = $('cvAI-' + id);
   if (!it || !ph || !aiKey()) { toast(!aiKey() ? 'Needs the Claude key (⚙ Setup → Ask Claude)' : 'No picture on this one', false); return; }
   if (out) out.textContent = '🔮 reading the picture…';
@@ -10599,7 +10610,7 @@ function matConvoHtml(it) {
   // 🖼 v5.77 — MERGED, at Eric's word: the card view IS the open item now. Photo big,
   // What-is-it, her pick, the thread, the reply box — inline with the lamps and steps,
   // one tap to see everything. Renders whenever there's a picture or a client to talk to.
-  const ph = it.cph ? DBX_ROOT + '/App Data/Client Portal/' + it.cph : (it.phs || [])[0];
+  const ph = it.cph ? portalRoot() + '/' + it.cph : (it.phs || [])[0];
   const talk = matIsHm(it);
   if (!ph && !talk && !(it.remarks || []).length) return '';
   if (ph) setTimeout(() => matConvoImg(ph, 'cvImg-' + it.id), 30);
@@ -10848,7 +10859,7 @@ function matDelItem(id) {
 // board Save-as-master button is parked at Eric's word; the master can grow from pieces.
 let _matTpl = [];
 async function matTplLoad() {
-  try { const t = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-templates.json') || '[]'); if (Array.isArray(t)) _matTpl = t; } catch (e) { _matTpl = []; }
+  try { const t = JSON.parse(await dbxDownload(portalRoot() + '/materials-templates.json') || '[]'); if (Array.isArray(t)) _matTpl = t; } catch (e) { _matTpl = []; }
 }
 async function matTplSave(ri) {
   const r = _matD.rooms[ri];
@@ -10858,7 +10869,7 @@ async function matTplSave(ri) {
   _matTpl = _matTpl.filter(t => t.name.toLowerCase() !== r.name.toLowerCase());
   _matTpl.push({ name: r.name, items: (r.items || []).map(scrub) });
   try {
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-templates.json', JSON.stringify(_matTpl));
+    await dbxUpload(portalRoot() + '/materials-templates.json', JSON.stringify(_matTpl));
     matLog(`📑 saved "${r.name}" as a template (${r.items.length} items)`);
     renderMatMgr();
     toast(`📑 "${r.name}" is a template now — every job gets the same process from here ✓`);
@@ -10979,7 +10990,7 @@ function matAddRoom() {
 }
 async function matFromMaster() {
   try {
-    const m = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/materials-master.json') || 'null');
+    const m = JSON.parse(await dbxDownload(portalRoot() + '/materials-master.json') || 'null');
     if (!m || !Array.isArray(m.rooms)) { toast('No master list yet — build a board and 📌 Save as master', false); return; }
     _matD = m; _matDirty = true;
     renderMatMgr();
@@ -10996,7 +11007,7 @@ async function matSaveMaster() {
     return d;
   }) })) };
   try {
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-master.json', JSON.stringify(m));
+    await dbxUpload(portalRoot() + '/materials-master.json', JSON.stringify(m));
     renderMatMgr();
     toast('📌 Master list updated — every future job starts from this ✓');
   } catch (e) { toast('Couldn\'t save the master — try again', false); }
@@ -11024,10 +11035,10 @@ async function matSave() {
     const hmPkts = {};
     _matD.rooms.forEach(r => (r.items || []).forEach(x => { if (x.hm && x.pkt) hmPkts[x.id] = x.pkt; }));
     if (Object.keys(hmPkts).length) offCut.pkts = hmPkts;
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-' + c.code + '.json', JSON.stringify(cut(true)));
-    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/materials-office-' + c.code + '.json', JSON.stringify(offCut));
+    await dbxUpload(portalRoot() + '/materials-' + c.code + '.json', JSON.stringify(cut(true)));
+    await dbxUpload(portalRoot() + '/materials-office-' + c.code + '.json', JSON.stringify(offCut));
     // bump the page stamp so their lamp lights
-    const path = DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json';
+    const path = portalRoot() + '/' + c.code + '.json';
     try { const d = JSON.parse(await dbxDownload(path) || '{}'); d.updated = _matD.updated; await dbxUpload(path, JSON.stringify(d, null, 1)); } catch (e) {}
     _matDirty = false;
     _matPubDirty = false;
@@ -11047,7 +11058,7 @@ function matClose() {
 // Fire-and-forget: offline just means the lamp lights on a later sweep-through.
 async function markClientAsk(code, ts, patch) {
   if (!code || !ts || !dbx.refreshToken || CREW_NAME) return;
-  const path = DBX_ROOT + '/App Data/Client Portal/asks-' + code + '.json';
+  const path = portalRoot() + '/asks-' + code + '.json';
   try {
     const arr = JSON.parse(await dbxDownload(path) || '[]');
     if (!Array.isArray(arr)) return;
@@ -11061,14 +11072,14 @@ async function markClientAsk(code, ts, patch) {
 async function checkClientAsks() {
   if (!dbx.refreshToken || CREW_NAME) return;
   try {
-    if (!_portalIdx) _portalIdx = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/index.json'));
+    if (!_portalIdx) _portalIdx = JSON.parse(await dbxDownload(portalRoot() + '/index.json'));
   } catch (e) { return; }
   if (!_portalIdx || !Array.isArray(_portalIdx.clients)) return;
   if (!prefs.caSeen) prefs.caSeen = {};
   let got = 0;
   for (const c of _portalIdx.clients) {
     let arr = [];
-    try { arr = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/asks-' + c.code + '.json') || '[]'); } catch (e) { continue; }
+    try { arr = JSON.parse(await dbxDownload(portalRoot() + '/asks-' + c.code + '.json') || '[]'); } catch (e) { continue; }
     if (!Array.isArray(arr)) continue;
     const seen = prefs.caSeen[c.key] || '';
     const fresh = arr.filter(a => a && a.ts && a.ts > seen);
@@ -12137,6 +12148,41 @@ function officeFolks() { return Array.isArray(prefs.office) ? prefs.office : (pr
 function isOffice(name) { return officeFolks().some(o => o.toLowerCase() === String(name || '').toLowerCase()); }
 // on a crew phone: does THIS phone hold the office key? (Eric is always office on his own.)
 function amOffice() { return !CREW_NAME || lsGet('daylog-crew-office') === '1' || (crewPreview && isOffice(prefs.previewAs || crew[0] || '')); }
+// 🏢 v6.07 — PHIL, WITH THE SAME KEYS. Eric: "Phil needs the same access as I do to the
+// project portal, including making the lists and checking boxes and all that, making bids —
+// but only Phil." The wall that stopped this was never permission, it was plumbing: a crew
+// phone's DBX_ROOT is that crew member's OWN mounted folder, so every client-page path
+// pointed somewhere that doesn't exist on his side. Now an office phone resolves a SECOND
+// root — the Client Portal folder Eric shares to that person's Dropbox account — and every
+// portal read and write goes through here. Field crew never resolve one, so nothing changes
+// for them: they keep the read-only view of the client's page.
+let _portalRoot = lsGet('daylog-portal-root') || '';
+const PORTAL_DIR = '/App Data/Client Portal';
+function portalRoot() {
+  if (!CREW_NAME) return DBX_ROOT + PORTAL_DIR;   // Eric's own phone
+  return _portalRoot || (DBX_ROOT + PORTAL_DIR);  // an office phone, once the share is found
+}
+// hunt for the shared folder once, then remember it — whatever he accepted the share as.
+async function findPortalRoot(force) {
+  if (!CREW_NAME || !amOffice()) return '';
+  if (_portalRoot && !force) return _portalRoot;
+  const test = async base => {
+    try { const t = await dbxDownload(base + '/index.json'); if (t && JSON.parse(t).clients) return true; } catch (e) {}
+    return false;
+  };
+  const tries = [DBX_ROOT + PORTAL_DIR];
+  try {
+    const r = await dbxRpc('files/list_folder', { path: '', recursive: false });
+    for (const f of (r.entries || []).filter(x => x['.tag'] === 'folder').slice(0, 40)) {
+      const b = f.path_display || f.path_lower;
+      tries.push(b + '/App Data/Client Portal', b + '/Client Portal', b);
+    }
+  } catch (e) {}
+  for (const t of tries) {
+    if (await test(t)) { _portalRoot = t; lsSet('daylog-portal-root', t); return t; }
+  }
+  return '';
+}
 function toggleOffice(i) {
   const n = crew[i];
   if (!n) return;
