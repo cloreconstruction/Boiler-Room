@@ -3137,7 +3137,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.99 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.00 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8993,7 +8993,7 @@ function renderEstimates() {
         <button type="button" class="btn-ghost req-x" onclick="estBillSkip(${e.id})">🏢 not budget</button>
       </div>`; }).join('')}
       <div class="frow" style="gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px;">
-        <div class="field" style="margin: 0; flex: 1; min-width: 110px;"><label style="font-size: 10px;">Vendor (stays office)</label><input id="estHandV" placeholder="Tri-City…"></div>
+        <div class="field" style="margin: 0; flex: 1; min-width: 110px;"><label style="font-size: 10px;">Vendor (stays office)</label><input id="estHandV" placeholder="who billed you…"></div>
         <div class="field" style="margin: 0; width: 100px;"><label style="font-size: 10px;">Amount</label><input id="estHandA" inputmode="decimal" placeholder="$"></div>
         <div class="field" style="margin: 0; min-width: 140px; flex: 1;"><label style="font-size: 10px;">Budget category</label><select id="estHandC">${_estD.cats.map((x, i) => `<option value="${i}">${esc(x.n)}</option>`).join('')}</select></div>
         <button type="button" class="pick-chip${window._estHandInc ? '' : ' sel'}" style="font-size: 10px; padding: 4px 8px; min-height: 26px;" onclick="estHandIncFlip()">${window._estHandInc ? '✓ markup already in' : '+' + estMk() + '% rides on top'}</button>
