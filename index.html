@@ -3121,7 +3121,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.85 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.86 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9807,7 +9807,10 @@ async function matOpenDoc(path) {
     const r = await fetch('https://content.dropboxapi.com/2/files/download', {
       method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Dropbox-API-Arg': hsafe({ path }) } });
     if (!r.ok) throw new Error();
-    const url = URL.createObjectURL(await r.blob());
+    // 📄 v5.85b — Eric: "it sends me some kind of unrecognizable file that won't open."
+    // Dropbox hands the bytes back as octet-stream; the phone needs to be TOLD it's a PDF.
+    const mime = /\.pdf$/i.test(path) ? 'application/pdf' : (r.headers.get('content-type') || 'application/octet-stream');
+    const url = URL.createObjectURL(new Blob([await r.arrayBuffer()], { type: mime }));
     $('cpFrame').src = url;
     $('cliPrev').classList.add('show');
   } catch (e) { toast('Couldn\'t open it — check the connection', false); }
