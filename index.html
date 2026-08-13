@@ -3176,7 +3176,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.05 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.06 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8002,6 +8002,14 @@ async function publishSharedNotes() {
     // No client phone numbers, no emails, no money — a crew phone opens the page a homeowner
     // opens, nothing behind it. Rotating a code kills their copy on the next sweep too.
     try {
+      // 🏠 v6.06 — THE BUG PHIL FOUND: this rode only on what was already in memory, and the
+      // client list is loaded lazily when Eric opens ⚙ Setup. If he hadn't been on that
+      // screen since the app started, _portalIdx was null, nothing went out, and every crew
+      // phone said "no client pages have reached this phone yet." Load it here instead of
+      // hoping he visited a screen first.
+      if (!_portalIdx) {
+        try { _portalIdx = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/index.json') || 'null'); } catch (e) {}
+      }
       const cl = ((_portalIdx || {}).clients || []).filter(c => c && c.job && c.code);
       const pj = cl.length ? JSON.stringify({ clients: cl.map(c => ({ job: c.job, code: c.code })) }) : '';
       if (pj && _portalCache[name] !== pj) {
