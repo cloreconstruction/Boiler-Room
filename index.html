@@ -3121,7 +3121,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.87 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.88 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8667,22 +8667,48 @@ function pkHistToggle(key) { _pkHistShow.has(key) ? _pkHistShow.delete(key) : _p
 // Office file estimates-<code>.json — the client's page NEVER loads it. Approving a category
 // copies ONLY {name, est} onto the page as "budget"; notes and bid papers stay office-side.
 let _estIdx = -1, _estD = null, _estPage = null, _estArm = '', _estTimer = null;
+// 📋 v5.88 — Eric's standing category list, loaded on EVERY estimates board by default
+// (editable — rename, add, subtract — his list, his order, verbatim):
+const EST_DEFAULT_CATS = ['Demo', 'Well line, sewerline to house', 'Septic', 'Dirt work', 'Enstar', 'HEA', 'Well', 'Plumbing', 'Heating', 'Air', 'Concrete and foundation', 'ICF Walls', 'Window Wells', 'Framing', 'Trusses', 'Roofing', 'Windows', 'Exterior Doors', 'Gypcrete', 'Electrical', 'Insulation', 'Urethane', 'Drywall, Mud and Texture', 'Interior Paint', 'Siding', 'Decks', 'Helical Piers', 'Ext Painting', 'Kitchen cabinets', 'Countertops', 'Vanities and sinks', 'Int Doors', 'Trim', 'Drop ceiling', 'Tile (floors)', 'Tile (Showers)', 'Flooring', 'Carpet', 'Garage Doors', 'Gutters', 'Closet Interiors', 'Appliances', 'Woodstove or fireplace', 'Winter costs', 'Misc', 'Inspections / Permit', 'Engineering', 'Add ons'];
+// 🔎 name matching: Eric's names ("Drywall, Mud and Texture", "Ext Painting") have to find
+// the QuickBooks numbers ("Drywall & texture", "Exterior paint"). Tokens match when equal or
+// one is a prefix of the other (3+ letters) — deterministic, each QB line lands on ONE category.
+function estToks(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 2 && !['and', 'or', 'the', 'to', 'of'].includes(w)); }
+function estTokHit(a, b) { return a === b || (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a))); }
+function estScore(qbName, catName) {
+  const q = estToks(qbName), c = estToks(catName);
+  if (!q.length || !c.length) return 0;
+  if (q.join(' ') === c.join(' ')) return 1000;
+  let hit = 0;
+  q.forEach(a => { if (c.some(b => estTokHit(a, b))) hit++; });
+  const full = hit === Math.min(q.length, c.length);
+  return hit ? (full ? 100 + hit : hit) : 0;
+}
 function estPath(code) { return DBX_ROOT + '/App Data/Client Portal/estimates-' + code + '.json'; }
+// a category's number = the bid Eric ACCEPTED (Estimate 1 + Estimate 2 together)
+function estAccBid(x) { return (x.bids || []).find(b => b.acc) || null; }
+function estTotal(x) { const b = estAccBid(x); return b ? (+b.e1 || 0) + (+b.e2 || 0) : 0; }
+let _estOpenCats = new Set();
 async function openEstimates(i) {
   if (portalGuard()) return;
   if (CREW_NAME) { toast('💰 Estimates live in Eric\'s Dropbox — the office-phone copy is a later screw', false); return; }
-  _estIdx = i; _estArm = '';
+  _estIdx = i; _estArm = ''; _estOpenCats = new Set();
   const c = _portalIdx.clients[i];
   toast('⏳ Opening the estimates…');
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
   try { _estPage = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null'); } catch (e) { _estPage = null; }
   if (!_estD || !Array.isArray(_estD.cats)) _estD = { updated: '', cats: [] };
-  // seed rows from the categories the client's page already speaks (once each)
+  // 🧳 migrate the v5.85 shape (one est per category) into bid lines
+  _estD.cats.forEach(x => {
+    if (!Array.isArray(x.bids)) {
+      x.bids = (+x.est > 0 || x.note || (x.docs || []).length)
+        ? [{ e1: +x.est || 0, e2: 0, note: x.note || '', docs: x.docs || [], acc: true }] : [];
+      delete x.est; delete x.note; delete x.docs;
+    }
+  });
+  // 📋 the default list rides every board — missing ones join in Eric's order
   const have = new Set(_estD.cats.map(x => x.n.toLowerCase()));
-  (((_estPage || {}).phases) || []).forEach(p => (p.cats || []).forEach(ct => {
-    const n = String(ct[0] || '').trim();
-    if (n && !have.has(n.toLowerCase())) { have.add(n.toLowerCase()); _estD.cats.push({ n, est: 0, note: '', appr: false, docs: [] }); }
-  }));
+  EST_DEFAULT_CATS.forEach(n => { if (!have.has(n.toLowerCase())) { have.add(n.toLowerCase()); _estD.cats.push({ n, appr: false, bids: [] }); } });
   renderEstimates();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -8692,98 +8718,169 @@ function closeEstimates() {
   document.body.classList.remove('modal-open');
   _estIdx = -1; _estD = null; _estPage = null;
 }
+// "in" per board category — every QB phase line lands on its best-matching category, once
 function estUsedBy() {
   const used = {};
-  (((_estPage || {}).phases) || []).forEach(p => (p.cats || []).forEach(ct => {
-    const k = String(ct[0] || '').toLowerCase();
-    used[k] = (used[k] || 0) + (+ct[1] || 0);
-  }));
+  const qb = [];
+  (((_estPage || {}).phases) || []).forEach(p => (p.cats || []).forEach(ct => qb.push([String(ct[0] || ''), +ct[1] || 0])));
+  qb.forEach(([qn, amt]) => {
+    let best = null, bs = 0;
+    _estD.cats.forEach(x => { const s = estScore(qn, x.n); if (s > bs) { bs = s; best = x.n; } });
+    if (best && bs > 0) used[best] = (used[best] || 0) + amt;
+  });
   return used;
 }
+function estFold(ci) { _estOpenCats.has(ci) ? _estOpenCats.delete(ci) : _estOpenCats.add(ci); _estArm = ''; renderEstimates(); }
 function renderEstimates() {
   const c = _portalIdx.clients[_estIdx];
   if (!c || !_estD) return;
   const used = estUsedBy();
-  const apprN = _estD.cats.filter(x => x.appr && +x.est > 0).length;
-  const totE = _estD.cats.reduce((s, x) => s + (+x.est || 0), 0);
+  const apprN = _estD.cats.filter(x => x.appr && estTotal(x) > 0).length;
+  const totAppr = _estD.cats.filter(x => x.appr).reduce((s, x) => s + estTotal(x), 0);
+  const money0 = n => '$' + (+n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
   $('revBox').innerHTML = `<h3>💰 ${esc(c.job)} — estimates
     <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeEstimates()" aria-label="close estimates">✕</button></h3>
-    <div class="hint" style="margin: 0 0 10px;">🏢 Office-side until YOU say otherwise. Work the numbers and bids in peace — a category only reaches their page when its ✓ APPROVE lamp is lit (two taps). ${apprN ? `<b>${apprN} showing on their page.</b>` : '<b>Nothing is showing yet.</b>'}${totE ? ` · $${totE.toLocaleString(undefined, { maximumFractionDigits: 0 })} penciled in all told` : ''}</div>
-    ${_estD.cats.map((x, xi) => {
-      const u = Math.max(0, used[x.n.toLowerCase()] || 0);
-      const pct = +x.est > 0 ? Math.min(100, Math.round(u / x.est * 100)) : 0;
-      const over = +x.est > 0 && u > +x.est ? u - x.est : 0;
-      return `<div class="set-section fc-sec" style="margin-top: 8px; padding: 10px 12px;">
-      <div class="frow" style="gap: 6px; align-items: center; flex-wrap: wrap;">
-        <input type="text" value="${esc(x.n)}" style="flex: 2; min-width: 110px; font-weight: 800;" onchange="estSet(${xi}, 'n', this.value)">
-        <input type="inputmode" inputmode="decimal" value="${x.est || ''}" placeholder="$ estimate" style="flex: 1; min-width: 80px; font-weight: 800;" onchange="estSet(${xi}, 'est', this.value)">
-        <button type="button" class="pick-chip${x.appr ? ' sel' : ''}" style="flex: none; font-size: 11px; padding: 6px 10px; min-height: 30px; font-weight: 800;${x.appr ? '' : ' border-style: dashed;'}" onclick="estApprove(${xi})">${_estArm === 'ap' + xi ? '⚠ SURE? Goes on their page' : x.appr ? '✓ ON THEIR PAGE' : '🏢 office only'}</button>
-        <button type="button" class="btn-ghost req-x" style="font-size: 11px; color: var(--err, #c0392b);" onclick="estDelCat(${xi})">${_estArm === 'del' + xi ? '⚠ SURE?' : '✕'}</button>
+    <div class="hint" style="margin: 0 0 8px;">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. ${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}</div>
+    ${_estD.cats.map((x, ci) => {
+      const open = _estOpenCats.has(ci);
+      const tot = estTotal(x);
+      const u = Math.max(0, used[x.n] || 0);
+      const pct = tot > 0 ? Math.min(100, Math.round(u / tot * 100)) : 0;
+      const over = tot > 0 && u > tot ? u - tot : 0;
+      const nb = (x.bids || []).length;
+      return `<div class="set-section fc-sec" style="margin-top: 6px; padding: 8px 12px;">
+      <div class="frow" style="gap: 6px; align-items: center; flex-wrap: nowrap;">
+        <span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; cursor: pointer; font-weight: 800; line-height: 1.3;" onclick="estFold(${ci})">${open ? '▾' : '▸'} ${esc(x.n)}
+          <span class="hint" style="margin: 0; font-weight: 400; white-space: nowrap;">${tot ? ` · est ${money0(tot)}` : nb ? ` · ${nb} bid${nb > 1 ? 's' : ''}, none picked` : ''}${u ? ` · ${money0(u)} in` : ''}${over ? ` · <b style="color: var(--err, #b3452f);">over ${money0(over)}</b>` : ''}</span></span>
+        <button type="button" class="pick-chip${x.appr ? ' sel' : ''}" style="flex: none; font-size: 10.5px; padding: 5px 9px; min-height: 28px; font-weight: 800;${x.appr ? '' : ' border-style: dashed;'}" onclick="estApprove(${ci})">${_estArm === 'ap' + ci ? '⚠ SURE?' : x.appr ? '✓ ON PAGE' : '🏢 office'}</button>
       </div>
-      ${+x.est > 0 ? `<div style="margin: 6px 0 2px; height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--ink-muted) 22%, transparent); overflow: hidden;">
-        <div style="height: 100%; width: ${pct}%; background: ${over ? 'var(--err, #c0392b)' : 'var(--accent)'};"></div></div>
-      <div class="hint" style="margin: 0;">est $${(+x.est).toLocaleString()} · $${u.toLocaleString(undefined, { maximumFractionDigits: 0 })} in${over ? ` · <b style="color: var(--err, #b3452f);">over by $${over.toLocaleString(undefined, { maximumFractionDigits: 0 })}</b>` : ''}</div>` : ''}
-      <input type="text" value="${esc(x.note || '')}" placeholder="🗒 note — whose bid, good through, what it covers… (never leaves the office)"
-        style="width: 100%; margin-top: 5px; font-size: 12px; padding: 5px 8px; opacity: ${x.note ? '1' : '.75'};" onchange="estSet(${xi}, 'note', this.value)">
-      <div class="chips-row" style="margin-top: 5px; display: flex; gap: 5px; flex-wrap: wrap;">
-        ${(x.docs || []).map((d, di) => `<span style="display: inline-flex; gap: 4px; align-items: center;">
-          <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="matOpenDoc('${escq(d.path)}')">📄 ${esc(d.name)}</button>
-          <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="estDelDoc(${xi}, ${di})" aria-label="drop this paper">✕</button></span>`).join('')}
-        <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="$('estF-${xi}').click()">📁 ➕ bid paper</button>
-        <input type="file" id="estF-${xi}" accept="image/*,.pdf,application/pdf" multiple style="display: none;" onchange="estAddDocs(${xi}, this.files)">
-      </div>
+      ${tot > 0 || u > 0 ? `<div style="margin: 5px 0 2px; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--ink-muted) 22%, transparent); overflow: hidden;">
+        <div style="height: 100%; width: ${tot ? pct : 0}%; background: ${over ? 'var(--err, #c0392b)' : 'var(--accent)'};"></div></div>` : ''}
+      ${open ? `
+        ${(x.bids || []).map((b, bi) => `<div style="margin-top: 8px; padding: 8px; border: 1.5px solid ${b.acc ? 'var(--accent)' : 'var(--border)'}; border-radius: 8px;${b.acc ? '' : ' opacity: .85;'}">
+          <div class="frow" style="gap: 5px; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="pick-chip${b.acc ? ' sel' : ''}" style="font-size: 10.5px; padding: 5px 9px; min-height: 28px; font-weight: 800;" onclick="estBidAccept(${ci}, ${bi})">${b.acc ? '✓ USING THIS ONE' : '○ use this'}</button>
+            <div class="field" style="flex: 1; min-width: 86px; margin: 0;"><label style="font-size: 10px;">Estimate 1</label>
+              <input inputmode="decimal" value="${b.e1 || ''}" placeholder="$" style="font-weight: 800;" onchange="estBidSet(${ci}, ${bi}, 'e1', this.value)"></div>
+            <div class="field" style="flex: 1; min-width: 86px; margin: 0;"><label style="font-size: 10px;">Estimate 2</label>
+              <input inputmode="decimal" value="${b.e2 || ''}" placeholder="$" style="font-weight: 800;" onchange="estBidSet(${ci}, ${bi}, 'e2', this.value)"></div>
+            <span class="hint" style="margin: 0; font-weight: 800; white-space: nowrap;">= ${money0((+b.e1 || 0) + (+b.e2 || 0))}</span>
+            <button type="button" class="btn-ghost req-x" style="font-size: 11px; color: var(--err, #c0392b);" onclick="estBidDel(${ci}, ${bi})">${_estArm === 'bd' + ci + '_' + bi ? '⚠ SURE?' : '✕'}</button>
+          </div>
+          <input type="text" value="${esc(b.note || '')}" placeholder="🗒 whose bid, what it covers, good through… (never leaves the office)"
+            style="width: 100%; margin-top: 5px; font-size: 12px; padding: 5px 8px; opacity: ${b.note ? '1' : '.75'};" onchange="estBidSet(${ci}, ${bi}, 'note', this.value)">
+          <div class="chips-row" style="margin-top: 4px; display: flex; gap: 5px; flex-wrap: wrap;">
+            ${(b.docs || []).map((d, di) => `<span style="display: inline-flex; gap: 4px; align-items: center;">
+              <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="matOpenDoc('${escq(d.path)}')">📄 ${esc(d.name)}</button>
+              <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="estDelDoc(${ci}, ${bi}, ${di})" aria-label="drop this paper">✕</button></span>`).join('')}
+            <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="$('estF-${ci}-${bi}').click()">📁 ➕ bid paper</button>
+            <input type="file" id="estF-${ci}-${bi}" accept="image/*,.pdf,application/pdf" multiple style="display: none;" onchange="estAddDocs(${ci}, ${bi}, this.files)">
+          </div>
+        </div>`).join('')}
+        <div class="chips-row" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
+          <button type="button" class="btn-ghost req-x" onclick="estBidAdd(${ci})">➕ another bid in ${esc(x.n)}</button>
+          <button type="button" class="btn-ghost req-x" onclick="estRenameStart(${ci})">✎ rename</button>
+          <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="estDelCat(${ci})">${_estArm === 'del' + ci ? '⚠ SURE? Bids go too' : '✕ remove category'}</button>
+        </div>
+        ${_estArm === 'rn' + ci ? `<div class="frow" style="gap: 6px; margin-top: 6px;">
+          <input type="text" id="estRn-${ci}" value="${esc(x.n)}" style="flex: 1; font-weight: 700;" onkeydown="if(event.key==='Enter'){event.preventDefault();estRenameSave(${ci});}">
+          <button type="button" class="btn-ghost" onclick="estRenameSave(${ci})">✓ Save</button>
+        </div>` : ''}` : ''}
     </div>`; }).join('')}
     <div class="frow" style="margin-top: 12px;">
-      <div class="field" style="flex: 1;"><input type="text" id="estNewCat" placeholder="new category — Septic, Gutters, Site prep…" onkeydown="if(event.key==='Enter'){event.preventDefault();estAddCat();}"></div>
+      <div class="field" style="flex: 1;"><input type="text" id="estNewCat" placeholder="new category…" onkeydown="if(event.key==='Enter'){event.preventDefault();estAddCat();}"></div>
       <button class="btn-ghost" onclick="estAddCat()">➕ category</button>
     </div>
     <div class="rev-row" style="margin-top: 12px;">
       <button class="btn-ghost" style="flex: 1; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800; font-size: 14.5px;" onclick="closeEstimates()">✕ Close</button>
     </div>
-    <div class="hint" style="margin-top: 8px;">Everything saves itself. The "in" numbers feed off the same QuickBooks runs as their page — the bars move on their own each week. Notes and bid papers NEVER ride to the client; approving sends the category name and the number, nothing else.</div>`;
+    <div class="hint" style="margin-top: 8px;">Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else.</div>`;
 }
-function estSet(xi, k, v) {
-  const x = _estD.cats[xi];
+function estBidSet(ci, bi, k, v) {
+  const b = ((_estD.cats[ci] || {}).bids || [])[bi];
+  if (!b) return;
+  if (k === 'e1' || k === 'e2') { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); b[k] = isFinite(n) ? Math.round(n * 100) / 100 : 0; }
+  else b[k] = String(v).trim().slice(0, 160);
+  scheduleEstSave(_estD.cats[ci].appr && b.acc); // an accepted, approved number changed → their page follows
+  renderEstimates();
+}
+function estBidAdd(ci) {
+  const x = _estD.cats[ci];
   if (!x) return;
-  if (k === 'est') { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); x.est = isFinite(n) ? Math.round(n * 100) / 100 : 0; }
-  else x[k] = String(v).trim().slice(0, k === 'note' ? 160 : 40);
+  x.bids = x.bids || [];
+  x.bids.push({ e1: 0, e2: 0, note: '', docs: [], acc: x.bids.length === 0 }); // the first bid starts picked
   scheduleEstSave();
+  renderEstimates();
+}
+function estBidDel(ci, bi) {
+  if (_estArm !== 'bd' + ci + '_' + bi) {
+    _estArm = 'bd' + ci + '_' + bi; renderEstimates();
+    setTimeout(() => { if (_estArm === 'bd' + ci + '_' + bi) { _estArm = ''; renderEstimates(); } }, 5000);
+    return;
+  }
+  _estArm = '';
+  const x = _estD.cats[ci];
+  const wasAcc = x.bids[bi] && x.bids[bi].acc;
+  x.bids.splice(bi, 1);
+  if (wasAcc && x.appr) x.appr = false; // the shown number just left — the lamp can't stay lit
+  scheduleEstSave(true);
+  renderEstimates();
+}
+// ✓ the pick: which bid this category USES — one at a time, Eric's tap decides
+function estBidAccept(ci, bi) {
+  const x = _estD.cats[ci];
+  if (!x || !x.bids[bi]) return;
+  x.bids.forEach((b, i) => { b.acc = i === bi; });
+  scheduleEstSave(x.appr); // approved category's number may have changed
+  renderEstimates();
+}
+function estRenameStart(ci) { _estArm = 'rn' + ci; renderEstimates(); setTimeout(() => { const b = $('estRn-' + ci); if (b) { b.focus(); b.select(); } }, 80); }
+function estRenameSave(ci) {
+  const v = (($('estRn-' + ci) || {}).value || '').trim().slice(0, 40);
+  _estArm = '';
+  if (v && _estD.cats[ci]) { _estD.cats[ci].n = v; scheduleEstSave(_estD.cats[ci].appr); }
   renderEstimates();
 }
 function estAddCat() {
   const v = (($('estNewCat') || {}).value || '').trim().slice(0, 40);
   if (!v) return;
   if (_estD.cats.some(x => x.n.toLowerCase() === v.toLowerCase())) { toast('That category is already on the board', false); return; }
-  _estD.cats.push({ n: v, est: 0, note: '', appr: false, docs: [] });
+  _estD.cats.push({ n: v, appr: false, bids: [] });
+  _estOpenCats.add(_estD.cats.length - 1);
   scheduleEstSave();
   renderEstimates();
 }
-function estDelCat(xi) {
-  if (_estArm !== 'del' + xi) {
-    _estArm = 'del' + xi; renderEstimates();
-    setTimeout(() => { if (_estArm === 'del' + xi) { _estArm = ''; renderEstimates(); } }, 5000);
+function estDelCat(ci) {
+  if (_estArm !== 'del' + ci) {
+    _estArm = 'del' + ci; renderEstimates();
+    setTimeout(() => { if (_estArm === 'del' + ci) { _estArm = ''; renderEstimates(); } }, 5000);
     return;
   }
   _estArm = '';
-  const wasAppr = _estD.cats[xi] && _estD.cats[xi].appr;
-  _estD.cats.splice(xi, 1);
+  const wasAppr = _estD.cats[ci] && _estD.cats[ci].appr;
+  _estD.cats.splice(ci, 1);
+  _estOpenCats = new Set();
   scheduleEstSave(wasAppr);
   renderEstimates();
 }
-function estApprove(xi) {
-  const x = _estD.cats[xi];
+function estApprove(ci) {
+  const x = _estD.cats[ci];
   if (!x) return;
-  if (!x.appr && !(+x.est > 0)) { toast('Put the estimate number in first — there\'s nothing to show yet', false); return; }
-  if (!x.appr && _estArm !== 'ap' + xi) {
-    _estArm = 'ap' + xi; renderEstimates();
-    setTimeout(() => { if (_estArm === 'ap' + xi) { _estArm = ''; renderEstimates(); } }, 5000);
+  if (!x.appr && !(estTotal(x) > 0)) {
+    toast((x.bids || []).length ? 'Tap ○ use this on the bid you\'re accepting first' : 'Put a bid in first — there\'s nothing to show yet', false);
+    _estOpenCats.add(ci); renderEstimates();
+    return;
+  }
+  if (!x.appr && _estArm !== 'ap' + ci) {
+    _estArm = 'ap' + ci; renderEstimates();
+    setTimeout(() => { if (_estArm === 'ap' + ci) { _estArm = ''; renderEstimates(); } }, 5000);
     return;
   }
   _estArm = '';
   x.appr = !x.appr;
   scheduleEstSave(true);
   renderEstimates();
-  toast(x.appr ? `💰 ${x.n} is on their page now — est $${(+x.est).toLocaleString()}` : `🏢 ${x.n} pulled back to the office`);
+  toast(x.appr ? `💰 ${x.n} is on their page now — ${'$' + estTotal(x).toLocaleString()}` : `🏢 ${x.n} pulled back to the office`);
 }
 function scheduleEstSave(publish) {
   if (publish) window._estPub = true;
@@ -8795,46 +8892,46 @@ async function estSave() {
   if (!c || !_estD) return;
   _estD.updated = localDay(new Date());
   try {
-    await dbxUpload(estPath(c.code), JSON.stringify(_estD, null, 1));
+    await dbxUpload(estPath(c.code), JSON.stringify(_estD));
     if (window._estPub) { window._estPub = false; await estPublish(c); }
   } catch (e) { toast('Couldn\'t save the estimates — check the connection', false); }
 }
-// the approved cut: category name + number ONLY. Notes, bids, unapproved rows stay home.
+// the approved cut: category name + the ACCEPTED number only. Bids, notes, papers stay home.
 async function estPublish(c) {
   try {
     const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
     if (!pg) return;
-    const cut = _estD.cats.filter(x => x.appr && +x.est > 0).map(x => ({ n: x.n, est: +x.est }));
+    const cut = _estD.cats.filter(x => x.appr && estTotal(x) > 0).map(x => ({ n: x.n, est: estTotal(x) }));
     if (cut.length) pg.budget = cut; else delete pg.budget;
     pg.updated = localDay(new Date());
     await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json', JSON.stringify(pg, null, 1));
     _estPage = pg;
   } catch (e) { toast('Saved here, but their page didn\'t take the update — try the lamp again', false); }
 }
-async function estAddDocs(xi, files) {
-  const x = _estD.cats[xi];
+async function estAddDocs(ci, bi, files) {
+  const b = ((_estD.cats[ci] || {}).bids || [])[bi];
   const c = _portalIdx.clients[_estIdx];
-  if (!x || !c || !files || !files.length) return;
+  if (!b || !c || !files || !files.length) return;
   const ok = [...files].filter(f => /^image\//.test(f.type) || f.type === 'application/pdf').slice(0, 6);
   if (!ok.length) { toast('Photos and PDFs only', false); return; }
-  x.docs = x.docs || [];
+  b.docs = b.docs || [];
   let n = 0;
   for (const f of ok) {
     toast(`⏳ Bid paper ${++n} of ${ok.length} going in…`);
     const clean = (f.name || 'bid').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
-    const path = `${DBX_ROOT}/App Data/Client Portal/est-files-${c.code}/${x.n.replace(/[^a-zA-Z0-9 ]/g, '')} ${clean}`;
+    const path = `${DBX_ROOT}/App Data/Client Portal/est-files-${c.code}/${_estD.cats[ci].n.replace(/[^a-zA-Z0-9 ]/g, '')} ${clean}`;
     try {
       const r = await dbxUpload(path, f, true);
-      x.docs.push({ path: r.path_display || path, name: clean });
+      b.docs.push({ path: r.path_display || path, name: clean });
     } catch (e) { toast('That one wouldn\'t upload — check the connection', false); }
   }
   scheduleEstSave();
   renderEstimates();
 }
-function estDelDoc(xi, di) {
-  const x = _estD.cats[xi];
-  if (!x || !x.docs) return;
-  x.docs.splice(di, 1); // reference only — the paper itself stays in Dropbox
+function estDelDoc(ci, bi, di) {
+  const b = ((_estD.cats[ci] || {}).bids || [])[bi];
+  if (!b || !b.docs) return;
+  b.docs.splice(di, 1); // reference only — the paper itself stays in Dropbox
   scheduleEstSave();
   renderEstimates();
 }

@@ -484,14 +484,23 @@ async function boot() {
   // a progress bar, how much is in so far. Over-estimate shows plainly (red + words) —
   // Eric's call: "show the overspending."
   if (Array.isArray(d.budget) && d.budget.length) {
+    // 🔎 v5.88 — Eric's category names find the books' names by token match (prefix, 3+ letters)
+    const toks = s => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 2 && !['and', 'or', 'the', 'to', 'of'].includes(w));
+    const hit = (a, b) => a === b || (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a)));
+    const score = (qn, cn) => { const q = toks(qn), c = toks(cn); if (!q.length || !c.length) return 0;
+      if (q.join(' ') === c.join(' ')) return 1000;
+      let h = 0; q.forEach(a => { if (c.some(x => hit(a, x))) h++; });
+      return h ? (h === Math.min(q.length, c.length) ? 100 + h : h) : 0; };
     const usedBy = {};
     (d.phases || []).forEach(p => (p.cats || []).forEach(c => {
-      const k = String(c[0] || '').toLowerCase();
-      usedBy[k] = (usedBy[k] || 0) + (+c[1] || 0);
+      const qn = String(c[0] || ''), amt = +c[1] || 0;
+      let best = null, bs = 0;
+      d.budget.forEach(b => { const s = score(qn, b.n); if (s > bs) { bs = s; best = b.n; } });
+      if (best && bs > 0) usedBy[best] = (usedBy[best] || 0) + amt;
     }));
     let totE = 0, totU = 0;
     const rows = d.budget.map(b => {
-      const used = Math.max(0, usedBy[String(b.n).toLowerCase()] || 0);
+      const used = Math.max(0, usedBy[b.n] || 0);
       totE += +b.est || 0; totU += used;
       const pct = +b.est > 0 ? Math.min(100, Math.round(used / b.est * 100)) : 0;
       const over = used > +b.est ? used - b.est : 0;
