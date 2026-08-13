@@ -68,6 +68,13 @@
   .mat-head h3 { margin: 0; }
   .mat-close { border: none; border-radius: 999px; background: var(--gold); color: #201c15; font-weight: 800;
     padding: 10px 18px; cursor: pointer; font-size: 14px; font-family: inherit; }
+  /* 💰 v5.91 — tap-to-choose budget options: the lit one is YOUR PICK, spelled out */
+  .opt-pick { display: flex; justify-content: space-between; gap: 8px; width: 100%; text-align: left;
+    border: 2px dashed var(--line); background: none; color: var(--ink); border-radius: 10px;
+    padding: 9px 12px; font: inherit; font-size: 14px; cursor: pointer; margin-top: 6px; opacity: .8; }
+  .opt-pick.sel { border-style: solid; border-color: var(--gold); color: var(--gold); font-weight: 800; opacity: 1; }
+  .opt-pick .op-r { white-space: nowrap; font-weight: 800; }
+  .opt-hint { font-size: 12px; color: var(--ink2); margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -397,6 +404,84 @@ function updateMatTile() {
   const s = document.getElementById('matTileSub');
   if (s) s.innerHTML = n ? `<b style="color: var(--gold);">● ${n} need your pick</b>` : 'lists & picks, all set ✓';
 }
+// 💰 approved estimates — Eric lights a category's lamp and it shows HERE: total bid,
+// a progress bar, how much is in so far. Over-estimate shows plainly (red + words) —
+// Eric's call: "show the overspending."
+// 🏠 v5.91 — a category can carry CHOICES (vinyl siding vs repaint the old): tap the way
+// you want to go, the total follows your pick, and Clore Construction hears about it.
+let _d = null;
+const bEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// what a budget line counts as: its plain estimate, or the CHOSEN option's price
+const bEst = b => Array.isArray(b.opts)
+  ? +((b.opts[Number.isInteger(b.pick) && b.opts[b.pick] ? b.pick : 0] || {}).est) || 0
+  : +b.est || 0;
+function budgetHtml(d) {
+  if (!Array.isArray(d.budget) || !d.budget.length) return '';
+  // 🔎 v5.88 — Eric's category names find the books' names by token match (prefix, 3+ letters)
+  const toks = s => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 2 && !['and', 'or', 'the', 'to', 'of'].includes(w));
+  const hit = (a, b) => a === b || (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a)));
+  const score = (qn, cn) => { const q = toks(qn), c = toks(cn); if (!q.length || !c.length) return 0;
+    if (q.join(' ') === c.join(' ')) return 1000;
+    let h = 0; q.forEach(a => { if (c.some(x => hit(a, x))) h++; });
+    return h ? (h === Math.min(q.length, c.length) ? 100 + h : h) : 0; };
+  const usedBy = {};
+  (d.phases || []).forEach(p => (p.cats || []).forEach(c => {
+    const qn = String(c[0] || ''), amt = +c[1] || 0;
+    let best = null, bs = 0;
+    d.budget.forEach(b => { const s = score(qn, b.n); if (s > bs) { bs = s; best = b.n; } });
+    if (best && bs > 0) usedBy[best] = (usedBy[best] || 0) + amt;
+  }));
+  let totE = 0, totU = 0, anyOpts = false;
+  const rows = d.budget.map((b, bi) => {
+    const est = bEst(b);
+    const used = Math.max(0, usedBy[b.n] || 0);
+    totE += est; totU += used;
+    const pct = est > 0 ? Math.min(100, Math.round(used / est * 100)) : 0;
+    const over = used > est ? used - est : 0;
+    let optRows = '';
+    if (Array.isArray(b.opts)) {
+      anyOpts = true;
+      const pick = Number.isInteger(b.pick) && b.opts[b.pick] ? b.pick : 0;
+      optRows = `<div>` + b.opts.map((o, oi) => `<button type="button" class="opt-pick${oi === pick ? ' sel' : ''}" onclick="event.stopPropagation(); pickOpt(${bi}, ${oi})" aria-pressed="${oi === pick}">
+          <span class="op-l">${oi === pick ? '✓' : '○'} ${bEsc(o.t)}</span><span class="op-r">${money(o.est)}${oi === pick ? ' · YOUR PICK' : ''}</span>
+        </button>`).join('') +
+        `<div class="opt-hint">Your call — tap the way you want to go. The estimate above follows your pick, and Clore Construction sees which one you chose.</div></div>`;
+    }
+    return `<div style="margin: 10px 0;">
+      <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px;">
+        <span style="font-weight: 700;">${bEsc(b.n)}${b.opts ? ' — YOUR CHOICE' : ''}</span>
+        <span>est ${money(est)} · ${money(used)} in${over ? ` · <b style="color:#c0392b;">over by ${money(over)}</b>` : ''}</span>
+      </div>
+      ${optRows}
+      <div style="margin-top: 4px; height: 10px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden;">
+        <div style="height: 100%; width: ${pct}%; background: ${over ? '#c0392b' : 'var(--acc, #b8860b)'};"></div>
+      </div>
+    </div>`;
+  }).join('');
+  const totOver = totU > totE ? totU - totE : 0;
+  return `<div class="card" id="budgetCard" onclick="ping('budget')"><h3>BUDGET — APPROVED ESTIMATES</h3>
+    <div style="font-size: 14px; margin-bottom: 2px;">${money(totE)} approved · ${money(totU)} in so far${totOver ? ` · <b style="color:#c0392b;">over by ${money(totOver)}</b>` : ''}</div>
+    ${rows}
+    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"In" counts the work billed to each category so far — it updates as the books do.${anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}</div></div>`;
+}
+async function pickOpt(bi, oi) {
+  const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null;
+  if (!b || !Array.isArray(b.opts) || !b.opts[oi]) return;
+  const prev = Number.isInteger(b.pick) && b.opts[b.pick] ? b.pick : 0;
+  if (prev === oi) return;
+  b.pick = oi;
+  const card = document.getElementById('budgetCard');
+  if (card) card.outerHTML = budgetHtml(_d);
+  if (PV) return; // Eric previewing — show the motion, save nothing
+  try {
+    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ c: code, pick: { n: b.n, o: oi } }) });
+    if (!r.ok) throw new Error();
+  } catch (e) { // the tap didn't reach the office — put it back honestly
+    b.pick = prev;
+    const c2 = document.getElementById('budgetCard');
+    if (c2) c2.outerHTML = budgetHtml(_d);
+  }
+}
 async function boot() {
   if (!code) { $('#app').innerHTML = '<div class="err">This link is missing its code — ask Clore Construction for a fresh one.</div>'; return; }
   let d;
@@ -408,6 +493,7 @@ async function boot() {
     $('#app').innerHTML = '<div class="err">This project link isn\'t active. Ask Clore Construction for a current one.</div>';
     return;
   }
+  _d = d; // 💰 the budget card redraws itself from here when a choice is tapped
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // 🎛 per-page switches Eric flips from his phone: absent = ON, explicit false = OFF
   const sh = k => !d.show || d.show[k] !== false;
@@ -480,46 +566,8 @@ async function boot() {
         <br><span style="opacity:.75">Your invoice is the itemized record — this is the quick picture of what's on it.</span></div>
     </div>` : ''}</div>`;
   }
-  // 💰 approved estimates — Eric lights a category's lamp and it shows HERE: total bid,
-  // a progress bar, how much is in so far. Over-estimate shows plainly (red + words) —
-  // Eric's call: "show the overspending."
-  if (Array.isArray(d.budget) && d.budget.length) {
-    // 🔎 v5.88 — Eric's category names find the books' names by token match (prefix, 3+ letters)
-    const toks = s => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 2 && !['and', 'or', 'the', 'to', 'of'].includes(w));
-    const hit = (a, b) => a === b || (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a)));
-    const score = (qn, cn) => { const q = toks(qn), c = toks(cn); if (!q.length || !c.length) return 0;
-      if (q.join(' ') === c.join(' ')) return 1000;
-      let h = 0; q.forEach(a => { if (c.some(x => hit(a, x))) h++; });
-      return h ? (h === Math.min(q.length, c.length) ? 100 + h : h) : 0; };
-    const usedBy = {};
-    (d.phases || []).forEach(p => (p.cats || []).forEach(c => {
-      const qn = String(c[0] || ''), amt = +c[1] || 0;
-      let best = null, bs = 0;
-      d.budget.forEach(b => { const s = score(qn, b.n); if (s > bs) { bs = s; best = b.n; } });
-      if (best && bs > 0) usedBy[best] = (usedBy[best] || 0) + amt;
-    }));
-    let totE = 0, totU = 0;
-    const rows = d.budget.map(b => {
-      const used = Math.max(0, usedBy[b.n] || 0);
-      totE += +b.est || 0; totU += used;
-      const pct = +b.est > 0 ? Math.min(100, Math.round(used / b.est * 100)) : 0;
-      const over = used > +b.est ? used - b.est : 0;
-      return `<div style="margin: 10px 0;">
-        <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px;">
-          <span style="font-weight: 700;">${esc(b.n)}</span>
-          <span>est ${money(b.est)} · ${money(used)} in${over ? ` · <b style="color:#c0392b;">over by ${money(over)}</b>` : ''}</span>
-        </div>
-        <div style="margin-top: 4px; height: 10px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden;">
-          <div style="height: 100%; width: ${pct}%; background: ${over ? '#c0392b' : 'var(--acc, #b8860b)'};"></div>
-        </div>
-      </div>`;
-    }).join('');
-    const totOver = totU > totE ? totU - totE : 0;
-    h += `<div class="card" onclick="ping('budget')"><h3>BUDGET — APPROVED ESTIMATES</h3>
-      <div style="font-size: 14px; margin-bottom: 2px;">${money(totE)} approved · ${money(totU)} in so far${totOver ? ` · <b style="color:#c0392b;">over by ${money(totOver)}</b>` : ''}</div>
-      ${rows}
-      <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"In" counts the work billed to each category so far — it updates as the books do.</div></div>`;
-  }
+  // 💰 approved estimates — the card lives in budgetHtml() so a pick can redraw it in place
+  h += budgetHtml(d);
   if (d.show && d.show.phases && (d.phases || []).length) {
     h += `<div class="card"><h3>WORK BY PHASE — tap a phase for detail</h3>` +
       d.phases.map((p, i) => `<div class="ph" id="ph${i}"><div class="ph-head" onclick="document.getElementById('ph${i}').classList.toggle('open'); ping('phase:${esc(p.name).slice(0, 20)}')">

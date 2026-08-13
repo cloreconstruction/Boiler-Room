@@ -3121,7 +3121,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.90 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.91 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8691,12 +8691,19 @@ function estRaw(x) { const b = estAccBid(x); return b ? (+b.e1 || 0) + (+b.e2 ||
 // 💹 the number the CLIENT sees: raw bid + the board's markup, unless the line says the
 // markup is already inside it. The % itself never leaves the office.
 function estMk() { return _estD && +_estD.mk >= 0 ? +_estD.mk : 20; }
-function estTotal(x) {
-  const b = estAccBid(x);
-  if (!b) return 0;
+// one BID's client-facing number — same markup rule, any bid
+function estBidClient(b) {
   const raw = (+b.e1 || 0) + (+b.e2 || 0);
   return b.inc ? raw : Math.round(raw * (1 + estMk() / 100) * 100) / 100;
 }
+function estTotal(x) {
+  const b = estAccBid(x);
+  return b ? estBidClient(b) : 0;
+}
+// 🏠 v5.91 — Eric: "show multiple bids to the homeowner at once, and they can select which
+// one they want, and it will change their total estimated cost." (vinyl siding vs repaint)
+// The bids Eric flags 👁 become tap-to-choose options on their page — 2+ makes a real choice.
+function estOpts(x) { return (x.bids || []).filter(b => b.opt); }
 let _estOpenCats = new Set();
 async function openEstimates(i) {
   if (portalGuard()) return;
@@ -8770,10 +8777,15 @@ function renderEstimates() {
       const pct = tot > 0 ? Math.min(100, Math.round(u / tot * 100)) : 0;
       const over = tot > 0 && u > tot ? u - tot : 0;
       const nb = (x.bids || []).length;
+      // 🏠 v5.91 — what the homeowner has picked (their page carries it; the server writes it)
+      const nOpt = estOpts(x).length;
+      const pgB = x.appr && nOpt >= 2 ? (((_estPage || {}).budget) || []).find(b => b && b.n === x.n && Array.isArray(b.opts)) : null;
+      const theirPick = pgB && Number.isInteger(pgB.pick) && pgB.opts[pgB.pick] ? pgB.pick : null;
+      let oi = -1; const optIdx = (x.bids || []).map(b => b.opt ? ++oi : -1);
       return `<div class="set-section fc-sec" style="margin-top: 6px; padding: 8px 12px;">
       <div class="frow" style="gap: 6px; align-items: center; flex-wrap: nowrap;">
         <span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; cursor: pointer; font-weight: 800; line-height: 1.3;" onclick="estFold(${ci})">${open ? '▾' : '▸'} ${esc(x.n)}
-          <span class="hint" style="margin: 0; font-weight: 400; white-space: nowrap;">${tot ? ` · est ${money0(tot)}${rawT !== tot ? ` <span style="opacity:.7">(bid ${money0(rawT)})</span>` : ''}` : nb ? ` · ${nb} bid${nb > 1 ? 's' : ''}, none picked` : ''}${u ? ` · ${money0(u)} in` : ''}${over ? ` · <b style="color: var(--err, #b3452f);">over ${money0(over)}</b>` : ''}</span></span>
+          <span class="hint" style="margin: 0; font-weight: 400; white-space: nowrap;">${tot ? ` · est ${money0(tot)}${rawT !== tot ? ` <span style="opacity:.7">(bid ${money0(rawT)})</span>` : ''}` : nb ? ` · ${nb} bid${nb > 1 ? 's' : ''}, none picked` : ''}${u ? ` · ${money0(u)} in` : ''}${over ? ` · <b style="color: var(--err, #b3452f);">over ${money0(over)}</b>` : ''}${x.appr && nOpt >= 2 ? ` · <b>🏠 ${theirPick != null ? `they picked "${esc(pgB.opts[theirPick].t)}"` : nOpt + ' choices on their page'}</b>` : ''}</span></span>
         <button type="button" class="pick-chip${x.appr ? ' sel' : ''}" style="flex: none; font-size: 10.5px; padding: 5px 9px; min-height: 28px; font-weight: 800;${x.appr ? '' : ' border-style: dashed;'}" onclick="estApprove(${ci})">${_estArm === 'ap' + ci ? '⚠ SURE?' : x.appr ? '✓ ON PAGE' : '🏢 office'}</button>
       </div>
       ${tot > 0 || u > 0 ? `<div style="margin: 5px 0 2px; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--ink-muted) 22%, transparent); overflow: hidden;">
@@ -8788,8 +8800,12 @@ function renderEstimates() {
               <input inputmode="decimal" value="${b.e2 || ''}" placeholder="$" style="font-weight: 800;" onchange="estBidSet(${ci}, ${bi}, 'e2', this.value)"></div>
             <span class="hint" style="margin: 0; font-weight: 800; white-space: nowrap;">= ${money0((+b.e1 || 0) + (+b.e2 || 0))}${!b.inc && estMk() ? ` <span style="opacity:.75">→ ${money0(Math.round(((+b.e1 || 0) + (+b.e2 || 0)) * (1 + estMk() / 100) * 100) / 100)} to client</span>` : ''}</span>
             <button type="button" class="pick-chip${b.inc ? '' : ' sel'}" style="font-size: 10px; padding: 4px 8px; min-height: 26px;" onclick="estBidInc(${ci}, ${bi})" title="whether the ${estMk()}% markup rides on top of this number or is already inside it">${b.inc ? '✓ markup already in' : '+' + estMk() + '% rides on top'}</button>
+            <button type="button" class="pick-chip${b.opt ? ' sel' : ''}" style="font-size: 10px; padding: 4px 8px; min-height: 26px;${b.opt ? '' : ' border-style: dashed;'}" onclick="estBidOpt(${ci}, ${bi})" title="offer this bid to the homeowner as a tap-to-choose option — 2 or more offered makes the choice">${b.opt ? '👁 A CHOICE THEY SEE' : '○ offer as choice'}</button>
+            ${x.appr && theirPick != null && optIdx[bi] === theirPick ? '<span style="font-weight: 800; white-space: nowrap;">🏠 THEIR PICK</span>' : ''}
             <button type="button" class="btn-ghost req-x" style="font-size: 11px; color: var(--err, #c0392b);" onclick="estBidDel(${ci}, ${bi})">${_estArm === 'bd' + ci + '_' + bi ? '⚠ SURE?' : '✕'}</button>
           </div>
+          ${b.opt ? `<input type="text" value="${esc(b.lbl || '')}" placeholder="🏠 what the homeowner sees it called — Vinyl siding, Repaint existing… (Option ${optIdx[bi] + 1} if blank)"
+            style="width: 100%; margin-top: 5px; font-size: 12px; padding: 5px 8px; font-weight: 700;" onchange="estBidSet(${ci}, ${bi}, 'lbl', this.value)">` : ''}
           <input type="text" value="${esc(b.note || '')}" placeholder="🗒 whose bid, what it covers, good through… (never leaves the office)"
             style="width: 100%; margin-top: 5px; font-size: 12px; padding: 5px 8px; opacity: ${b.note ? '1' : '.75'};" onchange="estBidSet(${ci}, ${bi}, 'note', this.value)">
           <div class="chips-row" style="margin-top: 4px; display: flex; gap: 5px; flex-wrap: wrap;">
@@ -8817,14 +8833,14 @@ function renderEstimates() {
     <div class="rev-row" style="margin-top: 12px;">
       <button class="btn-ghost" style="flex: 1; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800; font-size: 14.5px;" onclick="closeEstimates()">✕ Close</button>
     </div>
-    <div class="hint" style="margin-top: 8px;">Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else.</div>`;
+    <div class="hint" style="margin-top: 8px;">Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 offer as choice</b> and the homeowner taps between them on their page — their pick sets THEIR total (vinyl siding vs repaint), and it shows here as 🏠 THEIR PICK. Give each offered bid a homeowner name; the office note still never leaves.</div>`;
 }
 function estBidSet(ci, bi, k, v) {
   const b = ((_estD.cats[ci] || {}).bids || [])[bi];
   if (!b) return;
   if (k === 'e1' || k === 'e2') { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); b[k] = isFinite(n) ? Math.round(n * 100) / 100 : 0; }
   else b[k] = String(v).trim().slice(0, 160);
-  scheduleEstSave(_estD.cats[ci].appr && b.acc); // an accepted, approved number changed → their page follows
+  scheduleEstSave(_estD.cats[ci].appr && (b.acc || b.opt)); // a number or label their page carries changed → it follows
   renderEstimates();
 }
 function estBidAdd(ci) {
@@ -8875,8 +8891,21 @@ async function estBidInc(ci, bi) {
   if (!b) return;
   b.inc = !b.inc;
   renderEstimates();
-  if (x.appr && b.acc) { clearTimeout(_estTimer); _estTimer = null; window._estPub = true; await estSave(); }
+  if (x.appr && (b.acc || b.opt)) { clearTimeout(_estTimer); _estTimer = null; window._estPub = true; await estSave(); }
   else scheduleEstSave();
+}
+// 🏠 v5.91 — flip a bid in or out of the homeowner's choice set. On an approved category
+// the page shape changes RIGHT NOW (same no-debounce-window discipline as the lamp).
+async function estBidOpt(ci, bi) {
+  const x = _estD.cats[ci];
+  const b = (x && x.bids || [])[bi];
+  if (!b) return;
+  b.opt = !b.opt;
+  if (!b.opt) delete b.opt;
+  renderEstimates();
+  if (x.appr) { clearTimeout(_estTimer); _estTimer = null; window._estPub = true; await estSave(); }
+  else scheduleEstSave();
+  if (b.opt && estOpts(x).length === 1) toast('👁 Offer at least one more bid in ' + x.n + ' — one option is not a choice yet');
 }
 function estRenameStart(ci) { _estArm = 'rn' + ci; renderEstimates(); setTimeout(() => { const b = $('estRn-' + ci); if (b) { b.focus(); b.select(); } }, 80); }
 function estRenameSave(ci) {
@@ -8943,7 +8972,16 @@ async function estSave() {
   // v5.89 — snapshot everything BEFORE the first await, so closing the board mid-save
   // can't null the data out from under the write
   const body = JSON.stringify(_estD);
-  const cut = _estD.cats.filter(x => x.appr && estTotal(x) > 0).map(x => ({ n: x.n, est: estTotal(x) }));
+  // 🏠 v5.91 — a category with 2+ offered bids goes out as tap-to-choose OPTIONS (marked-up
+  // numbers + Eric's client-facing labels only); otherwise the accepted number, as always.
+  const cut = _estD.cats.filter(x => x.appr && estTotal(x) > 0).map(x => {
+    const opts = estOpts(x);
+    if (opts.length >= 2) {
+      const accI = opts.findIndex(b => b.acc);
+      return { n: x.n, opts: opts.map((b, i) => ({ t: (b.lbl || '').trim() || 'Option ' + (i + 1), est: estBidClient(b) })), pick: accI >= 0 ? accI : 0 };
+    }
+    return { n: x.n, est: estTotal(x) };
+  });
   const doPub = !!window._estPub;
   window._estPub = false;
   try {
@@ -8956,6 +8994,10 @@ async function estPublish(c, cut) {
   try {
     const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
     if (!pg) return;
+    // 🏠 v5.91 — the homeowner's own pick SURVIVES a republish (it's their choice, not ours)
+    const oldPick = {};
+    (pg.budget || []).forEach(b => { if (b && Array.isArray(b.opts) && Number.isInteger(b.pick)) oldPick[b.n] = b.pick; });
+    cut.forEach(b => { if (b.opts && oldPick[b.n] != null && oldPick[b.n] < b.opts.length) b.pick = oldPick[b.n]; });
     if (cut.length) pg.budget = cut; else delete pg.budget;
     pg.updated = localDay(new Date());
     await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json', JSON.stringify(pg, null, 1));

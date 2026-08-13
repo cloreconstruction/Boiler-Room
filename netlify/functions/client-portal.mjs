@@ -147,6 +147,29 @@ const portal = async req => {
       await up(t, apath, JSON.stringify(arr.slice(0, 200)));
       return new Response('ok');
     }
+    // 💰 v5.91 — the homeowner tapped a budget CHOICE (vinyl siding vs repaint). Their pick
+    // rides their own page (so the total follows it) and echoes into Eric's review pile.
+    if (b.pick && typeof b.pick === 'object') {
+      const n = String(b.pick.n || '').slice(0, 60);
+      const o = Number.isInteger(b.pick.o) ? b.pick.o : -1;
+      if (!n || o < 0) return new Response('bad', { status: 400 });
+      const ppath = `${BASE}/${c}.json`;
+      let pg = null;
+      try { pg = JSON.parse(await dl(t, ppath) || 'null'); } catch (e) {}
+      const entry = pg && Array.isArray(pg.budget) ? pg.budget.find(x => x && x.n === n && Array.isArray(x.opts)) : null;
+      if (!entry || o >= entry.opts.length) return new Response('nope', { status: 404 });
+      if (entry.pick !== o) {
+        entry.pick = o; // their own tap isn't "news" — the updated-lamp stays honest
+        await up(t, ppath, JSON.stringify(pg, null, 1));
+        const apath = `${BASE}/asks-${c}.json`;
+        let arr = [];
+        try { arr = JSON.parse(await dl(t, apath) || '[]'); } catch (e) {}
+        if (!Array.isArray(arr)) arr = [];
+        arr.unshift({ tag: 'General', text: `💰 CHOSE — ${n}: ${entry.opts[o].t} ($${(+entry.opts[o].est || 0).toLocaleString()})`, ts: new Date().toISOString() });
+        await up(t, apath, JSON.stringify(arr.slice(0, 200)));
+      }
+      return new Response('ok');
+    }
     // 💬 a question or remark from the client — lands in Eric's review pile on his next sync
     if (b.ask && typeof b.ask === 'object') {
       const tag = ['Phil', 'Eric', 'General', 'Feedback', 'Materials'].includes(b.ask.tag) ? b.ask.tag : 'General';
