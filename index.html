@@ -3176,7 +3176,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.08 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.09 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8604,46 +8604,10 @@ async function checkCrewLogs() {
 // is the whole key: rotate = new address, old one dead. Pages read curated JSON from
 // /App Data/Client Portal/ through a Netlify function — never straight from Dropbox.
 let _portalIdx = null;
-async function renderPortalList() {
-  const box = $('portalList');
-  if (!box) return;
-  if (!dbx.refreshToken) { box.innerHTML = '<span class="hint">Connect Dropbox first.</span>'; return; }
-  // 🏠 v5.45 — A CREW PHONE CANNOT SEE ERIC'S DROPBOX. That's the wall, and it's staying.
-  // So Eric's phone writes a short list of the live client pages into each crew folder, and
-  // the crew phone reads its own copy. What Phil gets is the VIEW: the same page the
-  // homeowner sees, opened inside the app. The buttons that change the books — rotate,
-  // journal, materials — aren't withheld from him as a matter of trust; they write into
-  // Eric's Dropbox and physically cannot run from a crew phone.
-  if (CREW_NAME) {
-    if (amOffice()) await findPortalRoot();   // 🏢 v6.07 — locate Eric's shared Client Portal folder
-    // 🏠 v5.48 — DON'T TRUST DBX_ROOT. A crew folder is a MOUNT in the crew member's own
-    // Dropbox, and what it's called on his side is whatever he accepted it as. If the saved
-    // root is stale or renamed, the straight read misses and the page looks empty for no
-    // visible reason. So: try the saved root, then hunt his root folders for the file —
-    // the same way the 👷 crew button hunts for crew.json. Two ways in, not one.
-    const tried = [];
-    let raw = null;
-    const grab = async p => { tried.push(p); try { const t = await dbxDownload(p); if (t) { raw = t; return true; } } catch (e) {} return false; };
-    if (!(await grab(DBX_ROOT + '/portal.json'))) {
-      try {
-        const r = await dbxRpc('files/list_folder', { path: '', recursive: false });
-        for (const f of (r.entries || []).filter(x => x['.tag'] === 'folder').slice(0, 30)) {
-          if (await grab((f.path_display || f.path_lower) + '/portal.json')) break;
-        }
-      } catch (e) {}
-    }
-    try { _portalIdx = JSON.parse(raw); } catch (e) { _portalIdx = null; }
-    if (!_portalIdx) {
-      // say exactly what happened — a blank page teaches nobody anything
-      box.innerHTML = `<span class="hint">No client pages have reached this phone yet. <b>${esc(APP_VER)}</b><br>
-        On Eric's phone: <b>⚙ Setup → Crew → 📤 Set up / update crew folders</b>, then tap 🔄 below.<br>
-        <span style="opacity:.75">Looked in: ${tried.length ? tried.map(esc).join(' · ') : 'nowhere — Dropbox would not answer'}</span></span>
-        <div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button></div>`;
-      return;
-    }
-    const cl = _portalIdx.clients || [];
-    const off = amOffice();
-    box.innerHTML = cl.length ? cl.map((c, i) => {
+function renderPortalFold(box, offRoot) {
+  const cl = (_portalIdx || {}).clients || [];
+  const off = amOffice();
+  box.innerHTML = cl.length ? cl.map((c, i) => {
       const open = _portalOpen === i;
       return `
       <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
@@ -8664,7 +8628,60 @@ async function renderPortalList() {
     }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button>
       ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — the Build List is yours too.</span>' : ''}</div>`
       : '<span class="hint">Eric hasn\'t turned any client pages on yet.</span>';
-    return;
+}
+async function renderPortalList() {
+  const box = $('portalList');
+  if (!box) return;
+  if (!dbx.refreshToken) { box.innerHTML = '<span class="hint">Connect Dropbox first.</span>'; return; }
+  // 🏠 v5.45 — A CREW PHONE CANNOT SEE ERIC'S DROPBOX. That's the wall, and it's staying.
+  // So Eric's phone writes a short list of the live client pages into each crew folder, and
+  // the crew phone reads its own copy. What Phil gets is the VIEW: the same page the
+  // homeowner sees, opened inside the app. The buttons that change the books — rotate,
+  // journal, materials — aren't withheld from him as a matter of trust; they write into
+  // Eric's Dropbox and physically cannot run from a crew phone.
+  if (CREW_NAME) {
+    // 🏢 v6.09 — AN OFFICE PHONE READS THE REAL LIST. Phil had the shared folder and still
+    // saw nothing, because the crew branch only ever read the little portal.json copy Eric's
+    // phone writes into each crew folder — which needs a crew-folder sweep to exist at all.
+    // An office phone has the actual Client Portal folder shared to it, so it reads the same
+    // index.json Eric reads and stops depending on the copy entirely.
+    let offRoot = '';
+    {
+      offRoot = await findPortalRoot();   // any crew phone may hold the share; finding it promotes
+      if (offRoot) {
+        try { _portalIdx = JSON.parse(await dbxDownload(offRoot + '/index.json') || 'null'); } catch (e) { _portalIdx = null; }
+        if (_portalIdx && (_portalIdx.clients || []).length) return renderPortalFold(box, offRoot);
+      }
+    }
+    // 🏠 v5.48 — DON'T TRUST DBX_ROOT. A crew folder is a MOUNT in the crew member's own
+    // Dropbox, and what it's called on his side is whatever he accepted it as. If the saved
+    // root is stale or renamed, the straight read misses and the page looks empty for no
+    // visible reason. So: try the saved root, then hunt his root folders for the file —
+    // the same way the 👷 crew button hunts for crew.json. Two ways in, not one.
+    const tried = [];
+    let raw = null;
+    const grab = async p => { tried.push(p); try { const t = await dbxDownload(p); if (t) { raw = t; return true; } } catch (e) {} return false; };
+    if (!(await grab(DBX_ROOT + '/portal.json'))) {
+      try {
+        const r = await dbxRpc('files/list_folder', { path: '', recursive: false });
+        for (const f of (r.entries || []).filter(x => x['.tag'] === 'folder').slice(0, 30)) {
+          if (await grab((f.path_display || f.path_lower) + '/portal.json')) break;
+        }
+      } catch (e) {}
+    }
+    try { _portalIdx = JSON.parse(raw); } catch (e) { _portalIdx = null; }
+    if (!_portalIdx) {
+      // say exactly what happened — a blank page teaches nobody anything
+      box.innerHTML = `<span class="hint">No client pages have reached this phone yet. <b>${esc(APP_VER)}</b> · this phone is <b>${amOffice() ? '🏢 OFFICE' : '👷 FIELD'}</b><br>
+        ${amOffice() ? (offRoot
+          ? `🏢 Found the shared folder at <b>${esc(offRoot)}</b> but no client list inside it.`
+          : '🏢 This phone is OFFICE but the shared <b>Client Portal</b> folder hasn\'t turned up yet — accept the Dropbox share, then tap 🔄 below.')
+        : 'On Eric\'s phone: <b>⚙ Setup → Crew → 📤 Set up / update crew folders</b>, then tap 🔄 below.'}<br>
+        <span style="opacity:.75">Looked in: ${tried.length ? tried.map(esc).join(' · ') : 'nowhere — Dropbox would not answer'}</span></span>
+        <div style="margin-top:8px;"><button class="btn-ghost" onclick="findPortalRoot(true).then(() => renderPortalList())">🔄 Look again</button></div>`;
+      return;
+    }
+    return renderPortalFold(box, offRoot);
   }
   try {
     const t = await dbxDownload(portalRoot() + '/index.json');
@@ -12169,23 +12186,39 @@ function portalRoot() {
   return _portalRoot || (DBX_ROOT + PORTAL_DIR);  // an office phone, once the share is found
 }
 // hunt for the shared folder once, then remember it — whatever he accepted the share as.
+let _rootHunted = false;
 async function findPortalRoot(force) {
-  if (!CREW_NAME || !amOffice()) return '';
+  if (!CREW_NAME) return '';
   if (_portalRoot && !force) return _portalRoot;
+  if (_rootHunted && !force) return '';   // one hunt per open; a fresh share is found next time
+  _rootHunted = true;
   const test = async base => {
     try { const t = await dbxDownload(base + '/index.json'); if (t && JSON.parse(t).clients) return true; } catch (e) {}
     return false;
   };
-  const tries = [DBX_ROOT + PORTAL_DIR];
+  // 🔒 the promotion must come from a folder ERIC SHARED, never from anything sitting inside
+  // this man's own crew folder — that folder is his, and he can put whatever he likes in it.
+  const mine = String(DBX_ROOT || '').toLowerCase();
+  const tries = [];
   try {
     const r = await dbxRpc('files/list_folder', { path: '', recursive: false });
     for (const f of (r.entries || []).filter(x => x['.tag'] === 'folder').slice(0, 40)) {
       const b = f.path_display || f.path_lower;
+      if (String(b).toLowerCase() === mine) continue;              // his own mount is not a grant
       tries.push(b + '/App Data/Client Portal', b + '/Client Portal', b);
     }
   } catch (e) {}
   for (const t of tries) {
-    if (await test(t)) { _portalRoot = t; lsSet('daylog-portal-root', t); return t; }
+    if (await test(t)) {
+      // 🔑 v6.09 — THE SHARE IS THE PERMISSION. Phil could see the client page but not edit
+      // it, because "office" rode a separate flag that only reaches a phone after Eric runs
+      // a crew-folder sweep AND that phone syncs. Reading this folder at all means Eric
+      // shared it with THIS person's Dropbox account, which is the real gate — so a phone
+      // that can open it is an office phone, and says so from that moment.
+      _portalRoot = t; lsSet('daylog-portal-root', t);
+      if (lsGet('daylog-crew-office') !== '1') { lsSet('daylog-crew-office', '1'); renderAll(); }
+      return t;
+    }
   }
   return '';
 }
@@ -13268,7 +13301,28 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.08';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.09';   // 🏷 the build this phone is running — printed where it matters
+// 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
+// build and his phone didn't, and nothing on the phone said so. Now every phone asks the
+// server what the current version is and puts a bar across the top if it's behind — one tap
+// reloads past the cache. Costs one tiny request per open.
+async function checkForUpdate() {
+  try {
+    const r = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const live = (await r.text()).trim().split(/\s+/)[0];
+    if (!/^v[0-9]/.test(live) || live === APP_VER) return;
+    const bar = document.createElement('button');
+    bar.type = 'button';
+    bar.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:999;border:0;width:100%;' +
+      'padding:11px 12px;font:inherit;font-weight:800;font-size:13.5px;cursor:pointer;' +
+      'background:var(--accent,#c9a24b);color:var(--accent-ink,#201c15);box-shadow:0 2px 10px rgba(0,0,0,.4);';
+    bar.textContent = `⬆ NEW VERSION ${live} — this phone is on ${APP_VER}. TAP TO LOAD IT`;
+    bar.onclick = () => location.replace(location.pathname + '?v=' + encodeURIComponent(live));
+    document.body.appendChild(bar);
+  } catch (e) { /* offline — it'll ask again next open */ }
+}
+setTimeout(checkForUpdate, 2500);
 let DBX_ROOT = lsGet('daylog-crew-root') || '/Clore DayLog';
 const CREW_NAME = lsGet('daylog-crew-name') || '';
 const CREW_DIR = '/Clore DayLog/Crew';
