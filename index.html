@@ -3121,7 +3121,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.88 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.89 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8714,6 +8714,9 @@ async function openEstimates(i) {
   document.body.classList.add('modal-open');
 }
 function closeEstimates() {
+  // 💾 v5.89 — a pending save rides OUT with the close instead of dying with it
+  // (Eric approved Dirt work and closed inside the debounce — the page write never landed)
+  if (_estTimer) { clearTimeout(_estTimer); _estTimer = null; estSave(); }
   $('revModal').classList.remove('show', 'mat-full');
   document.body.classList.remove('modal-open');
   _estIdx = -1; _estD = null; _estPage = null;
@@ -8827,12 +8830,16 @@ function estBidDel(ci, bi) {
   renderEstimates();
 }
 // ✓ the pick: which bid this category USES — one at a time, Eric's tap decides
-function estBidAccept(ci, bi) {
+async function estBidAccept(ci, bi) {
   const x = _estD.cats[ci];
   if (!x || !x.bids[bi]) return;
   x.bids.forEach((b, i) => { b.acc = i === bi; });
-  scheduleEstSave(x.appr); // approved category's number may have changed
   renderEstimates();
+  if (x.appr) { // v5.89 — the shown number changed: their page follows immediately, not later
+    clearTimeout(_estTimer); _estTimer = null;
+    window._estPub = true;
+    await estSave();
+  } else scheduleEstSave();
 }
 function estRenameStart(ci) { _estArm = 'rn' + ci; renderEstimates(); setTimeout(() => { const b = $('estRn-' + ci); if (b) { b.focus(); b.select(); } }, 80); }
 function estRenameSave(ci) {
@@ -8863,7 +8870,7 @@ function estDelCat(ci) {
   scheduleEstSave(wasAppr);
   renderEstimates();
 }
-function estApprove(ci) {
+async function estApprove(ci) {
   const x = _estD.cats[ci];
   if (!x) return;
   if (!x.appr && !(estTotal(x) > 0)) {
@@ -8878,9 +8885,14 @@ function estApprove(ci) {
   }
   _estArm = '';
   x.appr = !x.appr;
-  scheduleEstSave(true);
   renderEstimates();
-  toast(x.appr ? `💰 ${x.n} is on their page now — ${'$' + estTotal(x).toLocaleString()}` : `🏢 ${x.n} pulled back to the office`);
+  // 💾 v5.89 — the lamp writes their page RIGHT NOW, and the toast only speaks the truth:
+  // it fires AFTER the write lands (the old instant toast + 1.2s debounce lost Dirt work)
+  const word = x.appr, name = x.n, amt = estTotal(x);
+  clearTimeout(_estTimer); _estTimer = null;
+  window._estPub = true;
+  await estSave();
+  toast(word ? `💰 ${name} is on their page — $${amt.toLocaleString()} ✓` : `🏢 ${name} pulled back to the office ✓`);
 }
 function scheduleEstSave(publish) {
   if (publish) window._estPub = true;
@@ -8891,17 +8903,22 @@ async function estSave() {
   const c = _portalIdx.clients[_estIdx];
   if (!c || !_estD) return;
   _estD.updated = localDay(new Date());
+  // v5.89 — snapshot everything BEFORE the first await, so closing the board mid-save
+  // can't null the data out from under the write
+  const body = JSON.stringify(_estD);
+  const cut = _estD.cats.filter(x => x.appr && estTotal(x) > 0).map(x => ({ n: x.n, est: estTotal(x) }));
+  const doPub = !!window._estPub;
+  window._estPub = false;
   try {
-    await dbxUpload(estPath(c.code), JSON.stringify(_estD));
-    if (window._estPub) { window._estPub = false; await estPublish(c); }
+    await dbxUpload(estPath(c.code), body);
+    if (doPub) await estPublish(c, cut);
   } catch (e) { toast('Couldn\'t save the estimates — check the connection', false); }
 }
 // the approved cut: category name + the ACCEPTED number only. Bids, notes, papers stay home.
-async function estPublish(c) {
+async function estPublish(c, cut) {
   try {
     const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
     if (!pg) return;
-    const cut = _estD.cats.filter(x => x.appr && estTotal(x) > 0).map(x => ({ n: x.n, est: estTotal(x) }));
     if (cut.length) pg.budget = cut; else delete pg.budget;
     pg.updated = localDay(new Date());
     await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json', JSON.stringify(pg, null, 1));
