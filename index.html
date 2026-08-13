@@ -3133,7 +3133,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.97 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.98 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6748,7 +6748,7 @@ async function checkPending() {
       if (olds.length) {
         olds.forEach(p => {
           const pay = p.payload || {};
-          autoLogText(pay.from, pay.body === '(photo only — no words)' ? '' : pay.body, pay.photos, pay.personal || isPersonalSender(pay.from) || undefined);
+          autoLogText(pay.from, pay.body === '(photo only — no words)' ? '' : pay.body, pay.photos, pay.personal || isPersonalSender(pay.from) || undefined, pay.ts);
           if (pay.path) archiveText(pay.path);
           pendMarkDone(p.id);
         });
@@ -7128,16 +7128,54 @@ async function archiveText(path) {
       to_path: DBX_ROOT + '/Texts/' + path.split('/').pop(),
       autorename: true
     });
-  } catch (e) { /* offline — it'll get skipped next pull via pendDone anyway */ }
+    return true;
+  } catch (e) { return false; } // v5.98 — a failed move retries itself on the next sync
+}
+// 🔁 v5.98 — THE SAME TEXT CAN NEVER LAND TWICE. Eric: "when I get a text that is not on
+// the share list, it will just send me a repeat of a text I've already gotten from somebody
+// who is on the shortcut list." Two holes did that: the handled-marker was only kept in
+// memory (a restart forgot it), and a file whose archive move failed sat in the Inbox
+// waiting to be read again. Now the marker is written down AND the words themselves are
+// the guard — same sender, same message, same arrival stamp = already in the log.
+function textFP(from, body) {
+  return (from || '?').toString().trim().toLowerCase() + '|' +
+    String(body || '').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 200);
+}
+function textBodyOf(e) {
+  return String(e.details || '').replace(/^Text from [^:]*:\s*/, '').replace(/\s*\(📷 \d+\)\s*$/, '');
+}
+function textAlreadyLogged(from, body, srcTs) {
+  const fp = textFP(senderName(from), body);
+  const day = srcTs ? localDay(new Date(srcTs)) : '';
+  return entries.some(e => {
+    if (!e.texted || e.sample) return false;
+    if (textFP((e.tags || [])[0], textBodyOf(e)) !== fp) return false;
+    if (e.textTs && srcTs) return e.textTs === srcTs;      // exact: the same file, read twice
+    // an entry from before v5.98 has no stamp — same words on the same day is the same text
+    return String(body || '').trim().length >= 10 && day && localDay(new Date(e.ts)) === day;
+  });
 }
 // texts saved into /Inbox by the phone's Shortcuts automations become review cards.
 // File format (written by the Shortcut): line 1 "FROM: Phil", rest = the message.
+const _notText = new Set(); // .txt files in the Inbox that aren't texts — read once, then left alone
+const _txtCache = new Map(); // what we already downloaded this pass, so nothing is fetched twice
 async function checkInboxTexts() {
   if (!dbx.refreshToken) return;
   try {
     const r = await dbxRpc('files/list_folder', { path: DBX_ROOT + '/Inbox', recursive: false });
     const all = (r.entries || []).filter(f => f['.tag'] === 'file');
-    const files = all.filter(f => /^text\b.*\.txt$/i.test(f.name));
+    const named = all.filter(f => /^text\b.*\.txt$/i.test(f.name));
+    // 📨 v5.98 — a text from someone the Shortcut can't name doesn't always land as
+    // "Text - …". ANY .txt in the Inbox whose first line is FROM: is a text too, whatever
+    // the phone called it. Files that aren't texts are remembered so they're read once.
+    const extra = [];
+    for (const f of all.filter(f => /\.txt$/i.test(f.name) && !named.includes(f) && !_notText.has(f.name)).slice(0, 8)) {
+      if (pendDone.has('text:' + f.name)) { archiveText(f.path_lower); continue; }
+      const head = (await dbxDownload(f.path_lower)) || '';
+      if (/^\s*FROM:\s*\S/i.test(head)) { _txtCache.set(f.name, head); extra.push(f); }
+      else _notText.add(f.name);
+    }
+    const files = [...named, ...extra];
     // v4.92 — MMS photos: any image the Shortcut saves with the same TEXT name rides on the card.
     // Claimed into /Inbox/Text Photos right away so the nightly sorter can't file them elsewhere.
     const imgs = all.filter(f => /^text\b.*\.(jpe?g|png|heic|heif|webp|gif)$/i.test(f.name));
@@ -7162,8 +7200,14 @@ async function checkInboxTexts() {
           ph.push(await claim(im));
         }
       }
-      if (pendDone.has(id) || queued) { mine.forEach(im => claimed.add(im.name)); continue; }
-      const txt = (await dbxDownload(f.path_lower)) || '';
+      if (pendDone.has(id) || queued) {
+        mine.forEach(im => claimed.add(im.name));
+        // v5.98 — handled already, but still sitting here: the archive move failed once.
+        // Try again every sync until the Inbox is clean. It can never re-log: it's marked.
+        if (!queued) archiveText(f.path_lower);
+        continue;
+      }
+      const txt = _txtCache.get(f.name) || (await dbxDownload(f.path_lower)) || '';
       const m = txt.match(/^FROM:\s*(.+)$/im);
       let from = m ? m[1].trim() : '';
       if (!from) { const fm = f.name.match(/^text\s*-\s*([^-]+)/i); from = fm ? fm[1].trim() : '?'; }
@@ -7177,7 +7221,7 @@ async function checkInboxTexts() {
       // Everything else reads itself in: auto-piled under the sender, questions get the
       // evening nudge, and the daily 📬 digest proves nothing slipped through.
       if (hot) {
-        pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower, photos, hot, personal } });
+        pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower, photos, hot, personal, ts: f.server_modified } });
         if (!CREW_NAME && prefs.pushSecret) {
           fetch('/.netlify/functions/notify', { method: 'POST',
             headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
@@ -7185,9 +7229,10 @@ async function checkInboxTexts() {
           }).catch(() => {});
         }
       } else {
-        autoLogText(from, body, photos, personal);
-        pendDone.add(id);
-        archiveText(f.path_lower); // handled = out of the Inbox
+        autoLogText(from, body, photos, personal, f.server_modified);
+        pendMarkDone(id);           // v5.98 — WRITTEN DOWN, so a restart can't forget it
+        _txtCache.delete(f.name);
+        archiveText(f.path_lower);  // handled = out of the Inbox (retried above if it fails)
       }
     }
     // a TEXT photo with no matching txt auto-piles too — never silently lost, never a card
@@ -7197,8 +7242,8 @@ async function checkInboxTexts() {
       if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) continue;
       const fm = im.name.match(/^text\s*-\s*([^-]+)/i);
       const oFrom = fm ? fm[1].trim() : '?';
-      autoLogText(oFrom, '', [await claim(im)], isPersonalSender(oFrom) || undefined);
-      pendDone.add(id);
+      autoLogText(oFrom, '', [await claim(im)], isPersonalSender(oFrom) || undefined, im.server_modified);
+      pendMarkDone(id); // v5.98 — written down, same as the worded ones
     }
     renderPendBanner(); renderTextDigest(); renderTxtNudges();
   } catch (e) { /* no Inbox or offline — quiet */ }
@@ -7234,8 +7279,10 @@ function aliasSender(rawNum, name) {
   scheduleSave(); renderTextDigest(); renderTagChips();
   toast(`👤 ${name} — every text from that number wears the name now ✓`);
 }
-function autoLogText(from, body, photos, personal) {
+function autoLogText(from, body, photos, personal, srcTs) {
   from = senderName(from);
+  // 🔁 v5.98 — a repeat of something already in the log stops right here
+  if (textAlreadyLogged(from, body, srcTs)) return null;
   const who = crew.includes(from) ? from : undefined;
   // v5.27 — only REAL names earn a chip; numbers wait for their ✎ rename in the digest
   if (!tagLooksJunky(from) && !knownTags().some(x => x.toLowerCase() === from.toLowerCase())) { prefs.tags.unshift(from); renderTagChips(); }
@@ -7243,8 +7290,10 @@ function autoLogText(from, body, photos, personal) {
   const e = addEntry('Note', `Text from ${from}: ${(body || '(photo only — no words)').slice(0, 800)}${phs.length ? ` (📷 ${phs.length})` : ''}`, '—',
     { noSniff: true, texted: true, tags: [from],
       ...(phs.length ? { photoPath: phs[0], photoPaths: phs } : {}),
-      ...(personal ? { personal: true } : {}), ...(who ? { who } : {}) });
+      ...(personal ? { personal: true } : {}), ...(who ? { who } : {}),
+      ...(srcTs ? { textTs: srcTs } : {}) });
   scheduleSave(); // v5.25 — nudge recording retired with the strip; the digest spots questions live
+  return e;
 }
 // 💬 v5.26 — app feedback: one little square at the bottom. Notes tag 'App Feedback';
 // crew feedback rides their normal entry flow to Eric's review pile. Wizard: "the app feedback list".
