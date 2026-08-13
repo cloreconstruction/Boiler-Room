@@ -3176,7 +3176,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.09 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.10 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -11933,10 +11933,27 @@ function renderAskRecent() {
   const personOf = e => e.who && e.who !== 'Me' ? e.who : ((e.tags || [])[0] || '');
   const pendKind = p => p.kind === 'crew' ? 'crew' : p.kind === 'clientask' ? 'client'
     : p.kind === 'text' ? 'text' : p.kind === 'question' ? 'wiz' : 'grind';
+  // 🏷 v6.10 — Eric, at a wall of identical "⚙ ⏳ waiting: …" rows: "what are all these?"
+  // They were QuickBooks import cards, whose payload carries d/who/amt/memo and none of the
+  // fields this reached for — so every one printed an ellipsis and got stamped with the time
+  // the log drew itself. Now each kind says what it actually is, in its own words.
   const pendWords = p => {
     const pay = p.payload || {};
-    return (pay.text || pay.q || pay.body || pay.seen || pay.type || '…').slice(0, 64);
+    if (p.kind === 'qb') {
+      const bits = [pay.who || '', pay.amt != null ? '$' + Number(pay.amt).toLocaleString() : '', pay.memo || pay.acct || ''];
+      return ('QuickBooks line — ' + bits.filter(Boolean).join(' · ')).slice(0, 64);
+    }
+    return (pay.text || pay.q || pay.body || pay.seen || pay.type || 'needs a look').slice(0, 64);
   };
+  // and their real date, not the moment this list happened to render
+  const pendWhen = p => {
+    const pay = p.payload || {};
+    const d = pay.ts || pay.d || pay.due || '';
+    const t = d ? +new Date(d) : NaN;
+    return isNaN(t) ? Date.now() - 1 : t;
+  };
+  const PEND_MANY = { qb: 'QuickBooks lines', todo: 'suggested to-dos', match: 'possible matches',
+    text: 'texts', crew: 'crew messages', clientask: 'client questions', question: 'questions' };
   const shownEntries = entries.filter(e => !e.sample && entryPass(e));
   window._logShown = shownEntries; // 📤 Export CSV exports exactly what the searches show
   let items = [
@@ -11945,12 +11962,26 @@ function renderAskRecent() {
       .filter(x => !q || ((x.r.q || '') + ' ' + (x.r.a || '')).toLowerCase().includes(q))
       .map(x => ({ ts: +new Date(x.r.ts), kind: 'wiz', who: '',
         on: `reopenAnswer(${x.i})`, h: `🧙 <span class="arq">${esc(x.r.q)}</span>` }))),
-    ...(hardFiltersOn || CREW_NAME ? [] : pendingQueue.slice(0, 40))
-      .filter(pq => !q || ((pq.source || '') + ' ' + pendWords(pq)).toLowerCase().includes(q))
-      .map(pq => ({
-        ts: +new Date((pq.payload || {}).ts || Date.now() - 1), kind: pendKind(pq), who: pq.source || '',
-        on: `openReview()`,
-        h: `${GLYPH[pendKind(pq)]} <span class="arq"><b>⏳ waiting:</b> ${esc((pq.source ? pq.source + ' — ' : '') + pendWords(pq))}</span>` })),
+    // 🧱 v6.10 — three or more of the same kind collapse into ONE line with a count. Twenty
+    // identical rows is not information; "12 QuickBooks lines waiting" is.
+    ...(hardFiltersOn || CREW_NAME ? [] : (() => {
+      const pool = pendingQueue.slice(0, 40)
+        .filter(pq => !q || ((pq.source || '') + ' ' + pendWords(pq)).toLowerCase().includes(q));
+      const byKind = {};
+      pool.forEach(pq => { (byKind[pq.kind] = byKind[pq.kind] || []).push(pq); });
+      const rows = [];
+      Object.keys(byKind).forEach(k => {
+        const g = byKind[k];
+        if (g.length >= 3) {
+          rows.push({ ts: Math.max(...g.map(pendWhen)), kind: pendKind(g[0]), who: '', on: `openReview()`,
+            h: `${GLYPH[pendKind(g[0])]} <span class="arq"><b>⏳ ${g.length} ${esc(PEND_MANY[k] || 'items')} waiting</b> — tap to go through them</span>` });
+        } else {
+          g.forEach(pq => rows.push({ ts: pendWhen(pq), kind: pendKind(pq), who: pq.source || '', on: `openReview()`,
+            h: `${GLYPH[pendKind(pq)]} <span class="arq"><b>⏳ waiting:</b> ${esc((pq.source ? pq.source + ' — ' : '') + pendWords(pq))}</span>` }));
+        }
+      });
+      return rows;
+    })()),
     ...shownEntries.map(e => ({
       ts: +new Date(e.ts), kind: kindOf(e), who: personOf(e), e,
       h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^Text from /, '').slice(0, 70))}</span>` }))
@@ -13301,7 +13332,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.09';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.10';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
