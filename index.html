@@ -1275,12 +1275,13 @@
   .plate-btn.noimg { background: var(--accent); color: var(--accent-ink); padding: 13px 10px; }
   .plate-btn.noimg img { display: none; }
   .plate-btn.noimg .plate-txt { display: inline; font-weight: 700; font-size: 15px; }
-  /* 📗 v5.97 — Eric's own brass plate for the bookkeeper. Long left to right, short top to
-     bottom, like the button it replaces: the art is 3:1, the same banner shape as the
-     clock-out plate. If the art ever fails to load, .noimg puts the spelled-out gold
-     button straight back — and the words live under it either way. */
-  .plate-btn--bkk { display: block; width: 100%; flex: none; margin-top: 8px; }
-  .plate-btn--bkk.noimg { min-height: 48px; font-size: 14px; }
+  /* 📗 v6.01 — the bookkeeper plate, cut down to the gold plate itself: no pipe frame, no
+     bezel. Eric: "make it smaller than the grinder button" — so it sits centred and
+     narrower, shorter than the two big plates above it, which is the right weight for a
+     button used a few times a day instead of fifty. If the art ever fails to load, .noimg
+     puts the spelled-out gold button back at full width. */
+  .plate-btn--bkk { display: block; width: 68%; max-width: 240px; flex: none; margin: 8px auto 0; }
+  .plate-btn--bkk.noimg { width: 100%; max-width: none; min-height: 48px; font-size: 14px; }
   #bkkHint { margin: 4px 0 0; text-align: center; }
   .plate-btn--bkk.noimg + #bkkHint { display: none; } /* the fallback button already says it */
   /* 🔗 v5.39 — the two setup shortcuts. Temporary by design; one row, thumb-sized, gold plate. */
@@ -3137,7 +3138,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.00 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.01 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
