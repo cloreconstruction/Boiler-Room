@@ -3160,7 +3160,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.02 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.03 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6449,9 +6449,25 @@ function saveNoteFrom(boxId, fromPanel) {
     : `Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`);
   if (photos.length) attachEntryPhotos(e, photos, `Job Notes/${cleanName(noteJob)}`);
 }
+// 🗂 v6.03 — Eric: "the whole job is piled in the job note folder, maybe could have receipts,
+// invoices, photos." Inside a job's folder each paper now goes in its own drawer, decided by
+// what the grinder already knows about the file: a money read makes it a receipt (an invoice
+// if it says so or arrived as a PDF), a PDF with no money is a paper, everything else is a
+// photo. Plain typed notes with no file keep sitting in the job folder itself.
+function jobDrawer(entry, file, meta) {
+  const name = String((file && file.name) || '').toLowerCase();
+  const isPdf = (file && file.type) === 'application/pdf' || /\.pdf$/.test(name);
+  const words = [(entry && entry.details) || '', (meta && meta.ai) || '', (meta && meta.aiCat) || '', name].join(' ').toLowerCase();
+  const money = !!(meta && (meta.aiTotal != null || /💵/.test(meta.ai || '')));
+  if (money && (/invoice|statement|\bbill\b/.test(words) || isPdf)) return 'Invoices';
+  if (money) return 'Receipts';
+  if (isPdf) return 'Plans and Papers';
+  return 'Photos';
+}
 async function attachEntryPhotos(entry, files, folder) {
   if (!dbx.refreshToken) { toast('Saved — connect Dropbox to attach photos', false); return; }
   const paths = [];
+  const drawered = /^Job Notes\//.test(folder || '');   // only the job folders get drawers
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
     toast(files.length > 1 ? `⏳ Uploading photo ${i + 1} of ${files.length}…` : '⏳ Uploading photo…');
@@ -6462,7 +6478,8 @@ async function attachEntryPhotos(entry, files, folder) {
       const base = cleanName((entry.details || 'photo').slice(0, 40)) || 'photo';
       const jobPart = entry.job && entry.job !== '—' ? ` - ${cleanName(entry.job)}` : '';
       const nPart = files.length > 1 ? ` (${i + 1})` : '';
-      const path = `${DBX_ROOT}/${folder}/${base}${jobPart} - ${stamp}${nPart}.${ext}`;
+      const drawer = drawered ? '/' + jobDrawer(entry, f, fileMeta(f)) : '';
+      const path = `${DBX_ROOT}/${folder}${drawer}/${base}${jobPart} - ${stamp}${nPart}.${ext}`;
       await dbxUpload(path, f, true);
       paths.push(path);
     } catch (e) { /* keep going — partial success beats losing the rest */ }
