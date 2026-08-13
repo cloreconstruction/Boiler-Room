@@ -161,11 +161,23 @@ const portal = async req => {
       if (entry.pick !== o) {
         entry.pick = o; // their own tap isn't "news" — the updated-lamp stays honest
         await up(t, ppath, JSON.stringify(pg, null, 1));
+        // 🔕 v5.92 — Eric: "if she's clicking around choosing different options I don't want
+        // an alert each time." ONE review-pile entry per category, updated in place — the
+        // latest choice stands, with a small changed-count so he knows they shopped around.
         const apath = `${BASE}/asks-${c}.json`;
         let arr = [];
         try { arr = JSON.parse(await dl(t, apath) || '[]'); } catch (e) {}
         if (!Array.isArray(arr)) arr = [];
-        arr.unshift({ tag: 'General', text: `💰 CHOSE — ${n}: ${entry.opts[o].t} ($${(+entry.opts[o].est || 0).toLocaleString()})`, ts: new Date().toISOString() });
+        const label = `💰 CHOSE — ${n}: ${entry.opts[o].t} ($${(+entry.opts[o].est || 0).toLocaleString()})`;
+        const old = arr.find(a => a && a.pk === n);
+        if (old) {
+          old.k = (+old.k || 1) + 1;
+          old.text = `${label} · changed their mind ${old.k - 1}×`;
+          old.ts = new Date().toISOString();
+          arr = [old, ...arr.filter(a => a !== old)]; // freshest choice rides the top, still one entry
+        } else {
+          arr.unshift({ tag: 'General', pk: n, k: 1, text: label, ts: new Date().toISOString() });
+        }
         await up(t, apath, JSON.stringify(arr.slice(0, 200)));
       }
       return new Response('ok');

@@ -75,6 +75,8 @@
   .opt-pick.sel { border-style: solid; border-color: var(--gold); color: var(--gold); font-weight: 800; opacity: 1; }
   .opt-pick .op-r { white-space: nowrap; font-weight: 800; }
   .opt-hint { font-size: 12px; color: var(--ink2); margin-top: 6px; }
+  .opt-prompt { border: 2px solid var(--gold); color: var(--gold); border-radius: 10px; padding: 7px 12px;
+    font-weight: 800; font-size: 12.5px; letter-spacing: .6px; margin-top: 8px; text-align: center; }
 </style>
 </head>
 <body>
@@ -411,9 +413,12 @@ function updateMatTile() {
 // you want to go, the total follows your pick, and Clore Construction hears about it.
 let _d = null;
 const bEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-// what a budget line counts as: its plain estimate, or the CHOSEN option's price
+// what a budget line counts as: its plain estimate, the CHOSEN option's price, or —
+// until a choice is made — the builder's planned option (def)
+const bPicked = b => Number.isInteger(b.pick) && b.opts[b.pick] ? b.pick : null;
+const bDef = b => Number.isInteger(b.def) && b.opts[b.def] ? b.def : 0;
 const bEst = b => Array.isArray(b.opts)
-  ? +((b.opts[Number.isInteger(b.pick) && b.opts[b.pick] ? b.pick : 0] || {}).est) || 0
+  ? +((b.opts[bPicked(b) != null ? bPicked(b) : bDef(b)] || {}).est) || 0
   : +b.est || 0;
 function budgetHtml(d) {
   if (!Array.isArray(d.budget) || !d.budget.length) return '';
@@ -431,7 +436,7 @@ function budgetHtml(d) {
     d.budget.forEach(b => { const s = score(qn, b.n); if (s > bs) { bs = s; best = b.n; } });
     if (best && bs > 0) usedBy[best] = (usedBy[best] || 0) + amt;
   }));
-  let totE = 0, totU = 0, anyOpts = false;
+  let totE = 0, totU = 0, anyOpts = false, anyOpen = false;
   const rows = d.budget.map((b, bi) => {
     const est = bEst(b);
     const used = Math.max(0, usedBy[b.n] || 0);
@@ -439,17 +444,24 @@ function budgetHtml(d) {
     const pct = est > 0 ? Math.min(100, Math.round(used / est * 100)) : 0;
     const over = used > est ? used - est : 0;
     let optRows = '';
+    let picked = null;
     if (Array.isArray(b.opts)) {
       anyOpts = true;
-      const pick = Number.isInteger(b.pick) && b.opts[b.pick] ? b.pick : 0;
-      optRows = `<div>` + b.opts.map((o, oi) => `<button type="button" class="opt-pick${oi === pick ? ' sel' : ''}" onclick="event.stopPropagation(); pickOpt(${bi}, ${oi})" aria-pressed="${oi === pick}">
-          <span class="op-l">${oi === pick ? '✓' : '○'} ${bEsc(o.t)}</span><span class="op-r">${money(o.est)}${oi === pick ? ' · YOUR PICK' : ''}</span>
+      picked = bPicked(b); // null until THEY have chosen — nothing shows pre-chosen
+      if (picked == null) anyOpen = true;
+      const def = bDef(b);
+      optRows = `<div>` +
+        (picked == null ? `<div class="opt-prompt">⬇ CHOOSE YOUR ${bEsc(b.n).toUpperCase()} OPTION — tap the way you want to go</div>` : '') +
+        b.opts.map((o, oi) => `<button type="button" class="opt-pick${oi === picked ? ' sel' : ''}" onclick="event.stopPropagation(); pickOpt(${bi}, ${oi})" aria-pressed="${oi === picked}">
+          <span class="op-l">${oi === picked ? '✓' : '○'} ${bEsc(o.t)}</span><span class="op-r">${money(o.est)}${oi === picked ? ' · YOUR PICK' : picked == null && oi === def ? ' · in the total for now' : ''}</span>
         </button>`).join('') +
-        `<div class="opt-hint">Your call — tap the way you want to go. The estimate above follows your pick, and Clore Construction sees which one you chose.</div></div>`;
+        `<div class="opt-hint">${picked == null
+          ? 'Nothing is locked in yet — the estimate above uses the planned option until you tap your choice. Try them and watch the totals; Clore Construction sees where you land.'
+          : 'Your call — tap a different way any time. The estimate above follows your pick, and Clore Construction sees which one you chose.'}</div></div>`;
     }
     return `<div style="margin: 10px 0;">
       <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px;">
-        <span style="font-weight: 700;">${bEsc(b.n)}${b.opts ? ' — YOUR CHOICE' : ''}</span>
+        <span style="font-weight: 700;">${bEsc(b.n)}${b.opts ? (picked != null ? ' — YOUR CHOICE' : ' — CHOOSE YOUR OPTION') : ''}</span>
         <span>est ${money(est)} · ${money(used)} in${over ? ` · <b style="color:#c0392b;">over by ${money(over)}</b>` : ''}</span>
       </div>
       ${optRows}
@@ -462,12 +474,12 @@ function budgetHtml(d) {
   return `<div class="card" id="budgetCard" onclick="ping('budget')"><h3>BUDGET — APPROVED ESTIMATES</h3>
     <div style="font-size: 14px; margin-bottom: 2px;">${money(totE)} approved · ${money(totU)} in so far${totOver ? ` · <b style="color:#c0392b;">over by ${money(totOver)}</b>` : ''}</div>
     ${rows}
-    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"In" counts the work billed to each category so far — it updates as the books do.${anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}</div></div>`;
+    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"In" counts the work billed to each category so far — it updates as the books do.${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}</div></div>`;
 }
 async function pickOpt(bi, oi) {
   const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null;
   if (!b || !Array.isArray(b.opts) || !b.opts[oi]) return;
-  const prev = Number.isInteger(b.pick) && b.opts[b.pick] ? b.pick : 0;
+  const prev = bPicked(b); // null if they hadn't chosen yet
   if (prev === oi) return;
   b.pick = oi;
   const card = document.getElementById('budgetCard');
