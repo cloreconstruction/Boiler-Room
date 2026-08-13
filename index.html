@@ -3121,7 +3121,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.89 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.90 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8687,7 +8687,16 @@ function estScore(qbName, catName) {
 function estPath(code) { return DBX_ROOT + '/App Data/Client Portal/estimates-' + code + '.json'; }
 // a category's number = the bid Eric ACCEPTED (Estimate 1 + Estimate 2 together)
 function estAccBid(x) { return (x.bids || []).find(b => b.acc) || null; }
-function estTotal(x) { const b = estAccBid(x); return b ? (+b.e1 || 0) + (+b.e2 || 0) : 0; }
+function estRaw(x) { const b = estAccBid(x); return b ? (+b.e1 || 0) + (+b.e2 || 0) : 0; }
+// 💹 the number the CLIENT sees: raw bid + the board's markup, unless the line says the
+// markup is already inside it. The % itself never leaves the office.
+function estMk() { return _estD && +_estD.mk >= 0 ? +_estD.mk : 20; }
+function estTotal(x) {
+  const b = estAccBid(x);
+  if (!b) return 0;
+  const raw = (+b.e1 || 0) + (+b.e2 || 0);
+  return b.inc ? raw : Math.round(raw * (1 + estMk() / 100) * 100) / 100;
+}
 let _estOpenCats = new Set();
 async function openEstimates(i) {
   if (portalGuard()) return;
@@ -8698,6 +8707,10 @@ async function openEstimates(i) {
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
   try { _estPage = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null'); } catch (e) { _estPage = null; }
   if (!_estD || !Array.isArray(_estD.cats)) _estD = { updated: '', cats: [] };
+  // 💹 v5.90 — Eric: "click Markup, set the markup... every number the homeowner ever sees
+  // always has to include the markup but not show it. Default always on." Board-level %,
+  // rides on every bid unless a line says the number already includes it.
+  if (!(+_estD.mk >= 0)) _estD.mk = 20;
   // 🧳 migrate the v5.85 shape (one est per category) into bid lines
   _estD.cats.forEach(x => {
     if (!Array.isArray(x.bids)) {
@@ -8744,9 +8757,15 @@ function renderEstimates() {
   $('revBox').innerHTML = `<h3>💰 ${esc(c.job)} — estimates
     <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeEstimates()" aria-label="close estimates">✕</button></h3>
     <div class="hint" style="margin: 0 0 8px;">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. ${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}</div>
+    <div class="frow" style="gap: 8px; align-items: center; margin: 0 0 8px; flex-wrap: wrap;">
+      <span style="font-weight: 800;">💹 Clore markup</span>
+      <input inputmode="decimal" value="${estMk()}" style="width: 64px; font-weight: 800; text-align: center;" onchange="estSetMk(this.value)"><span style="font-weight: 800;">%</span>
+      <span class="hint" style="margin: 0; flex: 1; min-width: 150px;">rides on every number the client sees — they NEVER see the markup itself. A line can say ✓ already included instead.</span>
+    </div>
     ${_estD.cats.map((x, ci) => {
       const open = _estOpenCats.has(ci);
       const tot = estTotal(x);
+      const rawT = estRaw(x);
       const u = Math.max(0, used[x.n] || 0);
       const pct = tot > 0 ? Math.min(100, Math.round(u / tot * 100)) : 0;
       const over = tot > 0 && u > tot ? u - tot : 0;
@@ -8754,7 +8773,7 @@ function renderEstimates() {
       return `<div class="set-section fc-sec" style="margin-top: 6px; padding: 8px 12px;">
       <div class="frow" style="gap: 6px; align-items: center; flex-wrap: nowrap;">
         <span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; cursor: pointer; font-weight: 800; line-height: 1.3;" onclick="estFold(${ci})">${open ? '▾' : '▸'} ${esc(x.n)}
-          <span class="hint" style="margin: 0; font-weight: 400; white-space: nowrap;">${tot ? ` · est ${money0(tot)}` : nb ? ` · ${nb} bid${nb > 1 ? 's' : ''}, none picked` : ''}${u ? ` · ${money0(u)} in` : ''}${over ? ` · <b style="color: var(--err, #b3452f);">over ${money0(over)}</b>` : ''}</span></span>
+          <span class="hint" style="margin: 0; font-weight: 400; white-space: nowrap;">${tot ? ` · est ${money0(tot)}${rawT !== tot ? ` <span style="opacity:.7">(bid ${money0(rawT)})</span>` : ''}` : nb ? ` · ${nb} bid${nb > 1 ? 's' : ''}, none picked` : ''}${u ? ` · ${money0(u)} in` : ''}${over ? ` · <b style="color: var(--err, #b3452f);">over ${money0(over)}</b>` : ''}</span></span>
         <button type="button" class="pick-chip${x.appr ? ' sel' : ''}" style="flex: none; font-size: 10.5px; padding: 5px 9px; min-height: 28px; font-weight: 800;${x.appr ? '' : ' border-style: dashed;'}" onclick="estApprove(${ci})">${_estArm === 'ap' + ci ? '⚠ SURE?' : x.appr ? '✓ ON PAGE' : '🏢 office'}</button>
       </div>
       ${tot > 0 || u > 0 ? `<div style="margin: 5px 0 2px; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--ink-muted) 22%, transparent); overflow: hidden;">
@@ -8767,7 +8786,8 @@ function renderEstimates() {
               <input inputmode="decimal" value="${b.e1 || ''}" placeholder="$" style="font-weight: 800;" onchange="estBidSet(${ci}, ${bi}, 'e1', this.value)"></div>
             <div class="field" style="flex: 1; min-width: 86px; margin: 0;"><label style="font-size: 10px;">Estimate 2</label>
               <input inputmode="decimal" value="${b.e2 || ''}" placeholder="$" style="font-weight: 800;" onchange="estBidSet(${ci}, ${bi}, 'e2', this.value)"></div>
-            <span class="hint" style="margin: 0; font-weight: 800; white-space: nowrap;">= ${money0((+b.e1 || 0) + (+b.e2 || 0))}</span>
+            <span class="hint" style="margin: 0; font-weight: 800; white-space: nowrap;">= ${money0((+b.e1 || 0) + (+b.e2 || 0))}${!b.inc && estMk() ? ` <span style="opacity:.75">→ ${money0(Math.round(((+b.e1 || 0) + (+b.e2 || 0)) * (1 + estMk() / 100) * 100) / 100)} to client</span>` : ''}</span>
+            <button type="button" class="pick-chip${b.inc ? '' : ' sel'}" style="font-size: 10px; padding: 4px 8px; min-height: 26px;" onclick="estBidInc(${ci}, ${bi})" title="whether the ${estMk()}% markup rides on top of this number or is already inside it">${b.inc ? '✓ markup already in' : '+' + estMk() + '% rides on top'}</button>
             <button type="button" class="btn-ghost req-x" style="font-size: 11px; color: var(--err, #c0392b);" onclick="estBidDel(${ci}, ${bi})">${_estArm === 'bd' + ci + '_' + bi ? '⚠ SURE?' : '✕'}</button>
           </div>
           <input type="text" value="${esc(b.note || '')}" placeholder="🗒 whose bid, what it covers, good through… (never leaves the office)"
@@ -8840,6 +8860,23 @@ async function estBidAccept(ci, bi) {
     window._estPub = true;
     await estSave();
   } else scheduleEstSave();
+}
+function estSetMk(v) {
+  const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+  _estD.mk = isFinite(n) ? Math.min(100, Math.max(0, Math.round(n * 100) / 100)) : 20;
+  const anyAppr = _estD.cats.some(x => x.appr);
+  if (anyAppr) { clearTimeout(_estTimer); _estTimer = null; window._estPub = true; estSave(); }
+  else scheduleEstSave();
+  renderEstimates();
+}
+async function estBidInc(ci, bi) {
+  const x = _estD.cats[ci];
+  const b = (x && x.bids || [])[bi];
+  if (!b) return;
+  b.inc = !b.inc;
+  renderEstimates();
+  if (x.appr && b.acc) { clearTimeout(_estTimer); _estTimer = null; window._estPub = true; await estSave(); }
+  else scheduleEstSave();
 }
 function estRenameStart(ci) { _estArm = 'rn' + ci; renderEstimates(); setTimeout(() => { const b = $('estRn-' + ci); if (b) { b.focus(); b.select(); } }, 80); }
 function estRenameSave(ci) {
