@@ -75,8 +75,19 @@
   .opt-pick.sel { border-style: solid; border-color: var(--gold); color: var(--gold); font-weight: 800; opacity: 1; }
   .opt-pick .op-r { white-space: nowrap; font-weight: 800; }
   .opt-hint { font-size: 12px; color: var(--ink2); margin-top: 6px; }
+  .opt-desc { font-size: 12.5px; color: var(--ink2); margin: 3px 4px 0 14px; line-height: 1.4; }
   .opt-prompt { border: 2px solid var(--gold); color: var(--gold); border-radius: 10px; padding: 7px 12px;
     font-weight: 800; font-size: 12.5px; letter-spacing: .6px; margin-top: 8px; text-align: center; }
+  /* 🔒 v5.93 — lock it in: the definitive "this is my choice" word to the builder */
+  .opt-lockbtn { display: block; width: 100%; margin-top: 8px; border: none; border-radius: 10px;
+    background: var(--gold); color: #201c15; font-weight: 800; font-size: 14px; padding: 11px; cursor: pointer; font-family: inherit; }
+  .opt-unlock { display: block; margin: 6px auto 0; border: 1px solid var(--line); background: none; color: var(--ink2);
+    border-radius: 999px; padding: 5px 14px; font-size: 12.5px; cursor: pointer; font-family: inherit; }
+  .opt-locked { border: 2px solid var(--gold); color: var(--gold); border-radius: 10px; padding: 8px 12px;
+    font-weight: 800; font-size: 13px; margin-top: 8px; text-align: center; }
+  .opt-pick.lkd { opacity: .55; cursor: default; }
+  .bud-total { font-size: 27px; font-weight: 900; letter-spacing: .5px; line-height: 1.15; }
+  .bud-total-l { font-size: 11.5px; color: var(--ink2); letter-spacing: 1px; font-weight: 800; margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -450,20 +461,27 @@ function budgetHtml(d) {
       picked = bPicked(b); // null until THEY have chosen — nothing shows pre-chosen
       if (picked == null) anyOpen = true;
       const def = bDef(b);
+      const lkd = picked != null && b.lk; // 🔒 locked: taps rest until they change their mind
       optRows = `<div>` +
         (picked == null ? `<div class="opt-prompt">⬇ CHOOSE YOUR ${bEsc(b.n).toUpperCase()} OPTION — tap the way you want to go</div>` : '') +
-        b.opts.map((o, oi) => `<button type="button" class="opt-pick${oi === picked ? ' sel' : ''}" onclick="event.stopPropagation(); pickOpt(${bi}, ${oi})" aria-pressed="${oi === picked}">
+        b.opts.map((o, oi) => `<button type="button" class="opt-pick${oi === picked ? ' sel' : ''}${lkd ? ' lkd' : ''}" ${lkd ? 'disabled' : `onclick="event.stopPropagation(); pickOpt(${bi}, ${oi})"`} aria-pressed="${oi === picked}">
           <span class="op-l">${oi === picked ? '✓' : '○'} ${bEsc(o.t)}</span><span class="op-r">${money(o.est)}${oi === picked ? ' · YOUR PICK' : picked == null && oi === def ? ' · in the total for now' : ''}</span>
-        </button>`).join('') +
+        </button>${o.d ? `<div class="opt-desc">${bEsc(o.d)}</div>` : ''}`).join('') +
+        (picked == null ? '' : lkd
+          ? `<div class="opt-locked">🔒 LOCKED IN — Clore Construction has your choice</div>
+             <button type="button" class="opt-unlock" onclick="event.stopPropagation(); lockOpt(${bi}, false)">↩ change my mind</button>`
+          : `<button type="button" class="opt-lockbtn" onclick="event.stopPropagation(); lockOpt(${bi}, true)">🔒 LOCK IT IN — tell them this is my choice</button>`) +
         `<div class="opt-hint">${picked == null
           ? 'Nothing is locked in yet — the estimate above uses the planned option until you tap your choice. Try them and watch the totals; Clore Construction sees where you land.'
-          : 'Your call — tap a different way any time. The estimate above follows your pick, and Clore Construction sees which one you chose.'}</div></div>`;
+          : lkd ? 'Your choice is locked and on their desk. ↩ Change my mind reopens it any time.'
+          : 'Tap around all you like — when you\'re sure, LOCK IT IN sends Clore Construction the definite word.'}</div></div>`;
     }
     return `<div style="margin: 10px 0;">
       <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px;">
         <span style="font-weight: 700;">${bEsc(b.n)}${b.opts ? (picked != null ? ' — YOUR CHOICE' : ' — CHOOSE YOUR OPTION') : ''}</span>
         <span>est ${money(est)} · ${money(used)} in${over ? ` · <b style="color:#c0392b;">over by ${money(over)}</b>` : ''}</span>
       </div>
+      ${!b.opts && b.d ? `<div class="opt-desc" style="margin-left: 0;">${bEsc(b.d)}</div>` : ''}
       ${optRows}
       <div style="margin-top: 4px; height: 10px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden;">
         <div style="height: 100%; width: ${pct}%; background: ${over ? '#c0392b' : 'var(--acc, #b8860b)'};"></div>
@@ -472,13 +490,14 @@ function budgetHtml(d) {
   }).join('');
   const totOver = totU > totE ? totU - totE : 0;
   return `<div class="card" id="budgetCard" onclick="ping('budget')"><h3>BUDGET — APPROVED ESTIMATES</h3>
-    <div style="font-size: 14px; margin-bottom: 2px;">${money(totE)} approved · ${money(totU)} in so far${totOver ? ` · <b style="color:#c0392b;">over by ${money(totOver)}</b>` : ''}</div>
+    <div class="bud-total">${money(totE)}</div>
+    <div class="bud-total-l">TOTAL ESTIMATE — APPROVED WORK · ${money(totU)} in so far${totOver ? ` · <b style="color:#c0392b;">OVER BY ${money(totOver)}</b>` : ''}</div>
     ${rows}
     <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"In" counts the work billed to each category so far — it updates as the books do.${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}</div></div>`;
 }
 async function pickOpt(bi, oi) {
   const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null;
-  if (!b || !Array.isArray(b.opts) || !b.opts[oi]) return;
+  if (!b || !Array.isArray(b.opts) || !b.opts[oi] || b.lk) return; // 🔒 locked rows don't budge
   const prev = bPicked(b); // null if they hadn't chosen yet
   if (prev === oi) return;
   b.pick = oi;
@@ -490,6 +509,25 @@ async function pickOpt(bi, oi) {
     if (!r.ok) throw new Error();
   } catch (e) { // the tap didn't reach the office — put it back honestly
     b.pick = prev;
+    const c2 = document.getElementById('budgetCard');
+    if (c2) c2.outerHTML = budgetHtml(_d);
+  }
+}
+// 🔒 v5.93 — the definite word: lock the choice (or reopen it) and tell the builder
+async function lockOpt(bi, on) {
+  const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null;
+  if (!b || !Array.isArray(b.opts) || bPicked(b) == null) return;
+  const prev = !!b.lk;
+  if (prev === !!on) return;
+  if (on) b.lk = true; else delete b.lk;
+  const card = document.getElementById('budgetCard');
+  if (card) card.outerHTML = budgetHtml(_d);
+  if (PV) return; // Eric previewing — show the motion, save nothing
+  try {
+    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ c: code, lock: { n: b.n, on: !!on } }) });
+    if (!r.ok) throw new Error();
+  } catch (e) { // didn't reach the office — put it back honestly
+    if (prev) b.lk = true; else delete b.lk;
     const c2 = document.getElementById('budgetCard');
     if (c2) c2.outerHTML = budgetHtml(_d);
   }

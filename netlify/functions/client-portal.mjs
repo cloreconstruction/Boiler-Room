@@ -182,6 +182,35 @@ const portal = async req => {
       }
       return new Response('ok');
     }
+    // 🔒 v5.93 — LOCK IT IN: the homeowner's definite word on a choice (or reopening it).
+    // Flips the same standing pile entry — never a second alert.
+    if (b.lock && typeof b.lock === 'object') {
+      const n = String(b.lock.n || '').slice(0, 60);
+      const on = !!b.lock.on;
+      if (!n) return new Response('bad', { status: 400 });
+      const ppath = `${BASE}/${c}.json`;
+      let pg = null;
+      try { pg = JSON.parse(await dl(t, ppath) || 'null'); } catch (e) {}
+      const entry = pg && Array.isArray(pg.budget) ? pg.budget.find(x => x && x.n === n && Array.isArray(x.opts)) : null;
+      if (!entry) return new Response('nope', { status: 404 });
+      const hasPick = Number.isInteger(entry.pick) && entry.opts[entry.pick];
+      if (on && !hasPick) return new Response('bad', { status: 400 }); // nothing chosen = nothing to lock
+      if (!!entry.lk !== on) {
+        if (on) entry.lk = true; else delete entry.lk;
+        await up(t, ppath, JSON.stringify(pg, null, 1));
+        const apath = `${BASE}/asks-${c}.json`;
+        let arr = [];
+        try { arr = JSON.parse(await dl(t, apath) || '[]'); } catch (e) {}
+        if (!Array.isArray(arr)) arr = [];
+        const pickWord = hasPick ? `${entry.opts[entry.pick].t} ($${(+entry.opts[entry.pick].est || 0).toLocaleString()})` : '';
+        const label = on ? `🔒 LOCKED IN — ${n}: ${pickWord}` : `↩ UNLOCKED — ${n}: deciding again (was ${pickWord})`;
+        const old = arr.find(a => a && a.pk === n);
+        if (old) { old.text = label; old.ts = new Date().toISOString(); arr = [old, ...arr.filter(a => a !== old)]; }
+        else arr.unshift({ tag: 'General', pk: n, k: 1, text: label, ts: new Date().toISOString() });
+        await up(t, apath, JSON.stringify(arr.slice(0, 200)));
+      }
+      return new Response('ok');
+    }
     // 💬 a question or remark from the client — lands in Eric's review pile on his next sync
     if (b.ask && typeof b.ask === 'object') {
       const tag = ['Phil', 'Eric', 'General', 'Feedback', 'Materials'].includes(b.ask.tag) ? b.ask.tag : 'General';
