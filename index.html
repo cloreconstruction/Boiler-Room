@@ -2236,7 +2236,7 @@
          options below that. Drag photos from the PC anywhere onto this card. -->
     <div class="ask-row">
       <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this)" placeholder="Put your note here → tap ⚙ To the Grinder. Tags below file it.&#10;&#10;Or ask a question here → tap 🧙 Ask the Wizard. Skip the tags."></textarea>
-      <input type="file" id="qnPhoto" accept="image/*" multiple onchange="noteAddPhotos(this)" style="display: none;">
+      <input type="file" id="qnPhoto" accept="image/*,.pdf,application/pdf" multiple onchange="noteAddPhotos(this)" style="display: none;">
       <button type="button" class="btn-ghost cam-btn cam-btn--tall" onclick="$('qnPhoto').click()" aria-label="Add photos or files — or drag them onto this card" title="Add photos or files — or drag them onto this card"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"></button>
     </div>
     <!-- ⬇ v5.80 — Eric: "move the grinder and ask wizard button down so it's between the
@@ -2706,7 +2706,7 @@
       <div class="field" style="flex: 1; min-width: 200px;"><label>Note</label><textarea id="nText" class="grow" rows="3" oninput="fitTa(this)" placeholder="Owner wants the fence gate moved to the north side"></textarea></div>
     </div>
     <div class="frow">
-      <div class="field" style="flex: 1 1 100%;"><input type="file" id="nPhoto" accept="image/*" multiple onchange="noteAddPhotos(this)" style="display: none;"><button type="button" class="btn-file" onclick="$('nPhoto').click()"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"> Add photos (optional)</button><div id="nPhotoInfo" class="frow" style="gap: 6px; flex-wrap: wrap;"></div></div>
+      <div class="field" style="flex: 1 1 100%;"><input type="file" id="nPhoto" accept="image/*,.pdf,application/pdf" multiple onchange="noteAddPhotos(this)" style="display: none;"><button type="button" class="btn-file" onclick="$('nPhoto').click()"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"> Add photos (optional)</button><div id="nPhotoInfo" class="frow" style="gap: 6px; flex-wrap: wrap;"></div></div>
       <button class="btn-primary" onclick="saveNote()">Save note</button>
     </div>
     <div class="hint">🎙 Just say what happened — date and job are stamped on automatically.</div>
@@ -3121,7 +3121,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.95 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.96 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5602,6 +5602,48 @@ function noteClearPhotos() {
   notePhotos = [];
   renderNotePhotoList();
 }
+// 🔮 v5.96 — the WIZARD READ button: read every staged photo/PDF right now, on Eric's tap,
+// and put the words in the note box where he can fix them before grinding. Receipts get the
+// three filing lines (they feed the 📥 bill strip through the saved entry); jobsite shots
+// get one plain sentence. Works with the auto-read setting OFF — that's the point.
+async function wizardReadStaged() {
+  if (!aiKey()) { toast('Add your Anthropic key in ⚙ Setup → the Wizard first', false); return; }
+  if (!notePhotos.length) return;
+  toast(`🔮 Reading ${notePhotos.length === 1 ? 'it' : notePhotos.length + ' files'}…`);
+  const added = [];
+  for (const f of notePhotos) {
+    if (!((f.type || '').startsWith('image/') || f.type === 'application/pdf')) continue;
+    const m = fileMeta(f);
+    m.aiStatus = '🔮…'; renderNotePhotoList();
+    try {
+      const p = await aiDescribePhoto(f);
+      const isRcpt = !!(p.vendor || (p.total != null && p.total !== ''));
+      const words = isRcpt
+        ? [/^\d{4}-\d{2}-\d{2}$/.test(p.rdate || '') ? '📅 ' + p.rdate : '',
+           p.vendor ? '🏪 ' + p.vendor : '',
+           (p.total != null && p.total !== '') ? '💵 $' + p.total : ''].filter(Boolean).join('\n')
+        : (p.desc || '').trim();
+      if (!words) { m.aiStatus = ''; continue; }
+      m.ai = words; // the saved entry carries the read — a receipt lands in the bill strip
+      if (p.category && !m.aiCat) m.aiCat = p.category;
+      if (p.total != null && p.total !== '' && !isNaN(+p.total)) m.aiTotal = +p.total;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(p.due || '')) m.aiDue = p.due;
+      if (p.dueAmt != null && p.dueAmt !== '' && !isNaN(+p.dueAmt)) m.aiDueAmt = +p.dueAmt;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(p.expires || '')) m.aiExpires = p.expires;
+      m.aiStatus = '🔮✓';
+      added.push(words);
+    } catch (e) { m.aiStatus = ''; toast(`Couldn't read ${f.name || 'that one'} — ${e.message === 'too big' ? 'it\'s over the size limit' : 'check the connection'}`, false); }
+  }
+  renderNotePhotoList();
+  if (added.length) {
+    const box = $('askText');
+    if (box) {
+      box.value = (box.value.trim() ? box.value.trim() + '\n' : '') + added.join('\n');
+      box.dispatchEvent(new Event('input'));
+    }
+    toast('🔮 Read ✓ — the words are in the note box, fix them however you like');
+  }
+}
 function renderNotePhotoList() {
   const el = $('nPhotoInfo');
   if (!el) return;
@@ -5610,7 +5652,11 @@ function renderNotePhotoList() {
     return m.url
       ? `<span class="pv-thumb"><img src="${m.url}" onclick="lbShow('${m.url}')" alt="photo — tap to enlarge"><button title="Remove" onclick="noteRemovePhoto(${i})">✕</button>${(m.status || m.aiStatus) ? `<span class="ocr-dot">${(m.status || '') + (m.aiStatus || '')}</span>` : ''}</span>`
       : `<span class="file-chip">📎 <span class="fc-name">${esc(f.name)}</span><button title="Remove" onclick="noteRemovePhoto(${i})">✕</button></span>`;
-  }).join('') + (notePhotos.length > 1 ? `<span class="hint" style="align-self: center;">${notePhotos.length} photos ready</span>` : '');
+  }).join('') + (notePhotos.length > 1 ? `<span class="hint" style="align-self: center;">${notePhotos.length} photos ready</span>` : '')
+    // 🔮 v5.96 — Eric: "when I add a PDF or a photo to the main note section I want a button
+    // that says wizard read… the option to have it read and put a description in there."
+    // On-demand, works with the auto-read OFF, and the words land in the NOTE BOX to edit.
+    + (notePhotos.length ? `<button type="button" class="pick-chip" style="font-size: 11px; font-weight: 800; min-height: 30px;" onclick="wizardReadStaged()">🔮 WIZARD READ${notePhotos.length > 1 ? ' — all ' + notePhotos.length : ''}</button>` : '');
   el.innerHTML = html;
   const qn = $('qnPhotoInfo'); if (qn) qn.innerHTML = html; // quick card and note panel share the same staged photos
   qnAutoDraft(); // 📝 a freshly-read photo takes the first swing at the note
@@ -5727,15 +5773,29 @@ async function shrinkForAi(f) {
   const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.8));
   return await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(blob); });
 }
+// 📄 v5.96 — whole file as base64 (PDFs ride the API as documents, not pictures)
+function fileB64(f) {
+  return new Promise((res, rej) => {
+    if (f.size > 9_000_000) return rej(new Error('too big'));
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(f);
+  });
+}
 async function aiDescribePhoto(f) {
-  const b64 = await shrinkForAi(f);
+  // 📄 v5.96 — a PDF invoice reads the same as a photographed one
+  const isPdf = (f.type || '') === 'application/pdf';
+  const srcBlock = isPdf
+    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: await fileB64(f) } }
+    : { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: await shrinkForAi(f) } };
   // 🧠 v5.42 — labeling a receipt or a jobsite shot is the ⚡ quick brain's best work
   const { r } = await aiCall({
       max_tokens: 300,
       system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"ONE short plain sentence: what the photo shows and the stage of work — no filler","category":"best match from this list or empty: Framing, Foundation, Roofing, Siding, Windows/Doors, Electrical, Plumbing, HVAC, Drywall, Paint, Finish, Landscaping, Materials, Tools, Fuel, Subcontractor, Office/Admin, Permits/Fees, Insurance, Loan/Bank, Personal","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"rdate":"YYYY-MM-DD purchase/receipt date if visible on a receipt/invoice, else empty","due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty"}',
       messages: [{ role: 'user', content: [
-        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
-        { type: 'text', text: 'Label this photo.' }
+        srcBlock,
+        { type: 'text', text: isPdf ? 'Label this document.' : 'Label this photo.' }
       ] }]
   }, 'photo');
   if (!r.ok) throw new Error('AI ' + r.status);
