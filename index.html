@@ -3058,7 +3058,7 @@
       <div class="hint" id="aiKeyStatus" style="margin-top: 8px;">No key saved — Ask answers arrive on the hourly check. With a key, answers are instant. The key stays on this device only (paste it once per device, like the Dropbox connection).</div>
       <label class="hint" style="display: flex; gap: 8px; align-items: center; margin-top: 10px; cursor: pointer;">
         <input type="checkbox" id="sAiPhotos" onchange="prefs.aiPhotos = this.checked; scheduleSave();">
-        🔮 Describe photos automatically — every photo gets looked at and labeled (uses your key · about ¼¢ per photo)
+        🔮 Read photos automatically — receipts fill themselves in (📅 date · 🏪 place · 💵 cost) and feed the bill radar. Jobsite photos are NEVER auto-described — tap 🔮 describe on a log entry when you want a line (about ¼¢ per look)
       </label>
       <div class="frow" style="margin-top: 12px;">
         <div class="field"><label>🧠 Which brain answers</label>
@@ -3121,7 +3121,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.86 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.87 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5732,7 +5732,7 @@ async function aiDescribePhoto(f) {
   // 🧠 v5.42 — labeling a receipt or a jobsite shot is the ⚡ quick brain's best work
   const { r } = await aiCall({
       max_tokens: 300,
-      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"1-2 plain sentences: what the photo shows, the stage of work, anything notable","category":"best match from this list or empty: Framing, Foundation, Roofing, Siding, Windows/Doors, Electrical, Plumbing, HVAC, Drywall, Paint, Finish, Landscaping, Materials, Tools, Fuel, Subcontractor, Office/Admin, Permits/Fees, Insurance, Loan/Bank, Personal","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty"}',
+      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"ONE short plain sentence: what the photo shows and the stage of work — no filler","category":"best match from this list or empty: Framing, Foundation, Roofing, Siding, Windows/Doors, Electrical, Plumbing, HVAC, Drywall, Paint, Finish, Landscaping, Materials, Tools, Fuel, Subcontractor, Office/Admin, Permits/Fees, Insurance, Loan/Bank, Personal","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"rdate":"YYYY-MM-DD purchase/receipt date if visible on a receipt/invoice, else empty","due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty"}',
       messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
         { type: 'text', text: 'Label this photo.' }
@@ -5749,8 +5749,18 @@ function queueAi(f, meta, rerender) {
   _aiChain = _aiChain.then(async () => {
     try {
       const p = await aiDescribePhoto(f);
-      meta.ai = (p.desc || '').trim();
-      if (p.vendor) meta.ai += ` [${p.vendor}${p.total != null && p.total !== '' ? ` — $${p.total}` : ''}]`;
+      // 🔮 v5.87 — Eric: "When it reads the pictures and tries to put a description in it,
+      // I don't think I like that very much... I could usually put my own descriptions in."
+      // And for receipts: "summarize a lot shorter. Just a couple lines: date, place, cost."
+      // So: a RECEIPT auto-fills exactly those three tiny lines (the filing magic keeps
+      // working underneath). A JOBSITE photo gets NO auto prose — his words come first,
+      // and a 🔮 describe tap on the log entry asks for one when he wants it.
+      const isRcpt = !!(p.vendor || (p.total != null && p.total !== ''));
+      meta.ai = isRcpt
+        ? [/^\d{4}-\d{2}-\d{2}$/.test(p.rdate || '') ? '📅 ' + p.rdate : '',
+           p.vendor ? '🏪 ' + p.vendor : '',
+           (p.total != null && p.total !== '') ? '💵 $' + p.total : ''].filter(Boolean).join('\n')
+        : '';
       meta.aiCat = p.category || '';
       if (p.total != null && p.total !== '' && !isNaN(+p.total)) meta.aiTotal = +p.total;
       if (/^\d{4}-\d{2}-\d{2}$/.test(p.due || '')) meta.aiDue = p.due;
@@ -12315,7 +12325,8 @@ function logRowHtml(e) {
     const tagBit = (e.tags || []).length ? `<span>·</span>` + e.tags.map(t => `<span style="cursor: pointer;" title="Show everything tagged ${esc(t)}" onclick="logFilterTag('${escq(t)}', event)">🏷 ${esc(t)}</span>`).join(' ') : '';
     const visBit = e.vis ? `<span>·</span><span title="${e.vis === 'crew' ? 'Unlocked — every crew folder gets this' : 'Sent to ' + esc(Array.isArray(e.vis) ? e.vis.join(' + ') : e.vis) + ' only'}">${esc(visWord(e.vis))}</span>` : '';
     const ocrBit = e.ocr ? `<span>·</span><span title="Text was read from the photo — search can find it">📄 text</span>` : '';
-    const aiBit = e.ai ? `<span>·</span><span title="${esc(e.ai.slice(0, 220))}">🔮 described</span>` : '';
+    const aiBit = e.ai ? `<span>·</span><span title="${esc(e.ai.slice(0, 220))}">🔮 described</span>`
+      : (e.photoPath ? `<span>·</span><span style="cursor: pointer;" title="Ask the quick brain what this photo shows — only when YOU tap it" onclick="aiDescribeEntry(${e.id}, event)">🔮 describe</span>` : '');
     const nbBit = e.billable === false ? `<span>·</span><span title="Not billable — admin time">🛠 not billable</span>` : '';
     // ✓✓ v5.06 — money entries wear both checkmarks: FIELD (captured) + QB (proven by Logan's books)
     const vvBit = e.amount != null && !e.sample ? `<span>·</span><span class="vv"><span class="vv-on" title="Captured in the field">✓ FIELD</span> <span class="${e.qbV ? 'vv-on' : 'vv-off'}" title="${e.qbV ? 'Matched in the QuickBooks import (' + esc(e.qbV) + ')' : 'Not yet seen in a QuickBooks import'}">${e.qbV ? '✓' : '·'} QB</span></span>` : '';
@@ -12330,6 +12341,31 @@ function logRowHtml(e) {
 }
 // 📜 v5.78 — renderLog stays as a name the rest of the app calls; there is ONE log now
 function renderLog() { renderAskRecent(); }
+// 🔮 v5.87 — the on-request describe: Eric taps, the quick brain looks, ONE short line
+// lands on the entry. Never automatic for jobsite photos anymore — his words come first.
+async function aiDescribeEntry(id, ev) {
+  if (ev) ev.stopPropagation();
+  const e = entries.find(x => x.id === id);
+  if (!e || !e.photoPath) return;
+  if (!aiKey()) { toast('Add your Anthropic key in ⚙ Setup → the Wizard first', false); return; }
+  toast('🔮 Looking at the photo…');
+  try {
+    const t = await getToken();
+    const r = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + t,
+        'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path: e.photoPath }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w1024h768' } }) }
+    });
+    if (!r.ok) throw new Error();
+    const p = await aiDescribePhoto(await r.blob());
+    const line = (p.desc || '').trim();
+    if (!line) throw new Error();
+    e.ai = ((e.ai ? e.ai + '\n' : '') + line).slice(0, 2000);
+    scheduleSave();
+    renderLog();
+    toast('🔮 Described — it rides the entry now ✓');
+  } catch (err) { toast('Couldn\'t read it — check the connection', false); }
+}
 function renderChart() {
   const svg = $('weekChart');
   const start = weekStart(new Date());
