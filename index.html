@@ -1280,6 +1280,28 @@
      narrower, shorter than the two big plates above it, which is the right weight for a
      button used a few times a day instead of fifty. If the art ever fails to load, .noimg
      puts the spelled-out gold button back at full width. */
+  /* 💰 v6.02 — the estimates board on a phone. Eric: "most all the buttons on this page are
+     big and take up a lot of space and make the page kinda weird." Every control on this
+     board is a chip you tap a few times a minute, not a plate you hit fifty times a day —
+     so they shrink to thumb-sized-but-tidy and the rows stop wrapping into towers. The
+     !important is deliberate: these override the per-button inline sizes the board writes. */
+  .est-board .pick-chip { font-size: 10px !important; padding: 3px 7px !important; min-height: 24px !important; line-height: 1.25; }
+  .est-board .btn-ghost { font-size: 11px !important; padding: 5px 8px !important; min-height: 28px !important; }
+  .est-board .btn-primary { font-size: 12px !important; padding: 6px 10px !important; min-height: 30px !important; }
+  .est-board .field { margin: 0 !important; }
+  /* the wide min-widths were forcing every control onto its own line — a tower of chips.
+     Narrower floors let Amount and Budget category sit shoulder to shoulder again. */
+  .est-board .frow > .field { flex: 1 1 84px !important; min-width: 84px !important; }
+  .est-board .frow > .field:has(select) { flex: 1 1 120px !important; min-width: 120px !important; }
+  .est-board .field label { font-size: 9px !important; letter-spacing: .2px; }
+  .est-board input, .est-board select { font-size: 12px !important; padding: 4px 6px !important; min-height: 28px; }
+  .est-board .set-section { padding: 6px 9px !important; margin-top: 5px !important; }
+  .est-board .frow { gap: 4px !important; }
+  .est-board .chips-row { gap: 4px !important; }
+  .est-board h3 { font-size: 16px; }
+  .est-board .hint { font-size: 11px; line-height: 1.4; }
+  /* the two that stay big on purpose: the close plate, and the lamp that shows a client */
+  .est-board .rev-row .btn-ghost { font-size: 14px !important; padding: 11px !important; min-height: 44px !important; }
   .plate-btn--bkk { display: block; width: 68%; max-width: 240px; flex: none; margin: 8px auto 0; }
   .plate-btn--bkk.noimg { width: 100%; max-width: none; min-height: 48px; font-size: 14px; }
   #bkkHint { margin: 4px 0 0; text-align: center; }
@@ -3138,7 +3160,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.01 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.02 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8972,7 +8994,7 @@ function renderEstimates() {
   const apprN = _estD.cats.filter(x => x.appr && estTotal(x) > 0).length;
   const totAppr = _estD.cats.filter(x => x.appr).reduce((s, x) => s + estTotal(x), 0);
   const money0 = n => '$' + (+n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
-  $('revBox').innerHTML = `<h3>💰 ${esc(c.job)} — estimates
+  $('revBox').innerHTML = `<div class="est-board"><h3>💰 ${esc(c.job)} — estimates
     <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeEstimates()" aria-label="close estimates">✕</button></h3>
     <div class="hint" style="margin: 0 0 8px;">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. ${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}</div>
     <div class="frow" style="gap: 8px; align-items: center; margin: 0 0 8px; flex-wrap: wrap;">
@@ -8980,8 +9002,17 @@ function renderEstimates() {
       <input inputmode="decimal" value="${estMk()}" style="width: 64px; font-weight: 800; text-align: center;" onchange="estSetMk(this.value)"><span style="font-weight: 800;">%</span>
       <span class="hint" style="margin: 0; flex: 1; min-width: 150px;">rides on every number the client sees — they NEVER see the markup itself. A line can say ✓ already included instead.</span>
     </div>
-    ${(() => { const bills = estBillCands(); return `<div class="set-section fc-sec" style="margin: 0 0 8px; padding: 8px 12px; border: 2px solid var(--accent);">
-      <div style="font-weight: 800;">📥 BILLS THAT CAME IN — yours to approve first${bills.length ? ` (${bills.length})` : ''}</div>
+    ${(() => { const bills = estBillCands();
+      // 📥 v6.02 — Eric: "keep it small until it has something to deal with." Nothing waiting
+      // = one thin line you can tap open to file a bill by hand. A bill arrives = it opens
+      // itself and says how many, because that IS something to deal with — even if he shut
+      // the strip earlier, a NEW bill always gets to speak up.
+      if (bills.length > _estBillSeen) _estBillFold = null;
+      _estBillSeen = bills.length;
+      const open = bills.length ? _estBillFold !== false : _estBillFold === true;
+      if (!open) return `<button type="button" class="btn-ghost" style="width: 100%; margin: 0 0 8px; text-align: left; font-size: 12.5px; padding: 7px 10px; min-height: 34px; border: 1px dashed var(--border);" onclick="estBillFold()">▸ 📥 Bills that came in — <b>nothing waiting</b> · tap to file one by hand</button>`;
+      return `<div class="set-section fc-sec" style="margin: 0 0 8px; padding: 8px 12px; border: 2px solid var(--accent);">
+      <div role="button" style="font-weight: 800; cursor: pointer;" onclick="estBillFold()">▾ 📥 BILLS THAT CAME IN — yours to approve first${bills.length ? ` (${bills.length})` : ''}</div>
       ${bills.length ? '' : `<div class="hint" style="margin: 4px 0 0;">Nothing waiting from the grinder. An invoice photographed under this job lands here once its read finds a total (🔮 describe on the log entry re-reads it) — or add one by hand below.</div>`}
       ${bills.map(e => { const p = estBillParse(e); const gi = estBillGuess(e); const inc = !!(window._estBillInc || {})[e.id];
         const toLogan = (e.tags || []).includes('Bookkeeper') || e.shared;
@@ -9075,7 +9106,7 @@ function renderEstimates() {
     <div class="rev-row" style="margin-top: 12px;">
       <button class="btn-ghost" style="flex: 1; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800; font-size: 14.5px;" onclick="closeEstimates()">✕ Close</button>
     </div>
-    <div class="hint" style="margin-top: 8px;">Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing.</div>`;
+    </div><div class="hint" style="margin-top: 8px;">Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing.</div>`;
 }
 function estBidSet(ci, bi, k, v) {
   const b = ((_estD.cats[ci] || {}).bids || [])[bi];
@@ -9150,6 +9181,8 @@ async function estBidOpt(ci, bi) {
   if (b.opt && estOpts(x).length === 1) toast('👁 Offer at least one more bid in ' + x.n + ' — one option is not a choice yet');
 }
 // 📥 v5.94 — the bill strip's controls
+let _estBillFold = null, _estBillSeen = 0; // null = follow the bills: open when one waits, shut when none
+function estBillFold() { const bills = estBillCands(); _estBillFold = !(bills.length ? _estBillFold !== false : _estBillFold === true); renderEstimates(); }
 function estBillIncFlip(id) {
   window._estBillInc = window._estBillInc || {};
   window._estBillInc[id] = !window._estBillInc[id];
@@ -9615,6 +9648,7 @@ async function openJournal(i) {
     <!-- 📷 v5.38 — ALL the job's photos live HERE: tap the ones that ride with this week -->
     <div class="field" style="margin: 8px 0 2px;"><label>📷 Job photos — tap the ones to send with this week</label></div>
     <div id="jrnPhGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;"></div>
+    <div class="hint" id="jrnPhNote" style="margin: 5px 0 0;"></div>
     <!-- ✍ v5.84 — Eric: "auto write default off so that i can type myself or make my inclusion
          selections and then ask it to help write if i want suggestions." The box starts EMPTY
          and belongs to him. Chips only choose what ✍ Draft pulls in — they never touch his words. -->
@@ -9672,13 +9706,29 @@ function renderJrnPhotos() {
   else grid.innerHTML = list.map(e => {
     const sel = e.jrn && !e.jrnDone;
     const link = _jrnPhLinks[e.photoPath];
-    return `<button type="button" data-jph="${e.id}" onclick="jrnPhotoTog(${e.id})" aria-pressed="${sel}"
+    // ⭐ v6.02 — Eric: "a little star showing that it's already been used in a client journal
+    // entry before so I'm not sending the same pics twice." The grid holds 30 days of the
+    // job's photos and never resets weekly, so last week's are still sitting right here.
+    const sent = !!e.jrnSent;
+    const sentDay = typeof e.jrnSent === 'string'
+      ? new Date(e.jrnSent + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+    const times = +e.jrnSentN || 0;
+    const aria = `${sel ? 'Riding with this week' : 'Not going this week'}${sent ? `. Already sent${sentDay ? ' ' + sentDay : ''}${times > 1 ? `, ${times} times` : ''}` : ''}`;
+    return `<button type="button" data-jph="${e.id}" onclick="jrnPhotoTog(${e.id})" aria-pressed="${sel}" aria-label="${esc(aria)}" title="${esc(aria)}"
       style="position: relative; height: 76px; padding: 0; overflow: hidden; cursor: pointer; background: rgba(0,0,0,0.35);
         border: ${sel ? '3px solid var(--accent)' : '1px solid var(--border)'}; border-radius: 8px;">
       ${link ? `<img src="${esc(link)}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;${sel ? '' : ' opacity: 0.75;'}">` : '<span style="font-size: 22px;">📷</span>'}
       ${sel ? '<span style="position: absolute; top: 3px; right: 3px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 800; border-radius: 999px; padding: 1px 6px;">✓ GOES</span>' : ''}
+      ${sent ? `<span style="position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.72); color: #f3e0ac;
+        font-size: 9.5px; font-weight: 800; letter-spacing: .3px; padding: 1px 3px; white-space: nowrap; overflow: hidden;">⭐ SENT${times > 1 ? ' ' + times + '×' : ''}${sentDay ? ' · ' + esc(sentDay) : ''}</span>` : ''}
     </button>`;
   }).join('');
+  // the plain-words version of the star, and only when there's a star to explain
+  const anySent = list.some(e => e.jrnSent);
+  const dupes = list.filter(e => e.jrnSent && e.jrn && !e.jrnDone).length;
+  const note = $('jrnPhNote');
+  if (note) note.innerHTML = !anySent ? ''
+    : `⭐ SENT means that photo already went out in a past week — this grid holds the job's last 30 days, it doesn't clear itself.${dupes ? ` <b>${dupes} of the ones you've picked has gone before.</b>` : ''}`;
   const go = $('jrnGoBtn');
   if (go) {
     const n = jrnStamped(aj).filter(e => e.photoPath).length;
@@ -9856,7 +9906,14 @@ async function journalRelease() {
       ...(photos.length ? { photos: [...new Set(photos)] } : {}) }, ...(d.journal || [])].slice(0, 26);
     d.updated = now.toISOString().slice(0, 10);
     await dbxUpload(path, JSON.stringify(d, null, 1));
-    st.forEach(e => { e.jrnDone = true; }); // stamps are spent — the pile starts fresh
+    // stamps are spent — the pile starts fresh. ⭐ v6.02 — but a photo REMEMBERS that it
+    // went out, and when, and how many times. jrnDone gets wiped the moment Eric re-picks
+    // the photo; jrnSent never does, so the star can still warn him he's sending it twice.
+    const relDay = now.toISOString().slice(0, 10);
+    st.forEach(e => {
+      e.jrnDone = true;
+      if (e.photoPath) { e.jrnSent = relDay; e.jrnSentN = (+e.jrnSentN || 0) + 1; }
+    });
     scheduleSave();
     closeReview();
     toast(`📖 Journal released — ${c.job}'s page carries it now${photos.length ? ` with ${photos.length} photo${photos.length > 1 ? 's' : ''}` : ''} ✓`);
