@@ -3121,7 +3121,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v5.84 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v5.85 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8418,6 +8418,7 @@ async function renderPortalList() {
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openPlanRack(${i})">📐 Plans</button>
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openJournal(${i})">📖 Journal</button>
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openMaterials(${i})">📋 Build List</button>
+      <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="openEstimates(${i})">💰 Estimates</button>
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="portalCopy(${i})">📋 Copy link</button>
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
       <button class="btn-ghost" style="font-size: 14.5px; font-weight: 800; padding: 11px 15px; border-width: 2px;" onclick="portalIntel(${i})">📊 What they look at</button>
@@ -8426,6 +8427,14 @@ async function renderPortalList() {
         <button class="btn-ghost req-x" style="font-size: 11px;" onclick="portalEditStart(${i})">✎ Rename</button>
         <button class="btn-ghost req-x" style="font-size: 11px; color: var(--err, #c0392b);" onclick="portalDelete(${i})">${_portalDelArm === i + 1 ? '⚠ SURE? Comes down' : '✕ Remove page'}</button>
       </span>
+      <div style="flex: 1 1 100%; margin-top: 4px;">
+        <span class="hint" style="margin: 0; font-size: 11px;">🎛 They can see — tap to flip, takes hold on their next load:</span>
+        <div class="chips-row" style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px;">
+        ${_visCache[c.code] ? VIS_KEYS.map(([k, lab]) => { const on = visOn(_visCache[c.code], k);
+          return `<button type="button" class="pick-chip${on ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;${on ? '' : ' opacity: .55; border-style: dashed;'}" onclick="portalVis(${i}, '${k}')">${on ? '✓ ' : '✕ '}${lab}</button>`; }).join('')
+        : '<span class="hint" style="margin: 0;">⏳ reading their page…</span>'}
+        </div>
+      </div>
       ${_portalEdit === i ? `<div class="frow" style="flex: 1 1 100%; gap: 6px;">
         <input type="text" id="peName-${i}" value="${esc(c.job)}" style="flex: 1; min-width: 120px; font-weight: 700;">
         <button class="btn-ghost" onclick="portalRenameSave(${i})">✓ Save name</button>
@@ -8483,7 +8492,38 @@ async function portalNew() {
     if (msg) msg.textContent = 'Couldn\'t build it — check the connection and try again.';
   }
 }
-function portalFold(i) { _portalOpen = _portalOpen === i ? -1 : i; _rotArm = 0; _portalDelArm = 0; _portalEdit = -1; renderPortalList(); }
+function portalFold(i) { _portalOpen = _portalOpen === i ? -1 : i; _rotArm = 0; _portalDelArm = 0; _portalEdit = -1; renderPortalList(); if (_portalOpen === i) portalVisLoad(i); }
+// 🎛 v5.85 — Eric: "make it so I can instantly turn things on and off... turn off the build
+// list on Jostens' page... turn on the ask and remark on another." One tap per switch, per
+// client page. Absent = ON for the newer switches; money/phases keep their explicit flags.
+const _visCache = {};
+const VIS_KEYS = [['money', '💵 Money'], ['phases', '📊 Phases'], ['mat', '📋 Build List'], ['ask', '💬 Ask/Remark'], ['photos', '📷 Photos'], ['journal', '📖 Journal']];
+function visOn(show, k) { return (k === 'money' || k === 'phases') ? !!(show || {})[k] : (show || {})[k] !== false; }
+async function portalVisLoad(i) {
+  const c = (_portalIdx && _portalIdx.clients || [])[i];
+  if (!c || _visCache[c.code]) return;
+  try {
+    const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
+    if (pg) { _visCache[c.code] = pg.show || {}; if (_portalOpen === i) renderPortalList(); }
+  } catch (e) { /* offline — chips stay at ⏳ */ }
+}
+async function portalVis(i, k) {
+  if (portalGuard()) return;
+  const c = _portalIdx.clients[i];
+  try {
+    const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
+    if (!pg) { toast('Their page didn\'t answer — check the connection', false); return; }
+    pg.show = pg.show || {};
+    const on = visOn(pg.show, k);
+    pg.show[k] = !on;
+    pg.updated = localDay(new Date());
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json', JSON.stringify(pg, null, 1));
+    _visCache[c.code] = pg.show;
+    renderPortalList();
+    const lab = (VIS_KEYS.find(x => x[0] === k) || [k, k])[1];
+    toast(`🎛 ${lab} is ${!on ? 'ON' : 'OFF'} for ${c.job} ✓`);
+  } catch (e) { toast('Couldn\'t flip it — check the connection', false); }
+}
 // 📐 v5.83 — THE PLAN RACK. Eric: "we never know what's the most recent plan... It can't
 // say Final because every time I put Final Plans on it, something changes." So no names at
 // all: each job has slots (Whole project · Trusses · Windows · add your own), each slot holds
@@ -8540,11 +8580,16 @@ function renderPlanRack() {
             onkeydown="if(event.key==='Enter'){event.preventDefault();pkStamp('${escq(s.key)}');}">
           <button type="button" class="btn-primary" style="font-weight: 800;" onclick="pkStamp('${escq(s.key)}')">✓ Stamp it R${(cur ? cur.rev : 0) + 1}</button>
           <button type="button" class="btn-ghost req-x" onclick="delete _pkPend['${escq(s.key)}']; renderPlanRack()">✕</button>
-        </div>` : `<div class="chips-row" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
-          <button type="button" class="btn-ghost" onclick="$('pkFile-${escq(s.key)}').click()">⬆ Drop in a new set${cur ? ` (replaces R${cur.rev})` : ''}</button>
-          <input type="file" id="pkFile-${escq(s.key)}" accept="application/pdf,image/*" style="display: none;" onchange="pkPick('${escq(s.key)}', this.files)">
-          ${(s.hist || []).length ? `<button type="button" class="btn-ghost req-x" onclick="pkHistToggle('${escq(s.key)}')" aria-expanded="${showH}">${showH ? '▾' : '▸'} 🕘 ${s.hist.length} old set${s.hist.length === 1 ? '' : 's'} + changes</button>` : ''}
-        </div>`}
+        </div>` : `
+        <!-- 📐 v5.85 — Eric: "Make that all drag and drop. Into the three different windows." Each slot IS a drop zone. -->
+        <div id="pkDrop-${escq(s.key)}" style="border: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 8px; padding: 12px; text-align: center; cursor: pointer; font-size: 13px; margin-top: 8px;"
+          onclick="$('pkFile-${escq(s.key)}').click()"
+          ondragover="event.preventDefault(); this.style.borderStyle = 'solid';"
+          ondragleave="this.style.borderStyle = 'dashed';"
+          ondrop="event.preventDefault(); this.style.borderStyle = 'dashed'; pkPick('${escq(s.key)}', event.dataTransfer.files)">
+          ⬆ <b>Drop the new ${esc(s.name)} set right here</b> — drag the PDF onto this box, or tap to pick${cur ? ` · replaces R${cur.rev}` : ''}</div>
+        <input type="file" id="pkFile-${escq(s.key)}" accept="application/pdf,image/*" style="display: none;" onchange="pkPick('${escq(s.key)}', this.files)">
+        ${(s.hist || []).length ? `<div class="chips-row" style="margin-top: 6px;"><button type="button" class="btn-ghost req-x" onclick="pkHistToggle('${escq(s.key)}')" aria-expanded="${showH}">${showH ? '▾' : '▸'} 🕘 ${s.hist.length} old set${s.hist.length === 1 ? '' : 's'} + changes</button></div>` : ''}`}
         ${showH && (s.hist || []).length ? `<div style="margin-top: 6px;">
           ${s.hist.map((h, hi) => `<div class="sum-row" style="cursor: default; font-size: 13px;">
             <span>⚠ <b>R${h.rev}</b> · ${esc(h.date)}${h.note ? ` — ${esc(h.note)}` : ''} <span class="hint" style="margin: 0;">superseded${cur ? ' by R' + cur.rev : ''}</span></span>
@@ -8605,6 +8650,184 @@ function pkOpenOld(key, hi) {
   matOpenDoc(h.file);
 }
 function pkHistToggle(key) { _pkHistShow.has(key) ? _pkHistShow.delete(key) : _pkHistShow.add(key); renderPlanRack(); }
+// 💰 v5.85 — THE ESTIMATES BOARD. Eric: "a place to put estimates... not seen by the client
+// until I push approve... for each of the categories I can be putting in estimates and bids
+// as I get them in the background. When I push approve it will show up on their page — total
+// bid and a little progress bar and how much of that has been paid or used."
+// Office file estimates-<code>.json — the client's page NEVER loads it. Approving a category
+// copies ONLY {name, est} onto the page as "budget"; notes and bid papers stay office-side.
+let _estIdx = -1, _estD = null, _estPage = null, _estArm = '', _estTimer = null;
+function estPath(code) { return DBX_ROOT + '/App Data/Client Portal/estimates-' + code + '.json'; }
+async function openEstimates(i) {
+  if (portalGuard()) return;
+  if (CREW_NAME) { toast('💰 Estimates live in Eric\'s Dropbox — the office-phone copy is a later screw', false); return; }
+  _estIdx = i; _estArm = '';
+  const c = _portalIdx.clients[i];
+  toast('⏳ Opening the estimates…');
+  try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
+  try { _estPage = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null'); } catch (e) { _estPage = null; }
+  if (!_estD || !Array.isArray(_estD.cats)) _estD = { updated: '', cats: [] };
+  // seed rows from the categories the client's page already speaks (once each)
+  const have = new Set(_estD.cats.map(x => x.n.toLowerCase()));
+  (((_estPage || {}).phases) || []).forEach(p => (p.cats || []).forEach(ct => {
+    const n = String(ct[0] || '').trim();
+    if (n && !have.has(n.toLowerCase())) { have.add(n.toLowerCase()); _estD.cats.push({ n, est: 0, note: '', appr: false, docs: [] }); }
+  }));
+  renderEstimates();
+  $('revModal').classList.add('show', 'mat-full');
+  document.body.classList.add('modal-open');
+}
+function closeEstimates() {
+  $('revModal').classList.remove('show', 'mat-full');
+  document.body.classList.remove('modal-open');
+  _estIdx = -1; _estD = null; _estPage = null;
+}
+function estUsedBy() {
+  const used = {};
+  (((_estPage || {}).phases) || []).forEach(p => (p.cats || []).forEach(ct => {
+    const k = String(ct[0] || '').toLowerCase();
+    used[k] = (used[k] || 0) + (+ct[1] || 0);
+  }));
+  return used;
+}
+function renderEstimates() {
+  const c = _portalIdx.clients[_estIdx];
+  if (!c || !_estD) return;
+  const used = estUsedBy();
+  const apprN = _estD.cats.filter(x => x.appr && +x.est > 0).length;
+  const totE = _estD.cats.reduce((s, x) => s + (+x.est || 0), 0);
+  $('revBox').innerHTML = `<h3>💰 ${esc(c.job)} — estimates
+    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeEstimates()" aria-label="close estimates">✕</button></h3>
+    <div class="hint" style="margin: 0 0 10px;">🏢 Office-side until YOU say otherwise. Work the numbers and bids in peace — a category only reaches their page when its ✓ APPROVE lamp is lit (two taps). ${apprN ? `<b>${apprN} showing on their page.</b>` : '<b>Nothing is showing yet.</b>'}${totE ? ` · $${totE.toLocaleString(undefined, { maximumFractionDigits: 0 })} penciled in all told` : ''}</div>
+    ${_estD.cats.map((x, xi) => {
+      const u = Math.max(0, used[x.n.toLowerCase()] || 0);
+      const pct = +x.est > 0 ? Math.min(100, Math.round(u / x.est * 100)) : 0;
+      const over = +x.est > 0 && u > +x.est ? u - x.est : 0;
+      return `<div class="set-section fc-sec" style="margin-top: 8px; padding: 10px 12px;">
+      <div class="frow" style="gap: 6px; align-items: center; flex-wrap: wrap;">
+        <input type="text" value="${esc(x.n)}" style="flex: 2; min-width: 110px; font-weight: 800;" onchange="estSet(${xi}, 'n', this.value)">
+        <input type="inputmode" inputmode="decimal" value="${x.est || ''}" placeholder="$ estimate" style="flex: 1; min-width: 80px; font-weight: 800;" onchange="estSet(${xi}, 'est', this.value)">
+        <button type="button" class="pick-chip${x.appr ? ' sel' : ''}" style="flex: none; font-size: 11px; padding: 6px 10px; min-height: 30px; font-weight: 800;${x.appr ? '' : ' border-style: dashed;'}" onclick="estApprove(${xi})">${_estArm === 'ap' + xi ? '⚠ SURE? Goes on their page' : x.appr ? '✓ ON THEIR PAGE' : '🏢 office only'}</button>
+        <button type="button" class="btn-ghost req-x" style="font-size: 11px; color: var(--err, #c0392b);" onclick="estDelCat(${xi})">${_estArm === 'del' + xi ? '⚠ SURE?' : '✕'}</button>
+      </div>
+      ${+x.est > 0 ? `<div style="margin: 6px 0 2px; height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--ink-muted) 22%, transparent); overflow: hidden;">
+        <div style="height: 100%; width: ${pct}%; background: ${over ? 'var(--err, #c0392b)' : 'var(--accent)'};"></div></div>
+      <div class="hint" style="margin: 0;">est $${(+x.est).toLocaleString()} · $${u.toLocaleString(undefined, { maximumFractionDigits: 0 })} in${over ? ` · <b style="color: var(--err, #b3452f);">over by $${over.toLocaleString(undefined, { maximumFractionDigits: 0 })}</b>` : ''}</div>` : ''}
+      <input type="text" value="${esc(x.note || '')}" placeholder="🗒 note — whose bid, good through, what it covers… (never leaves the office)"
+        style="width: 100%; margin-top: 5px; font-size: 12px; padding: 5px 8px; opacity: ${x.note ? '1' : '.75'};" onchange="estSet(${xi}, 'note', this.value)">
+      <div class="chips-row" style="margin-top: 5px; display: flex; gap: 5px; flex-wrap: wrap;">
+        ${(x.docs || []).map((d, di) => `<span style="display: inline-flex; gap: 4px; align-items: center;">
+          <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="matOpenDoc('${escq(d.path)}')">📄 ${esc(d.name)}</button>
+          <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="estDelDoc(${xi}, ${di})" aria-label="drop this paper">✕</button></span>`).join('')}
+        <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="$('estF-${xi}').click()">📁 ➕ bid paper</button>
+        <input type="file" id="estF-${xi}" accept="image/*,.pdf,application/pdf" multiple style="display: none;" onchange="estAddDocs(${xi}, this.files)">
+      </div>
+    </div>`; }).join('')}
+    <div class="frow" style="margin-top: 12px;">
+      <div class="field" style="flex: 1;"><input type="text" id="estNewCat" placeholder="new category — Septic, Gutters, Site prep…" onkeydown="if(event.key==='Enter'){event.preventDefault();estAddCat();}"></div>
+      <button class="btn-ghost" onclick="estAddCat()">➕ category</button>
+    </div>
+    <div class="rev-row" style="margin-top: 12px;">
+      <button class="btn-ghost" style="flex: 1; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800; font-size: 14.5px;" onclick="closeEstimates()">✕ Close</button>
+    </div>
+    <div class="hint" style="margin-top: 8px;">Everything saves itself. The "in" numbers feed off the same QuickBooks runs as their page — the bars move on their own each week. Notes and bid papers NEVER ride to the client; approving sends the category name and the number, nothing else.</div>`;
+}
+function estSet(xi, k, v) {
+  const x = _estD.cats[xi];
+  if (!x) return;
+  if (k === 'est') { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); x.est = isFinite(n) ? Math.round(n * 100) / 100 : 0; }
+  else x[k] = String(v).trim().slice(0, k === 'note' ? 160 : 40);
+  scheduleEstSave();
+  renderEstimates();
+}
+function estAddCat() {
+  const v = (($('estNewCat') || {}).value || '').trim().slice(0, 40);
+  if (!v) return;
+  if (_estD.cats.some(x => x.n.toLowerCase() === v.toLowerCase())) { toast('That category is already on the board', false); return; }
+  _estD.cats.push({ n: v, est: 0, note: '', appr: false, docs: [] });
+  scheduleEstSave();
+  renderEstimates();
+}
+function estDelCat(xi) {
+  if (_estArm !== 'del' + xi) {
+    _estArm = 'del' + xi; renderEstimates();
+    setTimeout(() => { if (_estArm === 'del' + xi) { _estArm = ''; renderEstimates(); } }, 5000);
+    return;
+  }
+  _estArm = '';
+  const wasAppr = _estD.cats[xi] && _estD.cats[xi].appr;
+  _estD.cats.splice(xi, 1);
+  scheduleEstSave(wasAppr);
+  renderEstimates();
+}
+function estApprove(xi) {
+  const x = _estD.cats[xi];
+  if (!x) return;
+  if (!x.appr && !(+x.est > 0)) { toast('Put the estimate number in first — there\'s nothing to show yet', false); return; }
+  if (!x.appr && _estArm !== 'ap' + xi) {
+    _estArm = 'ap' + xi; renderEstimates();
+    setTimeout(() => { if (_estArm === 'ap' + xi) { _estArm = ''; renderEstimates(); } }, 5000);
+    return;
+  }
+  _estArm = '';
+  x.appr = !x.appr;
+  scheduleEstSave(true);
+  renderEstimates();
+  toast(x.appr ? `💰 ${x.n} is on their page now — est $${(+x.est).toLocaleString()}` : `🏢 ${x.n} pulled back to the office`);
+}
+function scheduleEstSave(publish) {
+  if (publish) window._estPub = true;
+  clearTimeout(_estTimer);
+  _estTimer = setTimeout(estSave, 1200);
+}
+async function estSave() {
+  const c = _portalIdx.clients[_estIdx];
+  if (!c || !_estD) return;
+  _estD.updated = localDay(new Date());
+  try {
+    await dbxUpload(estPath(c.code), JSON.stringify(_estD, null, 1));
+    if (window._estPub) { window._estPub = false; await estPublish(c); }
+  } catch (e) { toast('Couldn\'t save the estimates — check the connection', false); }
+}
+// the approved cut: category name + number ONLY. Notes, bids, unapproved rows stay home.
+async function estPublish(c) {
+  try {
+    const pg = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json') || 'null');
+    if (!pg) return;
+    const cut = _estD.cats.filter(x => x.appr && +x.est > 0).map(x => ({ n: x.n, est: +x.est }));
+    if (cut.length) pg.budget = cut; else delete pg.budget;
+    pg.updated = localDay(new Date());
+    await dbxUpload(DBX_ROOT + '/App Data/Client Portal/' + c.code + '.json', JSON.stringify(pg, null, 1));
+    _estPage = pg;
+  } catch (e) { toast('Saved here, but their page didn\'t take the update — try the lamp again', false); }
+}
+async function estAddDocs(xi, files) {
+  const x = _estD.cats[xi];
+  const c = _portalIdx.clients[_estIdx];
+  if (!x || !c || !files || !files.length) return;
+  const ok = [...files].filter(f => /^image\//.test(f.type) || f.type === 'application/pdf').slice(0, 6);
+  if (!ok.length) { toast('Photos and PDFs only', false); return; }
+  x.docs = x.docs || [];
+  let n = 0;
+  for (const f of ok) {
+    toast(`⏳ Bid paper ${++n} of ${ok.length} going in…`);
+    const clean = (f.name || 'bid').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
+    const path = `${DBX_ROOT}/App Data/Client Portal/est-files-${c.code}/${x.n.replace(/[^a-zA-Z0-9 ]/g, '')} ${clean}`;
+    try {
+      const r = await dbxUpload(path, f, true);
+      x.docs.push({ path: r.path_display || path, name: clean });
+    } catch (e) { toast('That one wouldn\'t upload — check the connection', false); }
+  }
+  scheduleEstSave();
+  renderEstimates();
+}
+function estDelDoc(xi, di) {
+  const x = _estD.cats[xi];
+  if (!x || !x.docs) return;
+  x.docs.splice(di, 1); // reference only — the paper itself stays in Dropbox
+  scheduleEstSave();
+  renderEstimates();
+}
 async function pkAddSlot() {
   const v = (($('pkNewSlot') || {}).value || '').trim().slice(0, 40);
   if (!v) return;
@@ -8681,6 +8904,7 @@ async function portalDelete(i) {
     await arc('materials-' + c.code + '.json');
     await arc('materials-office-' + c.code + '.json');
     await arc('plans-' + c.code + '.json'); // 📐 the rack index; the plan files themselves stay under /Plans
+    await arc('estimates-' + c.code + '.json'); // 💰 the estimates board rides to Archive too
     _portalIdx.clients.splice(i, 1);
     await dbxUpload(CP + 'index.json', JSON.stringify(_portalIdx));
     _portalOpen = -1;

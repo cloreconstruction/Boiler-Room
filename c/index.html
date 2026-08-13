@@ -409,6 +409,8 @@ async function boot() {
     return;
   }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // 🎛 per-page switches Eric flips from his phone: absent = ON, explicit false = OFF
+  const sh = k => !d.show || d.show[k] !== false;
   // 💡 the lamp: LIT when the page got fresher since this client's last visit
   const seenKey = 'clore-seen-' + code;
   const lastSeen = localStorage.getItem(seenKey) || '';
@@ -420,14 +422,14 @@ async function boot() {
     ${d.stage ? `<div class="stage">${esc(d.stage)}</div>` : ''}
     <div class="lamp${fresh ? ' lit' : ''}"><span class="dot"></span>${fresh ? 'UPDATED FOR YOU — ' + esc(d.updated || '') : 'CURRENT AS OF ' + esc(d.updated || '')}</div>
     <div class="soon-grid">
-      ${allShots.length
+      ${sh('photos') ? (allShots.length
         ? `<div class="soon live" onclick="toggleCard('photoCard', 'photos')"><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">${allShots.length} progress picture${allShots.length > 1 ? 's' : ''}</div></div></div>`
-        : `<div class="soon" onclick="ping('soon:photos')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">progress pictures from the job</div></div></div>`}
-      <div class="soon live" onclick="toggleCard('askCard', 'ask:open')"><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>
-      <div class="soon" id="matTile" onclick="ping('soon:materials')"><div class="ribbon" id="matRibbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Build List</div><div class="s" id="matTileSub">the job's checklist — lists & picks</div></div></div>
+        : `<div class="soon" onclick="ping('soon:photos')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">progress pictures from the job</div></div></div>`) : ''}
+      ${sh('ask') ? `<div class="soon live" onclick="toggleCard('askCard', 'ask:open')"><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>` : ''}
+      ${sh('mat') ? `<div class="soon" id="matTile" onclick="ping('soon:materials')"><div class="ribbon" id="matRibbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Build List</div><div class="s" id="matTileSub">the job's checklist — lists & picks</div></div></div>` : ''}
     </div>
-    <div class="card" id="matCard" style="display: none;"><div class="mat-head"><h3>📋 BUILD LIST</h3><button class="mat-close" onclick="matCloseFS()">✕ Back</button></div><div id="matBody"></div></div>
-    <div class="card" id="askCard" style="display: none;">
+    ${sh('mat') ? `<div class="card" id="matCard" style="display: none;"><div class="mat-head"><h3>📋 BUILD LIST</h3><button class="mat-close" onclick="matCloseFS()">✕ Back</button></div><div id="matBody"></div></div>` : ''}
+    ${sh('ask') ? `<div class="card" id="askCard" style="display: none;">
       <h3>💬 ASK OR REMARK</h3>
       <div style="display: flex; gap: 8px; margin-bottom: 10px;">
         <button class="tagchip" onclick="pickTag('Phil', this)">Phil</button>
@@ -437,12 +439,12 @@ async function boot() {
       <textarea class="ask-ta" id="askTa" placeholder="Ask a question or leave a remark — it goes straight to Eric's desk."></textarea>
       <button class="send-btn" id="askSend" onclick="sendAsk()">Send it</button>
       <div id="askList"></div>
-    </div>
+    </div>` : ''}
     ${allShots.length ? `<div class="card" id="photoCard" style="display: none;"><h3>📷 PROGRESS PHOTOS — newest first</h3>
       <div class="gal">${allShots.slice(0, 60).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="progress photo" onclick="shotOpen('${photoUrl(n)}')">`).join('')}</div>
     </div>` : ''}`;
   // 📖 the job journal: ONLY the latest week shows; older weeks live behind one fold
-  if ((d.journal || []).length) {
+  if ((d.journal || []).length && sh('journal')) {
     const js = d.journal.slice(0, 26);
     const shots = j => (j.photos || []).length
       ? `<div class="jr-shots">${j.photos.slice(0, 8).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="job photo" onclick="event.stopPropagation(); shotOpen('${photoUrl(n)}')">`).join('')}</div>` : '';
@@ -478,6 +480,37 @@ async function boot() {
         <br><span style="opacity:.75">Your invoice is the itemized record — this is the quick picture of what's on it.</span></div>
     </div>` : ''}</div>`;
   }
+  // 💰 approved estimates — Eric lights a category's lamp and it shows HERE: total bid,
+  // a progress bar, how much is in so far. Over-estimate shows plainly (red + words) —
+  // Eric's call: "show the overspending."
+  if (Array.isArray(d.budget) && d.budget.length) {
+    const usedBy = {};
+    (d.phases || []).forEach(p => (p.cats || []).forEach(c => {
+      const k = String(c[0] || '').toLowerCase();
+      usedBy[k] = (usedBy[k] || 0) + (+c[1] || 0);
+    }));
+    let totE = 0, totU = 0;
+    const rows = d.budget.map(b => {
+      const used = Math.max(0, usedBy[String(b.n).toLowerCase()] || 0);
+      totE += +b.est || 0; totU += used;
+      const pct = +b.est > 0 ? Math.min(100, Math.round(used / b.est * 100)) : 0;
+      const over = used > +b.est ? used - b.est : 0;
+      return `<div style="margin: 10px 0;">
+        <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px;">
+          <span style="font-weight: 700;">${esc(b.n)}</span>
+          <span>est ${money(b.est)} · ${money(used)} in${over ? ` · <b style="color:#c0392b;">over by ${money(over)}</b>` : ''}</span>
+        </div>
+        <div style="margin-top: 4px; height: 10px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden;">
+          <div style="height: 100%; width: ${pct}%; background: ${over ? '#c0392b' : 'var(--acc, #b8860b)'};"></div>
+        </div>
+      </div>`;
+    }).join('');
+    const totOver = totU > totE ? totU - totE : 0;
+    h += `<div class="card" onclick="ping('budget')"><h3>BUDGET — APPROVED ESTIMATES</h3>
+      <div style="font-size: 14px; margin-bottom: 2px;">${money(totE)} approved · ${money(totU)} in so far${totOver ? ` · <b style="color:#c0392b;">over by ${money(totOver)}</b>` : ''}</div>
+      ${rows}
+      <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"In" counts the work billed to each category so far — it updates as the books do.</div></div>`;
+  }
   if (d.show && d.show.phases && (d.phases || []).length) {
     h += `<div class="card"><h3>WORK BY PHASE — tap a phase for detail</h3>` +
       d.phases.map((p, i) => `<div class="ph" id="ph${i}"><div class="ph-head" onclick="document.getElementById('ph${i}').classList.toggle('open'); ping('phase:${esc(p.name).slice(0, 20)}')">
@@ -486,9 +519,9 @@ async function boot() {
       </div>`).join('') + `</div>`;
   }
   h += `<button class="theme-btn" style="display: block; margin: 22px auto 0;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
-    <div class="foot">Questions? Use 💬 Ask / Remark above, or call or text Eric directly.</div>`;
+    <div class="foot">${sh('ask') ? 'Questions? Use 💬 Ask / Remark above, or call or text Eric directly.' : 'Questions? Call or text Eric directly.'}</div>`;
   $('#app').innerHTML = h;
-  loadAsks(false); // 💬 their open questions + the three lamps
+  if (sh('ask')) loadAsks(false); // 💬 their open questions + the three lamps
   // 📋 the materials board comes alive when Eric has published one
   loadMat().then(() => {
     if (!_mat || !_mat.rooms.length) return;
