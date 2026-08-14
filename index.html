@@ -2314,6 +2314,7 @@
       <div class="chip-grid chip-grid--3" id="urgChips"></div>
       <!-- v4.91 — your sent requests + their live status lamps -->
       <div id="myReqStrip"></div>
+    <div class="card" id="mailAskCard" style="display: none; margin-top: 10px; padding: 10px 12px;"></div>
     </div>
     <div class="plate-row" style="margin-top: 12px;">
       <button type="button" class="plate-btn plate-btn--grind" onclick="saveQuickNote()" aria-label="To the grinder — save as a note" title="Save as a note — job + tags stamp on">
@@ -3176,7 +3177,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.11 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.12 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7191,6 +7192,67 @@ async function archiveText(path, robot) {
     return true;
   } catch (e) { return false; } // v5.98 — a failed move retries itself on the next sync
 }
+// 📧 v6.12 — EMAIL. A Zap drops each message into /Inbox as a .txt whose first lines are
+// FROM: and SUBJECT: — that SUBJECT line is what tells an email from a text. Eric asked for
+// filtered mail with "maybe a flag system so it learns": no guessing, just an address book
+// that grows one tap at a time. Known sender → filed. Told-no sender → never again. Anyone
+// new → nothing is logged, and one row asks once: ✓ Always or 🚫 Never.
+function mailOk() { return Array.isArray(prefs.mailOk) ? prefs.mailOk : (prefs.mailOk = []); }
+function mailNo() { return Array.isArray(prefs.mailNo) ? prefs.mailNo : (prefs.mailNo = []); }
+function mailAsk() { return Array.isArray(prefs.mailAsk) ? prefs.mailAsk : (prefs.mailAsk = []); }
+function mailAddr(s) { const m = String(s || '').match(/[\w.+-]+@[\w.-]+\.\w+/); return m ? m[0].toLowerCase() : ''; }
+function mailDom(a) { const i = String(a).indexOf('@'); return i < 0 ? '' : a.slice(i + 1); }
+function mailListed(list, addr) {
+  const a = String(addr || '').toLowerCase(), d = mailDom(a);
+  return list.some(x => { const v = String(x).toLowerCase(); return v === a || (v.startsWith('@') && v.slice(1) === d) || v === d; });
+}
+function mailParse(txt) {
+  const from = (txt.match(/^FROM:\s*(.*)$/im) || [])[1] || '';
+  const subj = (txt.match(/^SUBJECT:\s*(.*)$/im) || [])[1] || '';
+  const body = txt.replace(/^FROM:.*$/im, '').replace(/^SUBJECT:.*$/im, '').trim();
+  const addr = mailAddr(from);
+  const who = (from.replace(/<[^>]*>/, '').trim() || addr.split('@')[0] || '?').slice(0, 40);
+  return { who, addr, subj: subj.trim(), body };
+}
+function autoLogMail(m, srcTs) {
+  const line = `Email from ${m.who}: ${m.subj || '(no subject)'}${m.body ? ' — ' + m.body.replace(/\s+/g, ' ').slice(0, 400) : ''}`;
+  if (!tagLooksJunky(m.who) && !knownTags().some(x => x.toLowerCase() === m.who.toLowerCase())) { prefs.tags.unshift(m.who); renderTagChips(); }
+  return addEntry('Note', line, '—', { noSniff: true, mail: true, tags: [m.who],
+    mailAddr: m.addr, mailSubj: m.subj.slice(0, 120), ...(srcTs ? { textTs: srcTs } : {}) });
+}
+// the one row that does the learning
+function mailSay(addr, yes) {
+  const a = String(addr || '').toLowerCase();
+  prefs.mailAsk = mailAsk().filter(x => (x.a || x) !== a);
+  (yes ? mailOk() : mailNo()).push(a);
+  scheduleSave(); renderMailAsk();
+  toast(yes ? `📧 ${a} — kept from now on ✓` : `🚫 ${a} — never again ✓`);
+}
+function mailSayDom(addr, yes) {
+  const d = '@' + mailDom(String(addr || '').toLowerCase());
+  prefs.mailAsk = mailAsk().filter(x => mailDom(String(x.a || x)) !== d.slice(1));
+  (yes ? mailOk() : mailNo()).push(d);
+  scheduleSave(); renderMailAsk();
+  toast(`📧 everyone at ${d} — ${yes ? 'kept' : 'skipped'} from now on ✓`);
+}
+function renderMailAsk() {
+  const box = $('mailAskCard');
+  if (!box) return;
+  const list = mailAsk().slice(0, 8);
+  if (!list.length || CREW_NAME) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
+  box.innerHTML = `<div style="font-weight: 800; font-size: 13px; letter-spacing: .5px;">📧 NEW EMAIL SENDERS — keep them or not?</div>
+    <div class="hint" style="margin: 3px 0 6px;">Nothing from these has been filed. One tap each and it never asks again.</div>
+    ${list.map(x => { const a = String(x.a || x), sub = String(x.s || '');
+      return `<div style="border-top: 1px solid var(--border); padding: 6px 0;">
+      <div style="font-weight: 700; font-size: 13px; word-break: break-all;">${esc(a)}</div>
+      ${sub ? `<div class="hint" style="margin: 1px 0 4px;">${esc(sub.slice(0, 70))}</div>` : ''}
+      <div class="chips-row" style="display: flex; gap: 5px; flex-wrap: wrap;">
+        <button type="button" class="pick-chip sel" style="font-size: 11px;" onclick="mailSay('${escq(a)}', true)">✓ Always</button>
+        <button type="button" class="pick-chip" style="font-size: 11px;" onclick="mailSay('${escq(a)}', false)">🚫 Never</button>
+        <button type="button" class="btn-ghost req-x" style="font-size: 10.5px;" onclick="mailSayDom('${escq(a)}', true)">✓ everyone @${esc(mailDom(a))}</button>
+      </div></div>`; }).join('')}`;
+}
 // 🤖 v5.99 — ALL SENDERS means the machines write too. Eric: skip the robots entirely.
 // Deliberately narrow, because a wrong guess means he never sees that text:
 //   · a SHORT CODE sender (3–6 digits — 262966, 74454; a real phone is 10+), or
@@ -7317,6 +7379,22 @@ async function checkInboxTexts() {
       const body = txt.replace(/^FROM:.*$/im, '').trim();
       const photos = [];
       for (const im of mine) { claimed.add(im.name); photos.push(await claim(im)); }
+      // 📧 v6.12 — a SUBJECT: line means this is an email, not a text
+      if (/^SUBJECT:/im.test(txt)) {
+        const m = mailParse(txt);
+        pendMarkDone(id);
+        _txtCache.delete(f.name);
+        if (m.addr && mailListed(mailNo(), m.addr)) { archiveText(f.path_lower, true); continue; }
+        if (!m.addr || mailListed(mailOk(), m.addr)) {
+          autoLogMail(m, f.server_modified);
+        } else if (!mailAsk().some(x => (x.a || x) === m.addr)) {
+          mailAsk().push({ a: m.addr, s: m.subj });   // ask once, never log behind his back
+          scheduleSave();
+        }
+        archiveText(f.path_lower);
+        renderMailAsk();
+        continue;
+      }
       // 🤖 v5.99 — a machine wrote this one: filed under /Texts/Robots, never into the log
       if (textIsRobot(from, body)) {
         pendMarkDone(id);
@@ -7356,7 +7434,7 @@ async function checkInboxTexts() {
       autoLogText(oFrom, '', [await claim(im)], isPersonalSender(oFrom) || undefined, im.server_modified);
       pendMarkDone(id); // v5.98 — written down, same as the worded ones
     }
-    renderPendBanner(); renderTextDigest(); renderTxtNudges();
+    renderPendBanner(); renderTextDigest(); renderTxtNudges(); renderMailAsk();
   } catch (e) { /* no Inbox or offline — quiet */ }
 }
 // 📚 v5.19 — a text reads itself in: logged + tagged under the sender (Wizard-searchable),
@@ -12000,10 +12078,11 @@ function renderAskRecent() {
   // BEFORE he's acted on them, marked ⏳ waiting. Tap one and the review card opens.
   const kindOf = e => /^App feedback:/.test(e.details || '') || (e.tags || []).includes('App Feedback') ? 'fb'
     : (e.who && e.who !== 'Me' && crew.includes(e.who)) ? 'crew'
+    : e.mail ? 'mail'
     : e.texted ? 'text'
     : (e.photoPath || (e.photoPaths && e.photoPaths.length) || e.type === 'Photo') ? 'photo'
     : e.ask ? 'wiz' : 'grind';
-  const GLYPH = { text: '📱', photo: '📷', wiz: '❓', grind: '⚙', fb: '💬', crew: '👷', client: '🏠' };
+  const GLYPH = { text: '📱', photo: '📷', wiz: '❓', grind: '⚙', fb: '💬', crew: '👷', client: '🏠', mail: '📧' };
   const personOf = e => e.who && e.who !== 'Me' ? e.who : ((e.tags || [])[0] || '');
   const pendKind = p => p.kind === 'crew' ? 'crew' : p.kind === 'clientask' ? 'client'
     : p.kind === 'text' ? 'text' : p.kind === 'question' ? 'wiz' : 'grind';
@@ -13408,7 +13487,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.11';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.12';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
