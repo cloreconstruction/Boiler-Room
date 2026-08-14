@@ -3177,7 +3177,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.12 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.13 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7384,6 +7384,10 @@ async function checkInboxTexts() {
         const m = mailParse(txt);
         pendMarkDone(id);
         _txtCache.delete(f.name);
+        // 🕳 v6.13 — an EMPTY capture is not an email. Eric's first live Zap wrote files with
+        // the FROM:/SUBJECT: labels and nothing after them, and three "Email from ?: (no
+        // subject)" rows landed in his log. Nothing to say means nothing gets said.
+        if (!m.addr && !m.subj && !m.body.trim()) { archiveText(f.path_lower, true); continue; }
         if (m.addr && mailListed(mailNo(), m.addr)) { archiveText(f.path_lower, true); continue; }
         if (!m.addr || mailListed(mailOk(), m.addr)) {
           autoLogMail(m, f.server_modified);
@@ -13487,7 +13491,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.12';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.13';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
