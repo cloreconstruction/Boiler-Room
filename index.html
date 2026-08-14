@@ -3176,7 +3176,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.10 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.11 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7245,7 +7245,7 @@ function textAlreadyLogged(from, body, srcTs) {
   const day = srcTs ? localDay(new Date(srcTs)) : '';
   const wordy = String(body || '').trim().length >= 10; // "ok" twice is two texts, always
   return entries.some(e => {
-    if (!e.texted || e.sample) return false;
+    if (!e.texted || e.sample || e.out) return false;   // our own sent texts are not repeats
     if (textFP((e.tags || [])[0], textBodyOf(e)) !== fp) return false;
     if (e.textTs && srcTs) {
       if (e.textTs === srcTs) return true;                // the same file, read twice
@@ -7389,6 +7389,80 @@ function aliasSender(rawNum, name) {
   prefs.tags = [...new Set(prefs.tags)];
   scheduleSave(); renderTextDigest(); renderTagChips();
   toast(`👤 ${name} — every text from that number wears the name now ✓`);
+}
+// 💬 v6.11 — THE OTHER HALF OF THE CONVERSATION. Eric: "can my outgoing texts be captured
+// and put in the right conversation, so I can see more than just incoming?" iOS has no
+// automation that fires when you SEND, so nothing can capture Messages behind your back.
+// What works: write the reply HERE, and the app hands it to Messages with the words already
+// in it. He taps send there — his real number, the real thread, Messages still the source of
+// truth — and this end logs his side at that moment. Both halves, one conversation.
+function telBook() { return prefs.tel && typeof prefs.tel === 'object' ? prefs.tel : (prefs.tel = {}); }
+function telFor(who) {
+  const n = String(who || '').trim();
+  if (!n) return '';
+  if (telBook()[n]) return telBook()[n];
+  if (LOOKS_LIKE_PHONE.test(n)) return n;                       // the tag IS the number
+  const hit = Object.entries(prefs.senderAlias || {}).find(([, v]) => String(v).toLowerCase() === n.toLowerCase());
+  return hit ? hit[0] : '';                                     // taught number, remembered
+}
+function telSet(who, num) {
+  const clean = String(num || '').replace(/[^\d+]/g, '').slice(0, 18);
+  if (!clean) { delete telBook()[who]; } else telBook()[who] = clean;
+  scheduleSave();
+  openThread(who);
+}
+// every text with this person, both directions, oldest at the bottom like a message app
+function threadWith(who) {
+  const key = String(who || '').toLowerCase();
+  return entries.filter(e => e.texted && !e.sample && (e.tags || []).some(t => String(t).toLowerCase() === key))
+    .sort((a, b) => +new Date(a.ts) - +new Date(b.ts));
+}
+let _thrWho = '';
+function openThread(who) {
+  _thrWho = who;
+  const list = threadWith(who);
+  const tel = telFor(who);
+  const say = e => String(e.details || '').replace(/^Text (from|to) [^:]*:\s*/, '');
+  $('revBox').innerHTML = `<h3>💬 ${esc(who)}
+    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeReview()" aria-label="close">✕</button></h3>
+    <div class="hint" style="margin: 0 0 8px;">${list.length} message${list.length === 1 ? '' : 's'} — theirs and yours, oldest first. Sending opens your normal Messages app with the words already in it; the copy stays here.</div>
+    <div style="max-height: 46vh; overflow-y: auto; padding: 2px;">
+    ${list.length ? list.map(e => `<div style="margin: 6px 0; display: flex; ${e.out ? 'justify-content: flex-end;' : ''}">
+      <div style="max-width: 82%; border: 1.5px solid ${e.out ? 'var(--accent)' : 'var(--border)'}; border-radius: 10px; padding: 6px 9px; background: var(--surface-1);">
+        <div style="font-size: 10px; font-weight: 800; letter-spacing: .4px; color: var(--ink-muted);">${e.out ? '➡ YOU SENT' : '⬅ ' + esc(who)} · ${new Date(e.ts).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
+        <div style="white-space: pre-wrap; font-size: 13.5px; margin-top: 2px;">${esc(say(e))}</div>
+      </div></div>`).join('') : '<span class="hint">Nothing from this person yet.</span>'}
+    </div>
+    <div class="field" style="margin-top: 10px;"><label>Write back</label>
+      <textarea id="thrText" rows="3" class="grow" style="width: 100%;" placeholder="Type it here — Messages opens with it filled in"></textarea></div>
+    ${tel ? `<button type="button" class="btn-primary" style="width: 100%; font-weight: 800; margin-top: 8px; padding: 12px;" onclick="thrSend()">📤 Send it in Messages</button>`
+      : `<div class="frow" style="gap: 6px; margin-top: 8px;">
+        <div class="field" style="flex: 1; margin: 0;"><label>${esc(who)}'s number — needed once</label>
+          <input type="tel" id="thrTel" inputmode="tel" placeholder="907-555-0100"></div>
+        <button type="button" class="btn-ghost" onclick="telSet('${escq(who)}', ($('thrTel')||{}).value)">✓ Save</button>
+      </div>`}
+    <div class="hint" style="margin-top: 8px;">${tel ? `📱 ${esc(tel)} · <span style="cursor: pointer; text-decoration: underline;" onclick="telSet('${escq(who)}', '')">change the number</span>` : 'Once the number is in, sending is one tap.'}
+      Boiler Room never sends the text itself — your phone does, from your own number, so the thread in Messages stays whole.</div>`;
+  $('revModal').classList.add('show');
+  document.body.classList.add('modal-open');
+  setTimeout(() => { const t = $('thrText'); if (t) t.focus(); }, 120);
+}
+// the one line that hands off to the phone's own Messages app — its own step, so it can be
+// watched in a test without pretending to be a phone
+function openSms(url) { location.href = url; }
+function thrSend() {
+  const body = (($('thrText') || {}).value || '').trim();
+  const tel = telFor(_thrWho);
+  if (!body) { toast('Write something first', false); return; }
+  if (!tel) { toast('Put their number in first', false); return; }
+  // 📝 log OUR side the moment it's handed over, then open Messages with it ready to send
+  addEntry('Note', `Text to ${_thrWho}: ${body.slice(0, 800)}`, '—',
+    { noSniff: true, texted: true, out: true, tags: [_thrWho], textTs: new Date().toISOString() });
+  scheduleSave();
+  const sep = /iPhone|iPad|Mac/i.test(navigator.userAgent) ? '&' : '?';
+  openSms(`sms:${tel}${sep}body=${encodeURIComponent(body)}`);
+  toast(`➡ Filed under ${_thrWho} — hit send in Messages to make it go ✓`);
+  setTimeout(() => { if ($('revModal').classList.contains('show')) openThread(_thrWho); }, 1200);
 }
 function autoLogText(from, body, photos, personal, srcTs) {
   from = senderName(from);
@@ -13077,6 +13151,8 @@ function logRowHtml(e) {
     const sharedBit = e.shared ? `<span>·</span><span class="log-shared" title="Sent via File + Share">📤 sent → ${esc(e.sharedTo || 'Logan')}</span>` : '';
     const whoBit = e.who && e.who !== 'Me' ? `<span>·</span><span title="Tagged for ${esc(e.who)}">→ ${esc(e.who)}</span>` : '';
     const tagBit = (e.tags || []).length ? `<span>·</span>` + e.tags.map(t => `<span style="cursor: pointer;" title="Show everything tagged ${esc(t)}" onclick="logFilterTag('${escq(t)}', event)">🏷 ${esc(t)}</span>`).join(' ') : '';
+    // 💬 v6.11 — a text row opens the whole back-and-forth, and writes back from there
+    const thrBit = e.texted && (e.tags || [])[0] ? `<span>·</span><span style="cursor: pointer; font-weight: 700;" title="The whole conversation with ${esc((e.tags || [])[0])}" onclick="openThread('${escq((e.tags || [])[0])}'); event.stopPropagation();">💬 thread ↩</span>` : '';
     const visBit = e.vis ? `<span>·</span><span title="${e.vis === 'crew' ? 'Unlocked — every crew folder gets this' : 'Sent to ' + esc(Array.isArray(e.vis) ? e.vis.join(' + ') : e.vis) + ' only'}">${esc(visWord(e.vis))}</span>` : '';
     const ocrBit = e.ocr ? `<span>·</span><span title="Text was read from the photo — search can find it">📄 text</span>` : '';
     const aiBit = e.ai ? `<span>·</span><span title="${esc(e.ai.slice(0, 220))}">🔮 described</span>`
@@ -13087,7 +13163,7 @@ function logRowHtml(e) {
     return `<div class="log-row" onclick="this.classList.toggle('x')">
       <div class="log-body">
         <div class="log-main">${esc(e.details)}${e.photoPath ? ` <span style="cursor: pointer; white-space: nowrap;" title="Tap to view the photo${e.photoPaths && e.photoPaths.length > 1 ? 's' : ''}" onclick="openEntryPhoto(${e.id}, event)">📷${e.photoPaths && e.photoPaths.length > 1 ? '×' + e.photoPaths.length : ''}</span>` : ''}${qty ? ` <strong>· ${qty}</strong>` : ''}</div>
-        <div class="log-meta"><span class="mini-chip ${chipClass[e.type]}" title="${e.type}">${chipIcon[e.type]}</span><span>${when}</span><span>·</span><span>${esc(e.job)}</span>${truckBit}${whoBit}${tagBit}${visBit}<span>·</span><span>→ ${esc(e.filedTo)}</span>${sharedBit}${ocrBit}${aiBit}${nbBit}${vvBit}</div>
+        <div class="log-meta"><span class="mini-chip ${chipClass[e.type]}" title="${e.type}">${chipIcon[e.type]}</span><span>${when}</span><span>·</span><span>${esc(e.job)}</span>${truckBit}${whoBit}${tagBit}${thrBit}${visBit}<span>·</span><span>→ ${esc(e.filedTo)}</span>${sharedBit}${ocrBit}${aiBit}${nbBit}${vvBit}</div>
       </div>
       <div class="log-savedcell"><button class="log-edit" title="Edit this entry" onclick="openLogEdit(${e.id}, event)">✏️</button>${sync}</div>
     </div>`;
@@ -13332,7 +13408,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.10';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.11';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
