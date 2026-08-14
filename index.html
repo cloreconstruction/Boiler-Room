@@ -3177,7 +3177,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.13 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.14 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7515,6 +7515,13 @@ function openThread(who) {
         <div style="white-space: pre-wrap; font-size: 13.5px; margin-top: 2px;">${esc(say(e))}</div>
       </div></div>`).join('') : '<span class="hint">Nothing from this person yet.</span>'}
     </div>
+    ${LOOKS_LIKE_PHONE.test(who) ? `<div class="frow" style="gap: 6px; margin-top: 8px; align-items: flex-end;">
+      <div class="field" style="flex: 1; margin: 0;"><label>✎ Whose number is this? Name it once</label>
+        <input type="text" id="thrName" placeholder="Dale · Sterling Custom · Wifey"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();thrName();}"></div>
+      <button type="button" class="btn-ghost" onclick="thrName()">✓ Save the name</button>
+    </div>
+    <div class="hint" style="margin: 3px 0 0;">Every text from this number — past and future — wears the name from then on.</div>` : ''}
     <div class="field" style="margin-top: 10px;"><label>Write back</label>
       <textarea id="thrText" rows="3" class="grow" style="width: 100%;" placeholder="Type it here — Messages opens with it filled in"></textarea></div>
     ${tel ? `<button type="button" class="btn-primary" style="width: 100%; font-weight: 800; margin-top: 8px; padding: 12px;" onclick="thrSend()">📤 Send it in Messages</button>`
@@ -7532,6 +7539,15 @@ function openThread(who) {
 // the one line that hands off to the phone's own Messages app — its own step, so it can be
 // watched in a test without pretending to be a phone
 function openSms(url) { location.href = url; }
+// ✎ v6.14 — name a number right here, where he's already reading it. The digest has had
+// this since v5.26, but the thread is where he actually meets an unnamed number.
+function thrName() {
+  const v = (($('thrName') || {}).value || '').trim();
+  if (!v) { toast('Type the name first', false); return; }
+  const num = _thrWho;
+  aliasSender(num, v);          // retro-fixes every past entry and the chip row
+  openThread(v);                // the thread reopens under the name
+}
 function thrSend() {
   const body = (($('thrText') || {}).value || '').trim();
   const tel = telFor(_thrWho);
@@ -13491,7 +13507,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.13';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.14';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
