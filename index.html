@@ -3177,7 +3177,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.14 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.15 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7602,7 +7602,8 @@ function sendFeedback() {
 }
 // 📬 the one card instead of thirty — Eric likes it. v5.26: tap a NAME to see only that
 // person's texts today, and the running day-counts stay as the interesting fact they are.
-let _tdOpen = false, _tdSender = '', _tdRen = '';
+let _tdOpen = false, _tdSender = '', _tdRen = '', _tdRange = 'today';
+function tdRange(k) { _tdRange = k; _tdSender = ''; renderTextDigest(); }
 function tdPick(s, ev) {
   if (ev) ev.stopPropagation();
   _tdSender = _tdSender === s ? '' : s;
@@ -7686,7 +7687,17 @@ function renderTextDigest() {
   if (isCrew()) { box.innerHTML = ''; return; }
   const today = localDay(new Date());
   const allTexted = entries.filter(e => e.texted && !e.sample);
-  const tx = allTexted.filter(e => localDay(new Date(e.ts)) === today);
+  // 📅 v6.15 — Eric: "it only shows the current day, probably should have some simple quick
+  // sort buttons." Today is still where it opens; the rest is one tap away.
+  const R = { today: 1, yday: 2, week: 7, month: 30, all: 0 };
+  const rng = R[_tdRange] === undefined ? 1 : R[_tdRange];
+  const since = new Date(); since.setHours(0, 0, 0, 0);
+  since.setDate(since.getDate() - (rng ? rng - 1 : 3650));
+  const tx = allTexted.filter(e => {
+    const d = new Date(e.ts);
+    if (_tdRange === 'yday') { const y = new Date(); y.setDate(y.getDate() - 1); return localDay(d) === localDay(y); }
+    return +d >= +since;
+  });
   const meter = textMeterHtml();
   // quiet morning: no texts yet, but the meter still stands there waiting to fill
   if (!tx.length) {
@@ -7719,6 +7730,10 @@ function renderTextDigest() {
           ? `<input type="text" class="mini-sel" id="tdRenBox" placeholder="whose number?" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault();tdRenameDone('${escq(s)}', this.value);}" onblur="tdRenameDone('${escq(s)}', this.value)">`
           : `<button class="pick-chip${_tdSender === s ? ' sel' : ''}" onclick="tdPick('${escq(s)}', event)">${_tdSender === s ? '✓&nbsp;' : ''}${esc(s)} (${n})</button>` +
             (LOOKS_LIKE_PHONE.test(s) ? `<button class="pick-chip" onclick="tdRenameStart('${escq(s)}', event)" title="whose number is this?">✎ name</button>` : '')).join('')}
+    </div>
+    <div class="chips-row" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px;" onclick="event.stopPropagation()">
+      ${[['today', 'Today'], ['yday', 'Yesterday'], ['week', '7 days'], ['month', '30 days'], ['all', 'All']]
+        .map(([k, lab]) => `<button type="button" class="pick-chip${(_tdRange || 'today') === k ? ' sel' : ''}" style="font-size: 10.5px; padding: 4px 9px; min-height: 26px;" onclick="tdRange('${k}')">${(_tdRange || 'today') === k ? '✓ ' : ''}${lab}</button>`).join('')}
     </div>
     <div style="margin-top: 6px;" onclick="event.stopPropagation()">` + shown.slice(0, 40).map(e =>
       `<div class="hint" style="margin: 3px 0;">${e.personal ? '🔒 ' : ''}<b>${esc((e.tags || [])[0] || '?')}</b> · ${new Date(e.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} — ${esc(e.details.replace(/^Text from [^:]*: /, '').slice(0, 110))}</div>`).join('') +
@@ -13507,7 +13522,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.14';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.15';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
