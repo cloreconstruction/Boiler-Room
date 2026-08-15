@@ -3177,7 +3177,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.15 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.16 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5673,12 +5673,8 @@ async function wizardReadStaged() {
     m.aiStatus = '🔮…'; renderNotePhotoList();
     try {
       const p = await aiDescribePhoto(f);
-      const isRcpt = !!(p.vendor || (p.total != null && p.total !== ''));
-      const words = isRcpt
-        ? [/^\d{4}-\d{2}-\d{2}$/.test(p.rdate || '') ? '📅 ' + p.rdate : '',
-           p.vendor ? '🏪 ' + p.vendor : '',
-           (p.total != null && p.total !== '') ? '💵 $' + p.total : ''].filter(Boolean).join('\n')
-        : (p.desc || '').trim();
+      const isRcpt = isReceiptRead(p);
+      const words = isRcpt ? receiptLines(p) : (p.desc || '').trim();
       if (!words) { m.aiStatus = ''; continue; }
       m.ai = words; // the saved entry carries the read — a receipt lands in the bill strip
       if (p.category && !m.aiCat) m.aiCat = p.category;
@@ -5848,7 +5844,7 @@ async function aiDescribePhoto(f) {
   // 🧠 v5.42 — labeling a receipt or a jobsite shot is the ⚡ quick brain's best work
   const { r } = await aiCall({
       max_tokens: 300,
-      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"ONE short plain sentence: what the photo shows and the stage of work — no filler","category":"best match from this list or empty: Framing, Foundation, Roofing, Siding, Windows/Doors, Electrical, Plumbing, HVAC, Drywall, Paint, Finish, Landscaping, Materials, Tools, Fuel, Subcontractor, Office/Admin, Permits/Fees, Insurance, Loan/Bank, Personal","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"rdate":"YYYY-MM-DD purchase/receipt date if visible on a receipt/invoice, else empty","due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty"}',
+      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"ONE short plain sentence: what the photo shows and the stage of work — no filler","category":"best match from this list or empty: Framing, Foundation, Roofing, Siding, Windows/Doors, Electrical, Plumbing, HVAC, Drywall, Paint, Finish, Landscaping, Materials, Tools, Fuel, Subcontractor, Office/Admin, Permits/Fees, Insurance, Loan/Bank, Personal","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"rdate":"YYYY-MM-DD purchase/receipt date if visible on a receipt/invoice, else empty","due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"pastDue":amount shown as past due, overdue, or previous balance unpaid, as a number, else null,"balance":total balance or amount outstanding as a number if this is a statement, else null,"acctLast4":"ONLY the last four digits of any account or loan number, else empty","expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty"}',
       messages: [{ role: 'user', content: [
         srcBlock,
         { type: 'text', text: isPdf ? 'Label this document.' : 'Label this photo.' }
@@ -5858,6 +5854,31 @@ async function aiDescribePhoto(f) {
   const j = await r.json();
   const text = (j.content || []).map(c => c.text || '').join('').trim();
   return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+}
+// 🧾 v6.16 — Eric: "when I enter a mortgage statement or a bill or an invoice, take a little
+// more than the date and who it's from. Look for due dates, amounts that are due, things
+// that are past due. Put important numbers into the description." A plain receipt still gets
+// his three lines and no more; a BILL earns the extra ones, and only the ones it actually has.
+// Account numbers never travel further than their last four digits.
+function receiptLines(p) {
+  const money = n => '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const dayOnly = /^\d{4}-\d{2}-\d{2}$/;
+  const L = [];
+  if (dayOnly.test(p.rdate || '')) L.push('📅 ' + p.rdate);
+  if (p.vendor) L.push('🏪 ' + p.vendor);
+  if (p.total != null && p.total !== '') L.push('💵 ' + money(p.total));
+  if (dayOnly.test(p.due || '')) {
+    const late = p.due < localDay(new Date());
+    L.push(`🗓 DUE ${p.due}${late ? ' — ⚠ PAST DUE' : ''}`);
+  }
+  if (p.dueAmt != null && p.dueAmt !== '' && +p.dueAmt !== +p.total) L.push('💰 PAY ' + money(p.dueAmt));
+  if (p.pastDue != null && p.pastDue !== '' && +p.pastDue > 0) L.push('⚠ PAST DUE ' + money(p.pastDue));
+  if (p.balance != null && p.balance !== '' && +p.balance !== +p.total) L.push('🏦 BALANCE ' + money(p.balance));
+  if (p.acctLast4) L.push('🔢 acct ••••' + String(p.acctLast4).replace(/\D/g, '').slice(-4));
+  return L.join('\n');
+}
+function isReceiptRead(p) {
+  return !!(p.vendor || (p.total != null && p.total !== '') || p.due || p.dueAmt != null || p.pastDue != null);
 }
 function queueAi(f, meta, rerender) {
   if (!aiOn() || !(f.type || '').startsWith('image/')) return;
@@ -5871,12 +5892,8 @@ function queueAi(f, meta, rerender) {
       // So: a RECEIPT auto-fills exactly those three tiny lines (the filing magic keeps
       // working underneath). A JOBSITE photo gets NO auto prose — his words come first,
       // and a 🔮 describe tap on the log entry asks for one when he wants it.
-      const isRcpt = !!(p.vendor || (p.total != null && p.total !== ''));
-      meta.ai = isRcpt
-        ? [/^\d{4}-\d{2}-\d{2}$/.test(p.rdate || '') ? '📅 ' + p.rdate : '',
-           p.vendor ? '🏪 ' + p.vendor : '',
-           (p.total != null && p.total !== '') ? '💵 $' + p.total : ''].filter(Boolean).join('\n')
-        : '';
+      const isRcpt = isReceiptRead(p);
+      meta.ai = isRcpt ? receiptLines(p) : '';
       meta.aiCat = p.category || '';
       if (p.total != null && p.total !== '' && !isNaN(+p.total)) meta.aiTotal = +p.total;
       if (/^\d{4}-\d{2}-\d{2}$/.test(p.due || '')) meta.aiDue = p.due;
@@ -13305,11 +13322,9 @@ async function aiDescribeEntry(id, ev) {
     // 🧾 v5.95 — Eric tapped describe on the Tricity invoice and couldn't find it in the
     // estimates portal: describe wrote a sentence, not the receipt read. A receipt/invoice
     // now gets the SAME three lines the grinder writes — so it feeds the bill strip.
-    const isRcpt = !!(p.vendor || (p.total != null && p.total !== ''));
+    const isRcpt = isReceiptRead(p);
     if (isRcpt) {
-      e.ai = [/^\d{4}-\d{2}-\d{2}$/.test(p.rdate || '') ? '📅 ' + p.rdate : '',
-        p.vendor ? '🏪 ' + p.vendor : '',
-        (p.total != null && p.total !== '') ? '💵 $' + p.total : ''].filter(Boolean).join('\n');
+      e.ai = receiptLines(p);
       if (p.category && !e.aiCat) e.aiCat = p.category;
       delete e.budg; // fresh read = a fresh offer to the budget
       scheduleSave();
@@ -13522,7 +13537,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.15';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.16';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
