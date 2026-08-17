@@ -1323,7 +1323,7 @@
   #bkkHint { margin: 4px 0 0; text-align: center; }
   .plate-btn--bkk.noimg + #bkkHint { display: none; } /* the fallback button already says it */
   /* 🔗 v5.39 — the two setup shortcuts. Temporary by design; one row, thumb-sized, gold plate. */
-  .sc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 14px; }
+  .sc-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 14px; }
   .sc-btn {
     display: flex; align-items: center; justify-content: center; gap: 7px;
     background: var(--accent); color: var(--accent-ink); border: none; border-radius: 12px;
@@ -1336,9 +1336,25 @@
      into each crew folder, so the button has something real behind it. Only the 🏠 plate —
      the 👷 Crew portal plate is Eric's roster and folder publisher and stays his. */
   body.crew-mode #scRow .sc-btn:nth-child(2) { display: none; }
-  /* one plate, so it takes the whole width and reads like the button it is */
-  body.crew-mode #scRow { grid-template-columns: 1fr; }
-  body.crew-mode #scRow .sc-btn { font-size: 15px; min-height: 52px; }
+  /* 📇 v6.17 — a crew phone keeps two plates: the client page, and the job card */
+  body.crew-mode #scRow { grid-template-columns: 1fr 1fr; }
+  body.crew-mode #scRow .sc-btn { font-size: 14px; min-height: 52px; }
+  /* 📇 v6.17 — the job card's own furniture */
+  .jc-head { font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--ink-muted); margin: 14px 0 6px; border-bottom: 1px solid var(--border); padding-bottom: 3px; }
+  .jc-blk { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px; margin: 0 0 8px; background: var(--surface-1); }
+  .jc-add { width: 100%; font-weight: 800; }
+  .jc-x { font-size: 11px; padding: 4px 8px; min-height: 30px; margin-top: 6px; }
+  .jc-big { font-size: 17px; font-weight: 800; line-height: 1.3; }
+  .jc-lnk { display: inline-block; margin: 5px 10px 0 0; font-weight: 800; font-size: 14px;
+    color: var(--ink); text-decoration: underline; }
+  .jc-code { display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+    border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 10px; margin: 0 0 6px; background: var(--surface-1); }
+  .jc-code b { font-size: 20px; font-weight: 800; letter-spacing: 1.5px; font-variant-numeric: tabular-nums; }
+  .jc-lock { width: 100%; margin-top: 12px; padding: 10px; border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: .3px; text-align: left;
+    background: var(--surface-1); color: var(--ink); border: 2px dashed var(--border); }
+  .jc-lock.on { border-style: solid; border-color: var(--accent); }
   :root[data-skin="steam"] .sc-btn {
     border: 2px solid transparent;
     border-image: linear-gradient(160deg, #f0d79a, #8a6a2a 45%, #f3e0ac 70%, #6b4f1c) 1;
@@ -2268,6 +2284,8 @@
   <div class="sc-row" id="scRow">
     <button type="button" class="sc-btn" onclick="jumpSetup('portalSec')">🏠 <span>Project portal</span></button>
     <button type="button" class="sc-btn" onclick="crewViewMenu()">👷 <span>Crew portal</span></button>
+    <!-- 📇 v6.17 — addresses, numbers, emails, door codes. One tap, out of the way. -->
+    <button type="button" class="sc-btn" onclick="openJobCards()">📇 <span>Job cards</span></button>
   </div>
 
 
@@ -3177,7 +3195,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.16 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.17 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8234,8 +8252,11 @@ async function publishSharedNotes() {
     const truckBook = trucks.map(t => ({ name: t.name,
       last: (prefs.lastOdo || {})[t.name] || null,
       trip: t.trip ? { by: 'Eric', ts: t.trip.ts, odo: t.trip.odo, job: t.trip.job } : null }));
-    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, unlocks, trucks: truckBook }, null, 1);
-    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(unlocks) + ':' + JSON.stringify(truckBook);
+    // 📇 v6.17 — the job cards ride out with everything else: addresses, numbers, door codes.
+    // A card Eric marked 🔒 is not filtered downstream, it is never written into this file.
+    const cards = cardBook();
+    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, unlocks, trucks: truckBook, cards }, null, 1);
+    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(unlocks) + ':' + JSON.stringify(truckBook) + ':' + JSON.stringify(cards);
     if (_sharedCache[name] === key) continue; // nothing changed for this person
     try {
       await dbxUpload(`${CREW_DIR}/${cleanName(name)}/shared.json`, body);
@@ -8256,6 +8277,136 @@ function sendUnlock() {
   toast(`🔓 ${name}'s ${day} reopens on their next sync — they fix it and SEND it again ✓`);
 }
 // crew side: read my shared.json and show the FROM ERIC card
+// ================= 📇 v6.17 — THE JOB CARD =================
+// Eric: "in projects I need a place to put phone numbers, emails, and addresses and door codes —
+// a quick and easy button to find but also minimal and out of the way." One card per job. It
+// lives in prefs, so it syncs to his own phones with everything else; the unlocked ones ride
+// out to the crew folders on the normal sweep; and every card is read into the Wizard, so the
+// answer to "what's Rininger's door code" is one spoken question, not a hunt through texts.
+let crewCards = {};                       // a crew phone's copy, delivered in shared.json
+function jobCards() {
+  if (!prefs.cards || typeof prefs.cards !== 'object' || Array.isArray(prefs.cards)) prefs.cards = {};
+  return prefs.cards;
+}
+function allCards() { return CREW_NAME ? (crewCards || {}) : jobCards(); }
+function cardKey(job) { return String(job || '').trim().toLowerCase(); }
+function cardHas(c) { return !!(c && (c.addr || c.notes || (c.people || []).some(p => p.n || p.tel || p.em) || (c.codes || []).some(k => k.w || k.c))); }
+function cardGet(job) { const k = cardKey(job); return k ? (allCards()[k] || null) : null; }
+function cardMake(job) {                  // Eric's side only — a blank card the moment he needs one
+  const all = jobCards(), k = cardKey(job);
+  if (!all[k]) all[k] = { job: String(job || '').trim(), addr: '', people: [], codes: [], notes: '' };
+  if (!all[k].job) all[k].job = String(job || '').trim();
+  return all[k];
+}
+let _cardJob = '';
+function openJobCards() { openJobCard(_cardJob || curJob || jobs[0] || ''); }
+function cardJobList() {
+  if (!CREW_NAME) return jobs.filter(j => j && j !== '—');
+  const seen = [];
+  Object.values(crewCards || {}).forEach(c => { if (c && c.job && !seen.includes(c.job)) seen.push(c.job); });
+  return seen.sort((a, b) => a.localeCompare(b));
+}
+function openJobCard(job) {
+  const list = cardJobList();
+  if (!job || !list.some(j => cardKey(j) === cardKey(job))) job = list[0] || job || '';
+  _cardJob = job;
+  const mine = !CREW_NAME;
+  const c = (mine ? (job ? cardMake(job) : null) : cardGet(job)) || { job, addr: '', people: [], codes: [], notes: '' };
+  const ppl = c.people || [], cds = c.codes || [];
+  const pick = list.length
+    ? `<div class="field" style="margin: 0 0 10px;"><label>Job</label>
+        <select id="jcJob" onchange="openJobCard(this.value)" style="font-weight: 800;">
+          ${list.map(j => `<option${cardKey(j) === cardKey(job) ? ' selected' : ''}>${esc(j)}</option>`).join('')}
+        </select></div>`
+    : `<div class="hint">${mine ? 'Add a job first under ⚙ Setup.' : 'Eric hasn\'t filled in any job cards yet — they arrive on your next sync.'}</div>`;
+  const dial = t => `<a href="tel:${esc(String(t).replace(/[^0-9+]/g, ''))}" class="jc-lnk">📞 ${esc(t)}</a>`;
+  const mail = m => `<a href="mailto:${esc(m)}" class="jc-lnk">✉ ${esc(m)}</a>`;
+  const body = mine ? `
+    <div class="field"><label>📍 Physical address</label>
+      <input type="text" id="jcAddr" value="${esc(c.addr || '')}" placeholder="38210 K-Beach Rd, Soldotna"></div>
+    <div class="jc-head">👤 People — homeowner, spouse, inspector, whoever</div>
+    ${ppl.length ? ppl.map((p, i) => `<div class="jc-blk">
+      <div class="frow" style="gap: 6px;">
+        <div class="field" style="flex: 2; min-width: 130px; margin: 0;"><label>Name</label><input type="text" id="jcPn${i}" value="${esc(p.n || '')}" placeholder="Dale Rininger"></div>
+        <div class="field" style="flex: 1; min-width: 100px; margin: 0;"><label>Who they are</label><input type="text" id="jcPr${i}" value="${esc(p.r || '')}" placeholder="Homeowner"></div>
+      </div>
+      <div class="frow" style="gap: 6px; margin-top: 6px;">
+        <div class="field" style="flex: 1; min-width: 120px; margin: 0;"><label>Phone</label><input type="tel" inputmode="tel" id="jcPt${i}" value="${esc(p.tel || '')}" placeholder="907-555-0100"></div>
+        <div class="field" style="flex: 2; min-width: 140px; margin: 0;"><label>Email</label><input type="email" inputmode="email" id="jcPe${i}" value="${esc(p.em || '')}" placeholder="dale@example.com"></div>
+      </div>
+      <button type="button" class="btn-ghost jc-x" onclick="cardDropPerson(${i})">✕ Take this person off</button>
+    </div>`).join('') : '<div class="hint" style="margin: 0 0 6px;">Nobody on this card yet.</div>'}
+    <button type="button" class="btn-ghost jc-add" onclick="cardAddPerson()">➕ Add a person</button>
+    <div class="jc-head">🔑 Codes — door, gate, lockbox, alarm, wifi</div>
+    ${cds.length ? cds.map((k, i) => `<div class="frow jc-blk" style="gap: 6px; align-items: flex-end;">
+      <div class="field" style="flex: 2; min-width: 120px; margin: 0;"><label>What it opens</label><input type="text" id="jcCw${i}" value="${esc(k.w || '')}" placeholder="Front door · Gate · Shop"></div>
+      <div class="field" style="flex: 1; min-width: 90px; margin: 0;"><label>Code</label><input type="text" id="jcCc${i}" value="${esc(k.c || '')}" placeholder="1379#"></div>
+      <button type="button" class="btn-ghost jc-x" style="flex: none;" onclick="cardDropCode(${i})">✕</button>
+    </div>`).join('') : '<div class="hint" style="margin: 0 0 6px;">No codes on this card yet.</div>'}
+    <button type="button" class="btn-ghost jc-add" onclick="cardAddCode()">➕ Add a code</button>
+    <div class="field" style="margin-top: 12px;"><label>📝 Anything else worth knowing here</label>
+      <textarea id="jcNotes" rows="2" class="grow" oninput="fitTa(this)" placeholder="Dog in the back yard · park on the gravel · water shutoff is under the deck">${esc(c.notes || '')}</textarea></div>
+    <button type="button" class="jc-lock${c.lock ? ' on' : ''}" onclick="cardLock()">${c.lock ? '🔒 ERIC ONLY — this card stays off every crew phone and out of their Wizard' : '👷 THE CREW GETS THIS ONE — they can look it up and ask their Wizard for it'}</button>
+    <button type="button" class="btn-primary" style="width: 100%; font-weight: 800; margin-top: 10px; padding: 13px;" onclick="cardSave()">✓ Save this card</button>`
+  : `
+    ${c.addr ? `<div class="jc-head">📍 Address</div><div class="jc-big">${esc(c.addr)}</div>
+      <a href="${esc('https://maps.apple.com/?q=' + encodeURIComponent(c.addr))}" class="jc-lnk">🗺 Open in Maps</a>` : ''}
+    ${ppl.filter(p => p.n || p.tel || p.em).length ? `<div class="jc-head">👤 People</div>` +
+      ppl.filter(p => p.n || p.tel || p.em).map(p => `<div class="jc-blk">
+        <div style="font-weight: 800;">${esc(p.n || '(no name)')}${p.r ? ` <span class="hint" style="margin: 0;">· ${esc(p.r)}</span>` : ''}</div>
+        ${p.tel ? dial(p.tel) : ''}${p.em ? mail(p.em) : ''}</div>`).join('') : ''}
+    ${cds.filter(k => k.w || k.c).length ? `<div class="jc-head">🔑 Codes</div>` +
+      cds.filter(k => k.w || k.c).map(k => `<div class="jc-code"><span>${esc(k.w || 'code')}</span><b>${esc(k.c || '')}</b></div>`).join('') : ''}
+    ${c.notes ? `<div class="jc-head">📝 Worth knowing</div><div style="white-space: pre-wrap;">${esc(c.notes)}</div>` : ''}
+    ${cardHas(c) ? '' : '<div class="hint">Nothing on this card yet — Eric fills these in and they land here on your next sync.</div>'}`;
+  $('revBox').innerHTML = `<h3>📇 Job Card
+    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeReview()" aria-label="close">✕</button></h3>
+    <div class="hint" style="margin: 0 0 8px;">Addresses, numbers, emails and door codes for one job${mine ? ' — and the Wizard reads every card, so you can just ask it.' : ' — read-only; ask your Wizard for it out loud too.'}</div>
+    ${pick}${body}`;
+  $('revModal').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+// read whatever is on screen back onto the card. keepBlank leaves half-typed rows alone so
+// adding a second person never eats the first empty one.
+function cardRead(keepBlank) {
+  if (CREW_NAME || !_cardJob) return null;
+  const c = cardMake(_cardJob);
+  const v = id => { const el = $(id); return el ? String(el.value || '').trim() : ''; };
+  if ($('jcAddr')) c.addr = v('jcAddr');
+  if ($('jcNotes')) c.notes = v('jcNotes');
+  if ($('jcPn0') || (c.people || []).length) c.people = (c.people || []).map((p, i) => $('jcPn' + i) ? { n: v('jcPn' + i), r: v('jcPr' + i), tel: v('jcPt' + i), em: v('jcPe' + i) } : p);
+  if ($('jcCw0') || (c.codes || []).length) c.codes = (c.codes || []).map((k, i) => $('jcCw' + i) ? { w: v('jcCw' + i), c: v('jcCc' + i) } : k);
+  if (!keepBlank) {
+    c.people = (c.people || []).filter(p => p.n || p.tel || p.em);
+    c.codes = (c.codes || []).filter(k => k.w || k.c);
+  }
+  return c;
+}
+function cardAddPerson() { const c = cardRead(true); if (!c) return; (c.people = c.people || []).push({ n: '', r: '', tel: '', em: '' }); openJobCard(_cardJob); }
+function cardAddCode() { const c = cardRead(true); if (!c) return; (c.codes = c.codes || []).push({ w: '', c: '' }); openJobCard(_cardJob); }
+function cardDropPerson(i) { const c = cardRead(true); if (!c) return; (c.people || []).splice(i, 1); openJobCard(_cardJob); }
+function cardDropCode(i) { const c = cardRead(true); if (!c) return; (c.codes || []).splice(i, 1); openJobCard(_cardJob); }
+function cardLock() {
+  const c = cardRead(true); if (!c) return;
+  c.lock = !c.lock;
+  scheduleSave(); publishSharedNotes();
+  openJobCard(_cardJob);
+  toast(c.lock ? `🔒 ${c.job} card is yours only — it comes off every crew phone on the next sync`
+    : `👷 ${c.job} card goes out to the crew on the next sync ✓`);
+}
+function cardSave() {
+  const c = cardRead(); if (!c) return;
+  scheduleSave(); publishSharedNotes();
+  openJobCard(_cardJob);
+  toast(`📇 ${c.job} card saved ✓ — ask the Wizard for it any time`);
+}
+// what travels: every card he hasn't locked, and only the cards that actually hold something
+function cardBook() {
+  const out = {};
+  Object.entries(jobCards()).forEach(([k, c]) => { if (c && !c.lock && cardHas(c)) out[k] = c; });
+  return out;
+}
+// ================= /JOB CARD =================
 let crewShared = [];
 async function checkSharedNotes() {
   if (!CREW_NAME || !dbx.refreshToken) return;
@@ -8264,6 +8415,10 @@ async function checkSharedNotes() {
     if (!t) return;
     const j = JSON.parse(t);
     crewShared = (j.notes || []).slice(0, 100);
+    // 📇 v6.17 — Eric's job cards land on this phone: address, numbers, door codes, per job.
+    // Whatever he took off the sweep simply isn't in the file, so this can only ever hold
+    // what he meant to send.
+    if (j.cards && typeof j.cards === 'object' && !Array.isArray(j.cards)) crewCards = j.cards;
     // 🚚 v5.51 — take Eric's truck book, keep the NEWER odometer per truck (his sweep vs
     // a trip just ended on this phone). Trucks Eric added appear; ones he removed go.
     if (Array.isArray(j.trucks) && j.trucks.length) {
@@ -11821,19 +11976,80 @@ function askDateRange(q) {
   if (yr && +yr !== now.getFullYear()) return [mk(+yr, 0, 1), mk(+yr, 11, 31)];
   return null;
 }
+// 🔎 v6.17 — THE SWEEP. Eric: "the whole point is to be able to find anything from anytime
+// since the beginning of recorded history." Until now a question with no date in it only ever
+// saw the newest 140 entries. With ~1,600 on record the Wizard was blind to nine tenths of the
+// book and answered "I don't have that" — which reads like forgetting, but it was never handed
+// the pages. Now every question is broken into its real words and EVERY entry ever recorded
+// gets scanned for them. The matches ride along no matter how old they are.
+const ASK_STOP = new Set(('about all also and any are back because been before being both but can cant come could ' +
+  'did does doesnt doing done dont each even ever every find first for from get gets getting give going got had ' +
+  'has have how into its just know like look looking make many maybe might much must need needs never new not now ' +
+  'off one only other our out over please put remember remind said same say see should show some something take ' +
+  'tell than that the their them then there these they thing things think this those time told too two use used ' +
+  'very want was way well went were what whats when where wheres which who whos whom why will with would you your ' +
+  'yours yeah okay ok anything everything').split(/\s+/));
+function askTerms(q) {
+  const raw = String(q || '').toLowerCase().match(/[a-z0-9][a-z0-9'’.\-]*/g) || [];
+  const out = [];
+  for (let w of raw) {
+    w = w.replace(/[’']s$/, '').replace(/^[.\-]+|[.\-]+$/g, '');
+    if (w.length < 3 || ASK_STOP.has(w)) continue;
+    // "gutters" and "gutter" are the same word to a search — trim one plural s off longer words
+    const stem = (w.length >= 5 && /s$/.test(w) && !/ss$/.test(w)) ? w.slice(0, -1) : w;
+    if (!out.includes(stem)) out.push(stem);
+  }
+  return out.slice(0, 14);
+}
+// everything about an entry a word could hide in: his words, the job, who, where it filed,
+// the tags, and anything the Wizard read off a photo or a PDF
+function entryHay(e) {
+  return [e.details, e.job, e.who, e.filedTo, e.category, e.ai, e.ocr,
+    (e.cats || []).join(' '), (e.tags || []).join(' ')].filter(Boolean).join(' \n').toLowerCase();
+}
+// score every entry by how many of the question's words it carries. Best matches first;
+// sort() is stable, so within one score the newest still comes first.
+function askSweep(list, terms, skip, cap) {
+  if (!terms.length) return [];
+  const scored = [];
+  for (const e of list) {
+    if (skip && skip.has(e.id)) continue;
+    const hay = entryHay(e);
+    let n = 0;
+    for (const t of terms) if (hay.indexOf(t) >= 0) n++;
+    if (n) scored.push({ e, n });
+  }
+  scored.sort((a, b) => b.n - a.n);
+  return scored.slice(0, cap).map(x => x.e);
+}
 function buildAskContext(question) {
   const range = askDateRange(question);
   const live = entries.filter(e => !e.sample);
-  let pool, rangeLine = '';
+  const terms = askTerms(question);
+  let pool, rangeLine = '', sweepLine = '';
+  const seen = new Set();
+  pool = [];
+  const push = e => { if (!seen.has(e.id)) { seen.add(e.id); pool.push(e); } };
   if (range) {
     const hit = live.filter(e => { const d = localDay(e.ts); return d >= range[0] && d <= range[1]; });
-    const seen = new Set();
-    pool = [];
-    for (const e of [...hit.slice(0, 220), ...live.slice(0, 30)]) { if (!seen.has(e.id)) { seen.add(e.id); pool.push(e); } }
+    // 🔎 v6.17 — inside the range the word-matches go to the FRONT, so the 220 cap can never
+    // cut out the one entry he was actually reaching for.
+    askSweep(hit, terms, null, 220).forEach(push);
+    hit.slice(0, 220).forEach(push);
+    live.slice(0, 30).forEach(push);
     rangeLine = `\nDATE RANGE PULLED FOR THIS QUESTION: ${range[0]} → ${range[1]} — ${hit.length} log entries exist in that span` +
       (hit.length === 0 ? ' (NONE — the log has no records for those dates; say so plainly instead of guessing)' : ' (all of them are included in RECENT LOG below, no matter how old)') + '.';
   } else {
-    pool = live.slice(0, 140);
+    live.slice(0, 140).forEach(push);
+    const older = askSweep(live, terms, seen, 120);
+    older.forEach(push);
+    if (older.length) {
+      let oldest = '';
+      older.forEach(e => { const d = localDay(e.ts); if (!oldest || d < oldest) oldest = d; });
+      sweepLine = `\nWORD SEARCH RAN ON THE WHOLE LOG: no date was named, so all ${live.length} entries on record were scanned for ${JSON.stringify(terms)} — ${older.length} match${older.length === 1 ? '' : 'es'} older than the newest 140 (back as far as ${oldest}) are included in RECENT LOG below. Old entries are NOT out of reach: if something matching is in there, use it and give its date.`;
+    } else if (terms.length) {
+      sweepLine = `\nWORD SEARCH RAN ON THE WHOLE LOG: no date was named, so all ${live.length} entries on record were scanned for ${JSON.stringify(terms)} and nothing outside the newest 140 matched. The whole book HAS been searched — if the answer isn't in RECENT LOG below, say plainly that nothing on record matches, and suggest the words that would find it.`;
+    }
   }
   const slim = pool.map(e => {
     const o = { id: e.id, d: localDay(e.ts), t: e.type, x: e.details, j: e.job };
@@ -11881,10 +12097,31 @@ function buildAskContext(question) {
       if (Object.keys(store).length) crewAskCtx = `\nCREW WIZARD QUESTIONS (what each crew member has been asking their own Wizard — spot the patterns so Eric can make that info easier to find): ${JSON.stringify(store)}`;
     } catch (e) {}
   }
+  // 📇 v6.17 — THE JOB CARD rides in every question. Eric: "me or crew can say 'what is
+  // Rininger's physical address and door code'." These are working details, not secrets from
+  // the men doing the work — a card he marks 🔒 never leaves his phone at all, so anything
+  // that reaches this line is already cleared to be answered out loud.
+  const cardRows = Object.values(allCards()).filter(cardHas).map(c => {
+    const o = { job: c.job };
+    if (c.addr) o.address = c.addr;
+    const ppl = (c.people || []).filter(p => p.n || p.tel || p.em).map(p => {
+      const x = { name: p.n || '(no name)' };
+      if (p.r) x.role = p.r; if (p.tel) x.phone = p.tel; if (p.em) x.email = p.em;
+      return x;
+    });
+    if (ppl.length) o.people = ppl;
+    const cds = (c.codes || []).filter(k => k.w || k.c).map(k => ({ what: k.w || 'code', code: k.c }));
+    if (cds.length) o.codes = cds;
+    if (c.notes) o.notes = c.notes;
+    return o;
+  });
+  const cardCtx = cardRows.length
+    ? `\nJOB CARDS (the book of addresses, phone numbers, emails, and gate/door/lockbox codes, one card per job — answer "what is <job>'s address and door code" straight from here and give the code plainly; if a job has no card, say so and say to add one under 📇 Job cards): ${JSON.stringify(cardRows)}`
+    : '';
   const followCtx = (!CREW_NAME && _lastAnswer && Date.now() - _lastAnswer.at < 15 * 60000)
     ? `\nPREVIOUS EXCHANGE (moments ago — use it to resolve follow-up questions and pronouns):\nQ: ${_lastAnswer.q}\nA: ${String(_lastAnswer.text).slice(0, 900)}`
     : '';
-  return `TODAY: ${new Date().toString()}${rangeLine}${crewCtx}${crewAskCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first): ${JSON.stringify(slim)}`;
+  return `TODAY: ${new Date().toString()}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
 }
 // 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
 // offers their photos, a follow-up within 15 minutes remembers the exchange, and
@@ -13537,7 +13774,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.16';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.17';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
