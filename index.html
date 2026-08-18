@@ -1967,6 +1967,17 @@
   .punch-log div[onclick] { cursor: pointer; }
   .pl-edit { opacity: 0.55; margin-left: 4px; }
   /* 💡 v5.21 — QB freshness lamps: bright + glow + day-count when fresh; dim + STALE word when old */
+  /* 📚 v6.18 — books-updated strip + the per-client receipt */
+  .qb-fresh { text-align: left; line-height: 1.35; }
+  .qb-fresh.ok { border-color: var(--accent); }
+  .qb-fresh.warn { border-style: dashed; border-width: 2.5px; }
+  .qbf-tally { border: 2px solid var(--border); border-radius: 10px; padding: 9px 11px; margin: 0 0 10px;
+    font-size: 14px; font-weight: 800; }
+  .qbf-tally.ok { border-color: var(--accent); }
+  .qbf-tally.warn { border-style: dashed; }
+  .qbf-row { display: flex; gap: 9px; align-items: flex-start; border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 8px 10px; margin: 0 0 6px; background: var(--surface-1); }
+  .qbf-w { flex: none; font-size: 17px; font-weight: 800; width: 20px; text-align: center; }
   .qb-lamp { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--line, #3a3226); border-radius: 999px;
     padding: 4px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink-2, #b0a488); margin: 2px 6px 2px 0; opacity: 0.65; }
   .qb-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line, #3a3226); }
@@ -2294,6 +2305,10 @@
   <!-- 📬 v5.19 — text digest (one card, not thirty) + 📌 evening nudges for question texts -->
   <div id="txtDigest"></div>
   <div id="nudgeStrip"></div>
+  <!-- 📚 v6.18 — BOOKS UPDATED. Eric: "I would like a way to know that all the client portal
+       budgets have been updated." Appears the morning the QB run lands, says how many pages
+       got refreshed and names any that didn't, then goes quiet once he taps ✓ Got it. -->
+  <div id="qbFreshStrip"></div>
 
   <!-- v4.55 — ONE box on top: write a note or ask the Wizard, two buttons decide where it goes -->
   <div class="card ask-card qn-card" id="qnCard">
@@ -3084,6 +3099,8 @@
           <!-- 📣 v5.21 — the button rings Claude: raises a flag file the hourly watcher grabs -->
           <button class="btn-ghost" style="margin-top: 10px;" onclick="qbUpdateNow()">📣 Tell Claude — process the new exports</button>
           <div id="qbNowMsg" class="hint" style="margin-top: 6px;"></div>
+          <!-- 📚 v6.18 — the receipt for the run: which client pages actually got new money -->
+          <button class="btn-ghost" style="margin-top: 10px;" onclick="openQbFresh()">📚 Did every client budget update?</button>
         </div>
         <div class="set-section" id="setPrivacy">
       <h4>🔒 Personal people</h4>
@@ -3195,7 +3212,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.17 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.18 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -11500,6 +11517,91 @@ async function renderQbLights() {
     return `<span class="qb-lamp${lit ? ' lit' : ''}" role="img" aria-label="${lab} export — ${newest ? (lit ? 'fresh, ' : 'stale, ') + days + ' days old' : 'never uploaded'}"><span class="qb-dot"></span>${lab} <b>${word}</b></span>`;
   }).join('');
 }
+// ================= 📚 v6.18 — BOOKS UPDATED =================
+// Eric: "Logan said Tuesday at 6am the 3 required reports will be emailed to me... I would
+// like a way to know that all the client portal budgets have been updated."
+//
+// The QB run happens outside this phone — Claude reads Logan's exports and rewrites each
+// client page. Up to now the only way to know it worked was to open all seven pages and
+// squint. So the run now leaves a RECEIPT at App Data/qb-refresh.json, and this phone reads
+// it: how many pages were refreshed, when, and — the part that matters — which ones were NOT
+// and why. A run that half-worked has to LOOK half-worked.
+const QB_FRESH_PATH = () => DBX_ROOT + '/App Data/qb-refresh.json';
+let qbFresh = null;
+function qbFreshSeen() { return lsGet('daylog-qbfresh-seen') || ''; }
+function qbFreshStamp(j) { return String((j && (j.ranAt || j.importDate)) || ''); }
+// a page counts as refreshed only if the run says so IN WORDS — a missing flag is a miss,
+// never a pass. Silence must never read as success on a money screen.
+function qbFreshRows() {
+  const cl = ((qbFresh || {}).clients) || [];
+  return cl.map(c => ({
+    job: String(c.job || c.code || '(unnamed)'),
+    ok: c.updated === true,
+    at: c.at || '',
+    why: String(c.why || c.note || ''),
+    invoiced: typeof c.invoiced === 'number' ? c.invoiced : null,
+    paid: typeof c.paid === 'number' ? c.paid : null,
+    open: typeof c.open === 'number' ? c.open : null
+  }));
+}
+function qbFreshCount() {
+  const r = qbFreshRows();
+  return { done: r.filter(x => x.ok).length, all: r.length, miss: r.filter(x => !x.ok) };
+}
+async function checkQbFresh() {
+  if (CREW_NAME || !dbx.refreshToken) return;
+  try {
+    const t = await dbxDownload(QB_FRESH_PATH());
+    qbFresh = t ? JSON.parse(t) : null;
+  } catch (e) { qbFresh = null; }
+  renderQbFresh();
+}
+function renderQbFresh() {
+  const box = $('qbFreshStrip');
+  if (!box) return;
+  const stamp = qbFreshStamp(qbFresh);
+  if (!qbFresh || !stamp || qbFreshSeen() === stamp) { box.innerHTML = ''; return; }
+  const { done, all, miss } = qbFreshCount();
+  const when = qbFresh.ranAt ? new Date(qbFresh.ranAt).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : (qbFresh.importDate || '');
+  const clean = all > 0 && !miss.length;
+  // brightness + glyph + the spelled-out word — never colour on its own
+  box.innerHTML = `<button type="button" class="app-banner qb-fresh${clean ? ' ok' : ' warn'}" onclick="openQbFresh()">
+    <b>${clean ? '📚 BOOKS UPDATED' : '⚠ BOOKS PART-UPDATED'}</b> · ${esc(when)}<br>
+    <span>${all ? `${done} of ${all} client budget${all === 1 ? '' : 's'} refreshed` : 'the run left no client list'}${miss.length ? ` — ${miss.length} still need${miss.length === 1 ? 's' : ''} a look` : ' — every page is current'} · tap to see them</span></button>`;
+}
+function qbFreshDismiss() {
+  lsSet('daylog-qbfresh-seen', qbFreshStamp(qbFresh));
+  renderQbFresh();
+  closeReview();
+  toast('📚 Marked as seen — it comes back on the next QuickBooks run');
+}
+function openQbFresh() {
+  closePanels();
+  const rows = qbFreshRows();
+  const { done, all, miss } = qbFreshCount();
+  const when = (qbFresh && qbFresh.ranAt) ? new Date(qbFresh.ranAt).toLocaleString([], { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  const money = v => v == null ? '' : '$' + Math.round(v).toLocaleString();
+  const body = !qbFresh
+    ? `<div class="hint">No QuickBooks run has left a receipt yet. The next time Logan's three reports come in and Claude processes them, this fills in — one line per client page, saying plainly whether its budget was rewritten.</div>`
+    : `<div class="hint" style="margin: 0 0 10px;">Last run: <b>${esc(when || qbFresh.importDate || 'unknown')}</b>${qbFresh.importDate ? ` · books through <b>${esc(qbFresh.importDate)}</b>` : ''}${(qbFresh.source || []).length ? `<br>Read from: ${(qbFresh.source || []).slice(0, 4).map(esc).join(' · ')}` : ''}</div>
+      <div class="qbf-tally ${all && !miss.length ? 'ok' : 'warn'}">${all && !miss.length ? '✓' : '⚠'} <b>${done} of ${all}</b> client budget${all === 1 ? '' : 's'} refreshed${miss.length ? ` · ${miss.length} did not` : ''}</div>
+      ${rows.length ? rows.map(r => `<div class="qbf-row">
+        <div class="qbf-w">${r.ok ? '✓' : '✕'}</div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-weight: 800;">${esc(r.job)}</div>
+          <div class="hint" style="margin: 1px 0 0;">${r.ok
+            ? `updated${r.at ? ' ' + esc(new Date(r.at).toLocaleString([], { hour: 'numeric', minute: '2-digit' })) : ''}${r.invoiced != null ? ` · invoiced ${money(r.invoiced)}` : ''}${r.paid != null ? ` · paid ${money(r.paid)}` : ''}${r.open != null ? ` · open ${money(r.open)}` : ''}`
+            : `<b>NOT UPDATED</b>${r.why ? ' — ' + esc(r.why) : ' — the run gave no reason'}`}</div>
+        </div></div>`).join('') : '<div class="hint">The run named no client pages at all — that itself is worth asking Claude about.</div>'}
+      ${miss.length ? `<div class="hint" style="margin-top: 10px;">A page usually misses because QuickBooks has no customer whose name matches the job, or because the page was built after the export was pulled. Tell Claude the job name and it gets sorted on the next run.</div>` : ''}`;
+  $('revBox').innerHTML = `<h3>📚 Client budgets
+    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeReview()" aria-label="close">✕</button></h3>
+    ${body}
+    ${qbFresh ? `<button type="button" class="btn-primary" style="width: 100%; font-weight: 800; margin-top: 12px; padding: 12px;" onclick="qbFreshDismiss()">✓ Got it — clear the banner</button>` : ''}`;
+  $('revModal').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+// ================= /BOOKS UPDATED =================
 // 📣 v5.21 — the button that rings Claude: raises UPDATE-NOW.txt in the exports folder.
 // A scheduled watcher checks every hour; sees the flag → processes everything new right then.
 // The nightly refresher stays as the no-matter-what backstop.
@@ -13774,7 +13876,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.17';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.18';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -14237,6 +14339,7 @@ async function pullRemote() {
   checkSharedNotes(); // crew phones pick up their FROM ERIC list
   radarSweep(); // 🕸 quiet-job check — once a day, one card a week per silent job
   checkQbCosts(); // ✓✓ light the QB lamps + card what the books have that the field missed
+  checkQbFresh(); // 📚 v6.18 — did every client budget actually get rewritten on the last run?
 }
 async function pushRemote() {
   if (!dbx.refreshToken) return;
