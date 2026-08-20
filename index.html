@@ -3212,7 +3212,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.19 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.20 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6930,6 +6930,54 @@ function coolCard(id) {
   savePendingSoon();
   toast('🕐 Moved to the review pile — it stays there until you deal with it ✓');
 }
+// 🔁 v6.20 — WHO YOU PAID, AND WHERE IT WENT LAST TIME. Eric: "if QB has it but I didn't
+// enter the receipt into the grinder, why do I have to categorize it? isn't it categorized in
+// QB by that point?" Fair question, and the answer is no — not usefully. Of the 198 cost
+// payments in a week of his books, ZERO carry a customer or job; the job only exists on the
+// re-billing side. And the payment row's account is "Accounts Payable (A/P)", a clearing
+// account — the real expense account sits on the BILL, one row over.
+//
+// So two fixes. The Tuesday run joins the payment back to its bill and carries the real
+// account across as payload.cat. And this: 169 of those 198 payments went to somebody he had
+// paid before, so once he has filed a vendor the card offers it back as ONE TAP. It offers,
+// it never picks — a vendor can be on three jobs at once, and money quietly landing on the
+// wrong house is worse than a wheel he has to turn.
+function qbVendBook() {
+  if (!prefs.qbVend || typeof prefs.qbVend !== 'object' || Array.isArray(prefs.qbVend)) prefs.qbVend = {};
+  return prefs.qbVend;
+}
+function qbVendKey(who) { return String(who || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+// what he has filed this payee under before, commonest first — at most two offered
+function qbVendHints(who) {
+  const rec = qbVendBook()[qbVendKey(who)];
+  if (!rec || !rec.jobs) return [];
+  return Object.entries(rec.jobs)
+    .filter(([j, n]) => jobs.includes(j) && n > 0)     // a job he has since deleted is not an offer
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([job, n]) => ({ job, n }));
+}
+function qbVendLearn(who, job) {
+  const k = qbVendKey(who);
+  if (!k || !job || job === '—') return;
+  const bk = qbVendBook();
+  const rec = bk[k] || (bk[k] = { jobs: {}, last: '' });
+  rec.jobs[job] = (rec.jobs[job] || 0) + 1;
+  rec.last = localDay(new Date());
+}
+function qbVendUse(id, job) {
+  _qbJob[id] = job;
+  const sel = $('revJob-' + String(id).replace(/[^a-zA-Z0-9:_-]/g, ''));
+  if (sel) sel.value = job;
+  toast(`🔁 Set to ${job} — ✓ Log it when you're happy with it`);
+}
+// 💼 what QuickBooks actually calls this money. The payment row only ever says
+// "Accounts Payable (A/P)", which tells him nothing, so it is suppressed rather than shown.
+function qbCatOf(pay) {
+  if (pay.cat) return pay.cat;
+  const a = pay.acct || '';
+  return /accounts payable|\ba\/p\b/i.test(a) ? '' : a;
+}
 // 🏠 v6.19 — which job Eric picked on each QuickBooks card. Held OUTSIDE the DOM because
 // the review pile re-renders every time he acts on any one card: without this, setting three
 // wheels and then tapping ✓ three times filed the first one right and the other two on '—'.
@@ -6959,14 +7007,18 @@ function renderReview() {
         ${(p.payload.photos || []).length ? `<div class="rev-row">${p.payload.photos.map((ph, i) =>
           `<button class="btn-ghost" onclick="showPhoto('${escq(ph)}')">📷 View photo${p.payload.photos.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}</div>` : ''}`;
       if (p.kind === 'match') body = `<div class="rev-text">I saw <b>${esc(p.payload.seen || '')}</b> come in${p.payload.job && p.payload.job !== '—' ? ` on ${esc(p.payload.job)}` : ''} — looks like your to-do: <b>${esc(p.payload.todo || '')}</b>. Did you handle it?</div>`;
-      if (p.kind === 'qb') body = `<div class="rev-text"><b>$${(+p.payload.amt).toFixed(2)}${p.payload.who ? ' — ' + esc(p.payload.who) : ''}</b> on ${esc(p.payload.d)}</div>
-        <div class="rev-why">${[p.payload.memo, p.payload.acct].filter(Boolean).map(esc).join(' · ')}</div>
-        <div class="rev-why">Logan's books have this — your log doesn't. Pick the job right here and it lands where the trackers can see it.</div>
+      if (p.kind === 'qb') { const qcat = qbCatOf(p.payload); const hints = qbVendHints(p.payload.who);
+        body = `<div class="rev-text"><b>$${(+p.payload.amt).toFixed(2)}${p.payload.who ? ' — ' + esc(p.payload.who) : ''}</b> on ${esc(p.payload.d)}</div>
+        <div class="rev-why">${[p.payload.memo, qcat].filter(Boolean).map(esc).join(' · ')}</div>
+        <div class="rev-why">${qcat ? `QuickBooks files this under <b>${esc(qcat)}</b> — but its books have no job on it, so that part is yours.`
+          : 'Logan\'s books have this — your log doesn\'t. QuickBooks has no job on a bill payment, so this part only you can answer.'}</div>
+        ${hints.length ? `<div class="rev-row" style="margin-top: 8px;">${hints.map(h =>
+          `<button type="button" class="pick-chip" onclick="qbVendUse('${escq(String(p.id))}', '${escq(h.job)}')">🔁 ${esc(h.job)} — ${h.n === 1 ? 'last time' : 'last ' + h.n + ' times'}</button>`).join('')}</div>` : ''}
         <div class="field" style="margin-top: 8px; margin-bottom: 0;"><label>🏠 Which job is this money on?</label>
           <select id="revJob-${esc(String(p.id)).replace(/[^a-zA-Z0-9:_-]/g, '')}" onchange="qbJobPick('${escq(String(p.id))}', this.value)">
             <option value="—"${(_qbJob[p.id] || '—') === '—' ? ' selected' : ''}>— I'll pick it later</option>
             ${recentJobsOrdered().filter(x => x && x !== '—').map(x => `<option${_qbJob[p.id] === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}
-          </select></div>`;
+          </select></div>`; }
       if (p.kind === 'clientask') body = `<div class="rev-text"><b>${esc(p.payload.client || '?')}</b> wrote${p.payload.tag && p.payload.tag !== 'General' ? ` — tagged <b>${esc(p.payload.tag)}</b>` : ''}:${p.payload.onit ? ' <span class="hint" style="margin: 0;">● ON IT lit on their page</span>' : ''}</div>
         <div class="rev-why" style="font-size: 13.5px; white-space: pre-wrap;">${esc((p.payload.text || '').slice(0, 600))}</div>
         ${p.payload.photo ? `<div class="ca-photo" data-path="${esc(p.payload.photo)}" style="margin-top: 8px;"><span class="hint">📎 their picture — loading…</span></div>` : ''}
@@ -7159,6 +7211,7 @@ function reviewAct(id, accept) {
       if (!prefs.qbMatched) prefs.qbMatched = {};
       prefs.qbMatched[pay.qid] = e.id;
       scheduleSave();
+      if (picked !== '—') qbVendLearn(pay.who, picked);   // 🔁 next time this payee comes round, one tap
       toast(picked !== '—'
         ? `✓✓ $${(+pay.amt).toFixed(2)} logged on ${picked} — the trackers have it now`
         : `✓✓ Logged $${(+pay.amt).toFixed(2)} with NO job on it — tap ✏️ on it in the log to file it`);
@@ -13895,7 +13948,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.19';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.20';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
