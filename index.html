@@ -3212,7 +3212,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.18 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.19 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6930,6 +6930,11 @@ function coolCard(id) {
   savePendingSoon();
   toast('🕐 Moved to the review pile — it stays there until you deal with it ✓');
 }
+// 🏠 v6.19 — which job Eric picked on each QuickBooks card. Held OUTSIDE the DOM because
+// the review pile re-renders every time he acts on any one card: without this, setting three
+// wheels and then tapping ✓ three times filed the first one right and the other two on '—'.
+const _qbJob = {};
+function qbJobPick(id, v) { _qbJob[id] = v; }
 const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '🔥 Text — needs you', crew: '👷 From the crew', match: '⚙ The Grinder noticed', qb: '💼 In QuickBooks, not in your log', clientask: '💬 From a CLIENT' };
 const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', tomorrow: '🌙 by tomorrow' };
 function renderReview() {
@@ -6956,7 +6961,12 @@ function renderReview() {
       if (p.kind === 'match') body = `<div class="rev-text">I saw <b>${esc(p.payload.seen || '')}</b> come in${p.payload.job && p.payload.job !== '—' ? ` on ${esc(p.payload.job)}` : ''} — looks like your to-do: <b>${esc(p.payload.todo || '')}</b>. Did you handle it?</div>`;
       if (p.kind === 'qb') body = `<div class="rev-text"><b>$${(+p.payload.amt).toFixed(2)}${p.payload.who ? ' — ' + esc(p.payload.who) : ''}</b> on ${esc(p.payload.d)}</div>
         <div class="rev-why">${[p.payload.memo, p.payload.acct].filter(Boolean).map(esc).join(' · ')}</div>
-        <div class="rev-why">Logan's books have this — your log doesn't. Log it and pick the job so the trackers see it.</div>`;
+        <div class="rev-why">Logan's books have this — your log doesn't. Pick the job right here and it lands where the trackers can see it.</div>
+        <div class="field" style="margin-top: 8px; margin-bottom: 0;"><label>🏠 Which job is this money on?</label>
+          <select id="revJob-${esc(String(p.id)).replace(/[^a-zA-Z0-9:_-]/g, '')}" onchange="qbJobPick('${escq(String(p.id))}', this.value)">
+            <option value="—"${(_qbJob[p.id] || '—') === '—' ? ' selected' : ''}>— I'll pick it later</option>
+            ${recentJobsOrdered().filter(x => x && x !== '—').map(x => `<option${_qbJob[p.id] === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}
+          </select></div>`;
       if (p.kind === 'clientask') body = `<div class="rev-text"><b>${esc(p.payload.client || '?')}</b> wrote${p.payload.tag && p.payload.tag !== 'General' ? ` — tagged <b>${esc(p.payload.tag)}</b>` : ''}:${p.payload.onit ? ' <span class="hint" style="margin: 0;">● ON IT lit on their page</span>' : ''}</div>
         <div class="rev-why" style="font-size: 13.5px; white-space: pre-wrap;">${esc((p.payload.text || '').slice(0, 600))}</div>
         ${p.payload.photo ? `<div class="ca-photo" data-path="${esc(p.payload.photo)}" style="margin-top: 8px;"><span class="hint">📎 their picture — loading…</span></div>` : ''}
@@ -6967,7 +6977,7 @@ function renderReview() {
           p.payload.route && p.payload.route !== 'The Grinder' ? '📨 for ' + p.payload.route : '', URG_WORDS[p.payload.urg] || ''].filter(Boolean).join(' · ')}</div>`;
       const meta = [p.payload && p.payload.job ? p.payload.job : '', p.source || '', p.payload && p.payload.due ? 'due ' + p.payload.due : ''].filter(Boolean).join(' · ');
       const btns = p.kind === 'qb'
-        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it — I'll pick the job after</button>
+        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not job cost — skip</button>`
         : p.kind === 'match'
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Done — check it off</button>
@@ -7135,14 +7145,23 @@ function reviewAct(id, accept) {
         toast('Client message logged ✓');
       }
     } else if (p.kind === 'qb') {
-      // 💼 the QB line becomes a field entry, born already double-checked
-      const e = addEntry('Expense', `${pay.who || 'QB expense'}${pay.memo ? ' — ' + pay.memo : ''} (from QuickBooks import)`, '—',
+      // 💼 the QB line becomes a field entry, born already double-checked.
+      // 🏠 v6.19 — Eric: "can we pick the job right there?" It used to land on '—' every time
+      // and wait for him to go find it in the log and tap ✏️ — which is a second trip he has
+      // to remember to make, on money that is already spent. The wheel is on the card now.
+      const sel = $('revJob-' + String(p.id).replace(/[^a-zA-Z0-9:_-]/g, ''));
+      const want = _qbJob[p.id] || (sel ? sel.value : '');
+      const picked = jobs.includes(want) ? want : '—';
+      delete _qbJob[p.id];
+      const e = addEntry('Expense', `${pay.who || 'QB expense'}${pay.memo ? ' — ' + pay.memo : ''} (from QuickBooks import)`, picked,
         { amount: +pay.amt, noSniff: true, ts: new Date(pay.d + 'T12:00:00') });
       e.qbV = pay.d; e.qbQid = pay.qid;
       if (!prefs.qbMatched) prefs.qbMatched = {};
       prefs.qbMatched[pay.qid] = e.id;
       scheduleSave();
-      toast(`✓✓ Logged $${(+pay.amt).toFixed(2)} — tap ✏️ on it in the log to file it under a job`);
+      toast(picked !== '—'
+        ? `✓✓ $${(+pay.amt).toFixed(2)} logged on ${picked} — the trackers have it now`
+        : `✓✓ Logged $${(+pay.amt).toFixed(2)} with NO job on it — tap ✏️ on it in the log to file it`);
     } else if (p.kind === 'match') {
       const t = todos.find(x => x.id === pay.todoId);
       if (accept === 'todo') {
@@ -13876,7 +13895,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.18';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.19';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
