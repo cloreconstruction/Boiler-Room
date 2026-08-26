@@ -1268,6 +1268,20 @@
   /* v4.56 — the two brass plates side by side; text fallback if the art is missing */
   /* both plate files share one canvas size, cut to the pipes with transparent corners —
      width drives height, so the two buttons always match exactly */
+  /* 🪜 v6.25 — THE FIVE STEPS. Say it → job → tags → unlock → send. Each its own plate,
+     the NEXT one glows AND says ▸ NEXT (brightness + glyph + word — never colour alone),
+     done ones wear ✓ DONE. The eye rides the rail down. */
+  .g-step { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-top: 12px; }
+  .g-step:first-of-type { margin-top: 0; }
+  .g-step-label { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; letter-spacing: .6px; opacity: .72; margin-bottom: 8px; }
+  .g-step-num { display: inline-flex; align-items: center; justify-content: center; width: 21px; height: 21px; border: 2px solid currentColor; border-radius: 50%; font-size: 11px; flex: none; }
+  .g-step-opt { font-weight: 400; opacity: .85; letter-spacing: 0; text-transform: none; }
+  .g-step-next, .g-step-done { display: none; margin-left: auto; font-size: 10.5px; letter-spacing: .5px; white-space: nowrap; }
+  .g-step.next { border-color: var(--accent); border-width: 2.5px; padding: 9px 11px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .g-step.next .g-step-label { opacity: 1; }
+  .g-step.next .g-step-next { display: inline; color: var(--accent); }
+  .g-step.done .g-step-label { opacity: .85; }
+  .g-step.done .g-step-done { display: inline; }
   .plate-row { display: flex; gap: 8px; margin-top: 10px; }
   #qnCard #askText.qn-big { font-size: 17px; min-height: 112px; line-height: 1.45; }
   #qnCard.dropping { outline: 3px dashed var(--accent); outline-offset: -6px; }
@@ -2232,6 +2246,14 @@
   onclick="if(event.target===this && this._pd)closeReview(); this._pd = false">
   <div class="rev-box" id="revBox"></div>
 </div>
+<!-- 🧾 v6.25 — Eric: "when I click receipt a window might open to pick the category — it's
+     super confusing with so many tags right there." The category pick is its OWN window now:
+     the job's own picks starred on top, the full list below in ALPHABETICAL order. -->
+<div class="rev-modal" id="catModal"
+  onpointerdown="this._pd = (event.target === this)"
+  onclick="if(event.target===this && this._pd)catModalClose(); this._pd = false">
+  <div class="rev-box" id="catBox"></div>
+</div>
 <div class="rev-modal" id="planModal" onclick="if(event.target===this)closePlanner()">
   <div class="rev-box" id="planBox"></div>
 </div>
@@ -2319,8 +2341,14 @@
   <div class="card ask-card qn-card" id="qnCard">
     <!-- v4.83 — Eric's flow: WRITE first, the two doors under it, the grinder's filing
          options below that. Drag photos from the PC anywhere onto this card. -->
+    <!-- 🪜 v6.25 — Eric: "split the grinder into the 5 steps… make them distinguishable,
+         more separated, but still flow. Soon as a step is done my eye goes to the next."
+         Each band is its own numbered plate; the NEXT one glows and says so in a word
+         (never colour alone), finished ones wear a ✓ DONE. -->
+    <div class="g-step" data-step="1">
+    <div class="g-step-label"><span class="g-step-num">1</span> SAY IT <span class="g-step-opt">· write it, speak it, or add a photo</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
     <div class="ask-row">
-      <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this)" placeholder="Write a note, or ask a question.&#10;&#10;⚙ To the grinder — below — files it.&#10;🧙 ASK — right here — answers it."></textarea>
+      <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this); updateStepFlow()" placeholder="Write a note, or ask a question.&#10;&#10;⚙ To the grinder — below — files it.&#10;🧙 ASK — right here — answers it."></textarea>
       <input type="file" id="qnPhoto" accept="image/*,.pdf,application/pdf" multiple onchange="noteAddPhotos(this)" style="display: none;">
       <!-- 🧙 v6.22 — Eric: "move Ask the Wizard up next to the add photo button, so it's right
            next to the text box, and don't have to scroll down through the tags to ask it."
@@ -2339,14 +2367,22 @@
          'who sees it' and the running log" (and on Phil's phone: "below all of the tags").
          The two plates + the bookkeeper button now ride at the BOTTOM of this card, after
          every tag, who-sees-it and send-to section. Write → file → THEN pull the lever. -->
-    <div class="frow" style="margin-top: 10px; align-items: center; flex-wrap: nowrap;">
-      <!-- v5.26 — Eric kept hunting for this wheel: bigger, bolder, brass-rimmed -->
-      <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value; renderCatRow()" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0; font-size: 16.5px; font-weight: 800; padding: 12px 10px; border: 2px solid var(--accent); border-radius: 10px;"></select>
-    </div>
     <div id="qnPhotoInfo" class="frow" style="gap: 6px; flex-wrap: wrap; margin-top: 6px;"></div>
-    <div class="chips-row" id="qnTagChips" style="margin-top: 8px;"></div>
-    <div class="chips-row" id="qnCatRow"></div>
+    </div>
+    <div class="g-step" data-step="2">
+    <div class="g-step-label"><span class="g-step-num">2</span> PICK THE JOB<span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div class="frow" style="align-items: center; flex-wrap: nowrap;">
+      <!-- v5.26 — Eric kept hunting for this wheel: bigger, bolder, brass-rimmed -->
+      <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value; renderCatRow(); updateStepFlow()" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0; font-size: 16.5px; font-weight: 800; padding: 12px 10px; border: 2px solid var(--accent); border-radius: 10px;"></select>
+    </div>
+    </div>
+    <div class="g-step" data-step="3">
+    <div class="g-step-label"><span class="g-step-num">3</span> TAG IT <span class="g-step-opt">· optional — files it, never sends it</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div class="chips-row" id="qnTagChips"></div>
     <div class="hint" id="tagExplain" style="margin-top: 4px; font-size: 11px; line-height: 1.5;">🏷 Tags FILE it so it's findable later — they never send it anywhere. A <b>Personal</b> tag locks this note to this phone.</div>
+    </div>
+    <div class="g-step" data-step="4">
+    <div class="g-step-label"><span class="g-step-num">4</span> UNLOCK IT <span class="g-step-opt">· optional — locked to you till you say</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
     <!-- v4.71 — the lock: private by default; unlock for all crew or hand it to one person -->
     <div id="qnVisRow">
       <div class="field" style="margin: 8px 0 4px;"><label>🔓 Unlock it for… <span style="font-weight: 400; opacity: .8;">(locked to you until you say)</span></label></div>
@@ -2371,7 +2407,10 @@
          width, which cost a whole band of screen for a button used a few times a day. Both
          are now equal halves of one row — same width, same height, one reach. 📗 v5.55: it
          grinds the note + photos like normal AND pops the phone's send sheet for the books. -->
-    <div class="plate-row" style="margin-top: 12px;">
+    </div>
+    <div class="g-step" data-step="5">
+    <div class="g-step-label"><span class="g-step-num">5</span> SEND IT<span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div class="plate-row">
       <button type="button" class="plate-btn plate-btn--grind" onclick="saveQuickNote()" aria-label="To the grinder — save as a note" title="Save as a note — job + tags stamp on">
         <img src="steam/btn-grinder.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
         <span class="plate-txt">⚙ To the grinder</span>
@@ -2384,6 +2423,7 @@
       </button>
     </div>
     <div class="hint" id="bkkHint">⚙ files it · 📗 files it AND opens the send sheet</div>
+    </div>
     <div class="ask-foot">
       <span id="askStatus" class="hint" style="margin-top: 0;">⚙ grinds it into the log · 🧙 answers from it.</span>
     </div>
@@ -2804,7 +2844,6 @@
     <div class="chips-row" id="nJobChips" style="margin-bottom: 12px;"></div>
     <div class="field" style="margin-bottom: 6px;"><label>Tags — people &amp; places (optional)</label></div>
     <div class="chips-row" id="nTagChips" style="margin-bottom: 12px;"></div>
-    <div class="chips-row" id="nCatRow" style="margin-bottom: 12px;"></div>
     <div class="field" style="margin-bottom: 6px;"><label>🔓 Unlock it for… <span style="font-weight: 400; opacity: .8;">(locked to you until you say)</span></label></div>
     <div class="chips-row" id="nVisChips" style="margin-bottom: 12px;"></div>
     <div class="frow" style="margin-bottom: 10px;">
@@ -3239,7 +3278,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.24 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.25 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5304,8 +5343,49 @@ function qnHeadsToggle() { qnHeads = !qnHeads; renderTagChips(); }
 // and the category row appears — the job's own most-used categories first, the full list one
 // tap deeper. Photo receipts don't need the chip; the read flips them into the flow itself.
 let qnRcpt = false, qnCat = '', _qnCatMore = false;
-function qnRcptToggle() { qnRcpt = !qnRcpt; if (!qnRcpt) { qnCat = ''; _qnCatMore = false; } renderTagChips(); renderCatRow(); }
-function qnCatPick(c) { qnCat = qnCat === c ? '' : c; _qnCatMore = false; renderCatRow(); }
+// 🧾 v6.25 — tapping the chip opens the category WINDOW (Eric: inline chips next to the tags
+// "looks like more tags — super confusing"). Tap again any time to change or un-receipt it.
+function qnRcptToggle() { if (!qnRcpt) { qnRcpt = true; renderTagChips(); } catModalOpen(); }
+function qnCatPick(c) {
+  qnCat = c || '';
+  catModalClose();
+  renderTagChips(); renderCatRow();
+  if (typeof updateStepFlow === 'function') updateStepFlow();
+  if (qnCat) toast(`📂 ${qnCat} — rides the receipt to the budget pile ✓`);
+}
+function catModalOpen() {
+  const job = (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : curJob;
+  const learned = ((prefs.jobCats || {})[jobCatKey(job)] || []).filter(c => RCPT_CATS.includes(c));
+  const all = [...RCPT_CATS].sort((a, b) => a.localeCompare(b)); // 🅰 alphabetical — Eric: easier to find
+  const chip = (c, star) => `<button type="button" class="pick-chip${qnCat === c ? ' sel' : ''}" style="font-size: 12.5px; padding: 8px 12px; min-height: 38px;" onclick="qnCatPick('${escq(c)}')">${qnCat === c ? '✓' : star ? '⭐' : '📂'} ${esc(c)}</button>`;
+  $('catBox').innerHTML = `<h3>🧾 What kind of cost is this?
+    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="catModalClose()" aria-label="close">✕</button></h3>
+    <div class="hint" style="margin: 0 0 8px;">Filing under <b>${esc(job && job !== '—' ? job : 'no job yet — pick one after')}</b>. The pick rides the receipt to the budget pile pre-sorted, and it's remembered for next time.</div>
+    ${learned.length ? `<div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 6px 0 4px;">⭐ USED ON THIS JOB</div>
+      <div class="chips-row" style="margin-bottom: 8px;">${learned.map(c => chip(c, true)).join('')}</div>
+      <div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 6px 0 4px;">🅰 THE WHOLE LIST, A → Z</div>` : ''}
+    <div class="chips-row" style="max-height: 46vh; overflow-y: auto; align-content: flex-start;">${all.map(c => chip(c, false)).join('')}</div>
+    <div class="frow" style="gap: 8px; margin-top: 12px;">
+      <button type="button" class="btn-ghost" style="flex: 1;" onclick="catModalClose()">⏭ Skip — pick it at the budget later</button>
+      <button type="button" class="btn-ghost" style="flex: 1; color: var(--err, #c0392b);" onclick="qnRcpt = false; qnCat = ''; catModalClose(); renderTagChips(); renderCatRow();">✕ Not a receipt</button>
+    </div>`;
+  $('catModal').classList.add('show');
+}
+function catModalClose() { $('catModal').classList.remove('show'); renderTagChips(); }
+// 🪜 v6.25 — which step the eye should land on next. 1 until there are words or a photo,
+// 2 until the job's picked, then straight to 5 — tags and unlock are optional stops.
+function updateStepFlow() {
+  const card = $('qnCard'); if (!card) return;
+  const hasWords = !!(($('askText') || {}).value || '').trim() || (typeof notePhotos !== 'undefined' && notePhotos.length > 0);
+  const jobPicked = !!(qnJobPick && jobs.includes(qnJobPick));
+  const next = !hasWords ? 1 : !jobPicked ? 2 : 5;
+  const done = { 1: hasWords, 2: jobPicked, 3: !!(qnSel.size || qnHeads || qnRcpt), 4: !!(qnVis || qnVisNames.size), 5: false };
+  card.querySelectorAll('.g-step').forEach(el => {
+    const n = +el.dataset.step;
+    el.classList.toggle('next', n === next);
+    el.classList.toggle('done', !!done[n] && n !== next);
+  });
+}
 function jobCatKey(j) { return String(j || '').toLowerCase().trim(); }
 // the categories THIS job actually uses come first — learned from Eric's own picks, never guessed
 function jobCatsFor(job) {
@@ -5326,23 +5406,7 @@ function catLearn(job, cat, vendor) {
   if (v) { prefs.vendCat = prefs.vendCat || {}; prefs.vendCat[v] = cat; }
   scheduleSave();
 }
-function renderCatRow() {
-  ['qnCatRow', 'nCatRow'].forEach(id => {
-    const el = $(id); if (!el) return;
-    if (!qnRcpt) { el.innerHTML = ''; return; }
-    const job = id === 'nCatRow' ? curJob : ((qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : curJob);
-    if (_qnCatMore) {
-      el.innerHTML = `<div class="field" style="margin: 6px 0 0; flex: 1 1 100%;"><label>📂 Budget category — the full list</label>
-        <select onchange="qnCatPick(this.value)"><option value="">— pick one —</option>${RCPT_CATS.map(c => `<option${c === qnCat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></div>`;
-      return;
-    }
-    const cats = jobCatsFor(job);
-    if (qnCat && !cats.includes(qnCat)) cats.push(qnCat);
-    el.innerHTML = `<div class="hint" style="flex: 1 1 100%; margin: 6px 0 2px;">📂 Category — files it onto the budget pile pre-sorted, so the approve there is one tap</div>` +
-      cats.map(c => `<button type="button" class="pick-chip${qnCat === c ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 30px;" onclick="qnCatPick('${escq(c)}')">${qnCat === c ? '✓' : '📂'} ${esc(c)}</button>`).join('') +
-      `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 30px; border-style: dashed;" onclick="_qnCatMore = true; renderCatRow()">📂 more…</button>`;
-  });
-}
+function renderCatRow() { ['qnCatRow', 'nCatRow'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; }); }
 let qnJobPick = ''; // v4.66 — the quick-note job pick lives for ONE note, then the wheel resets
 function knownTags() {
   if (!prefs.tags) prefs.tags = ['Shevaun', 'Logan', 'Home Depot']; // starter set — Eric's own examples; grows as he types names
@@ -5518,7 +5582,7 @@ function renderTagChips() {
   const headsChip = `<button type="button" class="pick-chip lockchip${qnHeads ? ' sel is-down' : ''}" onclick="qnHeadsToggle()" aria-pressed="${qnHeads}"
       title="Marks this note as something that bites later work — the Wizard surfaces it first and the job card counts it">${qnHeads ? '⚠ HEADS-UP — ON THE JOB CARD' : '⚠ Heads-up'}</button>`;
   const rcptChip = `<button type="button" class="pick-chip lockchip${qnRcpt ? ' sel is-down' : ''}" onclick="qnRcptToggle()" aria-pressed="${qnRcpt}"
-      title="A typed or dictated purchase — flips open the category row and files it toward the job's budget pile">${qnRcpt ? '🧾 RECEIPT — PICK CATEGORY ⬇' : '🧾 Receipt'}</button>`;
+      title="A typed or dictated purchase — opens the category window and files it toward the job's budget pile">${qnRcpt ? (qnCat ? '🧾 ' + esc(qnCat) + ' — tap to change' : '🧾 RECEIPT — tap to pick category') : '🧾 Receipt'}</button>`;
   const html = headsChip + rcptChip + shown.map(t => {
     if (_tagArm === t) return `<button type="button" class="pick-chip" style="border-color: var(--err, #c0392b); color: var(--err, #c0392b); font-weight: 800;" onclick="tagDelete('${escq(t)}')">✕ delete ${esc(t)}?</button>`;
     const on = qnSel.has(t);
@@ -5535,6 +5599,7 @@ function renderTagChips() {
       <span class="sp"></span>${rowsSel(prefs.tagRows || 2)}${colsSel(cols)}</div>`;
   ['qnTagChips', 'nTagChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
   lockGate(); // 🔒 v5.44 — freshly drawn chips have to obey the lock too
+  if (typeof updateStepFlow === 'function') updateStepFlow(); // 🪜 v6.25 — keep the rail honest
 }
 // ⚠ v6.24 — from the job card straight to that job's landmines, and an obvious way back
 function openHeadsLog(job) {
@@ -5882,6 +5947,7 @@ function renderNotePhotoList() {
     + (notePhotos.length ? `<button type="button" class="pick-chip" style="font-size: 11px; font-weight: 800; min-height: 30px;" onclick="wizardReadStaged()">🔮 WIZARD READ${notePhotos.length > 1 ? ' — all ' + notePhotos.length : ''}</button>` : '');
   el.innerHTML = html;
   const qn = $('qnPhotoInfo'); if (qn) qn.innerHTML = html; // quick card and note panel share the same staged photos
+  if (typeof updateStepFlow === 'function') updateStepFlow(); // 🪜 photos count as words said
   qnAutoDraft(); // 📝 a freshly-read photo takes the first swing at the note
 }
 // single-photo pickers (to-do): live preview + ✕ to un-pick
@@ -8310,6 +8376,7 @@ function renderVisChips() {
     }
   });
   lockGate();
+  if (typeof updateStepFlow === 'function') updateStepFlow(); // 🪜 v6.25
 }
 // 🔒 v5.44 — the gate. While a crew phone has nothing picked in who-sees-it, the note is
 // private, so tagging and sending are dimmed AND disabled. Picking anybody opens them back
@@ -14221,7 +14288,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.24';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.25';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
