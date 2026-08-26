@@ -466,6 +466,13 @@
   /* v4.66 — tags stay out of the way: very small chips */
   #qnTagChips .pick-chip, #nTagChips .pick-chip { font-size: 10.5px; padding: 2px 8px; min-height: 0; font-weight: 600; }
   .ask-row { display: flex; gap: 10px; align-items: stretch; }
+  /* 🧙 v6.22 — camera over wizard, both hugging the writing box */
+  .ask-side { display: flex; flex-direction: column; gap: 8px; flex: none; align-self: stretch; }
+  .ask-side > button { flex: 1 1 0; margin: 0; }
+  .wiz-side { display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1px; padding: 6px 10px; border: 2px solid var(--accent); }
+  .wiz-side .cam-ic { height: 40px; }
+  .wiz-side-tx { font-size: 10px; font-weight: 800; letter-spacing: 0.6px; line-height: 1; }
   .ask-row textarea {
     flex: 1; background: var(--surface-1); color: var(--ink-1);
     border: 2px solid var(--baseline); border-radius: 10px;
@@ -1275,11 +1282,9 @@
   .plate-btn.noimg { background: var(--accent); color: var(--accent-ink); padding: 13px 10px; }
   .plate-btn.noimg img { display: none; }
   .plate-btn.noimg .plate-txt { display: inline; font-weight: 700; font-size: 15px; }
-  /* 📗 v6.01 — the bookkeeper plate, cut down to the gold plate itself: no pipe frame, no
-     bezel. Eric: "make it smaller than the grinder button" — so it sits centred and
-     narrower, shorter than the two big plates above it, which is the right weight for a
-     button used a few times a day instead of fifty. If the art ever fails to load, .noimg
-     puts the spelled-out gold button back at full width. */
+  /* 📗 v6.01 — the bookkeeper plate is the gold plate itself: no pipe frame, no bezel.
+     v6.23 retires the 68%-wide centred treatment — Eric wanted it the same size as the
+     grinder and beside it, which costs a whole band of screen less. */
   /* 💰 v6.02 — the estimates board on a phone. Eric: "most all the buttons on this page are
      big and take up a lot of space and make the page kinda weird." Every control on this
      board is a chip you tap a few times a minute, not a plate you hit fifty times a day —
@@ -1318,10 +1323,14 @@
   .pf-vis { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 5px; margin-top: 4px; }
   .pf-vis .pick-chip { width: 100%; font-size: 10.5px; padding: 5px 4px; min-height: 32px;
     justify-content: center; text-align: center; }
-  .plate-btn--bkk { display: block; width: 68%; max-width: 240px; flex: none; margin: 8px auto 0; }
-  .plate-btn--bkk.noimg { width: 100%; max-width: none; min-height: 48px; font-size: 14px; }
-  #bkkHint { margin: 4px 0 0; text-align: center; }
-  .plate-btn--bkk.noimg + #bkkHint { display: none; } /* the fallback button already says it */
+  /* ⚖ v6.23 — the bookkeeper plate is a full half of the row now, matched to the grinder.
+     It inherits flex: 1 1 0 from .plate-btn, so the two are always exactly equal — no
+     width, no max-width, no auto margin fighting it. */
+  /* stretch keeps the two boxes identical even if the brass art has different proportions;
+     centring stops the shorter plate's image hugging the top of its box */
+  .plate-row > .plate-btn { align-self: stretch; display: flex; align-items: center; justify-content: center; }
+  .plate-btn--bkk.noimg { min-height: 48px; font-size: 13px; }
+  #bkkHint { margin: 5px 0 0; text-align: center; font-size: 11px; }
   /* 🔗 v5.39 — the two setup shortcuts. Temporary by design; one row, thumb-sized, gold plate. */
   .sc-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 14px; }
   .sc-btn {
@@ -2300,24 +2309,31 @@
   </div>
 
 
-  <!-- v4.95 — 🔥 hot cards: time-critical texts pinned at the VERY top until Eric deals with them -->
-  <div id="hotStrip"></div>
-  <!-- 📬 v5.19 — text digest (one card, not thirty) + 📌 evening nudges for question texts -->
-  <div id="txtDigest"></div>
-  <div id="nudgeStrip"></div>
-  <!-- 📚 v6.18 — BOOKS UPDATED. Eric: "I would like a way to know that all the client portal
-       budgets have been updated." Appears the morning the QB run lands, says how many pages
-       got refreshed and names any that didn't, then goes quiet once he taps ✓ Got it. -->
-  <div id="qbFreshStrip"></div>
+  <!-- ⬆ v6.22 — Eric: "I want the grinder text box at the top just under the crew portal and
+       job cards and project portal buttons. Put the texts and needs you windows at the
+       bottom." So the box he writes in every day is the first thing under the three plates,
+       and 🔥 needs-you / 📬 texts / 📌 nudges moved to the foot of the page. 📚 BOOKS UPDATED
+       stays up here — it is money, not texts, and it only shows the morning after a QB run. -->
 
   <!-- v4.55 — ONE box on top: write a note or ask the Wizard, two buttons decide where it goes -->
   <div class="card ask-card qn-card" id="qnCard">
     <!-- v4.83 — Eric's flow: WRITE first, the two doors under it, the grinder's filing
          options below that. Drag photos from the PC anywhere onto this card. -->
     <div class="ask-row">
-      <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this)" placeholder="Put your note here → tap ⚙ To the Grinder. Tags below file it.&#10;&#10;Or ask a question here → tap 🧙 Ask the Wizard. Skip the tags."></textarea>
+      <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this)" placeholder="Write a note, or ask a question.&#10;&#10;⚙ To the grinder — below — files it.&#10;🧙 ASK — right here — answers it."></textarea>
       <input type="file" id="qnPhoto" accept="image/*,.pdf,application/pdf" multiple onchange="noteAddPhotos(this)" style="display: none;">
-      <button type="button" class="btn-ghost cam-btn cam-btn--tall" onclick="$('qnPhoto').click()" aria-label="Add photos or files — or drag them onto this card" title="Add photos or files — or drag them onto this card"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"></button>
+      <!-- 🧙 v6.22 — Eric: "move Ask the Wizard up next to the add photo button, so it's right
+           next to the text box, and don't have to scroll down through the tags to ask it."
+           A question isn't a note — it never needed the job wheel, the tags or the who-sees-it
+           row, and making him scroll past all three to reach the lever was backwards. The
+           grinder plate stays at the bottom, where filing belongs. -->
+      <div class="ask-side">
+        <button type="button" class="btn-ghost cam-btn cam-btn--tall" onclick="$('qnPhoto').click()" aria-label="Add photos or files — or drag them onto this card" title="Add photos or files — or drag them onto this card"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"></button>
+        <button type="button" class="btn-ghost wiz-side" id="wizSideBtn" onclick="askClaude()" aria-label="Ask the Wizard" title="Ask the Wizard — answers from your log, files nothing">
+          <img class="cam-ic" src="steam/btn-wizard.webp" alt="" onerror="this.outerHTML='🧙'">
+          <span class="wiz-side-tx">ASK</span>
+        </button>
+      </div>
     </div>
     <!-- ⬇ v5.80 — Eric: "move the grinder and ask wizard button down so it's between the
          'who sees it' and the running log" (and on Phil's phone: "below all of the tags").
@@ -2349,27 +2365,24 @@
       <div id="myReqStrip"></div>
     <div class="card" id="mailAskCard" style="display: none; margin-top: 10px; padding: 10px 12px;"></div>
     </div>
+    <!-- ⚖ v6.23 — Eric: "make the grinder and bookkeeper buttons the same size and side by
+         side to take up less room." The bookkeeper plate used to sit on its own row at 68%
+         width, which cost a whole band of screen for a button used a few times a day. Both
+         are now equal halves of one row — same width, same height, one reach. 📗 v5.55: it
+         grinds the note + photos like normal AND pops the phone's send sheet for the books. -->
     <div class="plate-row" style="margin-top: 12px;">
       <button type="button" class="plate-btn plate-btn--grind" onclick="saveQuickNote()" aria-label="To the grinder — save as a note" title="Save as a note — job + tags stamp on">
         <img src="steam/btn-grinder.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
         <span class="plate-txt">⚙ To the grinder</span>
       </button>
-      <button type="button" class="plate-btn plate-btn--wiz" onclick="askClaude()" aria-label="Ask the Wizard" title="Ask the Wizard">
-        <img src="steam/btn-wizard.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
-        <span class="plate-txt">🧙 Ask the Wizard</span>
+      <button type="button" class="plate-btn plate-btn--bkk" id="bkkBtn" onclick="toBookkeeper()"
+        aria-label="To the bookkeeper — files it here and opens the send sheet"
+        title="To the bookkeeper — files it here + opens the send sheet">
+        <img src="steam/btn-bookkeeper.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
+        <span class="plate-txt">📗 To the bookkeeper</span>
       </button>
     </div>
-    <!-- 📗 v5.55 — Eric: "me and Phil and the crew and everybody need a little button that
-         says to the bookkeeper." Grinds the note + photos like normal AND pops the phone's
-         send sheet labeled for the books, same finger-tap. When the Logan/QB robot address
-         is wired up later, this same button switches from the send sheet to sending direct. -->
-    <button type="button" class="plate-btn plate-btn--bkk" id="bkkBtn" onclick="toBookkeeper()"
-      aria-label="To the bookkeeper — files it here and opens the send sheet"
-      title="To the bookkeeper — files it here + opens the send sheet">
-      <img src="steam/btn-bookkeeper.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
-      <span class="plate-txt">📗 TO THE BOOKKEEPER — files it here + opens the send sheet</span>
-    </button>
-    <div class="hint" id="bkkHint">📗 files it here + opens the send sheet</div>
+    <div class="hint" id="bkkHint">⚙ files it · 📗 files it AND opens the send sheet</div>
     <div class="ask-foot">
       <span id="askStatus" class="hint" style="margin-top: 0;">⚙ grinds it into the log · 🧙 answers from it.</span>
     </div>
@@ -2379,6 +2392,11 @@
       <div class="ask-inline__foot"><a href="javascript:void(0)" onclick="openAnswerFull()">Open full screen →</a></div>
     </div>
   </div>
+
+  <!-- 📚 v6.18 — BOOKS UPDATED. Eric: "I would like a way to know that all the client portal
+       budgets have been updated." Appears the morning the QB run lands, says how many pages
+       got refreshed and names any that didn't, then goes quiet once he taps ✓ Got it. -->
+  <div id="qbFreshStrip"></div>
 
   <!-- 📜 v5.80 — Eric: "Detach that running log from the grinder window. Make them separate."
        The one log is its OWN card now, right below the grinder. v5.78 still holds inside it:
@@ -3206,13 +3224,20 @@
   <!-- 📜 v5.78 — panel-log retired. The one running log (with its searches) lives in the
        Grinder/Wizard card. openPanel('log') now opens the searches right there. -->
 
+  <!-- ⬇ v6.22 — the texts live down here now, out of the way of the writing box. -->
+  <!-- v4.95 — 🔥 hot cards: time-critical texts, held until Eric deals with them -->
+  <div id="hotStrip"></div>
+  <!-- 📬 v5.19 — text digest (one card, not thirty) + 📌 evening nudges for question texts -->
+  <div id="txtDigest"></div>
+  <div id="nudgeStrip"></div>
+
   <div class="brand-emblem"><img src="logo-badge.webp" alt="Clore Construction" onclick="lbShow('logo-badge.webp')"></div>
 
   <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.20 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.23 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4575,8 +4600,18 @@ function dayHours() {
 }
 function toggleClock() {
   if (!clockedInAt) {
+    // ⏱ v6.21 — no silent default. An hour has to belong to a job, and only he knows which.
+    const pick = (($('clockJob') || {}).value || '').trim();
+    if (!pick || !jobs.includes(pick)) {
+      const sel = $('clockJob');
+      if (sel) { try { sel.focus(); } catch (e) {} }
+      toast('Pick the job first — the wheel right above the button', false);
+      return;
+    }
     clockedInAt = new Date();
-    clockJobName = $('clockJob').value;
+    clockJobName = pick;
+    renderJobSelects();                                   // now on the clock: the blank drops off
+    { const sel = $('clockJob'); if (sel) sel.value = clockJobName; }
     wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); if (workCat) shiftCats.add(workCat); shiftNote = '';
     renderWorkCatSel();
     setClockBtn(true);
@@ -4599,7 +4634,7 @@ function scrapPunch() {
     return;
   }
   _scrapArm = false;
-  clockedInAt = null; clockJobName = null;
+  clockedInAt = null; clockJobName = null; clockWheelHome();
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); coCats = new Set(); coJob = ''; shiftNote = '';
   saveShift();
@@ -4707,7 +4742,7 @@ function doJobSwitch() {
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); if (workCat) shiftCats.add(workCat); shiftNote = '';
   saveShift();
-  const sel = $('clockJob'); if (sel) sel.value = clockJobName;
+  { const sel = $('clockJob'); if (sel) sel.value = clockJobName; }
   $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
   cancelJobSwitch();
   renderAll(); bcRender();
@@ -4733,7 +4768,7 @@ function saveClockOut() {
   const _e = addEntry('Clock', note ? `${note} — ${span}` : span, shiftJob, extra);
   lastShiftUndo = { id: _e.id, at: clockedInAt.toISOString(), job: clockJobName, brM: breakMins, done: Date.now() };
   toast(`Shift logged — ${rounded.toFixed(2)} hrs · ${shiftJob}${edited ? ' · ✎ adjusted' : ''}${coBillable ? '' : ' · not billable'} ✓`);
-  clockedInAt = null; clockJobName = null;
+  clockedInAt = null; clockJobName = null; clockWheelHome();
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); coCats = new Set(); coJob = ''; shiftNote = '';
   saveShift();
@@ -4858,7 +4893,8 @@ function restoreShift() {
   breakMins = j.brM || 0;
   wageBankCents = j.wb || 0; wageSegStartSec = j.ws || 0; workCat = j.wc || '';
   shiftCats = new Set(j.cats || []); shiftNote = j.sn || '';
-  const sel = $('clockJob'); if (sel) sel.value = clockJobName;
+  renderJobSelects();                                     // clocked in, so no blank on the wheel
+  { const sel = $('clockJob'); if (sel) sel.value = clockJobName; }
   setClockBtn(true);
   $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
   toast(`⏱ Still on the clock — ${esc(clockJobName)} since ${fmtTime(clockedInAt)} ✓`);
@@ -4969,6 +5005,8 @@ function undoPunch() {
     lastShiftUndo = null;
     saveShift();
     setClockBtn(true);
+    renderJobSelects();                                   // back on the clock: the blank goes
+    { const sel = $('clockJob'); if (sel) sel.value = clockJobName; }
     $('clockStatus').innerHTML = `<span class="on">On the clock</span> — ${esc(clockJobName)} since ${fmtTime(clockedInAt)}`;
     renderAll(); bcRender(); scheduleSave();
     toast('↩ Clock-out undone — you are back on the clock ✓');
@@ -4984,7 +5022,7 @@ function undoPunch() {
     return;
   }
   _undoArm = false;
-  clockedInAt = null; clockJobName = null;
+  clockedInAt = null; clockJobName = null; clockWheelHome();
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set();
   saveShift();
@@ -13658,14 +13696,25 @@ function renderTodos() {
   $('todoViewAll').textContent = `View all ${topTodos().length} →`;
 }
 // ---------- rendering ----------
+// ⏱ v6.21 — Eric: "make the time clock so it's always on something empty, not a job...
+// I don't like when it's on a job when it's not clocked in." Off the clock the wheel reads
+// CHOOSE JOB and means it — a job name sitting there looked like a live shift on a job he
+// wasn't working. On the clock the blank is gone entirely, so a stray thumb cannot unset the
+// job out from under a running shift.
 function renderJobSelects() {
   const ordered = recentJobsOrdered();
   ['clockJob', 'ptJob'].forEach(id => {
-    const sel = $(id); const cur = sel.value;
-    sel.innerHTML = ordered.map(j => `<option${j === cur ? ' selected' : ''}>${esc(j)}</option>`).join('');
+    const sel = $(id); if (!sel) return;
+    const cur = sel.value;
+    const blank = id === 'clockJob' && !clockedInAt;
+    sel.innerHTML = (blank ? '<option value="">⏱ Choose job…</option>' : '') +
+      ordered.map(j => `<option${j === cur ? ' selected' : ''}>${esc(j)}</option>`).join('');
+    if (blank && !ordered.includes(cur)) sel.value = '';   // nothing picked yet = sit on the blank
   });
   renderAllJobChips();
 }
+// the wheel goes home to CHOOSE JOB the moment the clock stops, however it stopped
+function clockWheelHome() { const sel = $('clockJob'); if (sel) sel.value = ''; renderJobSelects(); }
 function renderKpis() {
   const today = new Date();
   const tEntries = entries.filter(e => sameDay(e.ts, today));
@@ -13948,7 +13997,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.20';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.23';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
