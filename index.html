@@ -3278,7 +3278,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.25 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.26 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -10421,7 +10421,9 @@ async function openJournal(i) {
         <button class="btn-ghost req-x" onclick="jrnStamp(${e.id}); openJournal(${i})">✕</button>
       </div>`).join('') : ''}
     <!-- 📷 v5.38 — ALL the job's photos live HERE: tap the ones that ride with this week -->
-    <div class="field" style="margin: 8px 0 2px;"><label>📷 Job photos — tap the ones to send with this week</label></div>
+    <div class="field frow" style="margin: 8px 0 2px; align-items: center; gap: 8px;"><label style="flex: 1;">📷 Job photos — tap the ones to send with this week</label>
+      <button type="button" class="pick-chip" style="font-size: 11.5px; min-height: 30px;" onclick="$('jrnPhFile').click()" title="Photos added here get ground into the job log like normal AND arrive already picked for this week">➕ Add photos</button>
+      <input type="file" id="jrnPhFile" accept="image/*" multiple style="display: none;" onchange="jrnAddPhotos(this)"></div>
     <div id="jrnPhGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;"></div>
     <div class="hint" id="jrnPhNote" style="margin: 5px 0 0;"></div>
     <!-- ✍ v5.84 — Eric: "auto write default off so that i can type myself or make my inclusion
@@ -10466,10 +10468,31 @@ function jrnDraftGo() {
 // 📷 v5.38 — pick the week's photos RIGHT IN the journal window (no hunting through the log).
 // Tap = stamp toggles on the entry underneath, so release works exactly as before.
 const _jrnPhLinks = {}; // photoPath -> temp link (per session)
+// 📷 v6.26 — Eric: "I uploaded 11 photos and the journal only had one." A multi-photo grind
+// makes ONE entry carrying photoPaths[] — and this grid only ever looked at photoPath, the
+// first of them. Every photo of every entry gets its own cell now, each one its own tap.
+function entryAllPhotos(e) {
+  return (e.photoPaths && e.photoPaths.length) ? e.photoPaths : (e.photoPath ? [e.photoPath] : []);
+}
+// which of this entry's photos ride this week: no pick list = ALL of a stamped entry's ride
+function jrnSelPaths(e) {
+  if (!(e.jrn && !e.jrnDone)) return [];
+  const all = entryAllPhotos(e);
+  return Array.isArray(e.jrnPh) ? all.filter(p => e.jrnPh.includes(p)) : all;
+}
 function jrnPhotoList(aj) {
   const from = new Date(); from.setDate(from.getDate() - 30);
-  return entries.filter(e => e.photoPath && !e.personal && !e.sample && e.job === aj &&
-    (e.jrn && !e.jrnDone || new Date(e.ts) >= from)).slice(0, 24);
+  const out = [];
+  for (const e of entries) {
+    if (!e.photoPath || e.personal || e.sample || e.job !== aj) continue;
+    if (!((e.jrn && !e.jrnDone) || new Date(e.ts) >= from)) continue;
+    const all = entryAllPhotos(e);
+    for (let pi = 0; pi < all.length; pi++) {
+      out.push({ e, pi, path: all[pi] });
+      if (out.length >= 24) return out;
+    }
+  }
+  return out;
 }
 function renderJrnPhotos() {
   const grid = $('jrnPhGrid');
@@ -10477,10 +10500,11 @@ function renderJrnPhotos() {
   const c = _portalIdx.clients[_jrnIdx];
   const aj = portalAppJob(c);
   const list = jrnPhotoList(aj);
-  if (!list.length) { grid.innerHTML = '<span class="hint" style="grid-column: 1 / -1;">No photos on this job in the last 30 days — file some through the Grinder and they show up here.</span>'; }
-  else grid.innerHTML = list.map(e => {
-    const sel = e.jrn && !e.jrnDone;
-    const link = _jrnPhLinks[e.photoPath];
+  if (!list.length) { grid.innerHTML = '<span class="hint" style="grid-column: 1 / -1;">No photos on this job in the last 30 days — file some through the Grinder (or ➕ Add photos right here) and they show up.</span>'; }
+  else grid.innerHTML = list.map(it => {
+    const e = it.e;
+    const sel = jrnSelPaths(e).includes(it.path);
+    const link = _jrnPhLinks[it.path];
     // ⭐ v6.02 — Eric: "a little star showing that it's already been used in a client journal
     // entry before so I'm not sending the same pics twice." The grid holds 30 days of the
     // job's photos and never resets weekly, so last week's are still sitting right here.
@@ -10489,7 +10513,7 @@ function renderJrnPhotos() {
       ? new Date(e.jrnSent + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
     const times = +e.jrnSentN || 0;
     const aria = `${sel ? 'Riding with this week' : 'Not going this week'}${sent ? `. Already sent${sentDay ? ' ' + sentDay : ''}${times > 1 ? `, ${times} times` : ''}` : ''}`;
-    return `<button type="button" data-jph="${e.id}" onclick="jrnPhotoTog(${e.id})" aria-pressed="${sel}" aria-label="${esc(aria)}" title="${esc(aria)}"
+    return `<button type="button" data-jph="${e.id}_${it.pi}" onclick="jrnPhotoTog(${e.id}, ${it.pi})" aria-pressed="${sel}" aria-label="${esc(aria)}" title="${esc(aria)}"
       style="position: relative; height: 76px; padding: 0; overflow: hidden; cursor: pointer; background: rgba(0,0,0,0.35);
         border: ${sel ? '3px solid var(--accent)' : '1px solid var(--border)'}; border-radius: 8px;">
       ${link ? `<img src="${esc(link)}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;${sel ? '' : ' opacity: 0.75;'}">` : '<span style="font-size: 22px;">📷</span>'}
@@ -10499,14 +10523,14 @@ function renderJrnPhotos() {
     </button>`;
   }).join('');
   // the plain-words version of the star, and only when there's a star to explain
-  const anySent = list.some(e => e.jrnSent);
-  const dupes = list.filter(e => e.jrnSent && e.jrn && !e.jrnDone).length;
+  const anySent = list.some(it => it.e.jrnSent);
+  const dupes = list.filter(it => it.e.jrnSent && jrnSelPaths(it.e).includes(it.path)).length;
   const note = $('jrnPhNote');
   if (note) note.innerHTML = !anySent ? ''
     : `⭐ SENT means that photo already went out in a past week — this grid holds the job's last 30 days, it doesn't clear itself.${dupes ? ` <b>${dupes} of the ones you've picked has gone before.</b>` : ''}`;
   const go = $('jrnGoBtn');
   if (go) {
-    const n = jrnStamped(aj).filter(e => e.photoPath).length;
+    const n = jrnStamped(aj).reduce((t, e) => t + jrnSelPaths(e).length, 0); // v6.26 - counts PHOTOS, not entries
     go.textContent = `📖 Release to the client page${n ? ` (${n} photo${n > 1 ? 's ride' : ' rides'} along)` : ''}`;
   }
   jrnPhLoadLinks(list);
@@ -10516,31 +10540,57 @@ async function jrnPhLoadLinks(list) {
   // HEIC files behind raw temp links — browsers can't draw those. Dropbox's thumbnail door
   // converts ANY format to jpeg server-side (same door the board photos use), and a failed
   // fetch is no longer cached forever — reopening the journal retries it.
-  for (const e of list) {
-    if (_jrnPhLinks[e.photoPath]) continue;
+  for (const it of list) {
+    if (_jrnPhLinks[it.path]) continue;
     try {
       const t = await getToken();
       const r = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + t,
-          'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path: e.photoPath }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w480h320' } }) }
+          'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path: it.path }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w480h320' } }) }
       });
       if (r.ok) {
-        _jrnPhLinks[e.photoPath] = URL.createObjectURL(await r.blob());
-        const cell = document.querySelector(`[data-jph="${e.id}"]`);
+        _jrnPhLinks[it.path] = URL.createObjectURL(await r.blob());
+        const cell = document.querySelector(`[data-jph="${it.e.id}_${it.pi}"]`);
         if (cell) renderJrnPhotos(); // grid still on screen — repaint with the new thumb
       }
     } catch (err) { /* left un-cached on purpose — next open tries again */ }
     if (!$('jrnPhGrid')) break; // window closed — stop fetching
   }
 }
-function jrnPhotoTog(id) {
+function jrnPhotoTog(id, pi) {
   const e = entries.find(x => x.id === id);
   if (!e) return;
   if (e.personal) { toast('🔒 Personal never goes near a client', false); return; }
-  e.jrn = !(e.jrn && !e.jrnDone); delete e.jrnDone;
+  // 📷 v6.26 — the tap is PER PHOTO now. jrnPh holds the picked paths; no list = all of a
+  // stamped entry's photos ride (that's what "I uploaded 11" should have meant all along).
+  const all = entryAllPhotos(e);
+  const p = all[pi == null ? 0 : pi];
+  if (!p) return;
+  let sel = jrnSelPaths(e);
+  sel = sel.includes(p) ? sel.filter(x => x !== p) : [...sel, p];
+  if (!sel.length) { e.jrn = false; delete e.jrnPh; }
+  else {
+    e.jrn = true; delete e.jrnDone;
+    if (sel.length === all.length) delete e.jrnPh; else e.jrnPh = sel;
+  }
   scheduleSave();
   renderJrnPhotos();
+}
+// ➕ v6.26 — Eric: "add photos directly to the journal and it automatically goes to the
+// grinder — the same thing but backwards." One tap here = a real grinder entry on the job
+// (filed to the job folder like any photo note) that arrives ALREADY stamped for this week.
+async function jrnAddPhotos(inp) {
+  const files = [...(inp.files || [])];
+  inp.value = '';
+  if (!files.length || _jrnIdx == null) return;
+  const c = _portalIdx.clients[_jrnIdx];
+  const aj = portalAppJob(c);
+  const e = addEntry('Note', `📖 Journal photos — week of ${localDay(new Date())}`, aj, { jrn: true });
+  renderJrnPhotos();
+  await attachEntryPhotos(e, files, `Job Notes/${cleanName(aj)}`);
+  renderJrnPhotos();
+  toast(`📷 ${files.length} photo${files.length > 1 ? 's' : ''} ground into the ${aj} log AND stamped for this week ✓`);
 }
 // ↩ v5.20 — NOTHING sent to a client is beyond reach: edit updates their page live,
 // take-back pulls the week off it entirely. Their lamp lights either way.
@@ -10666,13 +10716,15 @@ async function journalRelease() {
     // 📷 picked photos copy into the client's own portal folder — served by code, like everything else
     const photos = [];
     for (const e of st) {
-      if (!e.photoPath) continue;
-      const name = String(e.photoPath).split('/').pop().replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80);
-      if (!name) continue;
-      try {
-        await dbxRpc('files/copy_v2', { from_path: e.photoPath, to_path: portalRoot() + '/photos-' + c.code + '/' + name });
-        photos.push(name);
-      } catch (err) { photos.push(name); /* already there from an earlier try */ }
+      // 📷 v6.26 — every picked photo of the entry rides, not just the first
+      for (const p of jrnSelPaths(e)) {
+        const name = String(p).split('/').pop().replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80);
+        if (!name) continue;
+        try {
+          await dbxRpc('files/copy_v2', { from_path: p, to_path: portalRoot() + '/photos-' + c.code + '/' + name });
+          photos.push(name);
+        } catch (err) { photos.push(name); /* already there from an earlier try */ }
+      }
     }
     const d = JSON.parse(await dbxDownload(path) || '{}');
     const now = new Date(); const from = new Date(); from.setDate(from.getDate() - 6);
@@ -14288,7 +14340,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.25';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.26';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
