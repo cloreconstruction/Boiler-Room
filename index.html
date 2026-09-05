@@ -379,6 +379,10 @@
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  /* 🌙 v6.33 — the root canvas too: with no html background, any gap the browser paints
+     before a fixed panel lands — overscroll, a modal opening, a re-layout — shows the
+     browser's own white. Now every layer under every window is the skin's page colour. */
+  html { background: var(--page); }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     background: var(--page);
@@ -848,7 +852,11 @@
     font-size: 13px; padding: 14px 10px; border: none; cursor: pointer;
     background: var(--accent); color: var(--accent-ink); font-family: inherit; flex: 0 0 auto; }
   .cp-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  #cpFrame { width: 100%; height: 100%; min-height: 100%; border: 0; background: #fff; display: block; }
+  /* 🌙 v6.33 — Eric: "sometimes when i push a button to open a page or window it will flash a
+     white page and then load the page… those are a bright flash at night." This frame was
+     painted WHITE while the client page loaded inside it. It wears the skin's page colour
+     now, so the gap before the page paints is the same dark he was already looking at. */
+  #cpFrame { width: 100%; height: 100%; min-height: 100%; border: 0; background: var(--page); display: block; }
   .cp-x { position: absolute; right: 18px; bottom: 18px; z-index: 5; border: none; border-radius: 999px;
     background: var(--accent); color: var(--accent-ink); font-family: inherit; font-weight: 800;
     font-size: 15px; letter-spacing: 1px; padding: 14px 22px; cursor: pointer;
@@ -2160,6 +2168,12 @@
 
   /* pick chips (jobs, trucks) */
   .chips-row { display: flex; flex-wrap: wrap; gap: 7px; }
+  /* 🔲 v6.33 — the 🧾 category window: same-size plates, three across (Eric's ask). A long
+     name like "Drywall, Mud and Texture" wraps inside its plate instead of stretching it. */
+  .cat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .cat-grid .pick-chip { width: 100%; min-height: 56px; border-radius: 12px; padding: 8px 6px;
+    font-size: 12.5px; line-height: 1.25; white-space: normal; text-align: center;
+    display: flex; align-items: center; justify-content: center; overflow-wrap: anywhere; }
   /* ✨ v5.31 — the gold plate IS the standard chip on every skin; picked = BRIGHT + banded.
      v5.32 — smaller letters so a Scritchfield-length word fits a plate in one piece. */
   .pick-chip {
@@ -3341,7 +3355,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.32 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.33 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5433,14 +5447,17 @@ function catModalOpen() {
   const job = (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : curJob;
   const learned = ((prefs.jobCats || {})[jobCatKey(job)] || []).filter(c => RCPT_CATS.includes(c));
   const all = [...RCPT_CATS].sort((a, b) => a.localeCompare(b)); // 🅰 alphabetical — Eric: easier to find
-  const chip = (c, star) => `<button type="button" class="pick-chip${qnCat === c ? ' sel' : ''}" style="font-size: 12.5px; padding: 8px 12px; min-height: 38px;" onclick="qnCatPick('${escq(c)}')">${qnCat === c ? '✓' : star ? '⭐' : '📂'} ${esc(c)}</button>`;
+  // 🔲 v6.33 — Eric: "all those cards needs to be the same size so its 3 across or whatever
+  // fits best." Same-size plates in a three-wide grid (.cat-grid), instead of pills of every
+  // length wrapping wherever they fell. No inline sizing here so the grid rule can win.
+  const chip = (c, star) => `<button type="button" class="pick-chip${qnCat === c ? ' sel' : ''}" onclick="qnCatPick('${escq(c)}')" aria-pressed="${qnCat === c}">${qnCat === c ? '✓' : star ? '⭐' : '📂'} ${esc(c)}</button>`;
   $('catBox').innerHTML = `<h3>🧾 What kind of cost is this?
     ${winX('catModalClose()', 'close')}</h3>
     <div class="hint" style="margin: 0 0 8px;">Filing under <b>${esc(job && job !== '—' ? job : 'no job yet — pick one after')}</b>. The pick rides the receipt to the budget pile pre-sorted, and it's remembered for next time.</div>
     ${learned.length ? `<div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 6px 0 4px;">⭐ USED ON THIS JOB</div>
-      <div class="chips-row" style="margin-bottom: 8px;">${learned.map(c => chip(c, true)).join('')}</div>
+      <div class="chips-row cat-grid" style="margin-bottom: 8px;">${learned.map(c => chip(c, true)).join('')}</div>
       <div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 6px 0 4px;">🅰 THE WHOLE LIST, A → Z</div>` : ''}
-    <div class="chips-row" style="max-height: 46vh; overflow-y: auto; align-content: flex-start;">${all.map(c => chip(c, false)).join('')}</div>
+    <div class="chips-row cat-grid" style="max-height: 46vh; overflow-y: auto; align-content: flex-start;">${all.map(c => chip(c, false)).join('')}</div>
     <div class="frow" style="gap: 8px; margin-top: 12px;">
       <button type="button" class="btn-ghost" style="flex: 1;" onclick="catModalClose()">⏭ Skip — pick it at the budget later</button>
       <button type="button" class="btn-ghost" style="flex: 1; color: var(--err, #c0392b);" onclick="qnRcpt = false; qnCat = ''; catModalClose(); renderTagChips(); renderCatRow();">✕ Not a receipt</button>
@@ -8217,7 +8234,20 @@ function jumpSetup(id) {
   if (!sec) return;
   document.querySelectorAll('#panel-settings > .set-section.collapsible').forEach(s => s.classList.remove('open'));
   sec.classList.add('open');
-  setTimeout(() => sec.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80);
+  // 🔝 v6.33 — Eric: "when i click project portal it goes to half way down the page i want it
+  // to start at the top of the page when it opens." scrollIntoView fired 80ms after the panel
+  // opened, then the collapse pass and the portal list finishing their layout pulled the
+  // section back down under it. The portal is the FIRST section now, so for it — or any
+  // section that is first — the honest answer is scrollTop 0, pinned again after the late
+  // layout lands. Anything further down still scrolls into view as before.
+  const panel = $('panel-settings');
+  const first = panel && panel.querySelector('.set-section');
+  if (panel && sec === first) {
+    const top = () => { panel.scrollTop = 0; window.scrollTo(0, 0); };
+    top(); setTimeout(top, 80); setTimeout(top, 400);
+  } else {
+    setTimeout(() => sec.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80);
+  }
 }
 function crewPreviewToggle() {
   if (CREW_NAME) return; // crew phones have no preview business
@@ -9430,7 +9460,7 @@ function renderPortalFold(box, offRoot) {
           <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
           <!-- 🧾 v6.30 — Eric asked for this to sit beside "view as a client": the tagged
                receipts still waiting on this job, to check and approve in one sitting. -->
-          <button class="btn-ghost pf-wide" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(c.job) ? " · " + rcptCount(c.job) + " WAITING" : " · none"}</button>
+          <button class="btn-ghost pf-wide" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(portalAppJob(c)) ? " · " + rcptCount(portalAppJob(c)) + " WAITING" : " · none"}</button>
         </div>` : `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>`) : ''}
       </div>`;
     }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button>
@@ -9575,7 +9605,7 @@ async function renderPortalList() {
         <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
         <!-- 🧾 v6.30 — beside "view as a client", as Eric asked: the tagged receipts still
              waiting on this job, to check and approve in one sitting. -->
-        <button class="btn-ghost pf-wide" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(c.job) ? " · " + rcptCount(c.job) + " WAITING" : " · none"}</button>
+        <button class="btn-ghost pf-wide" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(portalAppJob(c)) ? " · " + rcptCount(portalAppJob(c)) + " WAITING" : " · none"}</button>
       </div>
       <div class="pf-small">
         <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? Kills their link' : '🔄 Rotate code'}</button>
@@ -9835,6 +9865,12 @@ function estRaw(x) { const b = estAccBid(x); return b ? (+b.e1 || 0) + (+b.e2 ||
 // 💹 the number the CLIENT sees: raw bid + the board's markup, unless the line says the
 // markup is already inside it. The % itself never leaves the office.
 function estMk() { return _estD && +_estD.mk >= 0 ? +_estD.mk : 20; }
+// 🆕 v6.33 — the board a client starts with, the same shape openEstimates builds in memory:
+// Eric's default categories in his order, nothing approved, 20% markup. Used ONLY when
+// Dropbox has confirmed there is no board file at all (see dbxPathExists).
+function estFreshBoard() {
+  return { updated: '', mk: 20, cats: EST_DEFAULT_CATS.map(n => ({ n, appr: false, bids: [] })) };
+}
 // one BID's client-facing number — same markup rule, any bid
 function estBidClient(b) {
   const raw = (+b.e1 || 0) + (+b.e2 || 0);
@@ -9921,7 +9957,14 @@ function estBillParse(e) {
 function estBillCands() {
   const c = _portalIdx.clients[_estIdx];
   if (!c) return [];
-  return entries.filter(e => e.job === c.job && !e.budg && !e.sample && estBillParse(e)).slice(0, 12);
+  // 🔗 v6.33 — THE BILL STRIP HAS BEEN EMPTY SINCE v5.94, AND THIS LINE IS WHY. c.job is the
+  // client's PORTAL name ("Josten–Weiser Custom Home"); e.job is the APP job ("Josten/Weiser").
+  // They were compared literally and never matched, so no ground receipt ever reached this
+  // strip on a real phone — the tests only passed because they seeded both names the same.
+  // The journal, plans and materials all bridge the two with portalAppJob(); now so does
+  // every receipt path. Eric's Peninsula Overhead Doors invoice is what surfaced it.
+  const aj = portalAppJob(c);
+  return entries.filter(e => (e.job === aj || e.job === c.job) && !e.budg && !e.sample && estBillParse(e)).slice(0, 12);
 }
 function estBillGuess(e) {
   // 🧾 v6.24 — a category Eric picked (or a vendor-learned one) matches by NAME, never by
@@ -10256,7 +10299,7 @@ async function estQuickUpcoming(id, ev) {
   if (!_portalIdx) {
     try { _portalIdx = JSON.parse(await dbxDownload(portalRoot() + '/index.json')); } catch (err) { /* no portal yet */ }
   }
-  const i = (((_portalIdx || {}).clients) || []).findIndex(c => c.job === e.job);
+  const i = (((_portalIdx || {}).clients) || []).findIndex(c => portalAppJob(c) === e.job || c.job === e.job);
   if (i < 0) { toast(`${e.job} has no client page, so there is nowhere to show it — client jobs only`, false); return; }
   const cat = String(e.category || '').trim();
   if (!cat) { toast('Give it a 🧾 category first — opening the budget', false); _estBillFold = null; openEstimates(i); return; }
@@ -10276,6 +10319,14 @@ async function estQuickUpcoming(id, ev) {
       // invent one: if the read did not come back, we stop and keep the receipt in the log.
       let raw = null, readFailed = false;
       try { raw = await dbxDownload(estPath(c.code)); } catch (err) { readFailed = true; }
+      // 🆕 v6.33 — a client who has never had a board. The wipe guard stays exactly as it is:
+      // an empty board is invented ONLY when Dropbox itself says there is no file there. A
+      // probe that errors, or a file that exists but would not read, still refuses.
+      if (!readFailed && raw == null) {
+        let missing = false;
+        try { missing = !(await dbxPathExists(estPath(c.code))); } catch (err) { missing = false; }
+        if (missing) raw = JSON.stringify(estFreshBoard());
+      }
       if (readFailed || raw == null) {
         _estIdx = -1; _estD = null; _estPage = null;
         toast('Couldn\'t read the estimates board — nothing sent. Try again on a better signal', false);
@@ -10361,7 +10412,7 @@ async function openRcptReview(i) {
 function renderRcptReview() {
   const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
   if (!c) return;
-  const list = rcptWaiting(c.job);
+  const list = rcptWaiting(portalAppJob(c));   // 🔗 v6.33 — the APP job, not the portal name
   const mk = estMk();
   const money = n => '$' + (+n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const rows = list.map(e => {
@@ -10405,7 +10456,7 @@ function renderRcptReview() {
 function rcptTog(id) { _rcptSel.has(id) ? _rcptSel.delete(id) : _rcptSel.add(id); renderRcptReview(); }
 function rcptAll() {
   const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
-  const list = rcptWaiting(c ? c.job : '');
+  const list = rcptWaiting(c ? portalAppJob(c) : '');
   _rcptSel = _rcptSel.size >= list.length ? new Set() : new Set(list.map(e => e.id));
   renderRcptReview();
 }
@@ -10431,6 +10482,12 @@ async function rcptApprove() {
     toast(`⏳ Sending ${picked.length}…`);
     let raw = null, failed = false;
     try { raw = await dbxDownload(estPath(c.code)); } catch (err) { failed = true; }
+    // 🆕 v6.33 — no board yet for this client: start one, but only on Dropbox's word (see estQuickUpcoming)
+    if (!failed && raw == null) {
+      let missing = false;
+      try { missing = !(await dbxPathExists(estPath(c.code))); } catch (err) { missing = false; }
+      if (missing) raw = JSON.stringify(estFreshBoard());
+    }
     if (failed || raw == null) { toast('Couldn\'t read the estimates board — nothing sent. Try again on a better signal', false); return; }
     try { _estD = JSON.parse(raw || 'null'); } catch (err) { _estD = null; }
     if (!_estD || !Array.isArray(_estD.cats)) { toast('That estimates board didn\'t read cleanly — open 💰 Estimates and check it first', false); return; }
@@ -10474,7 +10531,7 @@ async function estJumpFromEntry(id, ev) {
   if (!_portalIdx) {
     try { _portalIdx = JSON.parse(await dbxDownload(portalRoot() + '/index.json')); } catch (err) { /* no portal yet */ }
   }
-  const i = (((_portalIdx || {}).clients) || []).findIndex(c => c.job === e.job);
+  const i = (((_portalIdx || {}).clients) || []).findIndex(c => portalAppJob(c) === e.job || c.job === e.job);
   if (i < 0) { toast(`${e.job} has no client page, so no budget board — client jobs only`, false); return; }
   _estBillFold = null; // the bill strip opens itself with the bill waiting in it
   openEstimates(i);
@@ -14687,7 +14744,7 @@ async function aiDescribeEntry(id, ev) {
       delete e.budg; // fresh read = a fresh offer to the budget
       scheduleSave();
       renderLog();
-      const cl = (((_portalIdx || {}).clients) || []).find(c => c.job === e.job);
+      const cl = (((_portalIdx || {}).clients) || []).find(c => portalAppJob(c) === e.job || c.job === e.job);   // 🔗 v6.33
       toast(cl && p.total != null && p.total !== ''
         ? `🧾 Receipt read ✓ — waiting in ${cl.job}'s 💰 Estimates under 📥 BILLS THAT CAME IN`
         : '🧾 Receipt read ✓ — date, place, cost on the entry');
@@ -14789,6 +14846,18 @@ function rcptLampHtml(e) {
 function rlRcptToggle() {
   window._logRcptOnly = !window._logRcptOnly;
   window._rlN = 12;
+  // 🧾 v6.33 — Eric: "when i click on receipts it should turn off all other filters because
+  // i when i click on receipts i will always only be looking for a reciept." Turning it ON
+  // drops the search words, every wheel, the dates and the heads-up view, so the list is every
+  // receipt in the book and nothing narrower. Narrow it again AFTER, if he wants one job.
+  if (window._logRcptOnly) {
+    logQuery = '';
+    window._logHeadsOnly = '';
+    if ($('logSearch')) $('logSearch').value = '';
+    ['lfJob', 'lfType', 'lfWho', 'lfCat', 'lfTag'].forEach(id => { if ($(id)) $(id).value = 'All'; });
+    if ($('lfFrom')) $('lfFrom').value = '';
+    if ($('lfTo')) $('lfTo').value = '';
+  }
   const b = $('rlRcptBtn');
   if (b) { b.classList.toggle('sel', !!window._logRcptOnly); b.setAttribute('aria-pressed', !!window._logRcptOnly); b.textContent = window._logRcptOnly ? '🧾 Receipts ✓ ON' : '🧾 Receipts'; }
   renderLog();
@@ -14924,7 +14993,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.32';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.33';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -15068,6 +15137,17 @@ async function dbxRpc(path, arg) {
     body: JSON.stringify(arg)
   });
   return r.json();
+}
+// 🔎 v6.33 — is there a file at this path? TRUE, FALSE, or it throws. dbxDownload folds "not
+// there" and "could not reach Dropbox" into the same null, and the receipt doors need to tell
+// a client who has never had an estimates board (Josten, the day this shipped) from a phone
+// with no signal. Only a clean "not found" is a no; anything else is an error and the caller
+// must refuse, exactly as before.
+async function dbxPathExists(path) {
+  const j = await dbxRpc('files/get_metadata', { path });
+  if (j && j['.tag']) return true;
+  if (j && /not_found/.test(String(j.error_summary || ''))) return false;
+  throw new Error('get_metadata: ' + String((j || {}).error_summary || 'no answer'));
 }
 // Dropbox-API-Arg is an HTTP header: non-ASCII characters (em-dashes, accents) must be \u-escaped
 const hsafe = o => JSON.stringify(o).replace(/[\u007f-\uffff]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
