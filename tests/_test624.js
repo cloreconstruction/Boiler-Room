@@ -213,9 +213,10 @@ const { chromium } = require('playwright');
 
   ok('the grinder card is five numbered plates, in order', await page.evaluate(() => {
     const steps = Array.from(document.querySelectorAll('#qnCard .g-step')).map(el => +el.dataset.step);
+    // 🔀 v6.30 — the job and the words swapped places (Eric: "pick the job… important first")
     return JSON.stringify(steps) === '[1,2,3,4,5]' &&
-      $('askText').closest('.g-step').dataset.step === '1' &&
-      $('qnJob').closest('.g-step').dataset.step === '2' &&
+      $('qnJob').closest('.g-step').dataset.step === '1' &&
+      $('askText').closest('.g-step').dataset.step === '2' &&
       $('qnTagChips').closest('.g-step').dataset.step === '3' &&
       $('qnVisChips').closest('.g-step').dataset.step === '4' &&
       document.querySelector('.plate-row').closest('.g-step').dataset.step === '5';
@@ -226,14 +227,16 @@ const { chromium } = require('playwright');
     return document.querySelector('.g-step[data-step="1"]').classList.contains('next');
   }));
 
-  ok('words in → ① goes ✓ DONE, ② PICK THE JOB lights up', await page.evaluate(() => {
-    $('askText').value = 'ran conduit under the slab'; updateStepFlow();
+  // 🔀 v6.30 — the job is the gate now: picking it finishes ① and lights ② SAY IT
+  ok('job picked → ① goes ✓ DONE, ② SAY IT lights up', await page.evaluate(() => {
+    $('askText').value = ''; qnJobPick = 'Mery'; updateStepFlow();
     const s1 = document.querySelector('.g-step[data-step="1"]'), s2 = document.querySelector('.g-step[data-step="2"]');
     return s1.classList.contains('done') && !s1.classList.contains('next') && s2.classList.contains('next');
   }));
 
-  ok('job picked → the eye goes straight to ⑤ SEND IT (tags and unlock stay optional)', await page.evaluate(() => {
-    qnJobPick = 'Mery'; updateStepFlow();
+  // 🔀 v6.30 — with BOTH the job and the words in, the eye jumps to the lever
+  ok('job and words in → the eye goes straight to ⑤ SEND IT (tags and unlock stay optional)', await page.evaluate(() => {
+    qnJobPick = 'Mery'; $('askText').value = 'ran conduit under the slab'; updateStepFlow();
     const s2 = document.querySelector('.g-step[data-step="2"]'), s5 = document.querySelector('.g-step[data-step="5"]');
     const s3 = document.querySelector('.g-step[data-step="3"]');
     return s2.classList.contains('done') && s5.classList.contains('next') && !s3.classList.contains('next');

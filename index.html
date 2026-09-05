@@ -1271,6 +1271,32 @@
   /* 🪜 v6.25 — THE FIVE STEPS. Say it → job → tags → unlock → send. Each its own plate,
      the NEXT one glows AND says ▸ NEXT (brightness + glyph + word — never colour alone),
      done ones wear ✓ DONE. The eye rides the rail down. */
+  /* 🅿 v6.30 — PARKED, NOT DELETED. Eric: "id like to clear the text reader 'needs you' keep
+     that in mind as something we may bring back but for now i want it off the app. also the
+     to-dos id like temporarily off the app, we will rework it again later."
+     Every line of both features is still here and still runs — this only stops them being
+     drawn. To bring one back, delete its selector from this block and nothing else: no
+     re-wiring, no lost state, and any to-do already written is still in the file.
+     Hidden with a class on <body> rather than by deleting markup, so a re-render cannot
+     quietly bring them back mid-session. */
+  /* 🔦 v6.30 — the job wheel on the job card. Eric reads this card to give someone an address
+     or a phone number, so landing on the wrong job is how the wrong client's details go out.
+     It is the brightest thing on the card by a distance: brass rim, its own lamp glow, the
+     job name set large. Never colour alone — the label says "▸ PICK THE JOB FIRST" and the
+     line under it spells out which job is on screen. */
+  .jc-pick { border: 3px solid var(--accent); border-radius: 14px; padding: 12px; margin: 0 0 14px;
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface-1, transparent));
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 26%, transparent), 0 2px 14px color-mix(in srgb, var(--accent) 34%, transparent); }
+  .jc-pick-lbl { display: block; font-size: 12px; font-weight: 800; letter-spacing: .7px; color: var(--accent); margin-bottom: 7px; }
+  /* the phone rule pins every input to 16px !important so iOS never zooms the page on focus.
+     That is a FLOOR, not a ceiling — Safari only zooms below 16px — so going up is safe and
+     needs its own !important to get past it. */
+  .jc-pick-sel { width: 100%; font-size: 19px !important; font-weight: 800; padding: 14px 10px; min-height: 52px;
+    border: 2.5px solid var(--accent); border-radius: 11px; background: var(--surface-1); color: var(--ink); }
+  .jc-pick-now { font-size: 12px; font-weight: 800; letter-spacing: .5px; margin-top: 8px; opacity: .95; }
+  body.parked-630 #hotStrip,
+  body.parked-630 #todoCard,
+  body.parked-630 #kpiTodoTile { display: none !important; }
   .g-step { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-top: 12px; }
   .g-step:first-of-type { margin-top: 0; }
   .g-step-label { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; letter-spacing: .6px; opacity: .72; margin-bottom: 8px; }
@@ -2224,7 +2250,7 @@
   @media (prefers-reduced-motion: reduce) { .btn-busy .hourglass { animation: none; } }
 </style>
 </head>
-<body>
+<body class="parked-630"><!-- 🅿 v6.30 parked: 🔥 needs-you strip + to-dos. Drop this class to bring both back. -->
 <div id="backdrop" onclick="closePanels()"></div>
 <div id="toast"></div>
 <div id="lightbox" onclick="closeLightbox()">
@@ -2345,8 +2371,19 @@
          more separated, but still flow. Soon as a step is done my eye goes to the next."
          Each band is its own numbered plate; the NEXT one glows and says so in a word
          (never colour alone), finished ones wear a ✓ DONE. -->
+    <!-- 🔀 v6.30 — Eric: "i would like 'pick the job' to be just above 'say it' as I think it's
+         important first, might flow better." The job is the thing every note is filed under,
+         and picking it first means the wheel is never the thing standing between him and the
+         lever after he has already said his piece. -->
     <div class="g-step" data-step="1">
-    <div class="g-step-label"><span class="g-step-num">1</span> SAY IT <span class="g-step-opt">· write it, speak it, or add a photo</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div class="g-step-label"><span class="g-step-num">1</span> PICK THE JOB<span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div class="frow" style="align-items: center; flex-wrap: nowrap;">
+      <!-- v5.26 — Eric kept hunting for this wheel: bigger, bolder, brass-rimmed -->
+      <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value; renderCatRow(); updateStepFlow()" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0; font-size: 16.5px; font-weight: 800; padding: 12px 10px; border: 2px solid var(--accent); border-radius: 10px;"></select>
+    </div>
+    </div>
+    <div class="g-step" data-step="2">
+    <div class="g-step-label"><span class="g-step-num">2</span> SAY IT <span class="g-step-opt">· write it, speak it, or add a photo</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
     <div class="ask-row">
       <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this); updateStepFlow()" placeholder="Write a note, or ask a question.&#10;&#10;⚙ To the grinder — below — files it.&#10;🧙 ASK — right here — answers it."></textarea>
       <input type="file" id="qnPhoto" accept="image/*,.pdf,application/pdf" multiple onchange="noteAddPhotos(this)" style="display: none;">
@@ -2368,13 +2405,6 @@
          The two plates + the bookkeeper button now ride at the BOTTOM of this card, after
          every tag, who-sees-it and send-to section. Write → file → THEN pull the lever. -->
     <div id="qnPhotoInfo" class="frow" style="gap: 6px; flex-wrap: wrap; margin-top: 6px;"></div>
-    </div>
-    <div class="g-step" data-step="2">
-    <div class="g-step-label"><span class="g-step-num">2</span> PICK THE JOB<span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
-    <div class="frow" style="align-items: center; flex-wrap: nowrap;">
-      <!-- v5.26 — Eric kept hunting for this wheel: bigger, bolder, brass-rimmed -->
-      <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value; renderCatRow(); updateStepFlow()" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0; font-size: 16.5px; font-weight: 800; padding: 12px 10px; border: 2px solid var(--accent); border-radius: 10px;"></select>
-    </div>
     </div>
     <div class="g-step" data-step="3">
     <div class="g-step-label"><span class="g-step-num">3</span> TAG IT <span class="g-step-opt">· optional — files it, never sends it</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
@@ -3278,7 +3308,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.29 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.30 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5378,8 +5408,10 @@ function updateStepFlow() {
   const card = $('qnCard'); if (!card) return;
   const hasWords = !!(($('askText') || {}).value || '').trim() || (typeof notePhotos !== 'undefined' && notePhotos.length > 0);
   const jobPicked = !!(qnJobPick && jobs.includes(qnJobPick));
-  const next = !hasWords ? 1 : !jobPicked ? 2 : 5;
-  const done = { 1: hasWords, 2: jobPicked, 3: !!(qnSel.size || qnHeads || qnRcpt), 4: !!(qnVis || qnVisNames.size), 5: false };
+  // 🔀 v6.30 — the job is step ① now and the words are ②, so the eye goes: pick the job →
+  // say it → send it. Tags and unlock stay optional and are never the NEXT thing.
+  const next = !jobPicked ? 1 : !hasWords ? 2 : 5;
+  const done = { 1: jobPicked, 2: hasWords, 3: !!(qnSel.size || qnHeads || qnRcpt), 4: !!(qnVis || qnVisNames.size), 5: false };
   card.querySelectorAll('.g-step').forEach(el => {
     const n = +el.dataset.step;
     el.classList.toggle('next', n === next);
@@ -8607,6 +8639,23 @@ function cardMake(job) {                  // Eric's side only — a blank card t
   return all[k];
 }
 let _cardJob = '';
+// 📋 v6.30 — what is ticked to be handed out. Cleared whenever the card changes job, so a
+// tick made on Rininger's card can never ride out inside Mery's details.
+let _jcPick = new Set(), _jcPickJob = '';
+function jcPickTog(k) { _jcPick.has(k) ? _jcPick.delete(k) : _jcPick.add(k); openJobCard(_cardJob); }
+function jcPickAll() {
+  const bits = window._jcBits || [];
+  _jcPick = _jcPick.size >= bits.length ? new Set() : new Set(bits.map(b => b.k));
+  openJobCard(_cardJob);
+}
+async function jcCopyPicked() {
+  const bits = (window._jcBits || []).filter(b => _jcPick.has(b.k));
+  if (!bits.length) { toast('Tick what you want to send first', false); return; }
+  // the job name heads it so the paste makes sense on its own at the other end
+  const text = [_cardJob, ...bits.map(b => b.val)].filter(Boolean).join('\n');
+  try { await navigator.clipboard.writeText(text); toast(`📋 ${bits.length} copied — paste it into a text or email ✓`); }
+  catch (e) { prompt('Copy this:', text); }
+}
 function openJobCards() { openJobCard(_cardJob || curJob || jobs[0] || ''); }
 function cardJobList() {
   if (!CREW_NAME) return jobs.filter(j => j && j !== '—');
@@ -8617,16 +8666,48 @@ function cardJobList() {
 function openJobCard(job) {
   const list = cardJobList();
   if (!job || !list.some(j => cardKey(j) === cardKey(job))) job = list[0] || job || '';
+  // a tick belongs to the card it was made on — changing job drops them all
+  if (_jcPickJob !== cardKey(job)) { _jcPick = new Set(); _jcPickJob = cardKey(job); }
   _cardJob = job;
   const mine = !CREW_NAME;
   const c = (mine ? (job ? cardMake(job) : null) : cardGet(job)) || { job, addr: '', people: [], codes: [], notes: '' };
   const ppl = c.people || [], cds = c.codes || [];
+  // 🔦 v6.30 — Eric: "at the top where i select the job i need that to be much brighter than
+  // the rest of the the page as it needs to attract my eyes to it first to select the correct
+  // job." Reading the WRONG job's card is how a code or a number goes to the wrong person, so
+  // this wheel gets the loudest treatment on the card: brass rim, its own glow, the job name
+  // large. Brightness alone is never the signal (standing rule) — the label spells out
+  // "▸ PICK THE JOB FIRST" and the chosen job is printed in words underneath.
   const pick = list.length
-    ? `<div class="field" style="margin: 0 0 10px;"><label>Job</label>
-        <select id="jcJob" onchange="openJobCard(this.value)" style="font-weight: 800;">
+    ? `<div class="jc-pick">
+        <label for="jcJob" class="jc-pick-lbl">▸ PICK THE JOB FIRST</label>
+        <select id="jcJob" class="jc-pick-sel" onchange="openJobCard(this.value)">
           ${list.map(j => `<option${cardKey(j) === cardKey(job) ? ' selected' : ''}>${esc(j)}</option>`).join('')}
-        </select></div>`
+        </select>
+        <div class="jc-pick-now">✓ SHOWING — ${esc(job || '(none)')}</div>
+      </div>`
     : `<div class="hint">${mine ? 'Add a job first under ⚙ Setup.' : 'Eric hasn\'t filled in any job cards yet — they arrive on your next sync.'}</div>`;
+  // 📋 v6.30 — Eric: "i want to be able to check mark each part (name, address, phone) and
+  // then click copy, and be able to paste that in a text or email to quickly give out
+  // specific client info." Tick what goes, copy it, paste it. Only what he ticks travels.
+  // 🔑 Door and gate CODES are deliberately NOT offered here — a copy block is one paste away
+  // from the wrong thread, and a code is the one thing on this card that opens a building.
+  const shareBits = [];
+  if (c.addr) shareBits.push({ k: 'addr', lbl: '📍 Address', val: c.addr });
+  ppl.forEach((p, i) => {
+    if (p.n) shareBits.push({ k: 'pn' + i, lbl: `👤 ${p.n}${p.r ? ' (' + p.r + ')' : ''}`, val: p.n + (p.r ? ` — ${p.r}` : '') });
+    if (p.tel) shareBits.push({ k: 'pt' + i, lbl: `📞 ${p.tel}${p.n ? ' · ' + p.n : ''}`, val: `${p.n ? p.n + ': ' : ''}${p.tel}` });
+    if (p.em) shareBits.push({ k: 'pe' + i, lbl: `✉ ${p.em}`, val: `${p.n ? p.n + ': ' : ''}${p.em}` });
+  });
+  window._jcBits = shareBits;
+  const share = shareBits.length ? `<div class="jc-head">📋 Hand out this job's details</div>
+    <div class="hint" style="margin: 0 0 6px;">Tick what you want to send, then copy — paste it straight into a text or an email. Door and gate codes are never in here on purpose.</div>
+    <div class="chips-row" id="jcShareChips">${shareBits.map(b =>
+      `<button type="button" class="pick-chip${_jcPick.has(b.k) ? ' sel' : ''}" onclick="jcPickTog('${escq(b.k)}')" aria-pressed="${_jcPick.has(b.k)}">${_jcPick.has(b.k) ? '☑' : '☐'} ${esc(b.lbl)}</button>`).join('')}</div>
+    <div class="frow" style="gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+      <button type="button" class="btn-primary" style="flex: 1; min-width: 150px; min-height: 46px; font-weight: 800;" ${_jcPick.size ? '' : 'disabled'} onclick="jcCopyPicked()">📋 COPY ${_jcPick.size ? _jcPick.size + ' TICKED' : '— tick something first'}</button>
+      <button type="button" class="btn-ghost" style="min-height: 46px;" onclick="jcPickAll()">${_jcPick.size >= shareBits.length ? '☐ Untick all' : '☑ Tick all'}</button>
+    </div>` : '';
   const dial = t => `<a href="tel:${esc(String(t).replace(/[^0-9+]/g, ''))}" class="jc-lnk">📞 ${esc(t)}</a>`;
   const mail = m => `<a href="mailto:${esc(m)}" class="jc-lnk">✉ ${esc(m)}</a>`;
   // ⚠ v6.24 — the job's landmines, right on the card. Eric's phone counts his own log;
@@ -8681,7 +8762,7 @@ function openJobCard(job) {
   $('revBox').innerHTML = `<h3>📇 Job Card
     <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeReview()" aria-label="close">✕</button></h3>
     <div class="hint" style="margin: 0 0 8px;">Addresses, numbers, emails and door codes for one job${mine ? ' — and the Wizard reads every card, so you can just ask it.' : ' — read-only; ask your Wizard for it out loud too.'}</div>
-    ${pick}${headsBar}${body}`;
+    ${pick}${headsBar}${body}${share}`;
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
 }
@@ -9301,6 +9382,9 @@ function renderPortalFold(box, offRoot) {
           <button class="btn-ghost" onclick="portalCopy(${i})">📋 Copy link</button>
           <button class="btn-ghost" onclick="portalIntel(${i})">📊 What they look at</button>
           <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
+          <!-- 🧾 v6.30 — Eric asked for this to sit beside "view as a client": the tagged
+               receipts still waiting on this job, to check and approve in one sitting. -->
+          <button class="btn-ghost pf-wide" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(c.job) ? " · " + rcptCount(c.job) + " WAITING" : " · none"}</button>
         </div>` : `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>`) : ''}
       </div>`;
     }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button>
@@ -9387,6 +9471,9 @@ async function renderPortalList() {
         <button class="btn-ghost" onclick="portalCopy(${i})">📋 Copy link</button>
         <button class="btn-ghost" onclick="portalIntel(${i})">📊 What they look at</button>
         <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
+        <!-- 🧾 v6.30 — beside "view as a client", as Eric asked: the tagged receipts still
+             waiting on this job, to check and approve in one sitting. -->
+        <button class="btn-ghost pf-wide" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(c.job) ? " · " + rcptCount(c.job) + " WAITING" : " · none"}</button>
       </div>
       <div class="pf-small">
         <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? Kills their link' : '🔄 Rotate code'}</button>
@@ -10130,6 +10217,149 @@ async function estQuickUpcoming(id, ev) {
     if (!wasOpen) { _estIdx = -1; _estD = null; _estPage = null; }
     renderLog();
     toast(`🔮 On their page under UPCOMING — ${cat}, $${shown.toLocaleString()} ✓`);
+  } finally {
+    window._qUpBusy = false;
+  }
+}
+// ═══════════════ 🧾 v6.30 — THE RECEIPT REVIEW WINDOW ═══════════════
+// Eric: "the project tracker should have a button next to the 'veiw as a client' and thats
+// where i want the tagged reciepts to show up and i can check them and then approve them to
+// the client side budget numbers."
+//
+// The one-tap 🔮 → Upcoming door in the log is for a receipt he is looking at right now. This
+// is the other half: sit down with a job, see every tagged receipt still waiting on it, tick
+// the ones that are right, and send them all in one press. Nothing here posts on its own —
+// the tick is his, and so is the APPROVE.
+//
+// Personal entries never appear (the lock wins), vendors are shown to HIM but never ride out,
+// and the number beside each one is the marked-up figure the homeowner will actually see, so
+// what he ticks is what they get.
+let _rcptSel = new Set(), _rcptIdx = -1;
+// a receipt still waiting on this job: tagged 🧾 or carrying a category, a dollar read, and
+// not already sent to the budget. Same test the button's count uses, so they cannot disagree.
+function rcptWaiting(job) {
+  return entries.filter(e => e && e.job === job && !e.budg && !e.sample &&
+    !e.personal && !(e.tags || []).includes('Personal') &&
+    (e.rcpt || e.category) && estBillParse(e));
+}
+function rcptCount(job) { return rcptWaiting(job).length; }
+async function openRcptReview(i) {
+  if (portalGuard && portalGuard()) return;
+  const c = (((_portalIdx || {}).clients) || [])[i];
+  if (!c) return;
+  _rcptIdx = i; _rcptSel = new Set();
+  // the board is only needed for the markup rate — read it, but never write it from here
+  // without the full guards in rcptApprove()
+  try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (err) { _estD = null; }
+  if (!_estD || !Array.isArray(_estD.cats)) _estD = null;
+  renderRcptReview();
+  $('revModal').classList.add('show', 'mat-full');
+  document.body.classList.add('modal-open');
+}
+function renderRcptReview() {
+  const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
+  if (!c) return;
+  const list = rcptWaiting(c.job);
+  const mk = estMk();
+  const money = n => '$' + (+n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const rows = list.map(e => {
+    const p = estBillParse(e) || {};
+    const on = _rcptSel.has(e.id);
+    const shown = estPendMk({ a: p.amt });
+    const cat = String(e.category || '').trim();
+    return `<div class="g-step${on ? ' done' : ''}" style="margin-top: 8px;">
+      <button type="button" class="pick-chip${on ? ' sel' : ''}" style="width: 100%; text-align: left; min-height: 44px; font-size: 13px; font-weight: 800;"
+        onclick="rcptTog(${e.id})" aria-pressed="${on}">${on ? '☑ CHECKED' : '☐ tap to check'}</button>
+      <div style="font-size: 13px; margin-top: 6px;"><b>${esc((e.details || '').slice(0, 70))}</b></div>
+      <div style="font-size: 12px; opacity: .8; margin-top: 3px;">
+        ${esc(localDay(new Date(e.ts)))}${p.v ? ' · 🏪 ' + esc(p.v) : ''}${cat ? ' · 🧾 ' + esc(cat) : ' · <b>⚠ NO CATEGORY</b>'}
+      </div>
+      <div style="font-size: 13px; margin-top: 4px;">receipt ${money(p.amt)} · <b>they see ${money(shown)}</b></div>
+      ${cat ? '' : `<div class="hint" style="margin-top: 4px;">⚠ Give it a 🧾 category in the log before this one can go — it needs a budget line to land on.</div>`}
+    </div>`;
+  }).join('');
+  const okCount = [..._rcptSel].filter(id => {
+    const e = entries.find(x => x.id === id);
+    return e && String(e.category || '').trim();
+  }).length;
+  const total = [..._rcptSel].reduce((s, id) => {
+    const e = entries.find(x => x.id === id);
+    if (!e || !String(e.category || '').trim()) return s;
+    const p = estBillParse(e) || {};
+    return s + estPendMk({ a: p.amt });
+  }, 0);
+  $('revBox').innerHTML = `<div class="est-board"><h3>🧾 ${esc(c.job)} — receipts waiting
+    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeRcptReview()" aria-label="close receipts">✕</button></h3>
+    <div class="hint" style="margin: 0 0 8px;">🏢 Office-side. Check the ones that are right, then send them together. Each lands on their page under <b>ESTIMATED UPCOMING COSTS</b> with the ${mk}% already folded in — they never see the markup or the vendor. ${list.length ? `<b>${list.length} waiting.</b>` : '<b>Nothing waiting — every tagged receipt on this job is already through.</b>'}</div>
+    ${rows}
+    ${list.length ? `<div class="g-step" style="margin-top: 12px;">
+      <div style="font-size: 13px; font-weight: 800;">${okCount ? `☑ ${okCount} checked · they will see ${money(total)}` : '☐ Nothing checked yet'}</div>
+      <div class="frow" style="gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+        <button type="button" class="btn-primary" style="flex: 1; min-width: 160px; min-height: 46px; font-weight: 800;" ${okCount ? '' : 'disabled'} onclick="rcptApprove()">✓ APPROVE ${okCount || ''} → THEIR PAGE</button>
+        <button type="button" class="btn-ghost" style="min-height: 46px;" onclick="rcptAll()">${_rcptSel.size >= list.length ? '☐ Uncheck all' : '☑ Check all'}</button>
+      </div>
+    </div>` : ''}</div>`;
+}
+function rcptTog(id) { _rcptSel.has(id) ? _rcptSel.delete(id) : _rcptSel.add(id); renderRcptReview(); }
+function rcptAll() {
+  const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
+  const list = rcptWaiting(c ? c.job : '');
+  _rcptSel = _rcptSel.size >= list.length ? new Set() : new Set(list.map(e => e.id));
+  renderRcptReview();
+}
+function closeRcptReview() {
+  $('revModal').classList.remove('show', 'mat-full');
+  document.body.classList.remove('modal-open');
+  _rcptSel = new Set(); _rcptIdx = -1; _estD = null; _estPage = null;
+  if (typeof renderPortalList === "function") renderPortalList();   // the button’s count is now one lower
+}
+// the batch send. One board read, one save, one publish — and the SAME refusals the one-tap
+// door learned in v6.28: a read that does not come back stops everything, because an empty
+// board written over a real one is how a client's estimates disappear.
+async function rcptApprove() {
+  const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
+  if (!c) return;
+  const picked = [..._rcptSel].map(id => entries.find(x => x.id === id))
+    .filter(e => e && !e.budg && !e.personal && !(e.tags || []).includes('Personal') &&
+      String(e.category || '').trim() && estBillParse(e));
+  if (!picked.length) { toast('Check at least one receipt that has a 🧾 category', false); return; }
+  if (window._qUpBusy) return;
+  window._qUpBusy = true;
+  try {
+    toast(`⏳ Sending ${picked.length}…`);
+    let raw = null, failed = false;
+    try { raw = await dbxDownload(estPath(c.code)); } catch (err) { failed = true; }
+    if (failed || raw == null) { toast('Couldn\'t read the estimates board — nothing sent. Try again on a better signal', false); return; }
+    try { _estD = JSON.parse(raw || 'null'); } catch (err) { _estD = null; }
+    if (!_estD || !Array.isArray(_estD.cats)) { toast('That estimates board didn\'t read cleanly — open 💰 Estimates and check it first', false); return; }
+    let pageRaw = null, pageFailed = false;
+    try { pageRaw = await dbxDownload(portalRoot() + '/' + c.code + '.json'); } catch (err) { pageFailed = true; }
+    if (pageFailed || pageRaw == null) { toast('Couldn\'t read their page — nothing sent. Try again on a better signal', false); return; }
+    try { _estPage = JSON.parse(pageRaw || 'null'); } catch (err) { _estPage = null; }
+    if (!(+_estD.mk >= 0)) _estD.mk = 20;
+    _estIdx = _rcptIdx;
+    const used = estUsedBy();
+    let shown = 0;
+    picked.forEach(e => {
+      const p = estBillParse(e) || {};
+      const cat = String(e.category || '').trim();
+      let x = _estD.cats.find(k => String(k.n).toLowerCase().trim() === cat.toLowerCase());
+      if (!x) { x = { n: cat, appr: false, bids: [] }; _estD.cats.push(x); }
+      x.pend = x.pend || [];
+      x.pend.push({ a: Math.round(p.amt * 100) / 100, v: p.v || '', ts: localDay(new Date()),
+        base: Math.round((used[x.n] || 0) * 100) / 100, eid: e.id });
+      e.budg = 'sent';
+      catLearn(e.job, x.n, p.v);
+      shown += estPendMk(x.pend[x.pend.length - 1]);
+    });
+    scheduleSave();
+    clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
+    await estSave();
+    _estIdx = -1;
+    _rcptSel = new Set();
+    renderRcptReview();
+    renderLog();
+    toast(`🔮 ${picked.length} on their page under UPCOMING — they see $${shown.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ✓`);
   } finally {
     window._qUpBusy = false;
   }
@@ -14508,7 +14738,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.29';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.30';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
