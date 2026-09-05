@@ -3278,7 +3278,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.26 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.27 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9686,6 +9686,10 @@ async function openEstimates(i) {
   // 📋 the default list rides every board — missing ones join in Eric's order
   const have = new Set(_estD.cats.map(x => x.n.toLowerCase()));
   EST_DEFAULT_CATS.forEach(n => { if (!have.has(n.toLowerCase())) { have.add(n.toLowerCase()); _estD.cats.push({ n, appr: false, bids: [] }); } });
+  // 🧾→📗 v6.27 — the books have moved since he last looked: retire every upcoming bill
+  // QuickBooks has now taken in, and republish so their page stops showing it twice.
+  const gone = estAutoClear();
+  if (gone) { window._estPub = true; scheduleEstSave(true); toast(`📗 ${gone} bill${gone > 1 ? 's' : ''} matched in QuickBooks — off their upcoming list`); }
   renderEstimates();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -9748,6 +9752,55 @@ function estBillToLogan(p) {
 }
 function estPendMk(p) { return p.inc ? +p.a || 0 : Math.round((+p.a || 0) * (1 + estMk() / 100) * 100) / 100; }
 function estPendUp(x) { return Math.round((x.pend || []).reduce((s, p) => s + estPendMk(p), 0) * 100) / 100; }
+// 🔮 v6.27 — Eric: "clients can forsee upcoming costs before the next weeks invoice, make
+// suggestions or feedback before building." Until now an approved receipt only reached their
+// page as the small "on the way" number INSIDE an approved category — so a receipt filed
+// under a category with no estimate, or with its lamp still dark, was invisible to them.
+// This block rides on its own: every pending bill on the job, marked up and folded, whatever
+// the lamps are doing. Vendor names never come with it (standing rule) and neither does the
+// markup — estPendMk() folds it in exactly like every other client number.
+function estUpcoming() {
+  if (!_estD) return null;
+  const items = _estD.cats
+    .map(x => ({ n: x.n, a: estPendUp(x) }))
+    .filter(x => x.a > 0)
+    .sort((a, b) => b.a - a.a);
+  if (!items.length) return null;
+  return { items, tot: Math.round(items.reduce((s, x) => s + x.a, 0) * 100) / 100 };
+}
+// 🧾→📗 v6.27 — auto-clear with a paper trail. Eric: "auto but with a paper trail that can be
+// checked or traced if something goes wrong."
+//
+// Every pending bill already records `base` — what QuickBooks had counted against that
+// category at the moment Eric approved it. So the match needs no guessing and no scoring
+// (his standing rule): when the books have since taken in at least this bill's own amount on
+// top of that base, QuickBooks has caught up with it and it stops being "upcoming".
+//
+// Nothing is deleted quietly. Each cleared bill moves to _estD.cleared[] carrying its vendor,
+// amount, entry id, the base it was approved against and the QB figure that retired it — so
+// any number on a client's page can be walked back to the receipt it came from.
+function estAutoClear() {
+  if (!_estD || !Array.isArray(_estD.cats)) return 0;
+  const used = estUsedBy();
+  const today = localDay(new Date());
+  let n = 0;
+  _estD.cats.forEach(x => {
+    if (!Array.isArray(x.pend) || !x.pend.length) return;
+    const saw = +used[x.n] || 0;
+    x.pend = x.pend.filter(p => {
+      const base = +p.base || 0, amt = +p.a || 0;
+      // 0.98 leaves room for a cent of rounding between the receipt read and the ledger
+      if (!(amt > 0) || saw - base < amt * 0.98) return true;
+      _estD.cleared = [{ n: x.n, a: amt, v: p.v || '', eid: p.eid, ts: p.ts || '',
+        cl: today, base: Math.round(base * 100) / 100, saw: Math.round(saw * 100) / 100,
+        why: 'qb' }, ...(_estD.cleared || [])].slice(0, 400);
+      n++;
+      return false;
+    });
+    if (!x.pend.length) delete x.pend;
+  });
+  return n;
+}
 function renderEstimates() {
   const c = _portalIdx.clients[_estIdx];
   if (!c || !_estD) return;
@@ -9975,6 +10028,53 @@ async function estBillApprove(id) {
     toast(`📥 Filed under ${x.n} — it shows the day you light ${x.n}'s lamp`);
   }
 }
+// 🔮 v6.27 — ONE TAP from the log. Eric asked for the 🧾 tag to put the cost straight on the
+// client's page; his call on the gate was "keep your tap, but make it one tap from the log".
+// So this is the whole trip in a single press: the receipt's own category (the 🧾 funnel
+// already asked him), its read amount, 20% folded in, onto their page under Upcoming.
+//
+// It refuses rather than guesses — no category, no dollar read, no client page for the job,
+// and it says which one is missing and opens the board so he can finish it by hand. A
+// personal entry never gets here at all (the lock wins over everything).
+async function estQuickUpcoming(id, ev) {
+  if (ev) ev.stopPropagation();
+  const e = entries.find(x => x.id === id);
+  if (!e || e.personal || (e.tags || []).includes('Personal')) return;
+  const p = estBillParse(e);
+  if (!p || !(p.amt > 0)) { toast('No dollar amount read off that one — open the budget and type it', false); return; }
+  if (!_portalIdx) {
+    try { _portalIdx = JSON.parse(await dbxDownload(portalRoot() + '/index.json')); } catch (err) { /* no portal yet */ }
+  }
+  const i = (((_portalIdx || {}).clients) || []).findIndex(c => c.job === e.job);
+  if (i < 0) { toast(`${e.job} has no client page, so there is nowhere to show it — client jobs only`, false); return; }
+  const cat = String(e.category || '').trim();
+  if (!cat) { toast('Give it a 🧾 category first — opening the budget', false); _estBillFold = null; openEstimates(i); return; }
+
+  toast('⏳ Sending it to their page…');
+  const wasOpen = _estIdx === i && _estD;
+  if (!wasOpen) {
+    _estIdx = i;
+    const c = _portalIdx.clients[i];
+    try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (err) { _estD = null; }
+    try { _estPage = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (err) { _estPage = null; }
+    if (!_estD || !Array.isArray(_estD.cats)) _estD = { updated: '', cats: [] };
+    if (!(+_estD.mk >= 0)) _estD.mk = 20;
+  }
+  let x = _estD.cats.find(k => String(k.n).toLowerCase().trim() === cat.toLowerCase());
+  if (!x) { x = { n: cat, appr: false, bids: [] }; _estD.cats.push(x); }
+  const used = estUsedBy();
+  x.pend = x.pend || [];
+  x.pend.push({ a: Math.round(p.amt * 100) / 100, v: p.v || '', ts: localDay(new Date()),
+    base: Math.round((used[x.n] || 0) * 100) / 100, eid: e.id });
+  e.budg = 'sent';
+  catLearn(e.job, x.n, p.v); // the tap IS the lesson, same as the strip's ✓ APPROVE
+  scheduleSave();
+  clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
+  await estSave();
+  if (!wasOpen) { _estIdx = -1; _estD = null; _estPage = null; }
+  renderLog();
+  toast(`🔮 On their page under UPCOMING — ${cat}, $${estPendMk({ a: p.amt }).toLocaleString()} ✓`);
+}
 // 💰 v6.24 — the jump from a log receipt straight to its job's bill strip
 async function estJumpFromEntry(id, ev) {
   if (ev) ev.stopPropagation();
@@ -10149,6 +10249,10 @@ async function estPublish(c, cut) {
     (pg.budget || []).forEach(b => { if (b && Array.isArray(b.opts) && Number.isInteger(b.pick)) oldPick[b.n] = { p: b.pick, lk: !!b.lk }; });
     cut.forEach(b => { if (b.opts && oldPick[b.n] && oldPick[b.n].p < b.opts.length) { b.pick = oldPick[b.n].p; if (oldPick[b.n].lk) b.lk = true; } });
     if (cut.length) pg.budget = cut; else delete pg.budget;
+    // 🔮 v6.27 — the upcoming block rides beside the budget, not inside it: it must survive a
+    // category whose lamp is dark, which is the whole point of it.
+    const upc = estUpcoming();
+    if (upc) pg.upcoming = upc; else delete pg.upcoming;
     pg.updated = localDay(new Date());
     await dbxUpload(portalRoot() + '/' + c.code + '.json', JSON.stringify(pg, null, 1));
     _estPage = pg;
@@ -12969,7 +13073,7 @@ function renderAskRecent() {
     })()),
     ...shownEntries.map(e => ({
       ts: +new Date(e.ts), kind: kindOf(e), who: personOf(e), e,
-      h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^Text from /, '').slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && e.job && e.job !== '—' ? ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>' : ''}</span>` }))
+      h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^Text from /, '').slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}</span>` }))
   ].filter(it => !isNaN(it.ts));
   const people = [...new Set(items.map(it => it.who).filter(Boolean))].slice(0, 20).sort();
   if (f) items = items.filter(it => it.kind === f);
@@ -14084,7 +14188,12 @@ function logRowHtml(e) {
     // 💰 v6.24 — Eric: "send to the budget" straight from the receipt. One tap lands on this
     // job's estimates board with the bill strip open — no hunting for where it went.
     const budgBit = !CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && e.job && e.job !== '—'
-      ? `<span>·</span><span style="cursor: pointer; font-weight: 800;" title="Open ${esc(e.job)}'s estimates board — this bill is waiting there under 📥 BILLS THAT CAME IN" onclick="estJumpFromEntry(${e.id}, event)">💰 → Budget</span>`
+      // 🔮 v6.27 — a receipt that already carries its 🧾 category needs no board: ONE tap puts
+      // it on their page under UPCOMING, markup folded in. Without a category the old jump
+      // still stands, because the board is where he gives it one.
+      ? (e.category
+        ? `<span>·</span><span style="cursor: pointer; font-weight: 800;" title="One tap — ${esc(e.category)}, marked up, onto ${esc(e.job)}'s page under ESTIMATED UPCOMING COSTS" onclick="estQuickUpcoming(${e.id}, event)">🔮 → Upcoming</span><span>·</span><span style="cursor: pointer;" title="Open ${esc(e.job)}'s estimates board instead" onclick="estJumpFromEntry(${e.id}, event)">💰 board</span>`
+        : `<span>·</span><span style="cursor: pointer; font-weight: 800;" title="Open ${esc(e.job)}'s estimates board — this bill is waiting there under 📥 BILLS THAT CAME IN" onclick="estJumpFromEntry(${e.id}, event)">💰 → Budget</span>`)
       : e.budg === 'sent' ? `<span>·</span><span title="Approved onto the client's budget — riding as billed, on the way">💰 on their page</span>` : '';
     const aiBit = e.ai ? `<span>·</span><span title="${esc(e.ai.slice(0, 220))}">🔮 described</span>`
       : (e.photoPath ? `<span>·</span><span style="cursor: pointer;" title="Ask the quick brain what this photo shows — only when YOU tap it" onclick="aiDescribeEntry(${e.id}, event)">🔮 describe</span>` : '');
@@ -14340,7 +14449,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.26';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.27';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

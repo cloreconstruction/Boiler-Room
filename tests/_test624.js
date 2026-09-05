@@ -177,9 +177,13 @@ const { chromium } = require('playwright');
 
   console.log('— 💰 v6.24 budget jump + 🧹 scrub + 🔓 wording —');
 
-  ok('a receipt entry in the log wears the 💰 → Budget jump', await page.evaluate(() => {
+  // 🔮 v6.27 — this receipt carries a 🧾 category, and a categorised receipt now gets the
+  // ONE-TAP → Upcoming door instead of the board jump (Eric: "make it one tap from the log").
+  // The jump is still there for an uncategorised bill — _test627 covers that side.
+  ok('a receipt entry in the log wears a door to the money', await page.evaluate(() => {
     window._logHeadsOnly = ''; clearLogFilters(); renderLog();
-    return /💰 → Budget/.test($('askRecent').innerHTML);
+    const h = $('askRecent').innerHTML;
+    return entries[0].category ? /🔮 → Upcoming/.test(h) : /💰 → Budget/.test(h);
   }));
 
   ok('approving learns AND retires the offer (budg=sent shows "on their page")', await page.evaluate(() => {
@@ -240,8 +244,13 @@ const { chromium } = require('playwright');
     return el && getComputedStyle(el).display !== 'none' && /▸ NEXT/.test(el.textContent);
   }));
 
-  ok('version bumped everywhere it matters', await page.evaluate(() =>
-    APP_VER === 'v6.26' && document.querySelector('footer').textContent.includes('v6.26')));
+  // 🏷 v6.27 — this used to pin 'v6.26' exactly, so the next release broke a green suite and
+  // the noise trained you to ignore it. What release rule 1 actually promises is: the app is
+  // at or past the build this suite was written for, AND the footer agrees with APP_VER.
+  ok('version bumped everywhere it matters — APP_VER and the footer agree', await page.evaluate(() => {
+    const num = v => (String(v).match(/(\d+)\.(\d+)/) || []).slice(1).reduce((a, b) => a * 1000 + +b, 0);
+    return num(APP_VER) >= num('v6.26') && document.querySelector('footer').textContent.includes(APP_VER);
+  }));
 
   ok('no page errors through all of it', errs.length === 0, errs.join(' | '));
 

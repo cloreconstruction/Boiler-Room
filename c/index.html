@@ -435,6 +435,25 @@ const bDef = b => Number.isInteger(b.def) && b.opts[b.def] ? b.def : 0;
 const bEst = b => Array.isArray(b.opts)
   ? +((b.opts[bPicked(b) != null ? bPicked(b) : bDef(b)] || {}).est) || 0
   : +b.est || 0;
+// 🔮 v6.27 — ESTIMATED UPCOMING COSTS. Eric: "clients can forsee upcoming costs before the
+// next weeks invoice, make suggestions or feedback before building."
+//
+// Costs Clore Construction has already taken on for the job that have not reached an invoice
+// yet. It stands on its own — it does NOT wait on a category lamp or an estimate, which is
+// why a homeowner can now see work coming that the budget card has nothing to say about.
+// Every number arrives already folded (markup is never named or shown), and no vendor is
+// named. Items leave this list on their own once the books catch up with them.
+function upcomingHtml(d) {
+  const u = d.upcoming;
+  if (!u || !Array.isArray(u.items) || !u.items.length) return '';
+  const rows = u.items.map(i => `<div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin: 6px 0;">
+      <span style="font-weight: 700;">${bEsc(i.n)}</span><span>${money(i.a)}</span></div>`).join('');
+  return `<div class="card" id="upcomingCard" onclick="ping('upcoming')"><h3>🔮 ESTIMATED UPCOMING COSTS</h3>
+    <div class="bud-total">${money(u.tot)}</div>
+    <div class="bud-total-l">COSTS ALREADY UNDER WAY — NOT YET INVOICED</div>
+    ${rows}
+    <div style="font-size: 12px; opacity: .7; margin-top: 8px;">These are materials and work already committed to your job that haven't reached an invoice yet — so you can see what's coming before the next one lands. Figures are estimates and can move a little. Each drops off this list once it's invoiced. Questions or a change of mind? Send a note below — it's easier before the work is built than after.</div></div>`;
+}
 function budgetHtml(d) {
   if (!Array.isArray(d.budget) || !d.budget.length) return '';
   // 🔎 v5.88 — Eric's category names find the books' names by token match (prefix, 3+ letters)
@@ -626,6 +645,8 @@ async function boot() {
   }
   // 💰 approved estimates — the card lives in budgetHtml() so a pick can redraw it in place
   h += budgetHtml(d);
+  // 🔮 v6.27 — under the approved budget: what is coming but not yet invoiced
+  h += upcomingHtml(d);
   if (d.show && d.show.phases && (d.phases || []).length) {
     h += `<div class="card"><h3>WORK BY PHASE — tap a phase for detail</h3>` +
       d.phases.map((p, i) => `<div class="ph" id="ph${i}"><div class="ph-head" onclick="document.getElementById('ph${i}').classList.toggle('open'); ping('phase:${esc(p.name).slice(0, 20)}')">

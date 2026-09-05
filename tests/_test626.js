@@ -64,8 +64,11 @@ const { chromium } = require('playwright');
     typeof jrnAddPhotos === 'function' && /jrnPhFile/.test(document.body.innerHTML) === false /* markup renders on open, fn is live */
       ? true : typeof jrnAddPhotos === 'function'));
 
-  ok('version bumped', await page.evaluate(() =>
-    APP_VER === 'v6.26' && document.querySelector('footer').textContent.includes('v6.26')));
+  // 🏷 v6.27 — at or past this suite's build, and the footer agrees with APP_VER (see 624)
+  ok('version bumped — APP_VER and the footer agree', await page.evaluate(() => {
+    const num = v => (String(v).match(/(\d+)\.(\d+)/) || []).slice(1).reduce((a, b) => a * 1000 + +b, 0);
+    return num(APP_VER) >= num('v6.26') && document.querySelector('footer').textContent.includes(APP_VER);
+  }));
 
   ok('no page errors', errs.length === 0, errs.join(' | '));
 
