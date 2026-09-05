@@ -1,12 +1,12 @@
 const { chromium } = require('playwright');
 (async () => {
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', e => { if (!/Failed to fetch/.test(e.message)) errs.push(e.message); });
   let pass = 0, fail = 0;
   const ok = (n, c, x) => { if (c) { pass++; console.log('  ok  ' + n); } else { fail++; console.log('  FAIL ' + n + (x ? ' -> ' + x : '')); } };
-  await page.goto('file:///home/claude/work/clore-daylog.html');
+  await page.goto(process.env.APP_URL || 'file:///home/claude/work/clore-daylog.html');
   await page.waitForTimeout(700);
   await page.evaluate(() => {
     jobs=['Scritchfield','Rininger','Mery']; curJob='Scritchfield'; crew=[]; entries=[]; todos=[]; nextId=1;
