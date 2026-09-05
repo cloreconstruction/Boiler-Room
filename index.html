@@ -3278,7 +3278,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.27 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.28 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9759,9 +9759,17 @@ function estPendUp(x) { return Math.round((x.pend || []).reduce((s, p) => s + es
 // This block rides on its own: every pending bill on the job, marked up and folded, whatever
 // the lamps are doing. Vendor names never come with it (standing rule) and neither does the
 // markup — estPendMk() folds it in exactly like every other client number.
+//
+// ➗ v6.28 — EVERY PENDING DOLLAR APPEARS EXACTLY ONCE. The first cut of this listed every
+// category, including the lit ones whose budget row ALREADY prints "📥 $1,200 on the way" —
+// so a homeowner adding up their own page counted that $1,200 twice, in the one card built
+// to help them add up their own page. A category rides here only when the budget card has
+// nothing to say about it: the cut in estSave() is `appr && estTotal > 0`, so that is exactly
+// what this skips. A lit category with no estimate still belongs here (the cut drops it too).
 function estUpcoming() {
   if (!_estD) return null;
   const items = _estD.cats
+    .filter(x => !(x.appr && estTotal(x) > 0))   // shown in the budget row instead — not twice
     .map(x => ({ n: x.n, a: estPendUp(x) }))
     .filter(x => x.a > 0)
     .sort((a, b) => b.a - a.a);
@@ -9787,10 +9795,19 @@ function estAutoClear() {
   _estD.cats.forEach(x => {
     if (!Array.isArray(x.pend) || !x.pend.length) return;
     const saw = +used[x.n] || 0;
+    // 💸 v6.28 — one payment used to retire SEVERAL bills. `saw` was read once and every bill
+    // was tested against the whole of it, so two $100 loads of gravel with $100 in the books
+    // both cleared — the second vanished off the client's upcoming list and out of Eric's
+    // pending pile although the books never covered it, and the trail called it a match.
+    // The ledger figure is a pot, not a yardstick: each bill that clears SPENDS its own
+    // amount out of it, and the next bill only sees what is left. Oldest first, so the money
+    // retires the bills in the order they were taken on.
+    let pot = saw;
     x.pend = x.pend.filter(p => {
       const base = +p.base || 0, amt = +p.a || 0;
       // 0.98 leaves room for a cent of rounding between the receipt read and the ledger
-      if (!(amt > 0) || saw - base < amt * 0.98) return true;
+      if (!(amt > 0) || pot - base < amt * 0.98) return true;
+      pot -= amt;
       _estD.cleared = [{ n: x.n, a: amt, v: p.v || '', eid: p.eid, ts: p.ts || '',
         cl: today, base: Math.round(base * 100) / 100, saw: Math.round(saw * 100) / 100,
         why: 'qb' }, ...(_estD.cleared || [])].slice(0, 400);
@@ -10040,6 +10057,11 @@ async function estQuickUpcoming(id, ev) {
   if (ev) ev.stopPropagation();
   const e = entries.find(x => x.id === id);
   if (!e || e.personal || (e.tags || []).includes('Personal')) return;
+  // 🔁 v6.28 — the !e.budg test used to live only in the two renderers, so a double tap on a
+  // slow connection re-entered here before the flag was set and posted the bill TWICE. The
+  // guard belongs on the function, and _qUpBusy holds the door for the awaits either side.
+  if (e.budg) { toast('That one is already on their page', false); return; }
+  if (window._qUpBusy) return;
   const p = estBillParse(e);
   if (!p || !(p.amt > 0)) { toast('No dollar amount read off that one — open the budget and type it', false); return; }
   if (!_portalIdx) {
@@ -10050,30 +10072,67 @@ async function estQuickUpcoming(id, ev) {
   const cat = String(e.category || '').trim();
   if (!cat) { toast('Give it a 🧾 category first — opening the budget', false); _estBillFold = null; openEstimates(i); return; }
 
-  toast('⏳ Sending it to their page…');
-  const wasOpen = _estIdx === i && _estD;
-  if (!wasOpen) {
-    _estIdx = i;
-    const c = _portalIdx.clients[i];
-    try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (err) { _estD = null; }
-    try { _estPage = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (err) { _estPage = null; }
-    if (!_estD || !Array.isArray(_estD.cats)) _estD = { updated: '', cats: [] };
-    if (!(+_estD.mk >= 0)) _estD.mk = 20;
+  window._qUpBusy = true;
+  try {
+    toast('⏳ Sending it to their page…');
+    const wasOpen = _estIdx === i && _estD;
+    if (!wasOpen) {
+      _estIdx = i;
+      const c = _portalIdx.clients[i];
+      // 🛟 v6.28 — THIS USED TO BE ABLE TO WIPE A CLIENT'S WHOLE ESTIMATES BOARD. A weak
+      // signal made dbxDownload return null (or throw), the board fell back to an empty
+      // { cats: [] }, and the estSave below uploaded that empty object straight over the real
+      // file — every bid, note, paper and lamp gone. A missing file is the ONLY case where an
+      // empty board is the truth, and dbxDownload cannot tell us that, so nothing here may
+      // invent one: if the read did not come back, we stop and keep the receipt in the log.
+      let raw = null, readFailed = false;
+      try { raw = await dbxDownload(estPath(c.code)); } catch (err) { readFailed = true; }
+      if (readFailed || raw == null) {
+        _estIdx = -1; _estD = null; _estPage = null;
+        toast('Couldn\'t read the estimates board — nothing sent. Try again on a better signal', false);
+        return;
+      }
+      try { _estD = JSON.parse(raw || 'null'); } catch (err) { _estD = null; }
+      if (_estD && !Array.isArray(_estD.cats)) _estD = null;
+      if (!_estD) {
+        _estIdx = -1; _estPage = null;
+        toast('That estimates board didn\'t read cleanly — open the budget and check it first', false);
+        return;
+      }
+      // 📅 v6.28 — the client page carries the QuickBooks figures the new bill's `base` is
+      // measured against. Guessing base 0 when it fails to load made the very next board open
+      // auto-clear the bill on any job the books already had costs against. Refuse instead.
+      let pageRaw = null, pageFailed = false;
+      try { pageRaw = await dbxDownload(portalRoot() + '/' + c.code + '.json'); } catch (err) { pageFailed = true; }
+      if (pageFailed || pageRaw == null) {
+        _estIdx = -1; _estD = null; _estPage = null;
+        toast('Couldn\'t read their page — nothing sent. Try again on a better signal', false);
+        return;
+      }
+      try { _estPage = JSON.parse(pageRaw || 'null'); } catch (err) { _estPage = null; }
+      if (!(+_estD.mk >= 0)) _estD.mk = 20;
+    }
+    let x = _estD.cats.find(k => String(k.n).toLowerCase().trim() === cat.toLowerCase());
+    if (!x) { x = { n: cat, appr: false, bids: [] }; _estD.cats.push(x); }
+    const used = estUsedBy();
+    x.pend = x.pend || [];
+    x.pend.push({ a: Math.round(p.amt * 100) / 100, v: p.v || '', ts: localDay(new Date()),
+      base: Math.round((used[x.n] || 0) * 100) / 100, eid: e.id });
+    e.budg = 'sent';
+    catLearn(e.job, x.n, p.v); // the tap IS the lesson, same as the strip's ✓ APPROVE
+    scheduleSave();
+    // 💵 v6.28 — read the client-facing number BEFORE the board is torn down. The toast used
+    // to recompute it after _estD was nulled, so estMk() fell back to its 20 default and a
+    // 15% board told Eric $1,200 while the homeowner was looking at $1,150.
+    const shown = estPendMk(x.pend[x.pend.length - 1]);
+    clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
+    await estSave();
+    if (!wasOpen) { _estIdx = -1; _estD = null; _estPage = null; }
+    renderLog();
+    toast(`🔮 On their page under UPCOMING — ${cat}, $${shown.toLocaleString()} ✓`);
+  } finally {
+    window._qUpBusy = false;
   }
-  let x = _estD.cats.find(k => String(k.n).toLowerCase().trim() === cat.toLowerCase());
-  if (!x) { x = { n: cat, appr: false, bids: [] }; _estD.cats.push(x); }
-  const used = estUsedBy();
-  x.pend = x.pend || [];
-  x.pend.push({ a: Math.round(p.amt * 100) / 100, v: p.v || '', ts: localDay(new Date()),
-    base: Math.round((used[x.n] || 0) * 100) / 100, eid: e.id });
-  e.budg = 'sent';
-  catLearn(e.job, x.n, p.v); // the tap IS the lesson, same as the strip's ✓ APPROVE
-  scheduleSave();
-  clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
-  await estSave();
-  if (!wasOpen) { _estIdx = -1; _estD = null; _estPage = null; }
-  renderLog();
-  toast(`🔮 On their page under UPCOMING — ${cat}, $${estPendMk({ a: p.amt }).toLocaleString()} ✓`);
 }
 // 💰 v6.24 — the jump from a log receipt straight to its job's bill strip
 async function estJumpFromEntry(id, ev) {
@@ -14449,7 +14508,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.27';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.28';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

@@ -160,8 +160,11 @@ const { chromium } = require('playwright');
     return /🔮 → Upcoming/.test($('askRecent').textContent);
   }));
 
-  ok('version bumped everywhere it matters', await page.evaluate(() =>
-    APP_VER === 'v6.27' && document.querySelector('footer').textContent.includes('v6.27')));
+  // 🏷 at or past this suite's build, and the footer agrees with APP_VER (see 624)
+  ok('version bumped everywhere it matters — APP_VER and the footer agree', await page.evaluate(() => {
+    const num = v => (String(v).match(/(\d+)\.(\d+)/) || []).slice(1).reduce((a, b) => a * 1000 + +b, 0);
+    return num(APP_VER) >= num('v6.27') && document.querySelector('footer').textContent.includes(APP_VER);
+  }));
 
   ok('no page errors through all of it', errs.length === 0, errs.join(' | '));
 
