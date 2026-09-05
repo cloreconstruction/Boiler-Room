@@ -19,3 +19,5 @@
   X-Robots-Tag: noindex, nofollow
 /tests/*
   X-Robots-Tag: noindex, nofollow
+/fnsrc/*
+  X-Robots-Tag: noindex, nofollow
