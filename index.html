@@ -1283,6 +1283,18 @@
      means posted today, empty means a week has gone by and the last space strobes.
      The strobe is never the only signal — the age is spelled out in words beside it, and a
      phone set to reduce motion gets a steady lamp with the same words. */
+  /* ✕ v6.32 — one close button for every window (see winX). Top-right, 44px so a thumb hits
+     it first time, brass-rimmed so it reads as a control rather than as decoration. */
+  .win-x { float: right; font-size: 15px; font-weight: 800; min-width: 44px; min-height: 44px;
+    background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);
+    border-radius: 10px; margin-left: 8px; }
+  /* 🟢🔴 v6.32 — the receipt lamp in the running log. Colour is the fast read, but it is
+     never the ONLY read: each state carries its own glyph and its own spelled word, so the
+     row says the same thing in bright sun, on a cracked screen, or to colour-blind eyes. */
+  .rc-lamp { font-weight: 800; letter-spacing: .3px; white-space: nowrap; }
+  .rc-on { color: var(--ok, #1e8449); }
+  .rc-wait { color: var(--err, #c0392b); }
+  .rc-off { opacity: .7; }
   .jm { display: flex; align-items: center; gap: 7px; margin-top: 5px; font-weight: 700; }
   .jm-bar { display: inline-flex; gap: 3px; flex: none; }
   .jm-cell { width: 13px; height: 11px; border-radius: 3px; border: 1.5px solid var(--accent);
@@ -2492,6 +2504,10 @@
       <span class="qn-div-label">📜 RUNNING LOG</span>
       <span style="display: flex; align-items: center; gap: 6px;">
         <span class="hint" id="rlCount" style="margin: 0; font-size: 11px;"></span>
+        <!-- 🧾 v6.32 — Eric: "maybe the running log needs a receipt filter button? then i can
+             also push receipts to the reciepts to approve as well and a green light if its
+             already on there and a red if its not." One tap and the log is receipts only. -->
+        <button type="button" class="pick-chip" id="rlRcptBtn" style="font-size: 12px; padding: 4px 10px; min-height: 28px;" onclick="rlRcptToggle()" aria-pressed="false">🧾 Receipts</button>
         <button type="button" class="pick-chip" id="rlSearchBtn" style="font-size: 12px; padding: 4px 10px; min-height: 28px;" onclick="rlSearchToggle()">🔍 Search</button>
         <a href="javascript:void(0)" style="font-size: 12px;" onclick="openPanel('summary')">All answers →</a>
       </span>
@@ -3325,7 +3341,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.31 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.32 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5312,6 +5328,19 @@ function closePanels() {
 }
 // ---------- chips: jobs & trucks ----------
 const escq = s => esc(s).replace(/'/g, "\\'");
+// ✕ v6.32 — THE CLOSE BUTTON, ONE PLACE. Eric: "put a close window x at the top the the write
+// in the journal page and make sure all other pages have that."
+//
+// The journal, the feedback box and the review pile had no way out but a Cancel at the very
+// bottom — on the journal that meant scrolling past every photo and the whole entry just to
+// back out of a window he only wanted to read. Every other window carried its own copy of the
+// same 200-character button, which is exactly how three of them ended up with none. One
+// helper now, used by all of them, so the next window cannot be built without one by accident.
+//
+// 44px is the smallest a work thumb hits first time, and it sits top-right where he looks.
+function winX(fn, label = 'close') {
+  return `<button type="button" class="btn-ghost req-x win-x" onclick="${fn}" aria-label="${esc(label)}" title="${esc(label)}">✕</button>`;
+}
 function chipsHtml(list, selected, fn) {
   return list.map(n => `<button class="pick-chip${n === selected ? ' sel' : ''}" onclick="${fn}('${escq(n)}')" aria-pressed="${n === selected}">${n === selected ? '✓&nbsp;' : ''}${esc(n)}</button>`).join('');
 }
@@ -5406,7 +5435,7 @@ function catModalOpen() {
   const all = [...RCPT_CATS].sort((a, b) => a.localeCompare(b)); // 🅰 alphabetical — Eric: easier to find
   const chip = (c, star) => `<button type="button" class="pick-chip${qnCat === c ? ' sel' : ''}" style="font-size: 12.5px; padding: 8px 12px; min-height: 38px;" onclick="qnCatPick('${escq(c)}')">${qnCat === c ? '✓' : star ? '⭐' : '📂'} ${esc(c)}</button>`;
   $('catBox').innerHTML = `<h3>🧾 What kind of cost is this?
-    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="catModalClose()" aria-label="close">✕</button></h3>
+    ${winX('catModalClose()', 'close')}</h3>
     <div class="hint" style="margin: 0 0 8px;">Filing under <b>${esc(job && job !== '—' ? job : 'no job yet — pick one after')}</b>. The pick rides the receipt to the budget pile pre-sorted, and it's remembered for next time.</div>
     ${learned.length ? `<div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 6px 0 4px;">⭐ USED ON THIS JOB</div>
       <div class="chips-row" style="margin-bottom: 8px;">${learned.map(c => chip(c, true)).join('')}</div>
@@ -7254,11 +7283,11 @@ const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', t
 function renderReview() {
   const box = $('revBox');
   if (!pendingQueue.length) {
-    box.innerHTML = `<h3>📥 Review</h3><div class="rev-done">All caught up — nothing waiting. ✓</div>
+    box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3><div class="rev-done">All caught up — nothing waiting. ✓</div>
       <div class="rev-row"><button class="btn-primary" onclick="closeReview()">Done</button></div>`;
     return;
   }
-  box.innerHTML = `<h3>📥 Review</h3><div class="rev-sub">${pendingQueue.length} waiting · nothing is added until you tap ✓</div>` +
+  box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3><div class="rev-sub">${pendingQueue.length} waiting · nothing is added until you tap ✓</div>` +
     pendingQueue.map(p => {
       let body = '';
       if (p.kind === 'todo') body = `<div class="rev-text">${esc(p.payload.text || '')}</div>`;
@@ -7896,7 +7925,7 @@ function openThread(who) {
   const tel = telFor(who);
   const say = e => String(e.details || '').replace(/^Text (from|to) [^:]*:\s*/, '');
   $('revBox').innerHTML = `<h3>💬 ${esc(who)}
-    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeReview()" aria-label="close">✕</button></h3>
+    ${winX('closeReview()', 'close')}</h3>
     <div class="hint" style="margin: 0 0 8px;">${list.length} message${list.length === 1 ? '' : 's'} — theirs and yours, oldest first. Sending opens your normal Messages app with the words already in it; the copy stays here.</div>
     <div style="max-height: 46vh; overflow-y: auto; padding: 2px;">
     ${list.length ? list.map(e => `<div style="margin: 6px 0; display: flex; ${e.out ? 'justify-content: flex-end;' : ''}">
@@ -7971,7 +8000,7 @@ function autoLogText(from, body, photos, personal, srcTs) {
 // 💬 v5.26 — app feedback: one little square at the bottom. Notes tag 'App Feedback';
 // crew feedback rides their normal entry flow to Eric's review pile. Wizard: "the app feedback list".
 function openFeedback() {
-  $('revBox').innerHTML = `<h3>💬 App feedback</h3>
+  $('revBox').innerHTML = `<h3>💬 App feedback${winX('closeReview()', 'close feedback')}</h3>
     <div class="hint" style="margin: 0 0 8px;">What works? What doesn't? What's missing? It all lands in one pile Eric (and Claude) read.</div>
     <textarea id="fbText" rows="4" class="grow" style="width: 100%;" placeholder="the mileage screen is great / I can never find the…"></textarea>
     <div class="rev-row" style="margin-top: 10px;">
@@ -8777,7 +8806,7 @@ function openJobCard(job) {
     ${c.notes ? `<div class="jc-head">📝 Worth knowing</div><div style="white-space: pre-wrap;">${esc(c.notes)}</div>` : ''}
     ${cardHas(c) ? '' : '<div class="hint">Nothing on this card yet — Eric fills these in and they land here on your next sync.</div>'}`;
   $('revBox').innerHTML = `<h3>📇 Job Card
-    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeReview()" aria-label="close">✕</button></h3>
+    ${winX('closeReview()', 'close')}</h3>
     <div class="hint" style="margin: 0 0 8px;">Addresses, numbers, emails and door codes for one job${mine ? ' — and the Wizard reads every card, so you can just ask it.' : ' — read-only; ask your Wizard for it out loud too.'}</div>
     ${pick}${headsBar}${body}${share}`;
   $('revModal').classList.add('show');
@@ -9687,7 +9716,7 @@ function renderPlanRack() {
   if (!c || !_pkD) return;
   const box = $('revBox');
   box.innerHTML = `<h3>📐 ${esc(c.job)} — plan rack
-    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closePlanRack()" aria-label="close the rack">✕</button></h3>
+    ${winX('closePlanRack()', 'close the rack')}</h3>
     <div class="hint" style="margin: 0 0 10px;">One current set per slot — whatever sits in the slot IS the plan. Drop a new set in and say what changed; the old one slides into history. Nothing here is ever called Final.</div>
     ${_pkD.slots.map((s, si) => {
       const cur = s.cur;
@@ -9986,7 +10015,7 @@ function renderEstimates() {
   const totAppr = _estD.cats.filter(x => x.appr).reduce((s, x) => s + estTotal(x), 0);
   const money0 = n => '$' + (+n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
   $('revBox').innerHTML = `<div class="est-board"><h3>💰 ${esc(c.job)} — estimates
-    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeEstimates()" aria-label="close estimates">✕</button></h3>
+    ${winX('closeEstimates()', 'close estimates')}</h3>
     <div class="hint" style="margin: 0 0 8px;">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. ${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}</div>
     <div class="frow" style="gap: 8px; align-items: center; margin: 0 0 8px; flex-wrap: wrap;">
       <span style="font-weight: 800;">💹 Clore markup</span>
@@ -10362,7 +10391,7 @@ function renderRcptReview() {
     return s + estPendMk({ a: p.amt });
   }, 0);
   $('revBox').innerHTML = `<div class="est-board"><h3>🧾 ${esc(c.job)} — receipts waiting
-    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeRcptReview()" aria-label="close receipts">✕</button></h3>
+    ${winX('closeRcptReview()', 'close receipts')}</h3>
     <div class="hint" style="margin: 0 0 8px;">🏢 Office-side. Check the ones that are right, then send them together. Each lands on their page under <b>ESTIMATED UPCOMING COSTS</b> with the ${mk}% already folded in — they never see the markup or the vendor. ${list.length ? `<b>${list.length} waiting.</b>` : '<b>Nothing waiting — every tagged receipt on this job is already through.</b>'}</div>
     ${rows}
     ${list.length ? `<div class="g-step" style="margin-top: 12px;">
@@ -10880,7 +10909,7 @@ async function openJournal(i) {
   const st = jrnStamped(aj);
   const chk = (k, lab) => `<button type="button" class="pick-chip${p[k] ? ' sel' : ''}" onclick="jrnFilter('${k}', ${!p[k]})" aria-pressed="${p[k]}">${p[k] ? '✓&nbsp;' : ''}${lab}</button>`;
   const stNotes = st.filter(e => !e.photoPath);
-  $('revBox').innerHTML = `<h3>📖 ${esc(c.job)} — this week's journal</h3>
+  $('revBox').innerHTML = `<h3>📖 ${esc(c.job)} — this week's journal${winX('closeReview()', 'close the journal')}</h3>
     ${stNotes.length ? `<div class="field" style="margin: 6px 0 2px;"><label>⭐ Stamped notes — what you picked out (✕ to drop one)</label></div>` +
       stNotes.slice(0, 12).map(e => `<div class="sum-row" style="cursor: default;">
         <span class="sum-title">📝 ${esc((e.details || '').replace(/\s+/g, ' ').slice(0, 70))}</span>
@@ -12482,7 +12511,7 @@ function openQbFresh() {
         </div></div>`).join('') : '<div class="hint">The run named no client pages at all — that itself is worth asking Claude about.</div>'}
       ${miss.length ? `<div class="hint" style="margin-top: 10px;">A page usually misses because QuickBooks has no customer whose name matches the job, or because the page was built after the export was pulled. Tell Claude the job name and it gets sorted on the next run.</div>` : ''}`;
   $('revBox').innerHTML = `<h3>📚 Client budgets
-    <button type="button" class="btn-ghost req-x" style="float: right; font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="closeReview()" aria-label="close">✕</button></h3>
+    ${winX('closeReview()', 'close')}</h3>
     ${body}
     ${qbFresh ? `<button type="button" class="btn-primary" style="width: 100%; font-weight: 800; margin-top: 12px; padding: 12px;" onclick="qbFreshDismiss()">✓ Got it — clear the banner</button>` : ''}`;
   $('revModal').classList.add('show');
@@ -13406,6 +13435,10 @@ function renderAskRecent() {
   const entryPass = e => {
     // ⚠ v6.24 — heads-up view from the job card: only that job's landmines
     if (window._logHeadsOnly && !(e.heads && e.job === window._logHeadsOnly)) return false;
+    // 🧾 v6.32 — receipts only: anything he tagged 🧾, gave a category, or that read a dollar
+    // amount off a photo. Wider than the tag alone on purpose — a receipt he ground without
+    // tagging is exactly the one he is hunting for.
+    if (window._logRcptOnly && !isRcptEntry(e)) return false;
     if (fJob !== 'All' && e.job !== fJob) return false;
     if (fType !== 'All' && !(TYPE_GROUPS[fType] || []).includes(e.type)) return false;
     if (fWho !== 'All' && (e.who || 'Me') !== fWho) return false;
@@ -13485,7 +13518,7 @@ function renderAskRecent() {
     })()),
     ...shownEntries.map(e => ({
       ts: +new Date(e.ts), kind: kindOf(e), who: personOf(e), e,
-      h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^Text from /, '').slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}</span>` }))
+      h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^Text from /, '').slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}${!CREW_NAME ? rcptLampHtml(e) : ''}</span>` }))
   ].filter(it => !isNaN(it.ts));
   const people = [...new Set(items.map(it => it.who).filter(Boolean))].slice(0, 20).sort();
   if (f) items = items.filter(it => it.kind === f);
@@ -14607,6 +14640,8 @@ function logRowHtml(e) {
         ? `<span>·</span><span style="cursor: pointer; font-weight: 800;" title="One tap — ${esc(e.category)}, marked up, onto ${esc(e.job)}'s page under ESTIMATED UPCOMING COSTS" onclick="estQuickUpcoming(${e.id}, event)">🔮 → Upcoming</span><span>·</span><span style="cursor: pointer;" title="Open ${esc(e.job)}'s estimates board instead" onclick="estJumpFromEntry(${e.id}, event)">💰 board</span>`
         : `<span>·</span><span style="cursor: pointer; font-weight: 800;" title="Open ${esc(e.job)}'s estimates board — this bill is waiting there under 📥 BILLS THAT CAME IN" onclick="estJumpFromEntry(${e.id}, event)">💰 → Budget</span>`)
       : e.budg === 'sent' ? `<span>·</span><span title="Approved onto the client's budget — riding as billed, on the way">💰 on their page</span>` : '';
+    // 🟢🔴 v6.32 — the lamp: is this receipt on the approve list or not
+    const rcLamp = !CREW_NAME ? rcptLampHtml(e) : '';
     const aiBit = e.ai ? `<span>·</span><span title="${esc(e.ai.slice(0, 220))}">🔮 described</span>`
       : (e.photoPath ? `<span>·</span><span style="cursor: pointer;" title="Ask the quick brain what this photo shows — only when YOU tap it" onclick="aiDescribeEntry(${e.id}, event)">🔮 describe</span>` : '');
     const nbBit = e.billable === false ? `<span>·</span><span title="Not billable — admin time">🛠 not billable</span>` : '';
@@ -14615,7 +14650,7 @@ function logRowHtml(e) {
     return `<div class="log-row" onclick="this.classList.toggle('x')">
       <div class="log-body">
         <div class="log-main">${esc(e.details)}${e.photoPath ? ` <span style="cursor: pointer; white-space: nowrap;" title="Tap to view the photo${e.photoPaths && e.photoPaths.length > 1 ? 's' : ''}" onclick="openEntryPhoto(${e.id}, event)">📷${e.photoPaths && e.photoPaths.length > 1 ? '×' + e.photoPaths.length : ''}</span>` : ''}${qty ? ` <strong>· ${qty}</strong>` : ''}</div>
-        <div class="log-meta"><span class="mini-chip ${chipClass[e.type]}" title="${e.type}">${chipIcon[e.type]}</span><span>${when}</span><span>·</span><span>${esc(e.job)}</span>${truckBit}${whoBit}${headsBit}${tagBit}${thrBit}${visBit}<span>·</span><span>→ ${esc(e.filedTo)}</span>${sharedBit}${ocrBit}${aiBit}${budgBit}${nbBit}${vvBit}</div>
+        <div class="log-meta"><span class="mini-chip ${chipClass[e.type]}" title="${e.type}">${chipIcon[e.type]}</span><span>${when}</span><span>·</span><span>${esc(e.job)}</span>${truckBit}${whoBit}${headsBit}${tagBit}${thrBit}${visBit}<span>·</span><span>→ ${esc(e.filedTo)}</span>${sharedBit}${ocrBit}${aiBit}${rcLamp}${budgBit}${nbBit}${vvBit}</div>
       </div>
       <div class="log-savedcell"><button class="log-edit" title="Edit this entry" onclick="openLogEdit(${e.id}, event)">✏️</button>${sync}</div>
     </div>`;
@@ -14733,7 +14768,35 @@ function filterLogToDay(d) {
   openPanel('log');
   renderLog();
 }
+// 🧾 v6.32 — what counts as a receipt in the log. The 🧾 tag, a category he picked, or a
+// dollar amount read off the paper — any one of the three.
+function isRcptEntry(e) {
+  return !!(e && !e.sample && (e.rcpt || String(e.category || '').trim() || (e.ai && /💵 \$/.test(e.ai))));
+}
+// 🟢🔴 v6.32 — is this receipt already on the receipts-to-approve list? Eric asked for "a
+// green light if its already on there and a red if its not". e.budg === 'sent' means it has
+// gone to a client's budget; 'no' means he waved it off. Anything else is still waiting.
+//
+// Never colour alone (standing rule): each lamp carries its own glyph AND its own word, so a
+// grey day, a cracked screen or colour-blind eyes read exactly the same state.
+function rcptLampHtml(e) {
+  if (!isRcptEntry(e)) return '';
+  const st = e.budg === 'sent' ? 'on' : e.budg === 'no' ? 'off' : 'wait';
+  const wd = st === 'on' ? '🟢 ✓ ON THE LIST' : st === 'off' ? '⚪ — SKIPPED' : '🔴 ✕ NOT ON IT';
+  const ti = st === 'on' ? 'Already approved onto a client budget' : st === 'off' ? 'You waved this one off — it will not be offered again' : 'Not sent yet — tap 🔮 → Upcoming, or use the tracker\'s 🧾 Receipts to approve';
+  return `<span>·</span><span class="rc-lamp rc-${st}" title="${esc(ti)}">${wd}</span>`;
+}
+function rlRcptToggle() {
+  window._logRcptOnly = !window._logRcptOnly;
+  window._rlN = 12;
+  const b = $('rlRcptBtn');
+  if (b) { b.classList.toggle('sel', !!window._logRcptOnly); b.setAttribute('aria-pressed', !!window._logRcptOnly); b.textContent = window._logRcptOnly ? '🧾 Receipts ✓ ON' : '🧾 Receipts'; }
+  renderLog();
+}
 function clearLogFilters() {
+  window._logRcptOnly = false;
+  const rb = $('rlRcptBtn');
+  if (rb) { rb.classList.remove('sel'); rb.setAttribute('aria-pressed', 'false'); rb.textContent = '🧾 Receipts'; }
   window._logHeadsOnly = '';
   logQuery = '';
   window._rlN = 12;
@@ -14861,7 +14924,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.31';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.32';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

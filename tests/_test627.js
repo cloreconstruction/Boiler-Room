@@ -136,7 +136,9 @@ const { chromium } = require('playwright');
     e.ai = '💵 $500.00'; e.rcpt = true;
     renderLog();
     const h = $('askRecent').innerHTML;
-    return /💰 → Budget/.test(h) && !/🔮 → Upcoming/.test(h);
+    // v6.32 — the row now wears a lamp whose tooltip MENTIONS the Upcoming door, so test for
+    // the door itself (its onclick), not for the words
+    return /💰 → Budget/.test(h) && !/estQuickUpcoming\(/.test(h);
   }));
 
   ok('once sent BOTH doors close — the same receipt cannot be posted twice', await page.evaluate(() => {
