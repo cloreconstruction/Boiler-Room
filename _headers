@@ -12,3 +12,10 @@
   Cache-Control: no-cache, must-revalidate
 /steam/*
   Cache-Control: public, max-age=604800
+
+# 🔒 v6.26 — belt and braces with the 404s in netlify.toml: keep these out of search
+# results too, in case a rule is ever loosened.
+/CLAUDE.md
+  X-Robots-Tag: noindex, nofollow
+/tests/*
+  X-Robots-Tag: noindex, nofollow
