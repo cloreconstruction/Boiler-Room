@@ -3355,7 +3355,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.33 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.34 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -10150,7 +10150,10 @@ function renderEstimates() {
           return `<div class="frow" style="gap: 6px; align-items: center; margin-top: 8px; padding: 6px 8px; border: 1.5px dashed var(--accent); border-radius: 8px; flex-wrap: wrap;">
           <span style="flex: 1; min-width: 150px;">📥 <b>$${(+p.a || 0).toLocaleString()}</b>${p.v ? ' from ' + esc(p.v) : ''} <span class="hint" style="margin: 0;">→ $${estPendMk(p).toLocaleString()} on their page · ${esc(p.ts || '')}${nudge ? ' · <b>📗 a QB run may have caught this</b>' : ''}</span></span>
           <button type="button" class="pick-chip${lg ? ' sel' : ''}" style="font-size: 10px; padding: 4px 8px; min-height: 26px;${lg ? '' : ' border-style: dashed;'}" onclick="estPendLogan(${ci}, ${pi})" title="has this invoice gone to Logan for processing? Lights itself if it went through TO THE BOOKKEEPER">${lg ? '📗 WITH LOGAN' : '○ sent to Logan?'}</button>
-          <button type="button" class="pick-chip${nudge ? ' sel' : ''}" style="font-size: 10.5px; min-height: 28px;" onclick="estPendClear(${ci}, ${pi})">✓ QB HAS IT — retire</button>
+          <button type="button" class="pick-chip${nudge ? ' sel' : ''}" style="font-size: 10.5px; min-height: 28px;" onclick="estPendClear(${ci}, ${pi}, 'qb')" title="QuickBooks carries this now — settle it and take it off their upcoming list">✓ QB HAS IT — retire</button>
+          <!-- ↩ v6.34 — Eric: "how can i edit, change or take back". Off their page, and the
+               receipt goes back to waiting in the log so it can be fixed and sent again. -->
+          <button type="button" class="pick-chip" style="font-size: 10.5px; min-height: 28px; border-style: dashed;" onclick="estPendClear(${ci}, ${pi}, 'back')" title="Wrong amount or wrong job? Off their page, and the receipt is offered again in the log">↩ Take back</button>
         </div>`; }).join('')}
         <div class="chips-row" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
           <button type="button" class="btn-ghost req-x" onclick="estBidAdd(${ci})">➕ another bid in ${esc(x.n)}</button>
@@ -10268,14 +10271,15 @@ async function estBillApprove(id) {
   scheduleSave();
   renderEstimates();
   const mkAmt = estPendMk(x.pend[x.pend.length - 1]);
-  if (x.appr) {
-    clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
-    await estSave();
-    toast(`📥 On their page under ${x.n} — $${mkAmt.toLocaleString()} billed, on the way ✓`);
-  } else {
-    scheduleEstSave();
-    toast(`📥 Filed under ${x.n} — it shows the day you light ${x.n}'s lamp`);
-  }
+  // 🔮 v6.34 — since v6.27 a bill in a DARK category rides their page under ESTIMATED UPCOMING
+  // COSTS, so this publishes either way. "It shows the day you light the lamp" was true before
+  // the upcoming card existed and quietly wrong after it: a bill approved here stayed off the
+  // page until some later lamp tap happened to publish.
+  clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
+  await estSave();
+  toast(x.appr
+    ? `📥 On their page under ${x.n} — $${mkAmt.toLocaleString()} billed, on the way ✓`
+    : `🔮 On their page under UPCOMING — ${x.n}, $${mkAmt.toLocaleString()} ✓`);
 }
 // 🔮 v6.27 — ONE TAP from the log. Eric asked for the 🧾 tag to put the cost straight on the
 // client's page; his call on the gate was "keep your tap, but make it one tap from the log".
@@ -10551,14 +10555,15 @@ async function estBillHand() {
   window._estHandInc = false;
   renderEstimates();
   const mkAmt = estPendMk(x.pend[x.pend.length - 1]);
-  if (x.appr) {
-    clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
-    await estSave();
-    toast(`📥 On their page under ${x.n} — $${mkAmt.toLocaleString()} billed, on the way ✓`);
-  } else {
-    scheduleEstSave();
-    toast(`📥 Filed under ${x.n} — it shows the day you light ${x.n}'s lamp`);
-  }
+  // 🔮 v6.34 — since v6.27 a bill in a DARK category rides their page under ESTIMATED UPCOMING
+  // COSTS, so this publishes either way. "It shows the day you light the lamp" was true before
+  // the upcoming card existed and quietly wrong after it: a bill approved here stayed off the
+  // page until some later lamp tap happened to publish.
+  clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
+  await estSave();
+  toast(x.appr
+    ? `📥 On their page under ${x.n} — $${mkAmt.toLocaleString()} billed, on the way ✓`
+    : `🔮 On their page under UPCOMING — ${x.n}, $${mkAmt.toLocaleString()} ✓`);
 }
 function estBillSkip(id) {
   const e = entries.find(x => x.id === id);
@@ -10576,14 +10581,39 @@ function estPendLogan(ci, pi) {
   scheduleEstSave(); // office bookkeeping only — nothing on their page changes
   renderEstimates();
 }
-async function estPendClear(ci, pi) {
+// ↩ v6.34 — TAKE IT BACK, ALL THE WAY. Eric: "how can i edit, change or take back the
+// estimated cost receipts?" Retiring a bill here used to delete it from the board and stop:
+// the log entry stayed marked 'sent' (🟢, both doors shut), so a wrong amount or a wrong job
+// could never be corrected and re-sent — and in a category with its lamp dark the client's
+// UPCOMING card was never republished, so the homeowner kept seeing the bill he had just
+// pulled. Now: the receipt goes back to the log as waiting (🔴), the client page is
+// republished whatever the lamp is doing, and the trail records that ERIC took it back —
+// same trail the QuickBooks match writes, different `why`, so the two are never confused.
+//
+// Two different intents share this function and MUST stay apart:
+//   'qb'   — "QuickBooks has it": the bill is done, the receipt stays settled (🟢), trail says
+//            Eric paired it by hand (why 'qb-eric', beside the automatic 'qb').
+//   'back' — "take it back": wrong amount, wrong job, wrong idea. The receipt reopens as
+//            waiting (🔴) so it can be fixed and sent again. Trail says why 'eric'.
+// Reopening a receipt QuickBooks already carries would offer it a second time — double count.
+async function estPendClear(ci, pi, how = 'qb') {
   const x = _estD.cats[ci];
-  if (!x || !(x.pend || [])[pi]) return;
+  const p = x && (x.pend || [])[pi];
+  if (!p) return;
+  const back = how === 'back';
   x.pend.splice(pi, 1);
+  if (!x.pend.length) delete x.pend;
+  _estD.cleared = [{ n: x.n, a: +p.a || 0, v: p.v || '', eid: p.eid, ts: p.ts || '',
+    cl: localDay(new Date()), why: back ? 'eric' : 'qb-eric' }, ...(_estD.cleared || [])].slice(0, 400);
+  const e = p.eid != null ? entries.find(k => k.id === p.eid) : null;
+  if (back && e) { delete e.budg; scheduleSave(); }   // back to waiting — both doors reopen
   renderEstimates();
-  if (x.appr) { clearTimeout(_estTimer); _estTimer = null; window._estPub = true; await estSave(); }
-  else scheduleEstSave();
-  toast('✓ Retired — the books carry it from here');
+  clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
+  await estSave();
+  renderLog();
+  toast(back
+    ? (e ? '↩ Taken back — off their page, and the receipt is waiting in the log again' : '↩ Taken back — off their page')
+    : '📗 Retired — QuickBooks carries it now; off their upcoming list');
 }
 // 🗒→🏠 v5.93 — Eric: "the description next to each estimate needs to be viewable by the
 // client… a button next to the text to turn it on for them." Per-bid, default OFF —
@@ -14993,7 +15023,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.33';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.34';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
