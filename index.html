@@ -1279,6 +1279,21 @@
      re-wiring, no lost state, and any to-do already written is still in the file.
      Hidden with a class on <body> rather than by deleting markup, so a re-render cannot
      quietly bring them back mid-session. */
+  /* 📊 v6.31 — the journal meter: seven spaces, one per day since the last release. Full
+     means posted today, empty means a week has gone by and the last space strobes.
+     The strobe is never the only signal — the age is spelled out in words beside it, and a
+     phone set to reduce motion gets a steady lamp with the same words. */
+  .jm { display: flex; align-items: center; gap: 7px; margin-top: 5px; font-weight: 700; }
+  .jm-bar { display: inline-flex; gap: 3px; flex: none; }
+  .jm-cell { width: 13px; height: 11px; border-radius: 3px; border: 1.5px solid var(--accent);
+    background: transparent; opacity: .5; }
+  .jm-cell.on { background: var(--accent); opacity: 1; }
+  .jm-word { font-size: 10.5px; letter-spacing: .4px; opacity: .82; }
+  .jm-dead .jm-word { opacity: 1; color: var(--err, #c0392b); }
+  .jm-cell.strobe { border-color: var(--err, #c0392b); background: var(--err, #c0392b); opacity: 1;
+    animation: jmStrobe 1.1s steps(1, end) infinite; }
+  @keyframes jmStrobe { 0%, 49% { opacity: 1; } 50%, 100% { opacity: .15; } }
+  @media (prefers-reduced-motion: reduce) { .jm-cell.strobe { animation: none; opacity: 1; } }
   /* 🔦 v6.30 — the job wheel on the job card. Eric reads this card to give someone an address
      or a phone number, so landing on the wrong job is how the wrong client's details go out.
      It is the brightest thing on the card by a distance: brass rim, its own lamp glow, the
@@ -3064,6 +3079,14 @@
 
   <div class="panel" id="panel-settings">
     <h3>Setup</h3>
+    <!-- 🔝 v6.31 — Eric: "i want the project portal to be at the top of the setup page".
+         It is what he opens Setup FOR, and the journal meters live on it. -->
+    <!-- v5.10 — 🏠 CLIENT PORTAL: one live page per job, the code IS the key -->
+        <div class="set-section" id="portalSec">
+          <h4>🏠 Project portal — live project pages</h4>
+          <div class="hint">Each job gets a page at an unguessable address. Text the link once; it updates as the books do. 🔄 rotate kills the old link instantly.</div>
+          <div id="portalList" style="margin-top: 8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Load the projects</button> <span class="hint">Tap if the list doesn't fill itself in.</span></div>
+        </div>
     <div class="set-section" id="setAppear">
       <h4>Appearance</h4>
       <div class="chips-row">
@@ -3160,12 +3183,6 @@
       </div>
       
     </div>
-    <!-- v5.10 — 🏠 CLIENT PORTAL: one live page per job, the code IS the key -->
-        <div class="set-section" id="portalSec">
-          <h4>🏠 Project portal — live project pages</h4>
-          <div class="hint">Each job gets a page at an unguessable address. Text the link once; it updates as the books do. 🔄 rotate kills the old link instantly.</div>
-          <div id="portalList" style="margin-top: 8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Load the projects</button> <span class="hint">Tap if the list doesn't fill itself in.</span></div>
-        </div>
         <!-- v5.10 — 💼 QB UPDATER: drop Logan's exports straight in -->
         <div class="set-section" id="qbSec">
           <h4>💼 QuickBooks updater</h4>
@@ -3308,7 +3325,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.30 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.31 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9371,7 +9388,7 @@ function renderPortalFold(box, offRoot) {
       return `
       <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
         <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
-          onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}</button>
+          onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}${jrnMeterHtml(c.code)}</button>
         ${open ? (off ? `
         <!-- 🏢 v6.07 — an OFFICE phone (Phil) gets the same fold Eric gets: lists, boxes, bids. -->
         <div class="pf-acts">
@@ -9390,6 +9407,59 @@ function renderPortalFold(box, offRoot) {
     }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button>
       ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — the Build List is yours too.</span>' : ''}</div>`
       : '<span class="hint">Eric hasn\'t turned any client pages on yet.</span>';
+}
+// ═══════════ 📊 v6.31 — THE JOURNAL METER ═══════════
+// Eric: "next to each project name id like a meter that is 7 spaces long and whenever i post
+// to the project journal it'll reset, so i can see how many days of the week old each journal
+// is at a glance and when it's empty the last one strobes which means i need to update
+// journal right away."
+//
+// Seven spaces, one per day of the week. A release fills all seven; each day that passes
+// drains one. Empty means a full week has gone by with nothing posted, and the last space
+// strobes. Nine jobs, one glance, and he can see which homeowner has been left in the dark.
+//
+// The date comes from each client's own file (journal[0].released — the same stamp
+// journalRelease writes), cached in prefs so the list paints instantly and then corrects
+// itself. Never colour alone: every meter spells out its own age in words beside it.
+const JRN_SPAN = 7;
+function jrnAgeDays(code) {
+  const rel = ((prefs.jrnRel || {})[code] || '').slice(0, 10);
+  if (!rel) return null;                       // nothing posted yet, or not read in yet
+  const then = new Date(rel + 'T00:00:00');
+  if (isNaN(+then)) return null;
+  const today = new Date(localDay(new Date()) + 'T00:00:00');
+  return Math.max(0, Math.round((today - then) / 86400000));
+}
+function jrnMeterHtml(code) {
+  const age = jrnAgeDays(code);
+  const known = age != null;
+  // unknown reads as overdue on purpose — an unposted journal is exactly the thing to chase
+  const left = known ? Math.max(0, JRN_SPAN - age) : 0;
+  const dead = left === 0;
+  const word = !known ? 'NO JOURNAL YET' : age === 0 ? 'POSTED TODAY'
+    : dead ? `${age} DAYS — POST IT NOW` : age === 1 ? '1 DAY OLD' : `${age} DAYS OLD`;
+  const cells = Array.from({ length: JRN_SPAN }, (_, i) => {
+    const on = i < left;
+    const strobe = dead && i === JRN_SPAN - 1;
+    return `<span class="jm-cell${on ? ' on' : ''}${strobe ? ' strobe' : ''}"></span>`;
+  }).join('');
+  return `<span class="jm${dead ? ' jm-dead' : ''}" title="📖 journal — ${word}" aria-label="journal ${word}">
+    <span class="jm-bar">${cells}</span><span class="jm-word">${dead ? '⚠ ' : ''}${word}</span></span>`;
+}
+// read each client's real release date, then repaint. One small download per job.
+async function refreshJrnAges(clients) {
+  if (!clients || !clients.length) return;
+  prefs.jrnRel = prefs.jrnRel || {};
+  let moved = false;
+  await Promise.all(clients.map(async c => {
+    if (!c || !c.code) return;
+    try {
+      const d = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null');
+      const rel = ((d && (d.journal || [])[0] || {}).released || '').slice(0, 10);
+      if (rel && prefs.jrnRel[c.code] !== rel) { prefs.jrnRel[c.code] = rel; moved = true; }
+    } catch (e) { /* leave the cached date alone — a bad signal is not news */ }
+  }));
+  if (moved) { scheduleSave(); const b = $('portalList'); if (b && !CREW_NAME) renderPortalList(); }
 }
 async function renderPortalList() {
   const box = $('portalList');
@@ -9449,6 +9519,9 @@ async function renderPortalList() {
     const t = await dbxDownload(portalRoot() + '/index.json');
     _portalIdx = JSON.parse(t);
   } catch (e) { box.innerHTML = '<span class="hint">No portal set up yet — ask Claude to build the client pages.</span>'; return; }
+  // 📊 v6.31 — paint from the cached dates immediately, then go and check them for real.
+  // Not awaited: the list must not sit blank behind nine downloads on a job-site signal.
+  refreshJrnAges(_portalIdx.clients || []);
   // 📁 v5.57 — Eric: "buttons hidden and only the job name showing... pick the job name from
   // the list, and THEN it opens up into Journal, Materials, Copy link, etc." One clean list
   // of job names; tapping one unfolds ITS buttons and folds the last one shut (accordion —
@@ -9458,7 +9531,7 @@ async function renderPortalList() {
     return `
     <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px; ${open ? '' : 'padding-bottom: 4px;'}">
       <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
-        onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}</button>
+        onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}${jrnMeterHtml(c.code)}</button>
       ${open ? `
       <!-- 📐 v6.05 — a grid, not a scatter: every plate the same width, in even rows, so the
            fold reads as one panel instead of seven differently-sized buttons stair-stepping
@@ -10826,6 +10899,14 @@ async function openJournal(i) {
     <div class="frow" style="margin: 8px 0;">${chk('notes', 'work notes')}${chk('hours', 'hours on site')}${chk('photos', 'photo count')}${chk('money', 'money moved')}</div>
     <button type="button" class="btn-ghost" style="width: 100%; margin: 0 0 8px; font-weight: 800; font-size: 14.5px; padding: 11px; border: 2.5px solid var(--accent); background: var(--surface-1); color: var(--ink);" onclick="jrnDraftGo()">✍ Draft it for me — from my picks (the Wizard polishes it)</button>
     ${_jrnUndo && _jrnUndo.code === c.code ? `<button type="button" class="btn-ghost" style="width: 100%; margin: 0 0 8px; font-weight: 800; border: 2.5px solid var(--accent); background: var(--surface-1); color: var(--ink);" onclick="jrnUndoBack()">↩ UNDO — bring back what I wrote</button>` : ''}
+    <!-- 📖 v6.31 — Eric: "id like the most recent posted one to also be open or some way that
+         i can see what was written last… so i can build on each report or step." He asked
+         about greying it INTO the box; this keeps it OUT of the box on purpose. Text sitting
+         in the textarea is one tap from being posted a second time, and a homeowner reading
+         last week's words again as this week's update is worse than not seeing them at all.
+         So: last week sits above the box, plainly readable, and moves into his words only
+         when he taps ⤵ Build on it. -->
+    <div id="jrnLast" style="margin: 10px 0 0;"></div>
     <div class="field"><label>The entry — your words, in your voice</label>
       <div class="hint" id="jrnAiHint" style="margin: 0 0 4px;"></div>
       <textarea id="jrnText" rows="10" class="grow" style="width: 100%;" placeholder="Write the week in your own words — or tap ✍ Draft it for me and fix what it gets wrong."></textarea></div>
@@ -10995,6 +11076,7 @@ async function renderJrnReleased() {
   let d = null;
   try { d = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || '{}'); } catch (e) {}
   const js = (d && d.journal) || [];
+  renderJrnLast(js);   // 📖 v6.31 — last week's words, above his box
   if (!js.length) { box.innerHTML = '<span class="hint">Nothing released to their page yet.</span>'; return; }
   box.innerHTML = `<div class="field" style="margin: 0 0 2px;"><label>📤 On their page now — ✎ edit it or ↩ take it back</label></div>` +
     js.slice(0, 8).map((j, i) => `<div class="sum-row" style="cursor: default; flex-wrap: wrap;">
@@ -11002,6 +11084,44 @@ async function renderJrnReleased() {
       <button class="btn-ghost req-x" onclick="jrnEditRel(${i})">✎ Edit</button>
       <button class="btn-ghost req-x" ${_jrnRetractArm === i ? 'style="color: var(--err); font-weight: 700;"' : ''} onclick="jrnRetract(${i})">${_jrnRetractArm === i ? '↩ SURE? Tap again' : '↩ Take back'}</button>
     </div>`).join('');
+}
+// 📖 v6.31 — WHAT WENT OUT LAST TIME, sitting where he can read it while he writes the next
+// one. Open by default (he asked for it open), foldable, and read-only: last week's words
+// never sit in the box they could be posted from. ⤵ Build on it is the only way they move,
+// and it APPENDS under what he has already written rather than wiping it.
+let _jrnLastOpen = true, _jrnLastText = '', _jrnLastJ = null;
+function renderJrnLast(js) {
+  const box = $('jrnLast');
+  if (!box) return;
+  const j = (js || [])[0];
+  _jrnLastJ = j || null;   // folding re-renders from this, so the week and ✎ survive the tap
+  if (!j || !String(j.text || '').trim()) {
+    _jrnLastText = '';
+    box.innerHTML = `<div class="hint" style="margin: 0;">📖 Nothing posted to this job yet — this one starts the story.</div>`;
+    return;
+  }
+  _jrnLastText = String(j.text);
+  const open = _jrnLastOpen;
+  box.innerHTML = `<div class="g-step" style="margin-top: 0;">
+    <button type="button" class="g-step-label" style="width: 100%; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left;"
+      onclick="jrnLastFold()" aria-expanded="${open}">${open ? '▾' : '▸'} 📖 LAST POSTED · WEEK OF ${esc(String(j.week || '?').toUpperCase())}${j.edited ? ' · ✎ EDITED' : ''}</button>
+    ${open ? `<div style="white-space: pre-wrap; font-size: 13px; line-height: 1.55; opacity: .72; max-height: 190px; overflow-y: auto; padding: 8px 2px; border-left: 3px solid var(--accent); padding-left: 10px; margin-top: 6px;">${esc(_jrnLastText)}</div>
+    <div class="hint" style="margin: 6px 0 0;">Already on their page — reading only. It will not go out again unless you put it in your own words below.</div>
+    <div class="frow" style="gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+      <button type="button" class="btn-ghost" style="flex: 1; min-width: 150px; min-height: 42px; font-weight: 800;" onclick="jrnBuildOn()">⤵ Build on it — copy into my box</button>
+    </div>` : ''}</div>`;
+}
+function jrnLastFold() { _jrnLastOpen = !_jrnLastOpen; renderJrnLast(_jrnLastJ ? [_jrnLastJ] : []); }
+function jrnBuildOn() {
+  const b = $('jrnText');
+  if (!b || !_jrnLastText) return;
+  const mine = String(b.value || '').trim();
+  // his own words always come first — this lands underneath them, never over them
+  b.value = mine ? `${mine}\n\n${_jrnLastText}` : _jrnLastText;
+  fitTa(b);
+  b.focus();
+  try { b.setSelectionRange(b.value.length, b.value.length); } catch (e) {}
+  toast('⤵ Copied down — edit it into this week\'s words before you release');
 }
 async function jrnEditRel(i) {
   const c = _portalIdx.clients[_jrnIdx];
@@ -11130,6 +11250,9 @@ async function journalRelease() {
     // went out, and when, and how many times. jrnDone gets wiped the moment Eric re-picks
     // the photo; jrnSent never does, so the star can still warn him he's sending it twice.
     const relDay = now.toISOString().slice(0, 10);
+    // 📊 v6.31 — the meter resets HERE, the moment the journal lands on their page
+    prefs.jrnRel = prefs.jrnRel || {};
+    prefs.jrnRel[c.code] = d.updated;
     st.forEach(e => {
       e.jrnDone = true;
       if (e.photoPath) { e.jrnSent = relDay; e.jrnSentN = (+e.jrnSentN || 0) + 1; }
@@ -14738,7 +14861,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.30';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.31';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
