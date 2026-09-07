@@ -55,8 +55,21 @@ const { chromium } = require('playwright');
     return s2.classList.contains('done') && s5.classList.contains('next') && !s3.classList.contains('next');
   }));
 
-  ok('words WITHOUT a job still points back at ① — the job is the gate now', await page.evaluate(() => {
+  // ▸ v6.42 REVERSES the second half of this. v6.30's own words: "picking it first means the wheel
+  // is never the thing standing between him and the lever after he has already said his piece" —
+  // but the code did the opposite, sending him back UP to ① once he had written, which Eric read
+  // as the app being wrong. The job still leads when nothing is said; once his words are in, the
+  // lever is next and ① says in words that a blank job is allowed. Job-first is intact.
+  ok('words WITHOUT a job point at the LEVER, and ① says a blank job is allowed (v6.42)', await page.evaluate(() => {
     qnJobPick = ''; $('askText').value = 'some words'; updateStepFlow();
+    const one = document.querySelector('.g-step[data-step="1"]');
+    return document.querySelector('.g-step[data-step="5"]').classList.contains('next') &&
+      !one.classList.contains('next') && one.classList.contains('blank') &&
+      /BLANK — files as unfiled/.test(one.textContent);
+  }));
+
+  ok('with nothing said yet, the job is still the gate — ① leads (v6.30, unchanged)', await page.evaluate(() => {
+    qnJobPick = ''; $('askText').value = ''; updateStepFlow();
     return document.querySelector('.g-step[data-step="1"]').classList.contains('next') &&
       !document.querySelector('.g-step[data-step="5"]').classList.contains('next');
   }));
