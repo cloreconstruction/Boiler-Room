@@ -2536,13 +2536,13 @@
     </div>
     <div id="rlSearchWrap" style="display: none; margin-top: 8px;">
       <div class="frow" style="margin-bottom: 8px;">
-        <input type="text" id="logSearch" class="mini-sel" placeholder="🔍 Search — vendor, job, truck, folder, date…" style="flex: 1; min-width: 180px;" oninput="logQuery = this.value; window._rlN = 12; renderAskRecent();">
+        <input type="text" id="logSearch" class="mini-sel" placeholder="🔍 Search — vendor, job, truck, email sender, subject, date…" style="flex: 1; min-width: 180px;" oninput="logQuery = this.value; window._rlN = 12; renderAskRecent();">
         <button class="btn-ghost" id="exportBtn">Export CSV</button>
       </div>
       <div class="frow" style="margin-bottom: 4px;">
         <div class="field"><label>Job</label><select id="lfJob" onchange="renderAskRecent()"></select></div>
         <div class="field"><label>Type</label><select id="lfType" onchange="renderAskRecent()">
-          <option value="All">All types</option><option value="Filed">🗄 Filed</option><option value="Mileage">🚚 Mileage</option><option value="Hours">⏱ Hours</option><option value="Note">📝 Notes</option><option value="Done">✅ Done</option>
+          <option value="All">All types</option><option value="Filed">🗄 Filed</option><option value="Mileage">🚚 Mileage</option><option value="Hours">⏱ Hours</option><option value="Note">📝 Notes</option><option value="Done">✅ Done</option><option value="Mail">📧 Emails</option>
         </select></div>
         <div class="field"><label>Who</label><select id="lfWho" onchange="renderAskRecent()"></select></div>
         <div class="field"><label>Category</label><select id="lfCat" onchange="renderAskRecent()"></select></div>
@@ -3317,6 +3317,19 @@
       </div>
       <div class="hint" id="pushStatus" style="margin-top: 8px;">The 🌙 evening reminder and 📥 review alerts buzz this phone. iPhone: add the app to your home screen first (Share → Add to Home Screen), then turn these on from the installed app.</div>
     </div>
+    <!-- 📧 v6.40 — Eric: "i'll need a place to be able to add or delete or edit the always and
+         never for email senders." The two lists the Inbox sweep keeps (v6.12): one row each, ✕ to
+         drop, and a box to add an address or a whole @company by hand. Edit = drop and re-add. -->
+    <div class="set-section" id="setMail">
+      <h4>📧 Email senders</h4>
+      <div class="hint" style="margin: 0 0 8px;">Who the app keeps and who it skips. ✓ ALWAYS files their emails onto your log, locked to you. 🚫 NEVER drops them into the Robots folder, nothing logged. A name that starts with @ means everyone at that company.</div>
+      <div id="mailListsBox"></div>
+      <div class="frow" style="margin-top: 8px; gap: 6px; flex-wrap: wrap;">
+        <input type="text" id="mailAddInput" class="mini-sel" placeholder="name@company.com, or @company.com" style="flex: 1; min-width: 160px;" inputmode="email" autocapitalize="off" onkeydown="if(event.key==='Enter'){event.preventDefault();mailListAdd(true);}">
+        <button type="button" class="btn-ghost" onclick="mailListAdd(true)">✓ Always</button>
+        <button type="button" class="btn-ghost" onclick="mailListAdd(false)">🚫 Never</button>
+      </div>
+    </div>
     <div class="set-section" id="setBackups">
       <h4>Backups</h4>
       <div class="hint" style="margin: 0 0 10px;">Automatic: a dated snapshot lands in App Data / Backups on every sync. Manual, for extra peace of mind:</div>
@@ -3366,7 +3379,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.39 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.40 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7702,15 +7715,48 @@ function mailSay(addr, yes) {
   const a = String(addr || '').toLowerCase();
   prefs.mailAsk = mailAsk().filter(x => (x.a || x) !== a);
   (yes ? mailOk() : mailNo()).push(a);
-  scheduleSave(); renderMailAsk();
+  scheduleSave(); renderMailAsk(); renderMailSenders();
   toast(yes ? `📧 ${a} — kept from now on ✓` : `🚫 ${a} — never again ✓`);
 }
 function mailSayDom(addr, yes) {
   const d = '@' + mailDom(String(addr || '').toLowerCase());
   prefs.mailAsk = mailAsk().filter(x => mailDom(String(x.a || x)) !== d.slice(1));
   (yes ? mailOk() : mailNo()).push(d);
-  scheduleSave(); renderMailAsk();
+  scheduleSave(); renderMailAsk(); renderMailSenders();
   toast(`📧 everyone at ${d} — ${yes ? 'kept' : 'skipped'} from now on ✓`);
+}
+// 📧 v6.40 — the two sender lists, on a Setup card he can edit. Eric: "i'll need a place to
+// be able to add or delete or edit the always and never for email senders."
+function renderMailSenders() {
+  const box = $('mailListsBox'); if (!box) return;
+  const rows = (list, yes) => list.length ? list.map((a, i) => `<div class="frow" style="gap: 6px; align-items: center; padding: 4px 0; border-top: 1px solid var(--border);">
+      <span style="flex: 1; min-width: 0; word-break: break-all; font-size: 13px;">${yes ? '✓' : '🚫'} ${esc(a)}${String(a).startsWith('@') ? ' <span class="hint" style="margin: 0;">everyone there</span>' : ''}</span>
+      <button type="button" class="btn-ghost req-x" style="font-size: 11px;" onclick="mailListDel(${yes}, ${i})" aria-label="drop ${esc(a)} from the ${yes ? 'always' : 'never'} list">✕ drop</button></div>`).join('')
+    : '<div class="hint" style="margin: 2px 0 6px;">nobody yet</div>';
+  box.innerHTML = `<div style="font-weight: 800; font-size: 12.5px; letter-spacing: .5px; margin-top: 4px;">✓ ALWAYS — kept (${mailOk().length})</div>${rows(mailOk(), true)}
+    <div style="font-weight: 800; font-size: 12.5px; letter-spacing: .5px; margin-top: 10px;">🚫 NEVER — skipped (${mailNo().length})</div>${rows(mailNo(), false)}`;
+}
+// an address, or "@company.com" / "company.com" for everyone there — lower-cased, nothing else
+function mailListNorm(v) {
+  v = String(v || '').trim().toLowerCase(); if (!v) return '';
+  if (v.startsWith('@')) return /^@[\w.-]+\.\w+$/.test(v) ? v : '';
+  return mailAddr(v) || (/^[\w.-]+\.\w+$/.test(v) ? '@' + v : '');
+}
+function mailListAdd(yes) {
+  const inp = $('mailAddInput'); const a = mailListNorm(inp && inp.value);
+  if (!a) { toast('Type an address like name@company.com, or @company.com for everyone there', false); return; }
+  const to = yes ? mailOk() : mailNo(), from = yes ? mailNo() : mailOk();
+  const k = from.findIndex(x => String(x).toLowerCase() === a); if (k >= 0) from.splice(k, 1);   // one list or the other, never both
+  if (!to.some(x => String(x).toLowerCase() === a)) to.push(a);
+  prefs.mailAsk = mailAsk().filter(x => String(x.a || x).toLowerCase() !== a);   // no longer a question
+  if (inp) inp.value = '';
+  scheduleSave(); renderMailSenders(); renderMailAsk();
+  toast(yes ? `📧 ${a} — kept from now on ✓` : `🚫 ${a} — never again ✓`);
+}
+function mailListDel(yes, i) {
+  const list = yes ? mailOk() : mailNo(); const a = list[i]; if (a == null) return;
+  list.splice(i, 1); scheduleSave(); renderMailSenders();
+  toast(`${a} — off the ${yes ? 'always' : 'never'} list. The next email from there asks again.`);
 }
 function renderMailAsk() {
   const box = $('mailAskCard');
@@ -13680,7 +13726,10 @@ function renderAskRecent() {
     // tagging is exactly the one he is hunting for.
     if (window._logRcptOnly && !isRcptEntry(e)) return false;
     if (fJob !== 'All' && e.job !== fJob) return false;
-    if (fType !== 'All' && !(TYPE_GROUPS[fType] || []).includes(e.type)) return false;
+    // 📧 v6.40 — Eric: "the running log will need an email search." Type = 📧 Emails shows only
+    // what the Inbox sweep filed from mail; the search box already reads sender, subject and body.
+    if (fType === 'Mail') { if (!e.mail) return false; }
+    else if (fType !== 'All' && !(TYPE_GROUPS[fType] || []).includes(e.type)) return false;
     if (fWho !== 'All' && (e.who || 'Me') !== fWho) return false;
     if (fCat !== 'All' && e.category !== fCat && !(e.cats || []).includes(fCat)) return false;
     if (fTag !== 'All' && !(e.tags || []).includes(fTag)) return false;
@@ -15142,7 +15191,7 @@ function deleteLogEntry() {
     renderAll(); scheduleSave();
   });
 }
-function renderAll() { renderKpis(); renderLog(); renderChart(); renderTodos();
+function renderAll() { renderMailSenders(); renderKpis(); renderLog(); renderChart(); renderTodos();
   renderDayTube(); renderPipeSelect(); updateClockGauge(); renderPendBanner(); renderPlanBanner();
   renderTagChips(); renderCrewGauges(); renderVisChips(); renderCrewShared(); renderCrewAsks();
   renderMyRequests(); renderAskStrip(); renderAskRecent(); renderTextDigest(); renderTxtNudges(); renderMileFace();
@@ -15178,7 +15227,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.39';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.40';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
