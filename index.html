@@ -2493,7 +2493,11 @@
       <button type="button" class="plate-btn plate-btn--bkk" id="bkkBtn" onclick="toBookkeeper()"
         aria-label="To the bookkeeper — files it here and opens the send sheet"
         title="To the bookkeeper — files it here + opens the send sheet">
-        <img src="steam/btn-bookkeeper.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
+        <!-- 🔧 v6.39 — Eric: "make the bookkeeper button look like the grinder button with the pipes
+             around the outside and make them the same size." The grinder's pipe frame and bezel are
+             baked into its picture, so the bookkeeper plate now rides inside that same frame
+             (steam/btn-bookkeeper-framed.webp — the old plate art set into the grinder's frame). -->
+        <img src="steam/btn-bookkeeper-framed.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
         <span class="plate-txt">📗 To the bookkeeper</span>
       </button>
     </div>
@@ -2601,7 +2605,10 @@
     <div id="bigClock" data-state="out">
       <button type="button" class="bc-tap" id="bcTapBtn" onclick="bcTap()" aria-label="Time clock — tap to clock in or out"></button>
       <select class="bc-job" id="clockJob" title="Job for this shift — change it mid-shift to switch jobs without clocking out" aria-label="Job for this shift" onchange="clockJobChanged(this)"></select>
-      <img src="steam/clockpanel-big.jpg" alt="" draggable="false">
+      <!-- 🧹 v6.39 — Eric: "on the time clock portion there is a remanent drop down menu that says
+           rininger, it's part of the pic somehow and not functional, clean that out." It was painted
+           INTO the panel picture (a screenshot artifact in the top-left corner). Painted out. -->
+      <img src="steam/clockpanel-big-v2.jpg" alt="" draggable="false" onerror="if (!this.dataset.fb) { this.dataset.fb = 1; this.src = 'steam/clockpanel-big.jpg'; }">
       <svg viewBox="0 0 1122 1402" aria-hidden="true">
         <defs>
           <linearGradient id="bcGold" x1="0" y1="0" x2="1" y2="1">
@@ -3359,7 +3366,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.38 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.39 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9896,7 +9903,22 @@ let _estIdx = -1, _estD = null, _estPage = null, _estArm = '', _estTimer = null;
 // one is a prefix of the other (3+ letters) — deterministic, each QB line lands on ONE category.
 function estToks(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 2 && !['and', 'or', 'the', 'to', 'of'].includes(w)); }
 function estTokHit(a, b) { return a === b || (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a))); }
+// 🗑 v6.39 — names Eric chose on purpose that QuickBooks spells differently. estScore is token
+// matching, so 'Trash / Construction Debris' could never see the books' 'Landfill' or
+// 'Garbage / Janitorial' dollars, and a dump-fee bill sent under it never cleared off the
+// client's page. His v6.36 call stands — ONE trash bucket — so both of Logan's names land in it.
+// The SAME table lives in c/index.html (budgetHtml) — the homeowner's page must add up the same.
+const EST_ALIASES = { 'trash / construction debris': ['Landfill', 'Garbage / Janitorial'], 'water softener': ['Water Softner'] };
+// a bill's base only "counted the alias" if the page it was measured against carried the books'
+// phase lines at all — a brand-new client page has phases: [] until the first Tuesday run, and a
+// base of 0 taken there must stay liftable once the lifetime dollars land.
+function estPageHasBooks() { return !!(_estPage && Array.isArray(_estPage.phases) && _estPage.phases.some(p => p && Array.isArray(p.cats) && p.cats.length)); }
 function estScore(qbName, catName) {
+  let best = estScoreRaw(qbName, catName);
+  for (const alias of (EST_ALIASES[String(catName || '').trim().toLowerCase()] || [])) best = Math.max(best, estScoreRaw(qbName, alias));
+  return best;
+}
+function estScoreRaw(qbName, catName) {
   const q = estToks(qbName), c = estToks(catName);
   if (!q.length || !c.length) return 0;
   if (q.join(' ') === c.join(' ')) return 1000;
@@ -9960,6 +9982,20 @@ async function openEstimates(i) {
   EST_DEFAULT_CATS.forEach(n => { if (!have.has(n.toLowerCase())) { have.add(n.toLowerCase()); _estD.cats.push({ n, appr: false, bids: [] }); } });
   // 🧾→📗 v6.27 — the books have moved since he last looked: retire every upcoming bill
   // QuickBooks has now taken in, and republish so their page stops showing it twice.
+  // 🗑 v6.39 — the alias makes months of Landfill dollars visible under Trash at once. A bill
+  // sent under Trash before this build carries base = 0, so the pot would "cover" it on the
+  // spot and retire it off the homeowner's list although the books never saw THAT bill.
+  // Such a bill's base is lifted to what the books show today, once; from then on it clears
+  // the normal way, when the ledger grows past it. Needs the page loaded to know the numbers.
+  // Each bill written since v6.39 carries al: 1 — its base already counted the alias. Only a
+  // bill WITHOUT that stamp (sent under Trash on v6.36–v6.38, or from a phone still on an older
+  // build) gets lifted, once, and then stamped so it is never lifted again.
+  if (_estPage) {
+    let lifted = 0; const used0 = estUsedBy();
+    _estD.cats.forEach(x => { if (!EST_ALIASES[String(x.n || '').trim().toLowerCase()]) return;
+      (x.pend || []).forEach(p => { if (p.al) return; p.base = Math.max(+p.base || 0, Math.round((used0[x.n] || 0) * 100) / 100); p.al = 1; lifted++; }); });
+    if (lifted) scheduleEstSave();
+  }
   const gone = estAutoClear();
   if (gone) { window._estPub = true; scheduleEstSave(true); toast(`📗 ${gone} bill${gone > 1 ? 's' : ''} matched in QuickBooks — off their upcoming list`); }
   renderEstimates();
@@ -10312,7 +10348,7 @@ async function estBillApprove(id) {
   const used = estUsedBy();
   x.pend = x.pend || [];
   x.pend.push({ a: Math.round(amt * 100) / 100, inc: !!(window._estBillInc || {})[id], v: p.v || '',
-    ts: localDay(new Date()), base: Math.round((used[x.n] || 0) * 100) / 100, eid: e.id });
+    ts: localDay(new Date()), base: Math.round((used[x.n] || 0) * 100) / 100, eid: e.id, ...(estPageHasBooks() ? { al: 1 } : {}) });   // al — v6.39: base counted the alias — only if the page carried books numbers
   e.budg = 'sent'; // the strip won't offer it again
   catLearn(e.job, x.n, p.v); // 🧾 v6.24 — the approve IS the lesson: this job + this vendor → this category
   scheduleSave();
@@ -10409,7 +10445,7 @@ async function estQuickUpcoming(id, ev) {
     const used = estUsedBy();
     x.pend = x.pend || [];
     x.pend.push({ a: Math.round(p.amt * 100) / 100, v: p.v || '', ts: localDay(new Date()),
-      base: Math.round((used[x.n] || 0) * 100) / 100, eid: e.id });
+      base: Math.round((used[x.n] || 0) * 100) / 100, eid: e.id, ...(estPageHasBooks() ? { al: 1 } : {}) });   // al — v6.39: base counted the alias — only if the page carried books numbers
     e.budg = 'sent';
     catLearn(e.job, x.n, p.v); // the tap IS the lesson, same as the strip's ✓ APPROVE
     scheduleSave();
@@ -10627,7 +10663,7 @@ async function rcptApprove() {
       if (!x) { x = { n: cat, appr: false, bids: [] }; _estD.cats.push(x); }
       x.pend = x.pend || [];
       x.pend.push({ a: Math.round(p.amt * 100) / 100, v: p.v || '', ts: localDay(new Date()),
-        base: Math.round((used[x.n] || 0) * 100) / 100, eid: e.id });
+        base: Math.round((used[x.n] || 0) * 100) / 100, eid: e.id, ...(estPageHasBooks() ? { al: 1 } : {}) });   // al — v6.39: base counted the alias — only if the page carried books numbers
       e.budg = 'sent';
       catLearn(e.job, x.n, p.v);
       shown += estPendMk(x.pend[x.pend.length - 1]);
@@ -10668,7 +10704,7 @@ async function estBillHand() {
   x.pend = x.pend || [];
   x.pend.push({ a: Math.round(amt * 100) / 100, inc: !!window._estHandInc,
     v: String((($('estHandV') || {}).value || '')).trim().slice(0, 40),
-    ts: localDay(new Date()), base: Math.round((used[x.n] || 0) * 100) / 100 });
+    ts: localDay(new Date()), base: Math.round((used[x.n] || 0) * 100) / 100, ...(estPageHasBooks() ? { al: 1 } : {}) });   // al — v6.39: base counted the alias — only if the page carried books numbers
   window._estHandInc = false;
   renderEstimates();
   const mkAmt = estPendMk(x.pend[x.pend.length - 1]);
@@ -15142,7 +15178,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.38';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.39';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

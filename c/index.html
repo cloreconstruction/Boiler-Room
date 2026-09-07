@@ -477,10 +477,17 @@ function budgetHtml(d) {
   // 🔎 v5.88 — Eric's category names find the books' names by token match (prefix, 3+ letters)
   const toks = s => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 2 && !['and', 'or', 'the', 'to', 'of'].includes(w));
   const hit = (a, b) => a === b || (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a)));
-  const score = (qn, cn) => { const q = toks(qn), c = toks(cn); if (!q.length || !c.length) return 0;
+  const scoreRaw = (qn, cn) => { const q = toks(qn), c = toks(cn); if (!q.length || !c.length) return 0;
     if (q.join(' ') === c.join(' ')) return 1000;
     let h = 0; q.forEach(a => { if (c.some(x => hit(a, x))) h++; });
     return h ? (h === Math.min(q.length, c.length) ? 100 + h : h) : 0; };
+  // 🗑 v6.39 — the SAME alias table as the app's estScore (index.html): Eric's one Trash bucket
+  // takes the books' Landfill and Garbage / Janitorial lines, so this page adds up exactly what
+  // his board adds up. Keep the two tables identical.
+  const EST_ALIASES = { 'trash / construction debris': ['Landfill', 'Garbage / Janitorial'], 'water softener': ['Water Softner'] };
+  const score = (qn, cn) => { let best = scoreRaw(qn, cn);
+    for (const alias of (EST_ALIASES[String(cn || '').trim().toLowerCase()] || [])) best = Math.max(best, scoreRaw(qn, alias));
+    return best; };
   const usedBy = {};
   (d.phases || []).forEach(p => (p.cats || []).forEach(c => {
     const qn = String(c[0] || ''), amt = +c[1] || 0;
