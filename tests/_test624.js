@@ -121,7 +121,9 @@ const { chromium } = require('playwright');
   }));
 
   ok('v6.25: the window lists the categories A → Z', await page.evaluate(() => {
-    const names = Array.from($('catBox').querySelectorAll('.chips-row .pick-chip')).map(b => b.textContent.replace(/^\S+\s+/, ''));
+    // v6.35 — the window has an OVERHEAD group above the A → Z list now; the A → Z list is the last grid
+    const grids = Array.from($('catBox').querySelectorAll('.cat-grid'));
+    const names = Array.from(grids[grids.length - 1].querySelectorAll('.pick-chip')).map(b => b.textContent.replace(/^\S+\s+/, ''));
     const sorted = [...names].sort((a, b) => a.localeCompare(b));
     return names.length >= 50 && JSON.stringify(names) === JSON.stringify(sorted);
   }));

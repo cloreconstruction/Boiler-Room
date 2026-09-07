@@ -3355,7 +3355,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.34 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.35 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4519,6 +4519,18 @@ const EST_DEFAULT_CATS = ['Demo', 'Well line, sewerline to house', 'Septic', 'Di
 // bars use, so nothing downstream has to guess a name match. A few money buckets a jobsite
 // budget doesn't carry ride at the end.
 const RCPT_CATS = [...EST_DEFAULT_CATS, 'Materials', 'Tools', 'Fuel', 'Office/Admin', 'Personal'];
+// 🏢 v6.35 — OVERHEAD. Eric: "whenever im sorting reciepts i need to be able to categorize it
+// as tools or office or business expense etc so that can send it to some place to record but
+// isn't a billable project receipt." His call on the gate: picking one of THESE in the 🧾
+// window IS the mark — no second tap. An overhead receipt is recorded (the log, the job's
+// receipts window, the CSV Logan gets with billable = no) and is never offered to a client
+// page. A saw bought FOR a job goes under a project category instead — that was the trade.
+const OVERHEAD_CATS = ['Tools', 'Fuel', 'Office/Admin'];
+function isOverheadEntry(e) {
+  if (!e) return false;
+  if (OVERHEAD_CATS.includes(String(e.category || '').trim())) return true;
+  return e.billable === false && !!(e.rcpt || (e.ai && /💵 \$/.test(e.ai)));   // hours use the same flag — only receipts count here
+}
 // the File Cabinet keeps its old names too — Dropbox folders already carry them — but
 // Eric's budget categories are now pickable everywhere a category is picked
 const FC_CATS = ['—', ...new Set([...FILE_CATS.slice(1), ...RCPT_CATS])];
@@ -5446,18 +5458,22 @@ function qnCatPick(c) {
 function catModalOpen() {
   const job = (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : curJob;
   const learned = ((prefs.jobCats || {})[jobCatKey(job)] || []).filter(c => RCPT_CATS.includes(c));
-  const all = [...RCPT_CATS].sort((a, b) => a.localeCompare(b)); // 🅰 alphabetical — Eric: easier to find
+  // 🏢 v6.35 — overhead gets its own group with its own words; the A → Z list is project costs only
+  const all = RCPT_CATS.filter(c => !OVERHEAD_CATS.includes(c)).sort((a, b) => a.localeCompare(b)); // 🅰 alphabetical — Eric: easier to find
   // 🔲 v6.33 — Eric: "all those cards needs to be the same size so its 3 across or whatever
   // fits best." Same-size plates in a three-wide grid (.cat-grid), instead of pills of every
   // length wrapping wherever they fell. No inline sizing here so the grid rule can win.
-  const chip = (c, star) => `<button type="button" class="pick-chip${qnCat === c ? ' sel' : ''}" onclick="qnCatPick('${escq(c)}')" aria-pressed="${qnCat === c}">${qnCat === c ? '✓' : star ? '⭐' : '📂'} ${esc(c)}</button>`;
+  const chip = (c, star) => `<button type="button" class="pick-chip${qnCat === c ? ' sel' : ''}" onclick="qnCatPick('${escq(c)}')" aria-pressed="${qnCat === c}">${qnCat === c ? '✓' : star ? '⭐' : OVERHEAD_CATS.includes(c) ? '🏢' : '📂'} ${esc(c)}</button>`;
   $('catBox').innerHTML = `<h3>🧾 What kind of cost is this?
     ${winX('catModalClose()', 'close')}</h3>
     <div class="hint" style="margin: 0 0 8px;">Filing under <b>${esc(job && job !== '—' ? job : 'no job yet — pick one after')}</b>. The pick rides the receipt to the budget pile pre-sorted, and it's remembered for next time.</div>
     ${learned.length ? `<div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 6px 0 4px;">⭐ USED ON THIS JOB</div>
       <div class="chips-row cat-grid" style="margin-bottom: 8px;">${learned.map(c => chip(c, true)).join('')}</div>
       <div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 6px 0 4px;">🅰 THE WHOLE LIST, A → Z</div>` : ''}
-    <div class="chips-row cat-grid" style="max-height: 46vh; overflow-y: auto; align-content: flex-start;">${all.map(c => chip(c, false)).join('')}</div>
+    <div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 6px 0 4px;">🏢 OVERHEAD — recorded for the books, never billed to a client</div>
+    <div class="chips-row cat-grid" style="margin-bottom: 8px;">${OVERHEAD_CATS.map(c => chip(c, false)).join('')}</div>
+    ${learned.length ? '' : `<div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 6px 0 4px;">🅰 PROJECT COSTS, A → Z</div>`}
+    <div class="chips-row cat-grid" style="max-height: 40vh; overflow-y: auto; align-content: flex-start;">${all.map(c => chip(c, false)).join('')}</div>
     <div class="frow" style="gap: 8px; margin-top: 12px;">
       <button type="button" class="btn-ghost" style="flex: 1;" onclick="catModalClose()">⏭ Skip — pick it at the budget later</button>
       <button type="button" class="btn-ghost" style="flex: 1; color: var(--err, #c0392b);" onclick="qnRcpt = false; qnCat = ''; catModalClose(); renderTagChips(); renderCatRow();">✕ Not a receipt</button>
@@ -6789,7 +6805,7 @@ function saveNoteFrom(boxId, fromPanel) {
   // so the estimates board's bill strip can offer it, and the pick is LEARNED for next time
   if (qnRcpt) {
     nExtra.rcpt = true;
-    if (qnCat) { nExtra.category = qnCat; catLearn(noteJob, qnCat); }
+    if (qnCat) { nExtra.category = qnCat; catLearn(noteJob, qnCat); if (OVERHEAD_CATS.includes(qnCat)) nExtra.billable = false; }   // 🏢 v6.35 — overhead is marked at the grind
     if (!nExtra.ai) {
       const am = t.match(/\$\s?([\d,]+(?:\.\d{1,2})?)/) || t.match(/\b([\d,]+(?:\.\d{1,2})?)\s*(?:dollars|bucks)\b/i);
       if (am) nExtra.ai = '💵 $' + am[1];
@@ -9964,7 +9980,7 @@ function estBillCands() {
   // The journal, plans and materials all bridge the two with portalAppJob(); now so does
   // every receipt path. Eric's Peninsula Overhead Doors invoice is what surfaced it.
   const aj = portalAppJob(c);
-  return entries.filter(e => (e.job === aj || e.job === c.job) && !e.budg && !e.sample && estBillParse(e)).slice(0, 12);
+  return entries.filter(e => (e.job === aj || e.job === c.job) && !e.budg && !e.sample && !isOverheadEntry(e) && estBillParse(e)).slice(0, 12);
 }
 function estBillGuess(e) {
   // 🧾 v6.24 — a category Eric picked (or a vendor-learned one) matches by NAME, never by
@@ -10296,6 +10312,7 @@ async function estQuickUpcoming(id, ev) {
   // 🔁 v6.28 — the !e.budg test used to live only in the two renderers, so a double tap on a
   // slow connection re-entered here before the flag was set and posted the bill TWICE. The
   // guard belongs on the function, and _qUpBusy holds the door for the awaits either side.
+  if (isOverheadEntry(e)) { toast('🏢 Overhead — tools, fuel, office. Recorded for the books, never billed to a client', false); return; }   // 🏢 v6.35
   if (e.budg) { toast('That one is already on their page', false); return; }
   if (window._qUpBusy) return;
   const p = estBillParse(e);
@@ -10397,9 +10414,41 @@ let _rcptSel = new Set(), _rcptIdx = -1;
 function rcptWaiting(job) {
   return entries.filter(e => e && e.job === job && !e.budg && !e.sample &&
     !e.personal && !(e.tags || []).includes('Personal') &&
+    !isOverheadEntry(e) &&                                   // 🏢 v6.35 — overhead is never offered to a client
     (e.rcpt || e.category) && estBillParse(e));
 }
 function rcptCount(job) { return rcptWaiting(job).length; }
+// 💡💡💡 v6.35 — THE THREE LIGHTS. Eric: "itll have three lights one is sent to client page,
+// second is receipt paired with qb and third is it has been invoiced and paid and no longer
+// relevant to the estimated cost client view." A sent receipt now STAYS in the job's receipts
+// window wearing its lights, instead of vanishing the moment QuickBooks catches up:
+//   ① 🟢 SENT      — e.budg === 'sent'; it is on their page (or was, until ②)
+//   ② 📗 PAIRED    — QuickBooks has it: the bill is off the board and in the trail with a qb
+//                    why. It leaves the CLIENT'S upcoming list here, not at ③ — once the books
+//                    carry it, it is already inside their "$ in so far" and keeping it under
+//                    upcoming too would count it twice. It stays in ERIC'S window.
+//   ③ 💵 PAID      — invoiced to the homeowner and paid. Nobody records that per receipt today;
+//                    it comes from Logan's QuickBooks run on the other side. The hook is
+//                    Client Portal/paid-<code>.json — { eids: [entry ids], byId: { id: { inv,
+//                    paidOn } } } — written by the books session, read here. Until that file
+//                    exists every ③ reads "○ NOT YET — comes from the books", in words.
+// A receipt with all three lit drops off the list and is counted as settled.
+let _estPaid = null;
+function rcptSent(job) {
+  return entries.filter(e => e && e.job === job && e.budg === 'sent' && !e.sample && !isOverheadEntry(e) && estBillParse(e));
+}
+function rcptOverhead(job) {
+  return entries.filter(e => e && e.job === job && !e.sample && !e.personal && !(e.tags || []).includes('Personal') &&
+    isOverheadEntry(e) && isRcptEntry(e));
+}
+function rcptPaidHas(id) { return !!(_estPaid && (((_estPaid.eids || []).includes(id)) || !!((_estPaid.byId || {})[id]))); }
+function rcptLights(e) {
+  const pendHas = !!(_estD && (_estD.cats || []).some(x => (x.pend || []).some(p => p.eid === e.id)));
+  const trail = _estD ? (_estD.cleared || []).find(t => t.eid === e.id && /qb/.test(String(t.why || ''))) : null;
+  const paired = !pendHas && !!trail;
+  const paid = rcptPaidHas(e.id);
+  return { sent: true, paired, paid, trail };
+}
 async function openRcptReview(i) {
   if (portalGuard && portalGuard()) return;
   const c = (((_portalIdx || {}).clients) || [])[i];
@@ -10409,6 +10458,8 @@ async function openRcptReview(i) {
   // without the full guards in rcptApprove()
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (err) { _estD = null; }
   if (!_estD || !Array.isArray(_estD.cats)) _estD = null;
+  // 💵 v6.35 — light ③ comes from the books side: paid-<code>.json, if it exists yet
+  try { _estPaid = JSON.parse(await dbxDownload(portalRoot() + '/paid-' + c.code + '.json') || 'null'); } catch (err) { _estPaid = null; }
   renderRcptReview();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -10416,9 +10467,39 @@ async function openRcptReview(i) {
 function renderRcptReview() {
   const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
   if (!c) return;
-  const list = rcptWaiting(portalAppJob(c));   // 🔗 v6.33 — the APP job, not the portal name
+  const aj = portalAppJob(c);                  // 🔗 v6.33 — the APP job, not the portal name
+  const list = rcptWaiting(aj);
   const mk = estMk();
   const money = n => '$' + (+n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // 💡💡💡 v6.35 — the sent ones stay here with their three lights until all three are lit
+  const sentAll = rcptSent(aj);
+  const settled = sentAll.filter(e => rcptLights(e).paid);
+  const sent = sentAll.filter(e => !rcptLights(e).paid);
+  const lamp = (on, onWord, offWord) => `<span class="rc-lamp ${on ? 'rc-on' : 'rc-off'}" style="display: inline-block; margin-right: 8px;">${on ? onWord : offWord}</span>`;
+  const sentRows = sent.map(e => {
+    const p = estBillParse(e) || {};
+    const L = rcptLights(e);
+    return `<div class="g-step" style="margin-top: 8px;">
+      <div style="font-size: 13px;"><b>${esc((e.details || '').slice(0, 70))}</b></div>
+      <div style="font-size: 12px; opacity: .8; margin-top: 3px;">${esc(localDay(new Date(e.ts)))}${p.v ? ' · 🏪 ' + esc(p.v) : ''} · 🧾 ${esc(String(e.category || '').trim() || '—')} · receipt ${money(p.amt)}</div>
+      <div style="font-size: 12px; margin-top: 6px; line-height: 1.9;">
+        ${lamp(true, '① 🟢 ✓ SENT — on their page', '')}
+        ${lamp(L.paired, '② 📗 ✓ PAIRED WITH QB', '② ○ NOT PAIRED YET — waiting on the books')}
+        ${lamp(L.paid, '③ 💵 ✓ INVOICED & PAID', '③ ○ NOT YET — comes from the books')}
+      </div>
+      ${L.paired ? `<div class="hint" style="margin-top: 2px;">Off their upcoming list — the books carry it now${L.trail && L.trail.cl ? ' (' + esc(L.trail.cl) + ')' : ''}.</div>`
+                 : `<div class="hint" style="margin-top: 2px;">↩ To change or take it back: 💰 Estimates → the bill's row → ↩ Take back.</div>`}
+    </div>`;
+  }).join('');
+  const sentBlock = sentAll.length ? `<div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 14px 0 2px;">💡 SENT — ${sent.length} on the way${settled.length ? ` · ✓ ${settled.length} fully settled, off the list` : ''}</div>${sentRows}` : '';
+  // 🏢 v6.35 — overhead on this job: recorded, never billed to them
+  const over = rcptOverhead(aj);
+  const overTot = over.reduce((s, e) => s + ((estBillParse(e) || {}).amt || 0), 0);
+  const overBlock = over.length ? `<div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 14px 0 2px;">🏢 OVERHEAD ON THIS JOB — ${over.length}, ${money(overTot)} · recorded, never billed to them</div>` +
+    over.map(e => { const p = estBillParse(e) || {}; return `<div class="g-step" style="margin-top: 8px;">
+      <div style="font-size: 13px;"><b>${esc((e.details || '').slice(0, 70))}</b></div>
+      <div style="font-size: 12px; opacity: .8; margin-top: 3px;">${esc(localDay(new Date(e.ts)))}${p.v ? ' · 🏪 ' + esc(p.v) : ''} · 🏢 ${esc(String(e.category || '').trim())} · ${money(p.amt)} · goes to Logan as not billable</div>
+    </div>`; }).join('') : '';
   const rows = list.map(e => {
     const p = estBillParse(e) || {};
     const on = _rcptSel.has(e.id);
@@ -10455,7 +10536,8 @@ function renderRcptReview() {
         <button type="button" class="btn-primary" style="flex: 1; min-width: 160px; min-height: 46px; font-weight: 800;" ${okCount ? '' : 'disabled'} onclick="rcptApprove()">✓ APPROVE ${okCount || ''} → THEIR PAGE</button>
         <button type="button" class="btn-ghost" style="min-height: 46px;" onclick="rcptAll()">${_rcptSel.size >= list.length ? '☐ Uncheck all' : '☑ Check all'}</button>
       </div>
-    </div>` : ''}</div>`;
+    </div>` : ''}
+    ${sentBlock}${overBlock}</div>`;
 }
 function rcptTog(id) { _rcptSel.has(id) ? _rcptSel.delete(id) : _rcptSel.add(id); renderRcptReview(); }
 function rcptAll() {
@@ -10467,7 +10549,7 @@ function rcptAll() {
 function closeRcptReview() {
   $('revModal').classList.remove('show', 'mat-full');
   document.body.classList.remove('modal-open');
-  _rcptSel = new Set(); _rcptIdx = -1; _estD = null; _estPage = null;
+  _rcptSel = new Set(); _rcptIdx = -1; _estD = null; _estPage = null; _estPaid = null;
   if (typeof renderPortalList === "function") renderPortalList();   // the button’s count is now one lower
 }
 // the batch send. One board read, one save, one publish — and the SAME refusals the one-tap
@@ -13605,7 +13687,7 @@ function renderAskRecent() {
     })()),
     ...shownEntries.map(e => ({
       ts: +new Date(e.ts), kind: kindOf(e), who: personOf(e), e,
-      h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^Text from /, '').slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}${!CREW_NAME ? rcptLampHtml(e) : ''}</span>` }))
+      h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^Text from /, '').slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && !isOverheadEntry(e) && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}${!CREW_NAME ? rcptLampHtml(e) : ''}</span>` }))
   ].filter(it => !isNaN(it.ts));
   const people = [...new Set(items.map(it => it.who).filter(Boolean))].slice(0, 20).sort();
   if (f) items = items.filter(it => it.kind === f);
@@ -14719,7 +14801,7 @@ function logRowHtml(e) {
     const ocrBit = e.ocr ? `<span>·</span><span title="Text was read from the photo — search can find it">📄 text</span>` : '';
     // 💰 v6.24 — Eric: "send to the budget" straight from the receipt. One tap lands on this
     // job's estimates board with the bill strip open — no hunting for where it went.
-    const budgBit = !CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && e.job && e.job !== '—'
+    const budgBit = !CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && !isOverheadEntry(e) && e.job && e.job !== '—'
       // 🔮 v6.27 — a receipt that already carries its 🧾 category needs no board: ONE tap puts
       // it on their page under UPCOMING, markup folded in. Without a category the old jump
       // still stands, because the board is where he gives it one.
@@ -14868,6 +14950,8 @@ function isRcptEntry(e) {
 // grey day, a cracked screen or colour-blind eyes read exactly the same state.
 function rcptLampHtml(e) {
   if (!isRcptEntry(e)) return '';
+  // 🏢 v6.35 — overhead has no client to be on a list for: it says so, in words, and stops there
+  if (isOverheadEntry(e)) return `<span>·</span><span class="rc-lamp rc-off" title="Overhead — recorded for the books, never billed to a client">🏢 OVERHEAD — recorded</span>`;
   const st = e.budg === 'sent' ? 'on' : e.budg === 'no' ? 'off' : 'wait';
   const wd = st === 'on' ? '🟢 ✓ ON THE LIST' : st === 'off' ? '⚪ — SKIPPED' : '🔴 ✕ NOT ON IT';
   const ti = st === 'on' ? 'Already approved onto a client budget' : st === 'off' ? 'You waved this one off — it will not be offered again' : 'Not sent yet — tap 🔮 → Upcoming, or use the tracker\'s 🧾 Receipts to approve';
@@ -15005,7 +15089,7 @@ function csvString(list) {
     '"' + (e.truck ?? '') + '"', e.odometer ?? '',
     e.miles ?? '', e.amount ?? '', e.hours ?? '', '"' + e.filedTo + '"',
     e.shared ? '"' + (e.sharedTo || 'Logan') + '"' : '',
-    e.billable === false ? '"no"' : ''
+    (e.billable === false || isOverheadEntry(e)) ? '"no"' : ''   // 🏢 v6.35 — overhead receipts reach Logan's CSV as billable = no
   ].join(','));
   return head + '\n' + rows.join('\n');
 }
@@ -15023,7 +15107,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.34';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.35';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
