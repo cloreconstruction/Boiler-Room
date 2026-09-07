@@ -3355,7 +3355,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.35 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.36 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4512,7 +4512,17 @@ let crew = [];           // people to-dos can be assigned to ('Me' is always ava
 const FILE_CATS = ['—', 'Framing', 'Foundation', 'Roofing', 'Siding', 'Windows/Doors', 'Electrical', 'Plumbing', 'HVAC', 'Drywall', 'Paint', 'Finish', 'Landscaping', 'Materials', 'Tools', 'Fuel', 'Subcontractor', 'Office/Admin', 'Permits/Fees', 'Insurance', 'Loan/Bank', 'Personal'];
 // 📋 v5.88 (moved up in v6.24) — Eric's standing category list, loaded on EVERY estimates
 // board by default (editable — rename, add, subtract — his list, his order, verbatim):
-const EST_DEFAULT_CATS = ['Demo', 'Well line, sewerline to house', 'Septic', 'Dirt work', 'Enstar', 'HEA', 'Well', 'Plumbing', 'Heating', 'Air', 'Concrete and foundation', 'ICF Walls', 'Window Wells', 'Framing', 'Trusses', 'Roofing', 'Windows', 'Exterior Doors', 'Gypcrete', 'Electrical', 'Insulation', 'Urethane', 'Drywall, Mud and Texture', 'Interior Paint', 'Siding', 'Decks', 'Helical Piers', 'Ext Painting', 'Kitchen cabinets', 'Countertops', 'Vanities and sinks', 'Int Doors', 'Trim', 'Drop ceiling', 'Tile (floors)', 'Tile (Showers)', 'Flooring', 'Carpet', 'Garage Doors', 'Gutters', 'Closet Interiors', 'Appliances', 'Woodstove or fireplace', 'Winter costs', 'Misc', 'Inspections / Permit', 'Engineering', 'Add ons'];
+// 🧾 v6.36 — SEVEN JOINED, from a side-by-side against Logan's QuickBooks Products & Services.
+// Eric: "lets add the ones i dont have and he does to the app and anywhere there are categories
+// to choose from. although the landfill one just make it say trash or constructin debris as
+// there will be more then just landfill fees in the trash category." So QuickBooks' Landfill
+// AND its Garbage / Janitorial both land in ONE 'Trash / Construction Debris' — his call: dump
+// fees are only part of what goes in that bucket. 'Water Softener' is spelled correctly here;
+// QuickBooks carries it as "Water Softner". Each new name is parked beside its own trade so a
+// FRESH board still reads in build order. A board that ALREADY exists gets them appended at the
+// BOTTOM instead — the merge in openEstimates() pushes missing names, it does not insert.
+// They ride into RCPT_CATS and FC_CATS below for free: pickable everywhere a category is picked.
+const EST_DEFAULT_CATS = ['Demo', 'Well line, sewerline to house', 'Septic', 'Dirt work', 'Enstar', 'HEA', 'Temporary Electric', 'Well', 'Plumbing', 'Heating', 'Air', 'Water Softener', 'Concrete and foundation', 'ICF Walls', 'Window Wells', 'Framing', 'Trusses', 'Roofing', 'Windows', 'Exterior Doors', 'Gypcrete', 'Electrical', 'Insulation', 'Urethane', 'Drywall, Mud and Texture', 'Interior Paint', 'Siding', 'Decks', 'Helical Piers', 'Ext Painting', 'Kitchen cabinets', 'Countertops', 'Vanities and sinks', 'Bathrooms', 'Int Doors', 'Trim', 'Drop ceiling', 'Tile (floors)', 'Tile (Showers)', 'Flooring', 'Carpet', 'Garage Doors', 'Gutters', 'Closet Interiors', 'Appliances', 'Woodstove or fireplace', 'Winter costs', 'Snow Plowing', 'Trash / Construction Debris', 'Misc', 'Contingency', 'Inspections / Permit', 'Engineering', 'Surveying', 'Add ons'];
 // 🧾 v6.24 — ONE VOCABULARY for money. The grinder's tag audit found the app speaking two
 // category languages: 22 generic names at entry (used on 36 of 2,189 entries — it never took)
 // and Eric's 48 on the estimates board. A receipt now files under the SAME list the budget
@@ -15107,7 +15117,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.35';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.36';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
