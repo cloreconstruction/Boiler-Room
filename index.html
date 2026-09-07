@@ -2294,6 +2294,17 @@
      bottom of it. min-height + auto lets the background grow WITH the list. */
   .rev-modal.mat-full .rev-box { max-width: 100%; width: 100%; height: auto; min-height: 100%; max-height: none; border-radius: 0; margin: 0; }
   .rev-sub { font-size: 12.5px; color: var(--ink-muted); margin-bottom: 6px; }
+  /* 🧹 v6.45 — SORT THE PILE. Eric, at 97 waiting: "help me sort it and get it to zero then i
+     can take over." One plate at the top of Review, one row per kind, one button per row that
+     does exactly what tapping every card's own button would. Two taps (⚠ SURE?) before it fires. */
+  .rev-bulk { border: 2px solid var(--accent); border-radius: 12px; padding: 10px 12px; margin-top: 8px; background: var(--surface-1); }
+  .rev-bulk-h { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .rev-bulk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 0; border-top: 1px solid var(--border); }
+  .rev-bulk-row:first-of-type { border-top: 0; }
+  .rev-bulk-row > span { flex: 1 1 180px; min-width: 0; font-size: 13.5px; line-height: 1.35; }
+  .rev-bulk-row .hint { margin: 1px 0 0; display: block; }
+  .rev-bulk-row .btn-ghost { flex: 0 0 auto; min-height: 42px; font-weight: 800; }
+  .rev-bulk-row .btn-ghost.arm { border-color: #ffd88a; color: #ffe9bd; }
   .rev-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 13px; margin-top: 10px; }
   .rev-kind { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--ink-muted); text-transform: uppercase; }
   .rev-text { font-size: 15px; font-weight: 650; margin-top: 5px; line-height: 1.45; }
@@ -3445,7 +3456,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.44 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.45 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7477,6 +7488,67 @@ const _qbJob = {};
 function qbJobPick(id, v) { _qbJob[id] = v; }
 const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '🔥 Text — needs you', crew: '👷 From the crew', match: '⚙ The Grinder noticed', qb: '💼 In QuickBooks, not in your log', clientask: '💬 From a CLIENT', mail: '📧 Email — looks IMPORTANT' };
 const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', tomorrow: '🌙 by tomorrow' };
+// 🧹 v6.45 — SORT THE PILE. Eric, at 97 waiting: "could you help me sort it and get it to zero
+// then i can take over?" The app owns removal (the pending.json contract), so the pile clears
+// HERE, on his tap — never from a session. Each row's button is nothing more than that kind's
+// own card button pressed N times: QuickBooks lines take "✕ Not job cost — skip", quiet-job
+// nags take "✕ No", texts take "📚 Pile it under <sender>", crew notes take "✓ Log it". Nothing
+// is thrown away: a skipped bank line is still in Logan's books, texts and notes land on the
+// log. Emails, client asks, questions and Grinder matches stay one at a time — those need his
+// eyes. Two taps before anything fires (⚠ SURE?), the same guard the clock-out scrap has.
+const REV_BULK = {
+  qb:   { verb: false,  pick: p => p.kind === 'qb', glyph: '📒', word: 'QuickBooks bank lines', btn: '✕ SKIP ALL', hint: "Logan's books already have every one of these — skipping loses nothing" },
+  nag:  { verb: false,  pick: p => p.kind === 'todo' && /^jobsilence:/.test(String(p.id)), glyph: '🕸', word: 'quiet-job nags', btn: '✕ CLEAR ALL', hint: 'to-dos are parked anyway · retire finished jobs in ⚙ Setup → Jobs and these stop coming' },
+  text: { verb: 'pile', pick: p => p.kind === 'text', glyph: '💬', word: 'texts', btn: '📚 PILE ALL', hint: 'each lands on the log under its sender — read them there' },
+  crew: { verb: 'log',  pick: p => p.kind === 'crew', glyph: '👷', word: 'crew notes', btn: '✓ LOG ALL', hint: 'each logged under who sent it' }
+};
+let _revBulk = false, _revBulkArm = '', _revBulkTimer = null;
+function revBulkRows() {
+  return Object.keys(REV_BULK).map(k => ({ k, ...REV_BULK[k], items: pendingQueue.filter(REV_BULK[k].pick) })).filter(r => r.items.length >= 2);
+}
+function renderRevBulk() {
+  if (CREW_NAME || pendingQueue.length < 6) return '';
+  const rows = revBulkRows();
+  if (!rows.length) return '';
+  const span = items => {
+    const ds = items.map(p => (p.payload || {}).d || (p.payload || {}).ts || (p.payload || {}).day || '').filter(Boolean).map(s => String(s).slice(0, 10)).sort();
+    if (!ds.length) return '';
+    const f = s => { const d = new Date(s + 'T12:00'); return isNaN(d) ? s : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
+    return ds[0] === ds[ds.length - 1] ? f(ds[0]) : `${f(ds[0])} – ${f(ds[ds.length - 1])}`;
+  };
+  const rest = pendingQueue.length - rows.reduce((s, r) => s + r.items.length, 0);
+  return `<div class="rev-bulk" id="revBulk">
+    <div class="rev-bulk-h">🧹 Sort the pile — one tap does what tapping each card would</div>
+    ${rows.map(r => { const sp = span(r.items); const armed = _revBulkArm === r.k;
+      return `<div class="rev-bulk-row">
+      <span><b>${r.glyph} ${r.items.length} ${r.word}</b>${sp ? ` <span class="hint" style="display: inline; margin: 0;">· ${esc(sp)}</span>` : ''}<span class="hint">${esc(r.hint)}</span></span>
+      <button type="button" class="btn-ghost${armed ? ' arm' : ''}" onclick="revBulk('${r.k}')" aria-label="${armed ? 'tap again to confirm' : r.btn + ' ' + r.items.length + ' ' + r.word}">${armed ? `⚠ SURE? Tap again — ${r.items.length} leave the pile` : `${r.btn} ${r.items.length}`}</button>
+    </div>`; }).join('')}
+    ${rest > 0 ? `<div class="hint" style="margin: 6px 0 0;">${rest} more below need your eyes one at a time — emails, questions, anything from a client.</div>` : ''}
+  </div>`;
+}
+function revBulk(k) {
+  const r = REV_BULK[k]; if (!r) return;
+  const items = pendingQueue.filter(r.pick);
+  if (!items.length) { _revBulkArm = ''; renderReview(); return; }
+  if (_revBulkArm !== k) {   // first tap arms; it disarms itself in 4s
+    _revBulkArm = k; clearTimeout(_revBulkTimer);
+    _revBulkTimer = setTimeout(() => { _revBulkArm = ''; renderReview(); }, 4000);
+    renderReview(); return;
+  }
+  clearTimeout(_revBulkTimer); _revBulkArm = '';
+  const keepToast = window.toast; window.toast = () => {};   // N card toasts → one summary below
+  _revBulk = true;
+  let n = 0;
+  try { items.map(p => String(p.id)).forEach(id => { reviewAct(id, r.verb); n++; }); }
+  finally { _revBulk = false; window.toast = keepToast; }
+  renderTodos(); renderKpis(); renderLog(); renderTagChips(); scheduleSave();
+  renderPendBanner(); renderReview(); savePendingSoon();
+  toast(k === 'qb' ? `✕ ${n} QuickBooks lines skipped — Logan's books still have every one ✓`
+    : k === 'nag' ? `✕ ${n} quiet-job nags cleared — finished jobs come off in ⚙ Setup → Jobs ✓`
+    : k === 'text' ? `📚 ${n} texts piled under their senders — they're on the log ✓`
+    : `✓ ${n} crew notes logged ✓`);
+}
 function renderReview() {
   const box = $('revBox');
   if (!pendingQueue.length) {
@@ -7485,6 +7557,7 @@ function renderReview() {
     return;
   }
   box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3><div class="rev-sub">${pendingQueue.length} waiting · nothing is added until you tap ✓</div>` +
+    renderRevBulk() +   // 🧹 v6.45 — the sort-the-pile plate, only when there IS a pile
     pendingQueue.map(p => {
       let body = '';
       if (p.kind === 'todo') body = `<div class="rev-text">${esc(p.payload.text || '')}</div>`;
@@ -7800,7 +7873,8 @@ function reviewAct(id, accept) {
       }
       toast('Answered ✓');
     }
-    renderTodos(); renderKpis(); renderLog(); scheduleSave();
+    if (!_revBulk) { renderTodos(); renderKpis(); renderLog(); }   // 🧹 v6.45 — a sweep renders once, at the end
+    scheduleSave();
   }
   // 💬 v5.25 — even a skipped client ask closes out on their page (off their open list)
   if (!accept && p.kind === 'clientask' && p.payload) markClientAsk(p.payload.code, p.payload.ts, { done: true, doneTs: new Date().toISOString() });
@@ -7817,7 +7891,12 @@ function reviewAct(id, accept) {
   }
   pendingQueue.splice(i, 1);
   pendMarkDone(p.id);
+  // 📒 v6.45 — "✕ Not job cost — skip" on a QuickBooks line used to live ONLY in this phone's
+  // last-300 done ring: the 301st skip, or a reinstall, and qbVerifySweep carded it again from
+  // qb-costs.json as if he had never answered. His answer now rides in synced prefs for good.
+  if (!accept && p.kind === 'qb' && p.payload && p.payload.qid) { (prefs.qbSkipped = prefs.qbSkipped || {})[p.payload.qid] = localDay(new Date()); scheduleSave(); }
   if (p.kind === 'text' && p.payload && p.payload.path) archiveText(p.payload.path); // handled = out of the Inbox
+  if (_revBulk) return;   // 🧹 v6.45 — the sweep renders and saves once, at the end
   renderPendBanner();
   renderReview();
   savePendingSoon();
@@ -13273,7 +13352,7 @@ async function checkQbCosts() {
 function qbVerifySweep() {
   if (!qbCosts || !Array.isArray(qbCosts.lines)) return;
   if (!prefs.qbMatched) prefs.qbMatched = {};
-  const taken = new Set(Object.keys(prefs.qbMatched));
+  const taken = new Set([...Object.keys(prefs.qbMatched), ...Object.keys(prefs.qbSkipped || {})]);   // 📒 v6.45 — a line he skipped stays skipped
   let changed = false;
   // pass 1 — light the QB lamp on field-captured money
   entries.filter(e => e.amount != null && !e.sample && !e.qbV).forEach(e => {
@@ -15646,7 +15725,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.44';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.45';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
