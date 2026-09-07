@@ -49,10 +49,13 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   const RULES = { v: 1, sort: true, ok: ['bob@sub.com'], no: ['spam@junk.com'], loud: ['boss@loud.com'], hush: ['noisy@vendor.com'], personal: ['her@home.com'], personalNames: ['Shevaun'], quiet: { from: '20:00', to: '07:00' } };
   const mkHarness = (opts = {}) => {
     const files = opts.files || [];
-    const state = { judgedWritten: null, anthropic: [], pushes: [], downloads: [] };
+    const state = { judgedWritten: null, anthropic: [], pushes: [], downloads: [], headers: [] };
     const bodyOf = n => (files.find(f => f.name === n) || {}).txt || null;
     global.fetch = async (url, init = {}) => {
       const u = String(url);
+      // 🔤 v6.46 — a real fetch REFUSES a header with a character above 255. The stub cannot
+      // throw for us, so every header value is kept and checked below instead.
+      Object.values(init.headers || {}).forEach(v => state.headers.push(String(v)));
       if (u.includes('oauth2/token')) return { ok: true, json: async () => ({ access_token: 't' }) };
       if (u.includes('files/list_folder')) return { ok: true, json: async () => ({ entries: files.map(f => ({ '.tag': 'file', name: f.name, path_lower: '/clore daylog/inbox/' + f.name.toLowerCase(), server_modified: '2026-09-07T15:00:00Z' })) }) };
       if (u.includes('files/download')) {
@@ -267,6 +270,34 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   // 🔑 v6.46 — the first real run wrote nothing and the log showed a bare duration line.
   // ANTHROPIC_API_KEY was in the Netlify env; DBX_REFRESH_TOKEN / DBX_APP_KEY never were, so
   // dbxToken() threw and the catch swallowed the reason. It names what is missing now.
+  // 🔤 v6.46 — the watcher's FIRST real run died here: "Cannot convert argument to a ByteString
+  // because the character at index 55 has a value of 8239". 8239 is U+202F, the NARROW NO-BREAK
+  // SPACE iOS writes before AM/PM in a Shortcuts filename — so every text file in the Inbox blew
+  // up the Dropbox-API-Arg header, which can only carry Latin-1. The phone has had hsafe() since
+  // the beginning; the watcher shipped without it and could not read a single file.
+  ok('hsafe() is byte-identical in the app and the watcher', (() => {
+    const a = grabLine(src, 'const hsafe = '), b = grabLine(fn, 'const hsafe = ');
+    return !!a && !!b && a === b;
+  })());
+
+  ok('EVERY Dropbox-API-Arg goes through hsafe — no raw JSON.stringify left',
+    /'Dropbox-API-Arg': hsafe\(/.test(fn) && !/'Dropbox-API-Arg': JSON\.stringify/.test(fn) &&
+    (fn.match(/'Dropbox-API-Arg'/g) || []).length === (fn.match(/'Dropbox-API-Arg': hsafe\(/g) || []).length);
+
+  ok('an Inbox of iOS-named files is read and judged — every header stays Latin-1', await (async () => {
+    const nb = '\u202f';   // exactly what iOS puts before AM/PM
+    const st = mkHarness({ files: [
+      { name: 'TEXT -Aug 27, 2026 at 4_50' + nb + 'PM.txt', txt: 'FROM: +12083390772\nclear coating on the trim' },
+      { name: 'Email -Invoice' + nb + 'due.txt', txt: 'FROM: Bob <bob@sub.com>\nSUBJECT: Invoice\n\nrough-in bill' }
+    ], verdict: { bucket: 'important', why: 'invoice', gist: 'A bill.' } });
+    const r = await mod.run({ env: ENV, now: new Date('2026-09-07T20:00:00Z') });
+    const tooBig = st.headers.filter(h => /[^\u0000-\u00ff]/.test(h));   // what the real fetch throws on
+    return r.ok === true && tooBig.length === 0 &&
+      st.headers.some(h => /\\u202f/.test(h)) &&                          // it was escaped, not stripped
+      !!st.judgedWritten['Email -Invoice' + nb + 'due.txt'] &&            // and the file was actually read
+      st.judgedWritten['TEXT -Aug 27, 2026 at 4_50' + nb + 'PM.txt'].skip === 'text';
+  })());
+
   ok('a missing Dropbox env var is NAMED, not swallowed', await (async () => {
     const r = await mod.run({ env: NO_DBX, now: new Date('2026-09-07T20:00:00Z') });
     const said = [];

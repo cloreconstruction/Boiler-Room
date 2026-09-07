@@ -7516,6 +7516,7 @@ function mailListed(list, addr) {
     return v === a || v.startsWith("@") && v.slice(1) === d || v === d;
   });
 }
+var hsafe = (o) => JSON.stringify(o).replace(/[\u007f-\uffff]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
 var MAIL_PUSH = {
   invoice: "Looks like a bill or invoice came in. Open Boiler Room to sort it.",
   money: "Looks like a bill or invoice came in. Open Boiler Room to sort it.",
@@ -7548,7 +7549,7 @@ var api = (tok, path, arg) => fetch("https://api.dropboxapi.com/2/" + path, {
 async function dl(tok, path) {
   const r = await fetch("https://content.dropboxapi.com/2/files/download", {
     method: "POST",
-    headers: { Authorization: "Bearer " + tok, "Dropbox-API-Arg": JSON.stringify({ path }) }
+    headers: { Authorization: "Bearer " + tok, "Dropbox-API-Arg": hsafe({ path }) }
   });
   return r.ok ? await r.text() : null;
 }
@@ -7558,7 +7559,7 @@ async function up(tok, path, body) {
     headers: {
       Authorization: "Bearer " + tok,
       "content-type": "application/octet-stream",
-      "Dropbox-API-Arg": JSON.stringify({ path, mode: "overwrite", mute: true })
+      "Dropbox-API-Arg": hsafe({ path, mode: "overwrite", mute: true })
     },
     body
   });

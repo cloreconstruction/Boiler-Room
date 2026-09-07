@@ -71,6 +71,12 @@ function mailListed(list, addr) {
   const a = String(addr || '').toLowerCase(), d = mailDom(a);
   return list.some(x => { const v = String(x).toLowerCase(); return v === a || (v.startsWith('@') && v.slice(1) === d) || v === d; });
 }
+// 🔤 v6.46 — Dropbox-API-Arg is an HTTP HEADER, and a header can only carry Latin-1. The phone
+// has had hsafe() for this since the beginning; the watcher shipped without it and died on its
+// first real run: iOS writes its Shortcuts filenames as "4:50 PM" with a NARROW NO-BREAK SPACE
+// (U+202F) before the AM/PM, so every text file in the Inbox blew up the download header.
+// Same line as index.html, lifted, so the two can never disagree.
+const hsafe = o => JSON.stringify(o).replace(/[\u007f-\uffff]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 // ---- end lifted ----
 
 // 📵 the only words that can ever reach a lock screen. Chosen from a table by the why-word and
@@ -111,7 +117,7 @@ const api = (tok, path, arg) => fetch('https://api.dropboxapi.com/2/' + path, {
 });
 async function dl(tok, path) {
   const r = await fetch('https://content.dropboxapi.com/2/files/download', {
-    method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Dropbox-API-Arg': JSON.stringify({ path }) }
+    method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Dropbox-API-Arg': hsafe({ path }) }
   });
   return r.ok ? await r.text() : null;
 }
@@ -119,7 +125,7 @@ async function up(tok, path, body) {
   return fetch('https://content.dropboxapi.com/2/files/upload', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + tok, 'content-type': 'application/octet-stream',
-      'Dropbox-API-Arg': JSON.stringify({ path, mode: 'overwrite', mute: true }) },
+      'Dropbox-API-Arg': hsafe({ path, mode: 'overwrite', mute: true }) },
     body
   });
 }
