@@ -140,11 +140,19 @@ async function judge(key, m) {
 
 export async function run({ now = new Date(), env = process.env, log = () => {} } = {}) {
   const key = env.ANTHROPIC_API_KEY;
-  if (!key) { log('no key — idle'); return { ok: false, why: 'no key' }; }
-  const tok = await dbxToken();
+  if (!key) { log('no ANTHROPIC_API_KEY — idle'); return { ok: false, why: 'no key' }; }
+  // 🔑 v6.46 — every env var this needs, named, BEFORE anything can throw over it. The first
+  // real run failed here: ANTHROPIC_API_KEY was pasted but DBX_REFRESH_TOKEN / DBX_APP_KEY were
+  // never in the Netlify env, so dbxToken() threw, the catch swallowed it, and the log showed a
+  // bare duration line with no reason. A watcher nobody can see into is a watcher nobody trusts.
+  const missing = ['DBX_REFRESH_TOKEN', 'DBX_APP_KEY'].filter(k => !env[k]);
+  if (missing.length) { log('MISSING env: ' + missing.join(', ') + ' — cannot reach Dropbox, idle'); return { ok: false, why: 'no dropbox env', missing }; }
+  let tok;
+  try { tok = await dbxToken(); }
+  catch (e) { log('Dropbox token refused: ' + String(e && e.message || e)); return { ok: false, why: 'dropbox token' }; }
 
   const rulesTxt = await dl(tok, RULES);
-  if (!rulesTxt) { log('no mail-rules.json — idle'); return { ok: false, why: 'no rules' }; }
+  if (!rulesTxt) { log('no App Data/mail-rules.json — open Boiler Room once to publish it, idle'); return { ok: false, why: 'no rules' }; }
   let rules; try { rules = JSON.parse(rulesTxt); } catch (e) { return { ok: false, why: 'bad rules' }; }
   if (!rules || rules.sort === false) { log('sorting off — idle'); return { ok: false, why: 'sort off' }; }
 
@@ -153,7 +161,7 @@ export async function run({ now = new Date(), env = process.env, log = () => {} 
   if (jTxt) { try { const p = JSON.parse(jTxt); if (p && typeof p === 'object') judged = p; } catch (e) {} }
 
   const lr = await api(tok, 'files/list_folder', { path: INBOX, recursive: false });
-  if (!lr.ok) return { ok: false, why: 'no inbox' };
+  if (!lr.ok) { log('cannot list /Inbox — Dropbox said ' + lr.status); return { ok: false, why: 'no inbox' }; }
   const all = ((await lr.json()).entries || []).filter(f => f['.tag'] === 'file' && /\.txt$/i.test(f.name));
   const todo = all.filter(f => !judged[f.name]).slice(0, MAX_PER_RUN);
 
@@ -211,7 +219,15 @@ export async function run({ now = new Date(), env = process.env, log = () => {} 
   return { ok: true, seen: all.length, judged: todo.length, important: fresh.length, pushed };
 }
 
+// 🗣 v6.46 — say it out loud in the Netlify log. Only counts and fixed words ever reach here:
+// the result is { ok, why, seen, judged, important, pushed } — no sender, subject or gist.
 export default async () => {
-  try { return Response.json(await run({})); }
-  catch (e) { return Response.json({ ok: false, error: String(e && e.message || e) }); }
+  try {
+    const r = await run({ log: m => console.log('mail-watch:', m) });
+    console.log('mail-watch result:', JSON.stringify(r));
+    return Response.json(r);
+  } catch (e) {
+    console.log('mail-watch ERROR:', String(e && e.message || e));
+    return Response.json({ ok: false, error: String(e && e.message || e) });
+  }
 };

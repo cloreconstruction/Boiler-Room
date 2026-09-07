@@ -7582,13 +7582,24 @@ async function run({ now = /* @__PURE__ */ new Date(), env = process.env, log = 
 } } = {}) {
   const key = env.ANTHROPIC_API_KEY;
   if (!key) {
-    log("no key \u2014 idle");
+    log("no ANTHROPIC_API_KEY \u2014 idle");
     return { ok: false, why: "no key" };
   }
-  const tok = await dbxToken();
+  const missing = ["DBX_REFRESH_TOKEN", "DBX_APP_KEY"].filter((k) => !env[k]);
+  if (missing.length) {
+    log("MISSING env: " + missing.join(", ") + " \u2014 cannot reach Dropbox, idle");
+    return { ok: false, why: "no dropbox env", missing };
+  }
+  let tok;
+  try {
+    tok = await dbxToken();
+  } catch (e) {
+    log("Dropbox token refused: " + String(e && e.message || e));
+    return { ok: false, why: "dropbox token" };
+  }
   const rulesTxt = await dl(tok, RULES);
   if (!rulesTxt) {
-    log("no mail-rules.json \u2014 idle");
+    log("no App Data/mail-rules.json \u2014 open Boiler Room once to publish it, idle");
     return { ok: false, why: "no rules" };
   }
   let rules;
@@ -7611,7 +7622,10 @@ async function run({ now = /* @__PURE__ */ new Date(), env = process.env, log = 
     }
   }
   const lr = await api(tok, "files/list_folder", { path: INBOX, recursive: false });
-  if (!lr.ok) return { ok: false, why: "no inbox" };
+  if (!lr.ok) {
+    log("cannot list /Inbox \u2014 Dropbox said " + lr.status);
+    return { ok: false, why: "no inbox" };
+  }
   const all = ((await lr.json()).entries || []).filter((f) => f[".tag"] === "file" && /\.txt$/i.test(f.name));
   const todo = all.filter((f) => !judged[f.name]).slice(0, MAX_PER_RUN);
   const fresh = [];
@@ -7687,8 +7701,11 @@ async function run({ now = /* @__PURE__ */ new Date(), env = process.env, log = 
 }
 var mail_watch_default = async () => {
   try {
-    return Response.json(await run({}));
+    const r = await run({ log: (m) => console.log("mail-watch:", m) });
+    console.log("mail-watch result:", JSON.stringify(r));
+    return Response.json(r);
   } catch (e) {
+    console.log("mail-watch ERROR:", String(e && e.message || e));
     return Response.json({ ok: false, error: String(e && e.message || e) });
   }
 };
