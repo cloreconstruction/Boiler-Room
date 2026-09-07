@@ -2471,8 +2471,12 @@
       <div class="chip-grid chip-grid--3" id="urgChips"></div>
       <!-- v4.91 — your sent requests + their live status lamps -->
       <div id="myReqStrip"></div>
-    <div class="card" id="mailAskCard" style="display: none; margin-top: 10px; padding: 10px 12px;"></div>
     </div>
+    <!-- 📧 v6.38 — this card sat INSIDE the crew-only #crewRoute block, which is display:none on
+         Eric's phone: it rendered and nobody could ever see it, so no new sender was ever
+         approved and every email filed silently. Eric: "now where are these email showing up
+         on the app?" Nowhere — until now. Same spot on the form, outside the crew-only wall. -->
+    <div class="card" id="mailAskCard" style="display: none; margin-top: 10px; padding: 10px 12px;"></div>
     <!-- ⚖ v6.23 — Eric: "make the grinder and bookkeeper buttons the same size and side by
          side to take up less room." The bookkeeper plate used to sit on its own row at 68%
          width, which cost a whole band of screen for a button used a few times a day. Both
@@ -3355,7 +3359,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.37 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.38 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -4538,6 +4542,10 @@ const RCPT_CATS = [...EST_DEFAULT_CATS, 'Materials', 'Tools', 'Fuel', 'Office/Ad
 const OVERHEAD_CATS = ['Tools', 'Fuel', 'Office/Admin'];
 function isOverheadEntry(e) {
   if (!e) return false;
+  // 🕰 v6.38 — HOURS are never overhead by category name. A shift filed under Tools, Fuel or
+  // Office/Admin with the clock-out "not billable" toggle left ON is billable labor, and v6.35
+  // was sending it to Logan's CSV as billable = no. Only the toggle decides for labor.
+  if (e.hours != null || e.type === 'Clock') return false;
   if (OVERHEAD_CATS.includes(String(e.category || '').trim())) return true;
   return e.billable === false && !!(e.rcpt || (e.ai && /💵 \$/.test(e.ai)));   // hours use the same flag — only receipts count here
 }
@@ -9605,7 +9613,14 @@ async function renderPortalList() {
   }
   try {
     const t = await dbxDownload(portalRoot() + '/index.json');
-    _portalIdx = JSON.parse(t);
+    // 🛡 v6.38 — a MISSING or empty index.json parsed to null here, and the very next line read
+    // .clients off it: a page error every sync. A read that is not a real index (a 429 from
+    // Dropbox, an empty or half-written file, "null") now falls back to the list already on his
+    // phone — it is never wiped by one bad read. The parse sits in its own try so a body that
+    // is not even JSON takes the same road. Only with NOTHING cached does it read as "no portal yet".
+    let idx = null; try { idx = JSON.parse(t || 'null'); } catch (e) { idx = null; }
+    if (idx && Array.isArray(idx.clients)) _portalIdx = idx;
+    else if (!(_portalIdx && Array.isArray(_portalIdx.clients) && _portalIdx.clients.length)) throw new Error('not an index');
   } catch (e) { box.innerHTML = '<span class="hint">No portal set up yet — ask Claude to build the client pages.</span>'; return; }
   // 📊 v6.31 — paint from the cached dates immediately, then go and check them for real.
   // Not awaited: the list must not sit blank behind nine downloads on a job-site signal.
@@ -10450,12 +10465,16 @@ function rcptCount(job) { return rcptWaiting(job).length; }
 //                    exists every ③ reads "○ NOT YET — comes from the books", in words.
 // A receipt with all three lit drops off the list and is counted as settled.
 let _estPaid = null;
+// 🧾 v6.38 — a receipt that was SENT before v6.35 under Tools, Fuel or Office/Admin is still on
+// the homeowner's page. It stays a SENT receipt with its three lights here, not "overhead,
+// never billed" — that label was hiding money that was, in fact, on their list. Overhead
+// picked since v6.35 never gets budg = 'sent' (the door refuses it), so nothing else changes.
 function rcptSent(job) {
-  return entries.filter(e => e && e.job === job && e.budg === 'sent' && !e.sample && !isOverheadEntry(e) && estBillParse(e));
+  return entries.filter(e => e && e.job === job && e.budg === 'sent' && !e.sample && estBillParse(e));
 }
 function rcptOverhead(job) {
   return entries.filter(e => e && e.job === job && !e.sample && !e.personal && !(e.tags || []).includes('Personal') &&
-    isOverheadEntry(e) && isRcptEntry(e));
+    e.budg !== 'sent' && isOverheadEntry(e) && isRcptEntry(e));
 }
 function rcptPaidHas(id) { return !!(_estPaid && (((_estPaid.eids || []).includes(id)) || !!((_estPaid.byId || {})[id]))); }
 function rcptLights(e) {
@@ -14967,7 +14986,7 @@ function isRcptEntry(e) {
 function rcptLampHtml(e) {
   if (!isRcptEntry(e)) return '';
   // 🏢 v6.35 — overhead has no client to be on a list for: it says so, in words, and stops there
-  if (isOverheadEntry(e)) return `<span>·</span><span class="rc-lamp rc-off" title="Overhead — recorded for the books, never billed to a client">🏢 OVERHEAD — recorded</span>`;
+  if (isOverheadEntry(e) && e.budg !== 'sent') return `<span>·</span><span class="rc-lamp rc-off" title="Overhead — recorded for the books, never billed to a client">🏢 OVERHEAD — recorded</span>`;   // v6.38 — sent before v6.35? it IS on their list
   const st = e.budg === 'sent' ? 'on' : e.budg === 'no' ? 'off' : 'wait';
   const wd = st === 'on' ? '🟢 ✓ ON THE LIST' : st === 'off' ? '⚪ — SKIPPED' : '🔴 ✕ NOT ON IT';
   const ti = st === 'on' ? 'Already approved onto a client budget' : st === 'off' ? 'You waved this one off — it will not be offered again' : 'Not sent yet — tap 🔮 → Upcoming, or use the tracker\'s 🧾 Receipts to approve';
@@ -15123,7 +15142,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.37';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.38';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
