@@ -454,6 +454,8 @@ const bEst = b => Array.isArray(b.opts)
 // The card is always there now: $0.00 and a plain line saying nothing is waiting. That also
 // means it appears on EVERY existing client page straight away, with no republish needed,
 // because a page whose JSON has no `upcoming` key at all reads as an empty one.
+// ✂ v6.37 — Eric: "take out the last part of the note from 'question or a change..' on."
+// The invitation to send a note is gone; the card just says what the list is.
 function upcomingHtml(d) {
   const u = d.upcoming;
   const items = u && Array.isArray(u.items) ? u.items : [];
@@ -462,7 +464,7 @@ function upcomingHtml(d) {
       <span style="font-weight: 700;">${bEsc(i.n)}</span><span>${money(i.a)}</span></div>`).join('');
   const body = items.length
     ? `${rows}
-    <div style="font-size: 12px; opacity: .7; margin-top: 8px;">These are materials and work already committed to your job that haven't reached an invoice yet — so you can see what's coming before the next one lands. Figures are estimates and can move a little. Each drops off this list once it's invoiced. Questions or a change of mind? Send a note below — it's easier before the work is built than after.</div>`
+    <div style="font-size: 12px; opacity: .7; margin-top: 8px;">These are materials and work already committed to your job that haven't reached an invoice yet — so you can see what's coming before the next one lands. Figures are estimates and can move a little. Each drops off this list once it's invoiced.</div>`
     : `<div style="font-size: 14px; margin: 6px 0;">Nothing waiting right now — everything committed to your job so far is already on an invoice.</div>
     <div style="font-size: 12px; opacity: .7; margin-top: 8px;">When Clore Construction takes on materials or work that hasn't reached an invoice yet, it shows up here first — so you can see what's coming, and say something before it's built.</div>`;
   return `<div class="card" id="upcomingCard" onclick="ping('upcoming')"><h3>🔮 ESTIMATED UPCOMING COSTS</h3>

@@ -3355,7 +3355,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.36 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.37 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9487,6 +9487,9 @@ function renderPortalFold(box, offRoot) {
           <!-- 🧾 v6.30 — Eric asked for this to sit beside "view as a client": the tagged
                receipts still waiting on this job, to check and approve in one sitting. -->
           <button class="btn-ghost pf-wide" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(portalAppJob(c)) ? " · " + rcptCount(portalAppJob(c)) + " WAITING" : " · none"}</button>
+          <!-- 📊 v6.37 — Eric: "lets put a button for the project tracker next to the receipts to
+               approve button. for quick access" — the same read-only money page as Summary → 💰 Money. -->
+          <button class="btn-ghost pf-wide" onclick="openMoneyPage('tracker')">📊 Project Tracker</button>
         </div>` : `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>`) : ''}
       </div>`;
     }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button>
@@ -9632,6 +9635,9 @@ async function renderPortalList() {
         <!-- 🧾 v6.30 — beside "view as a client", as Eric asked: the tagged receipts still
              waiting on this job, to check and approve in one sitting. -->
         <button class="btn-ghost pf-wide" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(portalAppJob(c)) ? " · " + rcptCount(portalAppJob(c)) + " WAITING" : " · none"}</button>
+        <!-- 📊 v6.37 — Eric: "lets put a button for the project tracker next to the receipts to
+             approve button. for quick access" — the same read-only money page as Summary → 💰 Money. -->
+        <button class="btn-ghost pf-wide" onclick="openMoneyPage('tracker')">📊 Project Tracker</button>
       </div>
       <div class="pf-small">
         <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? Kills their link' : '🔄 Rotate code'}</button>
@@ -15117,7 +15123,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.36';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.37';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
