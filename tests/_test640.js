@@ -40,7 +40,7 @@ const { chromium } = require('playwright');
     clearLogFilters(); logQuery = 'rininger'; renderAskRecent();
     const a = /question about the deck stain/.test($('askRecent').textContent);
     logQuery = 'deck stain'; renderAskRecent();
-    const b = /Email from Dale Rininger/.test($('askRecent').textContent) && !/plain jobsite note/.test($('askRecent').textContent);
+    const b = /Dale Rininger: question about the deck stain/.test($('askRecent').textContent) && !/plain jobsite note/.test($('askRecent').textContent);   // v6.41 — the 📧 glyph says "email"; the line no longer spends its room on the words
     logQuery = ''; clearLogFilters(); renderAskRecent();
     return a && b;
   }));
@@ -54,7 +54,7 @@ const { chromium } = require('playwright');
 
   ok('✕ drop takes a sender off a list, and the next email from there will ask again', await page.evaluate(() => {
     mailListDel(true, 0);
-    return !mailOk().length && /off the always list/.test($('toast').textContent) && /nobody yet/.test($('mailListsBox').textContent);
+    return !mailOk().length && /off that list/.test($('toast').textContent) && /asks again/.test($('toast').textContent) && /nobody yet/.test($('mailListsBox').textContent);
   }));
 
   ok('adding by hand: a pasted "Name <addr>" is cleaned to the address; a bare company becomes @company', await page.evaluate(() => {

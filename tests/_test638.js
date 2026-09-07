@@ -44,7 +44,7 @@ const { chromium } = require('playwright');
   ok('the card is no longer inside the crew-only block', await page.evaluate(() => !$('mailAskCard').closest('#crewRoute')));
 
   ok('a crew phone never sees it — the render still gates on CREW_NAME (it is Eric\'s decision, not theirs)', await page.evaluate(() =>
-    /if \(!list\.length \|\| CREW_NAME\)/.test(renderMailAsk.toString()) && CREW_NAME === '' && $('mailAskCard').offsetParent !== null));
+    /if \(CREW_NAME\)/.test(renderMailAsk.toString()) && CREW_NAME === '' && $('mailAskCard').offsetParent !== null));   // v6.41 — the card gates on CREW_NAME first thing
 
   ok('✓ Always keeps the sender, clears the card, and the toast says so in words', await page.evaluate(() => {
     mailSay('cloreeric@gmail.com', true);
