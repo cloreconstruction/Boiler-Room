@@ -5,6 +5,13 @@
 # 🌙🅿 v5.26 — plan-reminder schedule PARKED with the Plan-tomorrow feature (Eric: refine later).
 # Restore the [functions."plan-reminder"] schedule block to bring the 5pm nudge back.
 
+# 📧 v6.43 — THE WATCHER. Every 15 minutes it judges whatever is new in /Inbox and rings ONCE
+# when something important landed, so a sub's invoice at 7am does not wait for Eric to open the
+# app. Needs ANTHROPIC_API_KEY in the Netlify env; without it the function idles by design and
+# the phone keeps sorting on its own. It writes only App Data/mail-judged.json.
+[functions."mail-watch"]
+  schedule = "*/15 * * * *"
+
 # 🔒 v6.26 — the repo root IS the live site, so every file in git was also a public URL.
 # CLAUDE.md and the test suites belong in git, not on the web address. 404 them.
 # Eric: "they don't need to be readable on your live website." Blocking here, not in
