@@ -1312,6 +1312,20 @@
   /* 🟢🔴 v6.32 — the receipt lamp in the running log. Colour is the fast read, but it is
      never the ONLY read: each state carries its own glyph and its own spelled word, so the
      row says the same thing in bright sun, on a cracked screen, or to colour-blind eyes. */
+  /* 🗂 v6.55 — the category heads in the receipts window. A head is a real control: 44px for a
+     thumb, its own fold arrow, and the count and the money spelled out beside the name so the
+     line reads the same folded or open. The uncategorised head is brighter and says ⚠ — it is
+     never colour alone, the words say NO CATEGORY YET. */
+  .rc-grp { margin-top: 12px; }
+  .rc-grp-h { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px;
+    padding: 8px 10px; text-align: left; font: inherit; color: var(--ink);
+    background: var(--surface-2, var(--surface-1)); border: 2px solid var(--border);
+    border-radius: 10px; cursor: pointer; }
+  .rc-grp-x { flex: none; color: var(--accent); font-weight: 800; font-size: 13px; }
+  .rc-grp-n { flex: 1; min-width: 0; font-weight: 800; font-size: 13.5px; overflow-wrap: anywhere; }
+  .rc-grp-sum { flex: none; font-size: 12.5px; font-weight: 700; opacity: .85; white-space: nowrap; }
+  .rc-grp-none { border-color: var(--accent); }
+  .rc-grp-none .rc-grp-n { color: var(--accent); }
   .rc-lamp { font-weight: 800; letter-spacing: .3px; white-space: nowrap; }
   .rc-on { color: var(--ok, #1e8449); }
   .rc-wait { color: var(--err, #c0392b); }
@@ -3488,7 +3502,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.54 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.55 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -11299,6 +11313,33 @@ async function estQuickUpcoming(id, ev) {
 // and the number beside each one is the marked-up figure the homeowner will actually see, so
 // what he ticks is what they get.
 let _rcptSel = new Set(), _rcptIdx = -1;
+// 🗂 v6.55 — which category heads he has folded shut. Shut, not open, is remembered: the
+// window opens showing everything, exactly as it did before this build, and folding is his move.
+// Folded by POSITION, remembered by NAME: a category is "Office/Admin" or "Bob's Excavating",
+// and threading either through an onclick attribute is how quoting bugs are born. The tap sends
+// the row number and this looks the name up from the same list the row was drawn from.
+let _rcptCatShut = new Set();
+function rcptCatFold(i) {
+  const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
+  if (!c) return;
+  const g = rcptGroups(rcptWaiting(portalAppJob(c)))[i];
+  if (!g) return;
+  _rcptCatShut.has(g.cat) ? _rcptCatShut.delete(g.cat) : _rcptCatShut.add(g.cat);
+  renderRcptReview();
+}
+// the receipts on this job, gathered under their category. The uncategorised pile leads —
+// it is the biggest and the only one he can act on — then the rest by money, largest first.
+function rcptGroups(list) {
+  const by = new Map();
+  list.forEach(e => {
+    const c = String(e.category || '').trim();
+    if (!by.has(c)) by.set(c, []);
+    by.get(c).push(e);
+  });
+  return [...by.entries()]
+    .map(([cat, es]) => ({ cat, es, tot: es.reduce((s, e) => s + ((estBillParse(e) || {}).amt || 0), 0) }))
+    .sort((a, b) => (!a.cat ? -1 : !b.cat ? 1 : b.tot - a.tot || a.cat.localeCompare(b.cat)));
+}
 // a receipt still waiting on this job: tagged 🧾 or carrying a category, a dollar read, and
 // not already sent to the budget. Same test the button's count uses, so they cannot disagree.
 function rcptWaiting(job) {
@@ -11435,7 +11476,7 @@ function renderRcptReview() {
       <div style="font-size: 13px;"><b>${esc((e.details || '').slice(0, 70))}</b></div>
       <div style="font-size: 12px; opacity: .8; margin-top: 3px;">${esc(localDay(new Date(e.ts)))}${p.v ? ' · 🏪 ' + esc(p.v) : ''} · 🏢 ${esc(String(e.category || '').trim())} · ${money(p.amt)} · goes to Logan as not billable</div>
     </div>`; }).join('') : '';
-  const rows = list.map(e => {
+  const oneRow = e => {
     const p = estBillParse(e) || {};
     const on = _rcptSel.has(e.id);
     const shown = estPendMk({ a: p.amt });
@@ -11450,6 +11491,25 @@ function renderRcptReview() {
       <div style="font-size: 13px; margin-top: 4px;">receipt ${money(p.amt)} · <b>they see ${money(shown)}</b></div>
       ${cat ? '' : `<div class="hint" style="margin-top: 4px;">⚠ Give it a 🧾 category in the log before this one can go — it needs a budget line to land on.</div>`}
       ${rcptRowBtns(e)}
+    </div>`;
+  };
+  // 🗂 v6.55 — THE DRILL-DOWN, THE SIMPLE WAY. Eric wanted to tap a category and see what is in
+  // it, down to the paper. He asked for the simplest method, and this is it: the window he
+  // already opens, with its rows GROUPED under their category and a total on each head. Job →
+  // 🧾 Receipts → the category → the receipts in it → 📷 the photograph. No new screen, no new
+  // file, nothing to learn. The ⚠ uncategorised pile is pinned to the TOP because it is the one
+  // that needs him — on 2026-09-08 that is 36 receipts and $101,375 — and every row in it wears
+  // the same 📷 / ✏️ that fixes it where he is standing.
+  const rows = rcptGroups(list).map((g, gi) => {
+    const shut = _rcptCatShut.has(g.cat);
+    const label = g.cat || '⚠ NO CATEGORY YET';
+    return `<div class="rc-grp">
+      <button type="button" class="rc-grp-h${g.cat ? '' : ' rc-grp-none'}" onclick="rcptCatFold(${gi})"
+        aria-expanded="${!shut}" aria-label="${esc(label)} — ${g.es.length} receipt${g.es.length > 1 ? 's' : ''}, ${money(g.tot)}${shut ? ', closed' : ', open'}">
+        <span class="rc-grp-x">${shut ? '▸' : '▾'}</span>
+        <span class="rc-grp-n">${esc(label)}</span>
+        <span class="rc-grp-sum">${g.es.length} · ${money(g.tot)}</span></button>
+      ${shut ? '' : g.es.map(oneRow).join('')}
     </div>`;
   }).join('');
   // ⚪ v6.51 — the sort pile: everything he waved off this job, with the way back
@@ -16105,7 +16165,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.54';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.55';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
