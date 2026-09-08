@@ -88,7 +88,12 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return !!e && /private thing/.test(e.details) && !/private thing/.test(csv) && /Saldana/.test(csvString(entries.filter(x => !x.personal)));
   }));
 
-  ok('and the sync still applies that filter — nobody has quietly dropped it', /master-log\.csv', csvString\(entries\.filter\(e => !e\.sample && !e\.personal\)\)\)/.test(src));
+  // v6.53 widened this from !e.personal to isLocked(e) — the flag, the Personal TAG, or the
+  // Personal JOB. Assert the guarantee, not one spelling of it.
+  ok('and the sync still applies that filter — nobody has quietly dropped it', /master-log\.csv', csvString\(entries\.filter\(e => !e\.sample && !isLocked\(e\)\)\)\)/.test(src));
+
+  ok('and the filter now catches the Personal JOB too, not just the flag', await page.evaluate(() =>
+    isLocked({ job: 'Personal' }) && isLocked({ tags: ['Personal'] }) && isLocked({ personal: true }) && !isLocked({ job: 'Mery' })));
 
   ok('the wheel warns IN WORDS before he taps, when Personal is chosen', await page.evaluate(() => {
     pendingQueue = [{ id: 'text:t9', kind: 'text', payload: { from: 'Someone', body: 'x', path: '/p/t9.txt', photos: [] } }];

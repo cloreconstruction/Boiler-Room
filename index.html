@@ -3483,7 +3483,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.52 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.53 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7537,6 +7537,14 @@ function revJobWheel(p, label) {
 // picking it is "keep this off everything" — so picking it sets the flag the rest of the app
 // already obeys. The name is matched exactly, never guessed.
 function isPersonalJob(j) { return String(j || '').trim().toLowerCase() === 'personal'; }
+// 🔒 v6.53 — THE ONE LOCK TEST. The rule is "personal NEVER leaves the phone", but the code
+// spelled it three different ways in eleven places and the JOB named Personal was in none of
+// them — so two real entries on that job were riding out to Logan in master-log.csv, and any
+// crew-visible one would have travelled too. A locked entry is any of the three: the flag, the
+// tag, or the job. Everything that leaves this phone asks THIS question now.
+function isLocked(e) {
+  return !!(e && (e.personal || (e.tags || []).includes('Personal') || isPersonalJob(e.job)));
+}
 const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '🔥 Text — needs you', crew: '👷 From the crew', match: '⚙ The Grinder noticed', qb: '💼 In QuickBooks, not in your log', clientask: '💬 From a CLIENT', mail: '📧 Email — looks IMPORTANT' };
 const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', tomorrow: '🌙 by tomorrow' };
 // 🧹 v6.45 — SORT THE PILE. Eric, at 97 waiting: "could you help me sort it and get it to zero
@@ -7854,6 +7862,7 @@ function reviewAct(id, accept) {
       const e = addEntry('Expense', `${pay.who || 'QB expense'}${pay.memo ? ' — ' + pay.memo : ''} (from QuickBooks import)`, picked,
         { amount: +pay.amt, noSniff: true, ts: new Date(pay.d + 'T12:00:00') });
       e.qbV = pay.d; e.qbQid = pay.qid;
+      e.qbImp = 1;   // 💼 v6.53 — born from the books, not caught in the field. See qbImported().
       if (!prefs.qbMatched) prefs.qbMatched = {};
       prefs.qbMatched[pay.qid] = e.id;
       scheduleSave();
@@ -9339,7 +9348,7 @@ async function publishSharedNotes() {
     catch (e) { /* no portal built yet — the crew list just stays empty, quietly */ }
   }
   // 🔒 personal entries can NEVER travel — even a stray vis flag doesn't override the wall
-  const shared = entries.filter(e => e.vis && !e.sample && !e.personal).slice(0, 120);
+  const shared = entries.filter(e => e.vis && !e.sample && !isLocked(e)).slice(0, 120);   // 🔒 v6.53 — flag, tag OR the Personal job
   for (const name of crew) {
     const mineFor = shared.filter(e => visFor(e, name)); // v5.26 — arrays of names count too
     // 📷 v5.43 — the PICTURE travels now, not just the words. Eric: "he needs to be able to
@@ -10738,10 +10747,51 @@ function estFold(ci) { _estOpenCats.has(ci) ? _estOpenCats.delete(ci) : _estOpen
 // QuickBooks later." The grinder's receipt reads (🏪 vendor / 💵 total) become an approval
 // strip on this board; approved bills ride the page as "billed — on the way" (marked up,
 // vendor NEVER shown) until the QB run catches them and Eric retires the line.
+// 💸 v6.53 — THE $94,373 THAT COULD NOT BE SEEN. This read ONLY the 🧾 receipt block the
+// grinder writes into `e.ai`. But a receipt FILED from the cabinet (an emailed sub invoice, a
+// PDF) carries its money in `e.amount` and has no ai block at all — and since every money
+// door in the app is gated on this one function returning non-null, seventeen real receipts
+// worth $94,373.37 were invisible to the receipts window, the estimates board and every
+// client page. Silently: no error, no lamp, nothing to notice. The two biggest are the
+// sheetrock invoices — $58,000 on Rininger and $30,000 on Josten/Weiser.
+//
+// The fallback is deliberately narrow, because two things must NOT come through it:
+//   • a QuickBooks import (`qbQid`/`qbV`) — that money is already IN Logan's books, and
+//     offering it to a homeowner as an upcoming cost would bill it a second time.
+//   • anything that is not a receipt at all — mileage, hours, a plain note that happens to
+//     carry a number. It has to wear a receipt marker: the 🧾 flag or a category.
+// Vendor and date simply stay empty when there is no ai block; every caller already treats
+// them as optional, and the row falls back to the entry's own date.
+// 💼 v6.53 — was this entry BORN from a QuickBooks card, rather than caught in the field?
+// `qbImp` is stamped at birth from v6.53 on; the 23 already on file predate it and are found
+// by the words reviewAct has always written into them. Being merely MATCHED to a QB line
+// (e.qbQid / e.qbV, set by qbVerifySweep) is not the same thing and must not count here.
+function qbImported(e) {
+  return !!(e && (e.qbImp || (e.type === 'Expense' && /\(from QuickBooks import\)/.test(String(e.details || '')))));
+}
 function estBillParse(e) {
   const ai = String(e.ai || '');
   const m = ai.match(/💵 \$([\d,]+(?:\.\d{1,2})?)/);
-  if (!m) return null;
+  if (!m) {
+    // A CREDIT IS NOT A COST. An earlier draft used Math.abs(), which would have turned a
+    // refund or a return recorded as -38.99 into a $38.99 charge on a homeowner's page —
+    // inventing money out of a minus sign. There are no negative amounts on file today, and
+    // this is how it stays: a negative or unreadable amount simply does not parse, exactly as
+    // before this build. Refusing costs him one tap; guessing costs the client real dollars.
+    //
+    // WHAT IS EXCLUDED IS ORIGIN, NOT VERIFICATION. A first draft gated on !e.qbQid && !e.qbV,
+    // which was wrong twice over: qbVerifySweep() stamps BOTH of those onto a FIELD receipt
+    // the moment it matches a QuickBooks line — that is the ✓✓ two-checkmark feature, not a
+    // reason to hide the receipt. Nine real receipts wore those marks, including a $50,000
+    // concrete down payment, and the guard would have deleted them from the window the day
+    // the books caught up. Only an entry BORN from a QuickBooks card is barred, because that
+    // money is already Logan's and offering it as an upcoming cost bills it twice.
+    const n = e ? +e.amount : NaN;
+    const filed = e && e.amount != null && !qbImported(e) &&
+      (e.rcpt || String(e.category || '').trim()) && Number.isFinite(n) && n > 0;
+    if (!filed) return null;
+    return { amt: n, v: '', d: '', filed: true };
+  }
   return { amt: parseFloat(m[1].replace(/,/g, '')) || 0,
     v: ((ai.match(/🏪 ([^\n]+)/) || [])[1] || '').trim().slice(0, 40),
     d: ((ai.match(/📅 ([^\n]+)/) || [])[1] || '').trim() };
@@ -10756,7 +10806,9 @@ function estBillCands() {
   // The journal, plans and materials all bridge the two with portalAppJob(); now so does
   // every receipt path. Eric's Peninsula Overhead Doors invoice is what surfaced it.
   const aj = portalAppJob(c);
-  return entries.filter(e => (e.job === aj || e.job === c.job) && !e.budg && !e.sample && !isOverheadEntry(e) && !(e.mail && !e.rcpt) && estBillParse(e)).slice(0, 12);   // v6.41 — an email is a bill only once he 🧾-tags it
+  return entries.filter(e => (e.job === aj || e.job === c.job) && !e.budg && !e.sample && !isOverheadEntry(e) && !(e.mail && !e.rcpt) &&
+    !e.personal && !(e.tags || []).includes('Personal') && !isPersonalJob(e.job) &&   // 🔒 v6.53 — the lock reaches the bill strip too
+    estBillParse(e)).slice(0, 12);   // v6.41 — an email is a bill only once he 🧾-tags it
 }
 function estBillGuess(e) {
   // 🧾 v6.24 — a category Eric picked (or a vendor-learned one) matches by NAME, never by
@@ -11189,7 +11241,7 @@ let _rcptSel = new Set(), _rcptIdx = -1;
 // not already sent to the budget. Same test the button's count uses, so they cannot disagree.
 function rcptWaiting(job) {
   return entries.filter(e => e && e.job === job && !e.budg && !e.sample &&
-    !e.personal && !(e.tags || []).includes('Personal') &&
+    !e.personal && !(e.tags || []).includes('Personal') && !isPersonalJob(e.job) &&   // 🔒 v6.53
     !isOverheadEntry(e) &&                                   // 🏢 v6.35 — overhead is never offered to a client
     (e.rcpt || e.category) && estBillParse(e));
 }
@@ -11215,7 +11267,9 @@ let _estPaid = null;
 // never billed" — that label was hiding money that was, in fact, on their list. Overhead
 // picked since v6.35 never gets budg = 'sent' (the door refuses it), so nothing else changes.
 function rcptSent(job) {
-  return entries.filter(e => e && e.job === job && e.budg === 'sent' && !e.sample && estBillParse(e));
+  return entries.filter(e => e && e.job === job && e.budg === 'sent' && !e.sample &&
+    !e.personal && !(e.tags || []).includes('Personal') && !isPersonalJob(e.job) &&   // 🔒 v6.53 — the same three tests as every other receipt list
+    estBillParse(e));
 }
 function rcptOverhead(job) {
   return entries.filter(e => e && e.job === job && !e.sample && !e.personal && !(e.tags || []).includes('Personal') &&
@@ -11280,7 +11334,8 @@ function rcptUnskip(id) {
 }
 function rcptSkipped(job) {
   return entries.filter(e => e && e.job === job && e.budg === 'no' && !e.sample &&
-    !e.personal && !(e.tags || []).includes('Personal') && estBillParse(e));
+    !e.personal && !(e.tags || []).includes('Personal') && !isPersonalJob(e.job) &&   // 🔒 v6.53
+    estBillParse(e));
 }
 function renderRcptReview() {
   const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
@@ -11393,6 +11448,7 @@ async function rcptApprove() {
   if (!c) return;
   const picked = [..._rcptSel].map(id => entries.find(x => x.id === id))
     .filter(e => e && !e.budg && !e.personal && !(e.tags || []).includes('Personal') &&
+      !isPersonalJob(e.job) &&                              // 🔒 v6.53 — the last door, belt and braces
       String(e.category || '').trim() && estBillParse(e));
   if (!picked.length) { toast('Check at least one receipt that has a 🧾 category', false); return; }
   if (window._qUpBusy) return;
@@ -11859,7 +11915,11 @@ function portalAppJob(c) {
   const key = (c.key || '').toLowerCase(), cj = (c.job || '').toLowerCase();
   for (const j of jobs) {
     const jl = j.toLowerCase();
-    if (jl !== '—' && (cj.includes(jl) || jl.startsWith(key))) return j;
+    // 🔒 v6.53 — `key` was not checked for emptiness, and ''.startsWith('') is TRUE, so a client
+    // record with no key matched the FIRST job in the list and inherited its receipts. Every
+    // client on file today has a key, so nothing has leaked — but the next one added without
+    // one would have quietly been offered Shop / Admin's money. No key = no guess.
+    if (jl !== '—' && (cj.includes(jl) || (key && jl.startsWith(key)))) return j;
     const w = jl.split(/[^a-z]+/).filter(Boolean);
     for (const a of w) for (const b of w) if (a !== b && a + b === key) return j;
   }
@@ -14135,7 +14195,7 @@ function askSweep(list, terms, skip, cap) {
 }
 function buildAskContext(question) {
   const range = askDateRange(question);
-  const live = entries.filter(e => !e.sample && !e.personal);   // 🔒 v6.41 — the lock wins here too
+  const live = entries.filter(e => !e.sample && !isLocked(e));   // 🔒 v6.41/v6.53 — the lock wins here too, and the Personal JOB counts
   const terms = askTerms(question);
   let pool, rangeLine = '', sweepLine = '';
   const seen = new Set();
@@ -15983,7 +16043,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.52';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.53';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -16476,7 +16536,7 @@ async function pushRemote() {
   setSync('syncing');
   const payload = livePayload();
   await dbxUpload(DBX_ROOT + '/App Data/entries.json', payload);
-  await dbxUpload(DBX_ROOT + '/App Data/master-log.csv', csvString(entries.filter(e => !e.sample && !e.personal)));   // 🔒 v6.41 — personal never leaves the phone, not even to the books
+  await dbxUpload(DBX_ROOT + '/App Data/master-log.csv', csvString(entries.filter(e => !e.sample && !isLocked(e))));   // 🔒 v6.41/v6.53 — personal never leaves the phone, not even to the books
   // daily backup snapshot — one file per day, so a bad overwrite can always be undone
   const day = new Date().toISOString().slice(0, 10);
   await dbxUpload(`${DBX_ROOT}/App Data/Backups/entries-${day}.json`, payload);
