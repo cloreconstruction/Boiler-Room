@@ -156,10 +156,14 @@ const { chromium } = require('playwright');
     window._dbxFiles[portalRoot() + '/scr-1.json'] = JSON.stringify({ journal: [{ released: _ago(9) }] });
     _portalOpen = -1;
     await renderPortalList();
-    const meters = [...$('portalList').querySelectorAll('.jm')];
-    return meters.length === 2 &&
+    // v6.54 hung a second meter (📗 the books) beside each journal one, so the journal meters
+    // are now .jm:not(.jm-qb) — the guarantee is unchanged: one per job, saying the right thing.
+    const meters = [...$('portalList').querySelectorAll('.jm:not(.jm-qb)')];
+    const books = [...$('portalList').querySelectorAll('.jm-qb')];
+    return meters.length === 2 && books.length === 2 &&
       /POSTED TODAY/.test(meters[0].textContent) && /POST IT NOW/.test(meters[1].textContent) &&
-      meters[1].querySelectorAll('.jm-cell.strobe').length === 1;
+      meters[1].querySelectorAll('.jm-cell.strobe').length === 1 &&
+      meters.every(m => /📖/.test(m.textContent)) && books.every(b => /📗/.test(b.textContent));
   }));
 
   ok('the meter rides the job NAME, where his eye already is', await page.evaluate(() =>

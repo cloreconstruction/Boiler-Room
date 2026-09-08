@@ -1316,7 +1316,12 @@
   .rc-on { color: var(--ok, #1e8449); }
   .rc-wait { color: var(--err, #c0392b); }
   .rc-off { opacity: .7; }
+  /* 📗 v6.54 — the books meter sits directly UNDER the journal meter, not beside it: two
+     seven-cell bars plus their words are ~210px of cells alone and will not share a line on a
+     390px phone without the words being cut. Stacked, each row reads glyph → bar → words. */
   .jm { display: flex; align-items: center; gap: 7px; margin-top: 5px; font-weight: 700; }
+  .jm-glyph { font-size: 12px; line-height: 1; flex: none; }
+  .jm-qb { margin-top: 3px; }
   .jm-bar { display: inline-flex; gap: 3px; flex: none; }
   .jm-cell { width: 13px; height: 11px; border-radius: 3px; border: 1.5px solid var(--accent);
     background: transparent; opacity: .5; }
@@ -3483,7 +3488,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.53 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.54 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -10206,7 +10211,7 @@ function renderPortalFold(box, offRoot) {
       return `
       <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px;">
         <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
-          onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}${jrnMeterHtml(c.code)}</button>
+          onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}${jrnMeterHtml(c.code)}${qbMeterHtml(c.code)}</button>
         ${open ? (off ? `
         <!-- 🏢 v6.07 — an OFFICE phone (Phil) gets the same fold Eric gets: lists, boxes, bids. -->
         <div class="pf-acts">
@@ -10264,8 +10269,64 @@ function jrnMeterHtml(code) {
     const strobe = dead && i === JRN_SPAN - 1;
     return `<span class="jm-cell${on ? ' on' : ''}${strobe ? ' strobe' : ''}"></span>`;
   }).join('');
+  // 📖 v6.54 — the glyph arrived when the books meter joined it: two identical bars stacked
+  // need to say which is which before the words are read.
   return `<span class="jm${dead ? ' jm-dead' : ''}" title="📖 journal — ${word}" aria-label="journal ${word}">
-    <span class="jm-bar">${cells}</span><span class="jm-word">${dead ? '⚠ ' : ''}${word}</span></span>`;
+    <span class="jm-glyph" aria-hidden="true">📖</span><span class="jm-bar">${cells}</span><span class="jm-word">${dead ? '⚠ ' : ''}${word}</span></span>`;
+}
+// ═══════════ 📗 v6.54 — THE BOOKS METER ═══════════
+// Eric: "i really like the 7 day cube countdown for how often the journal is posted, i want one
+// next to it for the qb updates too."
+//
+// Same seven spaces, same drain, same strobe — but this one counts the days since the BOOKS
+// run last looked at that client. Logan's run is weekly, so seven spaces is exactly one cycle:
+// full the day it runs, empty the day the next one is due.
+//
+// The date comes from App Data/qb-refresh.json, which the run leaves behind as a receipt.
+// A client listed with `at` was rewritten then; a client listed WITHOUT one was still read that
+// run and simply had nothing to change (Rininger: "ledger agrees with the page exactly"), so it
+// takes the run's own ranAt — it was looked at, and that is what this meter measures. A client
+// missing from the list entirely has never been through a run at all, and says so.
+//
+// ONE download for every client, not one each: the whole run is a single small file.
+const QB_SPAN = 7;
+function qbAgeDays(code) {
+  const rel = ((prefs.qbRel || {})[code] || '').slice(0, 10);
+  if (!rel) return null;
+  const then = new Date(rel + 'T00:00:00');
+  if (isNaN(+then)) return null;
+  const today = new Date(localDay(new Date()) + 'T00:00:00');
+  return Math.max(0, Math.round((today - then) / 86400000));
+}
+function qbMeterHtml(code) {
+  if (CREW_NAME) return '';        // a crew phone never reads the books file, so it would only ever say "never"
+  const age = qbAgeDays(code);
+  const known = age != null;
+  const left = known ? Math.max(0, QB_SPAN - age) : 0;
+  const dead = left === 0;
+  const word = !known ? 'NO BOOKS RUN YET' : age === 0 ? 'BOOKS TODAY'
+    : dead ? `${age} DAYS — BOOKS ARE DUE` : age === 1 ? 'BOOKS 1 DAY OLD' : `BOOKS ${age} DAYS OLD`;
+  const cells = Array.from({ length: QB_SPAN }, (_, i) =>
+    `<span class="jm-cell${i < left ? ' on' : ''}${dead && i === QB_SPAN - 1 ? ' strobe' : ''}"></span>`).join('');
+  return `<span class="jm jm-qb${dead ? ' jm-dead' : ''}" title="📗 books — ${word}" aria-label="books ${word}">
+    <span class="jm-glyph" aria-hidden="true">📗</span><span class="jm-bar">${cells}</span><span class="jm-word">${dead ? '⚠ ' : ''}${word}</span></span>`;
+}
+// one file, every client. Cached in prefs so the list paints instantly and corrects itself.
+async function refreshQbAges() {
+  if (CREW_NAME || !dbx.refreshToken) return;
+  let run = null;
+  try { run = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/qb-refresh.json') || 'null'); }
+  catch (e) { return; }                                   // bad signal is not news — keep the cache
+  if (!run || !Array.isArray(run.clients)) return;
+  const ran = String(run.ranAt || '').slice(0, 10);
+  prefs.qbRel = prefs.qbRel || {};
+  let moved = false;
+  run.clients.forEach(c => {
+    if (!c || !c.code) return;
+    const day = String(c.at || ran || '').slice(0, 10);   // no `at` = read that run, nothing to change
+    if (day && prefs.qbRel[c.code] !== day) { prefs.qbRel[c.code] = day; moved = true; }
+  });
+  if (moved) { scheduleSave(); const b = $('portalList'); if (b && !CREW_NAME) renderPortalList(); }
 }
 // read each client's real release date, then repaint. One small download per job.
 async function refreshJrnAges(clients) {
@@ -10350,6 +10411,7 @@ async function renderPortalList() {
   // 📊 v6.31 — paint from the cached dates immediately, then go and check them for real.
   // Not awaited: the list must not sit blank behind nine downloads on a job-site signal.
   refreshJrnAges(_portalIdx.clients || []);
+  refreshQbAges();   // 📗 v6.54 — one file, every client
   // 📁 v5.57 — Eric: "buttons hidden and only the job name showing... pick the job name from
   // the list, and THEN it opens up into Journal, Materials, Copy link, etc." One clean list
   // of job names; tapping one unfolds ITS buttons and folds the last one shut (accordion —
@@ -10359,7 +10421,7 @@ async function renderPortalList() {
     return `
     <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px; ${open ? '' : 'padding-bottom: 4px;'}">
       <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
-        onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}${jrnMeterHtml(c.code)}</button>
+        onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}${jrnMeterHtml(c.code)}${qbMeterHtml(c.code)}</button>
       ${open ? `
       <!-- 📐 v6.05 — a grid, not a scatter: every plate the same width, in even rows, so the
            fold reads as one panel instead of seven differently-sized buttons stair-stepping
@@ -16043,7 +16105,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.53';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.54';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
