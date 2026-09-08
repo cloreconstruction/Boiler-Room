@@ -2550,7 +2550,6 @@
          are now equal halves of one row — same width, same height, one reach. 📗 v5.55: it
          grinds the note + photos like normal AND pops the phone's send sheet for the books. -->
     </div>
-    <div class="card" id="mailAskCard" style="display: none; margin-top: 10px; padding: 10px 12px;"></div>
     <div class="g-step" data-step="5">
     <div class="g-step-label"><span class="g-step-num">5</span> SEND IT<span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
     <div class="plate-row">
@@ -2580,6 +2579,13 @@
       <div class="ask-inline__foot"><a href="javascript:void(0)" onclick="openAnswerFull()">Open full screen →</a></div>
     </div>
   </div>
+
+  <!-- 📧 v6.48 — Eric: "id like the email section to be below the grinder not above it."
+       It sat between step ④ and the ⚙ plate, so a morning's mail pushed the grinder button —
+       the thing he reaches for all day — down off the screen. It is its own card UNDER the
+       grinder now, above the running log, the same move the log itself got in v5.80. Still
+       outside every .g-step: v6.42's lesson was that a folded step must never swallow it. -->
+  <div class="card" id="mailAskCard" style="display: none; margin-top: 10px; padding: 10px 12px;"></div>
 
   <!-- 📚 v6.18 — BOOKS UPDATED. Eric: "I would like a way to know that all the client portal
        budgets have been updated." Appears the morning the QB run lands, says how many pages
@@ -3456,7 +3462,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.47 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.48 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15725,7 +15731,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.47';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.48';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
