@@ -1,6 +1,9 @@
 // client-portal.mjs — serves each client's curated tracker data and logs what they tap.
 // GET  ?c=<code>            -> the client's JSON (read from Eric's Dropbox; code IS the key)
 // GET  ?c=<code>&p=<name>   -> a released journal photo from that client's own photos folder
+// GET  ?c=<code>&boards=1   -> the shared Option Boards library (only boards switched ON)
+// GET  ?c=<code>&bimg=<f>   -> one poster picture from that library, rendered to JPEG
+// POST {c, board:{id,picks[],note,call}} -> their choices off a poster; one entry per board
 // POST {c, ev}              -> appends one click event to that client's clicks file
 // POST {c, ask:{tag,text}}  -> appends one question/remark to that client's asks file
 // Data lives in /Clore DayLog/App Data/Client Portal/ — written by Eric's app and Claude,
@@ -24,7 +27,7 @@ async function dbxToken() {
 async function dlRaw(t, path) {
   return fetch('https://content.dropboxapi.com/2/files/download', {
     method: 'POST',
-    headers: { Authorization: 'Bearer ' + t, 'Dropbox-API-Arg': JSON.stringify({ path }) }
+    headers: { Authorization: 'Bearer ' + t, 'Dropbox-API-Arg': hsafe({ path }) }
   });
 }
 async function dl(t, path) {
@@ -36,13 +39,21 @@ async function up(t, path, body) {
     method: 'POST',
     headers: {
       Authorization: 'Bearer ' + t,
-      'Dropbox-API-Arg': JSON.stringify({ path, mode: 'overwrite', mute: true }),
+      'Dropbox-API-Arg': hsafe({ path, mode: 'overwrite', mute: true }),
       'Content-Type': 'application/octet-stream'
     },
     body
   });
 }
+// 🔤 v6.50 — Dropbox-API-Arg is an HTTP header and can only carry Latin-1. The mail watcher
+// died on exactly this in v6.47 (iOS writes a NARROW NO-BREAK SPACE into its filenames), so
+// every header this file builds gets the same escaping the app has always used.
+const hsafe = o => JSON.stringify(o).split('').map(ch => ch.charCodeAt(0) > 126 ? '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0') : ch).join('');
 const clean = s => String(s || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40);
+// 🖼 v6.50 — OPTION BOARDS. Eric's posters ("Sheetrock / Drywall Options" and the rest) live
+// ONCE and serve every client: one shared library, not a copy per job. The board file and its
+// pictures are only ever handed out to a caller who already proved a real client code.
+const BOARDS = '/Clore DayLog/App Data/Option Boards';
 const IMG_CT = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', heic: 'image/heic', heif: 'image/heif' };
 
 const portal = async req => {
@@ -60,7 +71,7 @@ const portal = async req => {
       const th = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', {
         method: 'POST',
         headers: { Authorization: `Bearer ${t}`,
-          'Dropbox-API-Arg': JSON.stringify({ resource: { '.tag': 'path', path: `${BASE}/photos-${c}/${p}` }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w2048h1536' } }) }
+          'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path: `${BASE}/photos-${c}/${p}` }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w2048h1536' } }) }
       });
       if (th.ok) {
         const buf = await th.arrayBuffer();
@@ -71,6 +82,31 @@ const portal = async req => {
       const buf = await r.arrayBuffer();
       const ct = IMG_CT[(p.split('.').pop() || '').toLowerCase()] || 'application/octet-stream';
       return new Response(buf, { headers: { 'content-type': ct, 'cache-control': 'private, max-age=86400' } });
+    }
+    // 🖼 v6.50 — a POSTER from the shared Option Boards library. Same door as a journal photo:
+    // the code is checked first, the name is stripped to safe characters, and it is rendered to
+    // JPEG so a HEIC or a huge PNG still opens on every homeowner's phone.
+    const bi = String(url.searchParams.get('bimg') || '').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80);
+    if (bi) {
+      if (await dl(t, `${BASE}/${c}.json`) == null) return new Response('nope', { status: 404 });
+      const th = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${t}`,
+          'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path: `${BOARDS}/${bi}` }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w2048h1536' } }) }
+      });
+      if (th.ok) return new Response(await th.arrayBuffer(), { headers: { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=86400' } });
+      const r = await dlRaw(t, `${BOARDS}/${bi}`);
+      if (!r.ok) return new Response('no picture', { status: 404 });
+      const ct = IMG_CT[(bi.split('.').pop() || '').toLowerCase()] || 'application/octet-stream';
+      return new Response(await r.arrayBuffer(), { headers: { 'content-type': ct, 'cache-control': 'private, max-age=86400' } });
+    }
+    // 🖼 the board library itself — shared by every client, so only the ones switched ON travel
+    if (url.searchParams.get('boards')) {
+      if (await dl(t, `${BASE}/${c}.json`) == null) return new Response('nope', { status: 404 });
+      let lib = null;
+      try { lib = JSON.parse(await dl(t, `${BOARDS}/boards.json`) || 'null'); } catch (e) {}
+      const on = lib && Array.isArray(lib.boards) ? lib.boards.filter(b => b && b.id && b.on !== false) : [];
+      return new Response(JSON.stringify({ boards: on }), { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
     }
     // 📋 the materials board (rooms, items, lamps) — served whole; picks/remarks come back by POST
     if (url.searchParams.get('mat')) {
@@ -209,6 +245,54 @@ const portal = async req => {
         else arr.unshift({ tag: 'General', pk: n, k: 1, text: label, ts: new Date().toISOString() });
         await up(t, apath, JSON.stringify(arr.slice(0, 200)));
       }
+      return new Response('ok');
+    }
+    // 🖼 v6.50 — what they chose off a poster. Eric: "so make check boxes? and a send to eric
+    // button? or a comment page if they check what they wants thats close and describe the
+    // rest?" Both: the ticks AND their words come back together, as ONE message per board, in
+    // one entry that updates in place — the same rule v5.92 set for budget choices, so shopping
+    // around never buries him in alerts. Their answer also lands on their own page, so they can
+    // look back at what they picked without asking him.
+    if (b.board && typeof b.board === 'object') {
+      const id = String(b.board.id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+      const note = String(b.board.note || '').slice(0, 1000).trim();
+      const call = !!b.board.call;
+      const picks = Array.isArray(b.board.picks)
+        ? [...new Set(b.board.picks.map(x => String(x || '').slice(0, 120).trim()).filter(Boolean))].slice(0, 40) : [];
+      if (!id || (!picks.length && !note && !call)) return new Response('bad', { status: 400 });
+      let lib = null;
+      try { lib = JSON.parse(await dl(t, `${BOARDS}/boards.json`) || 'null'); } catch (e) {}
+      const board = lib && Array.isArray(lib.boards) ? lib.boards.find(x => x && x.id === id && x.on !== false) : null;
+      if (!board) return new Response('nope', { status: 404 });
+      // only names that are actually ON that poster can come back — nothing invented in transit
+      const real = new Set((board.groups || []).flatMap(g => (g.o || []).map(String)));
+      const keep = picks.filter(x => real.has(x));
+      if (!keep.length && !note && !call) return new Response('bad', { status: 400 });
+      const now = new Date().toISOString();
+      const ppath = `${BASE}/${c}.json`;
+      let pg = null;
+      try { pg = JSON.parse(await dl(t, ppath) || 'null'); } catch (e) {}
+      if (pg && typeof pg === 'object') {
+        pg.boardPicks = pg.boardPicks && typeof pg.boardPicks === 'object' ? pg.boardPicks : {};
+        const was = pg.boardPicks[id];
+        pg.boardPicks[id] = { picks: keep, note, call, ts: now, k: (was && +was.k || 0) + 1 };
+        await up(t, ppath, JSON.stringify(pg, null, 1));
+      }
+      const bits = [keep.length ? keep.join(', ') : '', note ? `“${note}”` : '', call ? '📞 asked you to CALL' : ''].filter(Boolean);
+      const label = `🖼 CHOSE — ${board.name || id}: ${bits.join(' · ')}`;
+      const apath = `${BASE}/asks-${c}.json`;
+      let arr = [];
+      try { arr = JSON.parse(await dl(t, apath) || '[]'); } catch (e) {}
+      if (!Array.isArray(arr)) arr = [];
+      const key = 'board:' + id;
+      const old = arr.find(a => a && a.pk === key);
+      if (old) {
+        old.k = (+old.k || 1) + 1;
+        old.text = `${label}${old.k > 1 ? ` · changed their mind ${old.k - 1}×` : ''}`;
+        old.ts = now;
+        arr = [old, ...arr.filter(a => a !== old)];
+      } else arr.unshift({ tag: 'Materials', pk: key, k: 1, text: label, ts: now });
+      await up(t, apath, JSON.stringify(arr.slice(0, 200)));
       return new Response('ok');
     }
     // 💬 a question or remark from the client — lands in Eric's review pile on his next sync

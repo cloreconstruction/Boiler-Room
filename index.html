@@ -2043,7 +2043,7 @@
   #panel-settings .set-section.collapsible:not(.open) > :not(h4) { display: none !important; }
   /* v5.11 — crew Setup is MINIMAL: their phone, their Dropbox, their Wizard key, their
      notifications, three simple themes. None of Eric's machinery. */
-  body.crew-mode #setMail, body.crew-mode #setDayGoal, body.crew-mode #setPipes, body.crew-mode #setJobs,
+  body.crew-mode #setBoards, body.crew-mode #setMail, body.crew-mode #setDayGoal, body.crew-mode #setPipes, body.crew-mode #setJobs,
   body.crew-mode #setTrucks, body.crew-mode #setCrew, body.crew-mode #setBackups, body.crew-mode #setPrivacy,
   body.crew-mode #qbSec, body.crew-mode #waguesSec { display: none !important; }
   body.crew-mode #setAppear .pick-chip { display: none; }
@@ -3398,6 +3398,20 @@
     <!-- 📧 v6.40 — Eric: "i'll need a place to be able to add or delete or edit the always and
          never for email senders." The two lists the Inbox sweep keeps (v6.12): one row each, ✕ to
          drop, and a box to add an address or a whole @company by hand. Edit = drop and re-add. -->
+    <!-- 🖼 v6.50 — OPTION BOARDS. Eric: "I'm making these posters. Of things that clients can
+         look at to make decisions... I want to create a portion on the client page where they
+         can click through this by category and just browse as if they were browsing through
+         Pinterest." One shared library — a poster is made ONCE and serves every job. -->
+    <div class="set-section" id="setBoards">
+      <h4>🖼 Options boards</h4>
+      <div class="hint" style="margin: 0 0 8px;">Your posters — drywall, siding, tile — for clients to browse and choose from. Every client sees the same boards; switch one OFF to take it off all their pages. What they tick comes back as a card in 📥 Review.</div>
+      <div id="boardsBox"></div>
+      <div class="frow" style="margin-top: 8px; gap: 6px; flex-wrap: wrap;">
+        <input type="text" id="bdNewName" class="mini-sel" placeholder="Board name — e.g. Sheetrock / Drywall" style="flex: 1; min-width: 170px;">
+        <button type="button" class="btn-ghost" onclick="bdAdd()">➕ New board</button>
+      </div>
+      <input type="file" id="bdImg" accept="image/*" onchange="bdImgPick(this)" style="display: none;">
+    </div>
     <div class="set-section" id="setMail">
       <h4>📧 Email senders</h4>
       <div class="hint" style="margin: 0 0 8px;">Who the app keeps and who it skips. ✓ ALWAYS files their emails onto your log, locked to you. 🚫 NEVER drops them into the Robots folder, nothing logged. A name that starts with @ means everyone at that company.</div>
@@ -3462,7 +3476,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.49 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.50 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5443,6 +5457,9 @@ function openPanel(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('open', p.id === 'panel-' + name && !p.classList.contains('open')));
   const panel = $('panel-' + name);
   const isOpen = panel.classList.contains('open');
+  // 🖼 v6.50 — the boards live in Dropbox, not in prefs, so they are fetched the first time
+  // Setup is opened rather than on every boot. A crew phone never asks.
+  if (name === 'settings' && isOpen && !CREW_NAME) bdLoad().then(renderBoardsSet).catch(() => {});
   $('backdrop').classList.toggle('show', isOpen);
   document.body.classList.toggle('modal-open', isOpen);
   document.querySelectorAll('.cap-btn').forEach(b => b.classList.toggle('active', b.dataset.panel === name && isOpen));
@@ -8108,6 +8125,118 @@ async function mailSort(m, f, id) {
   mailDayBump('imp');
   archiveText(path);          // the card carries what it needs; the file goes to /Texts like every kept email
   savePendingSoon(); scheduleSave();
+}
+// 🖼 v6.50 — OPTION BOARDS, Eric's side. Eric: "I would need a place to build that and also a
+// place for the clients to see it on their page." This is the building place. One shared
+// library at /App Data/Option Boards/boards.json plus the poster pictures beside it — a board
+// is made ONCE and every client sees it, because a drywall poster doesn't change per job.
+// A board is: a name, a picture, and groups of named options typed one per line — which is
+// exactly how his posters read ("Corners: Bullnose, Square"). The client page draws the
+// picture big and the tick boxes underneath, grouped the same way.
+const BOARDS_DIR = () => DBX_ROOT + '/App Data/Option Boards';
+let _boards = null, _bdEdit = '', _bdBusy = false;
+function bdId(name) {
+  const base = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || 'board';
+  let id = base, n = 2;
+  while ((_boards || []).some(b => b.id === id)) id = base + '-' + n++;
+  return id;
+}
+async function bdLoad() {
+  if (_boards) return _boards;
+  _boards = [];
+  if (!dbx.refreshToken || CREW_NAME) return _boards;
+  try {
+    const t = await dbxDownload(BOARDS_DIR() + '/boards.json');
+    const j = t ? JSON.parse(t) : null;
+    if (j && Array.isArray(j.boards)) _boards = j.boards;
+  } catch (e) { /* no library yet — the first ➕ New board makes one */ }
+  return _boards;
+}
+async function bdSave() {
+  if (!dbx.refreshToken || CREW_NAME) return;
+  await dbxUpload(BOARDS_DIR() + '/boards.json', JSON.stringify({ v: 1, at: new Date().toISOString(), boards: _boards || [] }, null, 1));
+}
+function bdAdd() {
+  const inp = $('bdNewName'); const name = (inp && inp.value || '').trim();
+  if (!name) { toast('Give the board a name first — like "Sheetrock / Drywall"', false); return; }
+  _boards = _boards || [];
+  const b = { id: bdId(name), name: name.slice(0, 60), img: '', on: true, groups: [] };
+  _boards.unshift(b); _bdEdit = b.id;
+  if (inp) inp.value = '';
+  renderBoardsSet(); bdSave().catch(() => toast("Couldn't save that to Dropbox — try again in a minute", false));
+  toast(`🖼 ${b.name} started — add the picture and the choices ✓`);
+}
+function bdFind(id) { return (_boards || []).find(b => b.id === id); }
+function bdEdit(id) { _bdEdit = _bdEdit === id ? '' : id; renderBoardsSet(); }
+function bdOn(id) { const b = bdFind(id); if (!b) return; b.on = b.on === false; renderBoardsSet(); bdSave(); toast(b.on === false ? '○ OFF — off every client page' : '✓ ON — every client can see it'); }
+let _bdArm = '';
+function bdDel(id) {
+  if (_bdArm !== id) { _bdArm = id; renderBoardsSet(); setTimeout(() => { if (_bdArm === id) { _bdArm = ''; renderBoardsSet(); } }, 4000); return; }
+  _bdArm = ''; const b = bdFind(id);
+  _boards = (_boards || []).filter(x => x.id !== id);
+  if (_bdEdit === id) _bdEdit = '';
+  renderBoardsSet(); bdSave();
+  toast(`✕ ${(b || {}).name || 'Board'} removed — the picture stays in Dropbox`);
+}
+// the groups, typed the way the poster reads: a heading line, then its choices under it
+function bdGroupsText(b) {
+  return (b.groups || []).map(g => [g.n, ...(g.o || [])].join('\n')).join('\n\n');
+}
+function bdGroupsParse(txt) {
+  return String(txt || '').split(/\n\s*\n/).map(block => {
+    const lines = block.split('\n').map(s => s.trim()).filter(Boolean);
+    if (lines.length < 2) return null;
+    return { n: lines[0].slice(0, 60), o: lines.slice(1).map(s => s.slice(0, 120)).slice(0, 24) };
+  }).filter(Boolean).slice(0, 12);
+}
+function bdGroupsSave(id) {
+  const b = bdFind(id); if (!b) return;
+  const el = $('bdGroups-' + id);
+  b.groups = bdGroupsParse(el ? el.value : '');
+  const n = b.groups.reduce((s, g) => s + g.o.length, 0);
+  renderBoardsSet(); bdSave();
+  toast(b.groups.length ? `✓ ${b.groups.length} group${b.groups.length > 1 ? 's' : ''}, ${n} choice${n > 1 ? 's' : ''} saved` : 'Nothing saved — put the heading on its own line, the choices under it', !!b.groups.length);
+}
+function bdImgAsk(id) { _bdEdit = id; const i = $('bdImg'); if (i) { i.value = ''; i.click(); } }
+async function bdImgPick(inp) {
+  const f = inp && inp.files && inp.files[0]; const b = bdFind(_bdEdit);
+  if (!f || !b) return;
+  if (_bdBusy) return; _bdBusy = true;
+  try {
+    toast('📤 Sending the picture up…');
+    const name = `${b.id}-${Date.now()}.${(f.name.split('.').pop() || 'jpg').replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toLowerCase() || 'jpg'}`;
+    await dbxUpload(BOARDS_DIR() + '/' + name, await f.arrayBuffer());
+    b.img = name;
+    renderBoardsSet(); await bdSave();
+    toast('🖼 Picture on the board ✓');
+  } catch (e) {
+    toast("Couldn't send the picture — check the signal and try again", false);
+  } finally { _bdBusy = false; if (inp) inp.value = ''; }
+}
+function renderBoardsSet() {
+  const box = $('boardsBox'); if (!box) return;
+  const list = _boards || [];
+  if (!list.length) { box.innerHTML = '<div class="hint" style="margin: 2px 0 6px;">No boards yet. Name one below and tap ➕ New board.</div>'; return; }
+  box.innerHTML = list.map(b => {
+    const nOpt = (b.groups || []).reduce((s, g) => s + (g.o || []).length, 0);
+    const open = _bdEdit === b.id;
+    return `<div style="border-top: 1px solid var(--border); padding: 8px 0;">
+      <div class="frow" style="gap: 6px; align-items: center; flex-wrap: wrap;">
+        <span style="flex: 1; min-width: 120px; font-size: 13.5px; font-weight: 700;">${esc(b.name || b.id)}
+          <span class="hint" style="display: block; margin: 1px 0 0;">${b.on === false ? '○ OFF — nobody sees it' : '✓ ON — on every client page'} · ${b.img ? '🖼 picture set' : '⚠ no picture yet'} · ${nOpt ? `${(b.groups || []).length} group${(b.groups || []).length > 1 ? 's' : ''}, ${nOpt} choice${nOpt > 1 ? 's' : ''}` : '⚠ no choices yet'}</span></span>
+        <button type="button" class="btn-ghost" onclick="bdEdit('${escq(b.id)}')">${open ? '▲ Close' : '✎ Edit'}</button>
+        <button type="button" class="btn-ghost" onclick="bdOn('${escq(b.id)}')">${b.on === false ? '○ OFF' : '✓ ON'}</button>
+        <button type="button" class="btn-ghost req-x" onclick="bdDel('${escq(b.id)}')">${_bdArm === b.id ? '⚠ SURE?' : '✕'}</button>
+      </div>
+      ${open ? `<div style="margin-top: 8px;">
+        ${b.img ? `<img src="" id="bdPv-${esc(b.id)}" alt="" style="width: 100%; border-radius: 8px; display: none;">` : ''}
+        <button type="button" class="btn-ghost" style="width: 100%;" onclick="bdImgAsk('${escq(b.id)}')">${b.img ? '🔄 Swap the picture' : '📷 Add the poster picture'}</button>
+        <div class="field" style="margin-top: 8px;"><label>The choices — a heading on its own line, its options under it, a blank line between groups</label>
+          <textarea id="bdGroups-${esc(b.id)}" rows="9" placeholder="Corners&#10;Bullnose Corner&#10;Square Corner&#10;&#10;Window Wraps&#10;3-Sided Drywall Wrap + Sill&#10;4-Sided Drywall Wrap&#10;&#10;Wall Textures&#10;Knockdown&#10;Smooth">${esc(bdGroupsText(b))}</textarea></div>
+        <button type="button" class="btn-primary" style="width: 100%;" onclick="bdGroupsSave('${escq(b.id)}')">✓ Save the choices</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
 }
 // 🔒 v6.41 — one-time: mail filed since v6.12 from a personal name was never locked. Lock it now.
 function mailLockPersonalOnce() {
@@ -15758,7 +15887,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.49';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.50';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

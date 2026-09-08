@@ -70,6 +70,26 @@
   .mat-head { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
     gap: 10px; background: var(--bg); padding: 14px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
   .mat-head h3 { margin: 0; }
+  /* 🖼 v6.50 — OPTION BOARDS. A poster is a wide picture full of small labels, so it gets the
+     full width of the card and opens in the lightbox to pinch. Tick boxes are big enough for a
+     thumb (44px) and say what they are in words, never by colour alone. */
+  .bd-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; }
+  .bd-row:first-of-type { border-top: 0; }
+  .bd-row img, .bd-noimg { width: 62px; height: 46px; object-fit: cover; border-radius: 8px; flex: 0 0 auto; background: rgba(0,0,0,.15); }
+  .bd-noimg { display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .bd-row-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .bd-row-t .hint { margin: 0; }
+  .bd-go { flex: 0 0 auto; color: var(--gold); font-size: 22px; font-weight: 800; }
+  .bd-poster { width: 100%; border-radius: 10px; margin: 6px 0 2px; cursor: zoom-in; display: block; }
+  .bd-grp { margin-top: 14px; }
+  .bd-grp-n { font-size: 12px; font-weight: 800; letter-spacing: .1em; color: var(--gold); text-transform: uppercase; margin-bottom: 6px; }
+  .bd-opt { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 10px; margin-bottom: 6px;
+    border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-size: 15px; line-height: 1.3; }
+  .bd-opt input { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--gold); }
+  .bd-opt.on { border-color: var(--gold); background: rgba(190,150,70,.10); font-weight: 700; }
+  .bd-opt.on span::after { content: ' ✓ picked'; font-size: 11.5px; font-weight: 800; color: var(--gold); letter-spacing: .04em; }
+  .bd-done { margin: 10px 0 2px; padding: 9px 11px; border: 1px solid var(--gold); border-radius: 10px; font-size: 13.5px; line-height: 1.45; }
+  .send-btn.bd-call { margin-top: 8px; background: none; border: 1px solid var(--line); color: var(--ink); }
   .mat-close { border: none; border-radius: 999px; background: var(--gold); color: #201c15; font-weight: 800;
     padding: 10px 18px; cursor: pointer; font-size: 14px; font-family: inherit; }
   /* 💰 v5.91 — tap-to-choose budget options: the lit one is YOUR PICK, spelled out */
@@ -200,6 +220,108 @@ function toggleCard(id, ev) {
   const el = document.getElementById(id);
   el.style.display = el.style.display === 'none' ? '' : 'none';
   if (el.style.display !== 'none') { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); ping(ev); }
+}
+// 🖼 v6.50 — OPTION BOARDS. Eric makes a poster ("Sheetrock / Drywall Options": corners,
+// window wraps, wall textures) and every client browses the same one. His words: "so make
+// check boxes? and a send to eric button? or a comment page if they check what they wants
+// thats close and describe the rest?" — both. The poster shows big and opens full screen to
+// pinch; the tick boxes underneath are grouped exactly like the poster; one comment box and
+// ONE send for the whole board, because nobody picks a picture without wanting to say
+// "that one, but softer". 📞 Call me is there for the decisions that were never going to
+// happen by tapping. Nothing is sent until they tap Send.
+let _boards = null, _bOpen = '', _bPick = {}, _bBusy = false;
+// their answers ride on the page data itself (pg.boardPicks), so the page still says what
+// they chose after a reload, on any device, without asking Eric.
+let _bAns = null;
+// bEsc already exists further down this file (module scope) — reuse it, don't shadow it.
+const bEscq = s => String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, ' ');
+const boardImg = f => FN + '?c=' + encodeURIComponent(code) + '&bimg=' + encodeURIComponent(f);
+async function boardsLoad() {
+  if (_boards) return _boards;
+  try {
+    const r = await fetch(FN + '?c=' + encodeURIComponent(code) + '&boards=1');
+    const j = r.ok ? await r.json() : null;
+    _boards = (j && Array.isArray(j.boards)) ? j.boards : [];
+  } catch (e) { _boards = []; }
+  return _boards;
+}
+function boardTile() {
+  const t = document.getElementById('boardTile'); if (!t) return;
+  const n = (_boards || []).length;
+  const rib = document.getElementById('boardRibbon'), sub = document.getElementById('boardSub');
+  if (n) {
+    t.classList.add('live'); if (rib) rib.remove();
+    const done = (_boards || []).filter(b => (_bAns || {})[b.id]).length;
+    if (sub) sub.textContent = done ? `${done} of ${n} answered` : `${n} to look through`;
+  } else if (sub) sub.textContent = 'nothing to choose yet';
+}
+async function boardsOpen() {
+  await boardsLoad();
+  boardTile();
+  if (!(_boards || []).length) { ping('soon:boards'); return; }
+  _bOpen = '';
+  toggleCard('boardCard', 'boards:open');
+  renderBoards();
+}
+function boardOpen(id) { _bOpen = id; _bPick[id] = _bPick[id] || new Set(); renderBoards(); ping('board:open:' + id); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function boardBack() { _bOpen = ''; renderBoards(); }
+function boardTick(id, name) {
+  const s = _bPick[id] || (_bPick[id] = new Set());
+  s.has(name) ? s.delete(name) : s.add(name);
+  renderBoards();
+}
+function renderBoards() {
+  const box = document.getElementById('boardCard'); if (!box) return;
+  const list = _boards || [];
+  if (!_bOpen) {
+    box.innerHTML = `<h3>🖼 OPTIONS — HAVE A LOOK</h3>
+      <p class="hint">Browse the choices for your job. Tick what you like, say anything you'd change, and send it over. Nothing is decided until you send it.</p>
+      ${list.map(b => { const a = (_bAns || {})[b.id];
+        return `<div class="bd-row" onclick="boardOpen('${bEscq(b.id)}')">
+          ${b.img ? `<img loading="lazy" src="${boardImg(b.img)}" alt="">` : '<div class="bd-noimg">🖼</div>'}
+          <div class="bd-row-t"><b>${bEsc(b.name || b.id)}</b>
+            <span class="hint">${a ? '✓ Answered — tap to change' : (b.groups || []).map(g => bEsc(g.n)).join(' · ') || 'have a look'}</span></div>
+          <span class="bd-go">›</span></div>`; }).join('')}`;
+    return;
+  }
+  const b = list.find(x => x.id === _bOpen); if (!b) { _bOpen = ''; return renderBoards(); }
+  const picked = _bPick[b.id] || new Set();
+  const a = (_bAns || {})[b.id];
+  box.innerHTML = `<div class="mat-head"><h3>🖼 ${bEsc(b.name || b.id)}</h3><button class="mat-close" onclick="boardBack()">✕ Back</button></div>
+    ${b.img ? `<img class="bd-poster" src="${boardImg(b.img)}" alt="${bEsc(b.name || '')}" onclick="shotOpen('${boardImg(b.img)}')">
+      <p class="hint">Tap the picture to see it big.</p>` : ''}
+    ${a ? `<div class="bd-done">✓ You sent this on ${bEsc((a.ts || '').slice(0, 10))}${a.picks && a.picks.length ? ' — ' + a.picks.map(bEsc).join(', ') : ''}${a.note ? ` · “${bEsc(a.note)}”` : ''}<br><span class="hint">Change anything below and send again — the latest one stands.</span></div>` : ''}
+    ${(b.groups || []).map(g => `<div class="bd-grp"><div class="bd-grp-n">${bEsc(g.n || '')}</div>
+      ${(g.o || []).map(o => `<label class="bd-opt${picked.has(o) ? ' on' : ''}">
+        <input type="checkbox" ${picked.has(o) ? 'checked' : ''} onchange="boardTick('${bEscq(b.id)}', '${bEscq(o)}')">
+        <span>${bEsc(o)}</span></label>`).join('')}</div>`).join('')}
+    <div class="bd-grp"><div class="bd-grp-n">ANYTHING YOU'D CHANGE?</div>
+      <textarea class="ask-ta" id="bdNote" placeholder="Tick what's close, then tell us the rest — “the second corner but softer, and no texture in the bathroom.”">${bEsc(a && a.note || '')}</textarea></div>
+    <button class="send-btn" id="bdSend" onclick="boardSend()">📨 Send my choices to Eric</button>
+    <button class="send-btn bd-call" onclick="boardSend(true)">📞 I'm not sure — call me</button>
+    <div class="hint" id="bdStatus" style="margin-top: 8px;"></div>`;
+}
+async function boardSend(call) {
+  if (_bBusy) return;
+  const b = (_boards || []).find(x => x.id === _bOpen); if (!b) return;
+  const note = ((document.getElementById('bdNote') || {}).value || '').trim();
+  const picks = [...(_bPick[b.id] || new Set())];
+  const st = document.getElementById('bdStatus');
+  if (!picks.length && !note && !call) { if (st) st.textContent = 'Tick something, or write us a line, and then send.'; return; }
+  _bBusy = true; if (st) st.textContent = 'Sending…';
+  try {
+    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ c: code, board: { id: b.id, picks, note, call: !!call } }) });
+    if (!r.ok) throw new Error();
+    _bAns = _bAns || {};
+    _bAns[b.id] = { picks, note, call: !!call, ts: new Date().toISOString() };
+    renderBoards(); boardTile();
+    const st2 = document.getElementById('bdStatus');
+    if (st2) st2.textContent = call ? '✓ Sent — Eric will call you.' : '✓ Sent — Clore Construction has it.';
+  } catch (e) {
+    const st2 = document.getElementById('bdStatus');
+    if (st2) st2.textContent = "Couldn't send it — try again in a minute.";
+  } finally { _bBusy = false; }
 }
 // 📋 v5.28 — THE MATERIALS BOARD. Rooms fold like phases; every item wears four lamps:
 // YOUR PICK (glows when the ball's in your court) → PICKED → ORDERED → ARRIVED.
@@ -596,6 +718,7 @@ async function boot() {
     return;
   }
   _d = d; // 💰 the budget card redraws itself from here when a choice is tapped
+  _bAns = (d.boardPicks && typeof d.boardPicks === 'object') ? d.boardPicks : {};   // 🖼 v6.50
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // 🎛 per-page switches Eric flips from his phone: absent = ON, explicit false = OFF
   const sh = k => !d.show || d.show[k] !== false;
@@ -614,9 +737,11 @@ async function boot() {
         ? `<div class="soon live" onclick="toggleCard('photoCard', 'photos')"><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">${allShots.length} progress picture${allShots.length > 1 ? 's' : ''}</div></div></div>`
         : `<div class="soon" onclick="ping('soon:photos')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">progress pictures from the job</div></div></div>`) : ''}
       ${sh('ask') ? `<div class="soon live" onclick="toggleCard('askCard', 'ask:open')"><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>` : ''}
+      ${sh('boards') ? `<div class="soon" id="boardTile" onclick="boardsOpen()"><div class="ribbon" id="boardRibbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">🖼</div><div class="t">Options</div><div class="s" id="boardSub">browse &amp; choose</div></div></div>` : ''}
       ${sh('mat') ? `<div class="soon" id="matTile" onclick="ping('soon:materials')"><div class="ribbon" id="matRibbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Build List</div><div class="s" id="matTileSub">the job's checklist — lists & picks</div></div></div>` : ''}
     </div>
     ${sh('mat') ? `<div class="card" id="matCard" style="display: none;"><div class="mat-head"><h3>📋 BUILD LIST</h3><button class="mat-close" onclick="matCloseFS()">✕ Back</button></div><div id="matBody"></div></div>` : ''}
+    ${sh('boards') ? `<div class="card" id="boardCard" style="display: none;"></div>` : ''}
     ${sh('ask') ? `<div class="card" id="askCard" style="display: none;">
       <h3>💬 ASK OR REMARK</h3>
       <div style="display: flex; gap: 8px; margin-bottom: 10px;">
@@ -692,6 +817,8 @@ async function boot() {
     if (tile) { tile.classList.add('live'); tile.onclick = () => { renderMat(); matOpenFS(); }; }
     updateMatTile();
   });
+  // 🖼 v6.50 — the Options tile lights on its own, whether or not there is a Build List
+  if (sh('boards')) boardsLoad().then(boardTile);
   ping('open');
 }
 boot();
