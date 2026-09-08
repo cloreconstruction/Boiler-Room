@@ -3462,7 +3462,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.48 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.49 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7492,6 +7492,27 @@ function qbCatOf(pay) {
 // wheels and then tapping ✓ three times filed the first one right and the other two on '—'.
 const _qbJob = {};
 function qbJobPick(id, v) { _qbJob[id] = v; }
+// 🏠 v6.49 — Eric, on a text from a dental office: "where does it go?" It went to jobs[0] —
+// Shop / Admin on his phone — silently, because a text carries no job and the fallback picked
+// the first one in the list. "yes that needs to be sorted on the review." So the text card
+// wears the SAME wheel the QuickBooks card has had since v6.19, and nothing is guessed: with
+// no pick it files on '—' unfiled, where the log shows it plainly, instead of landing on a
+// real client's job behind his back.
+const revJobId = id => 'revJob-' + String(id).replace(/[^a-zA-Z0-9:_-]/g, '');
+function revJobWheel(p, label) {
+  const cur = _qbJob[p.id] || '—';
+  return `<div class="field" style="margin-top: 8px; margin-bottom: 0;"><label>${label}</label>
+    <select id="${revJobId(p.id)}" onchange="qbJobPick('${escq(String(p.id))}', this.value)">
+      <option value="—"${cur === '—' ? ' selected' : ''}>— I'll pick it later</option>
+      ${recentJobsOrdered().filter(x => x && x !== '—').map(x => `<option${cur === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}
+    </select>${isPersonalJob(cur) ? '<div class="lock-note" style="margin-top: 6px;">🔒 PERSONAL — this one stays on your phone. Never in a summary, never near crew, never on a client page.</div>' : ''}</div>`;
+}
+// 🔒 v6.49 — the Personal JOB now carries the Personal LOCK. It never did: the lock has always
+// keyed off `personal:true` or a 'Personal' tag, so filing something on the Personal job looked
+// private and wasn't. Eric asked for Personal on this wheel, and the only honest reading of
+// picking it is "keep this off everything" — so picking it sets the flag the rest of the app
+// already obeys. The name is matched exactly, never guessed.
+function isPersonalJob(j) { return String(j || '').trim().toLowerCase() === 'personal'; }
 const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '🔥 Text — needs you', crew: '👷 From the crew', match: '⚙ The Grinder noticed', qb: '💼 In QuickBooks, not in your log', clientask: '💬 From a CLIENT', mail: '📧 Email — looks IMPORTANT' };
 const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', tomorrow: '🌙 by tomorrow' };
 // 🧹 v6.45 — SORT THE PILE. Eric, at 97 waiting: "could you help me sort it and get it to zero
@@ -7576,7 +7597,8 @@ function renderReview() {
       if (p.kind === 'text') body = `<div class="rev-text">From <b>${esc(p.payload.from || '?')}</b>${p.payload.personal ? ' · <b>🔒 PERSONAL</b> — never in a summary, never near crew' : ''}</div>
         <div class="rev-why" style="font-size: 13.5px; color: var(--ink-2); white-space: pre-wrap;">${esc((p.payload.body || '').slice(0, 500))}</div>
         ${(p.payload.photos || []).length ? `<div class="rev-row">${p.payload.photos.map((ph, i) =>
-          `<button class="btn-ghost" onclick="showPhoto('${escq(ph)}')">📷 View photo${p.payload.photos.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}</div>` : ''}`;
+          `<button class="btn-ghost" onclick="showPhoto('${escq(ph)}')">📷 View photo${p.payload.photos.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}</div>` : ''}
+        ${revJobWheel(p, '🏠 Which job is this text about?')}`;
       if (p.kind === 'mail') body = `<div class="rev-text">From <b>${esc(p.payload.from || '?')}</b>${p.payload.addr ? ` · <span class="hint" style="margin: 0; word-break: break-all;">${esc(p.payload.addr)}</span>` : ''} · ${p.payload.known ? '✓ KNOWN sender' : '⚡ NEW sender — nothing filed yet'}</div>
         <div class="rev-text" style="font-weight: 700;">${esc(p.payload.subj || '(no subject)')}</div>
         <div class="rev-why">${esc(MAIL_WHY_WORD[p.payload.why] || MAIL_WHY_WORD.other)}${p.payload.gist ? ' — ' + esc(p.payload.gist) : ''} · ${esc(MAIL_BY_WORD[p.payload.by] || MAIL_BY_WORD.none)}${p.payload.att ? ' · 📎 attachment not captured — the Zap sends words only' : ''}</div>
@@ -7589,11 +7611,7 @@ function renderReview() {
           : 'Logan\'s books have this — your log doesn\'t. QuickBooks has no job on a bill payment, so this part only you can answer.'}</div>
         ${hints.length ? `<div class="rev-row" style="margin-top: 8px;">${hints.map(h =>
           `<button type="button" class="pick-chip" onclick="qbVendUse('${escq(String(p.id))}', '${escq(h.job)}')">🔁 ${esc(h.job)} — ${h.n === 1 ? 'last time' : 'last ' + h.n + ' times'}</button>`).join('')}</div>` : ''}
-        <div class="field" style="margin-top: 8px; margin-bottom: 0;"><label>🏠 Which job is this money on?</label>
-          <select id="revJob-${esc(String(p.id)).replace(/[^a-zA-Z0-9:_-]/g, '')}" onchange="qbJobPick('${escq(String(p.id))}', this.value)">
-            <option value="—"${(_qbJob[p.id] || '—') === '—' ? ' selected' : ''}>— I'll pick it later</option>
-            ${recentJobsOrdered().filter(x => x && x !== '—').map(x => `<option${_qbJob[p.id] === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}
-          </select></div>`; }
+        ${revJobWheel(p, '🏠 Which job is this money on?')}`; }
       if (p.kind === 'clientask') body = `<div class="rev-text"><b>${esc(p.payload.client || '?')}</b> wrote${p.payload.tag && p.payload.tag !== 'General' ? ` — tagged <b>${esc(p.payload.tag)}</b>` : ''}:${p.payload.onit ? ' <span class="hint" style="margin: 0;">● ON IT lit on their page</span>' : ''}</div>
         <div class="rev-why" style="font-size: 13.5px; white-space: pre-wrap;">${esc((p.payload.text || '').slice(0, 600))}</div>
         ${p.payload.photo ? `<div class="ca-photo" data-path="${esc(p.payload.photo)}" style="margin-top: 8px;"><span class="hint">📎 their picture — loading…</span></div>` : ''}
@@ -7705,7 +7723,19 @@ function reviewAct(id, accept) {
   const p = pendingQueue[i];
   if (accept) {
     const pay = p.payload || {};
-    const j = jobs.includes(pay.job) ? pay.job : (jobs[0] || '—');
+    // 🏠 v6.49 — a card that WEARS the wheel is filed by the wheel, and an untouched wheel means
+    // '— unfiled', not jobs[0]. Every other kind keeps the old fallback: a crew note and a radar
+    // to-do arrive carrying their own job, so nothing there was ever guessing.
+    const wheeled = p.kind === 'text' || p.kind === 'qb';
+    let j;
+    if (wheeled) {
+      const sel = $(revJobId(p.id));
+      const want = _qbJob[p.id] || (sel ? sel.value : '');
+      j = jobs.includes(want) ? want : '—';
+      delete _qbJob[p.id];
+    } else j = jobs.includes(pay.job) ? pay.job : (jobs[0] || '—');
+    // 🔒 the Personal job carries the Personal lock — see isPersonalJob()
+    const jLock = isPersonalJob(j) ? { personal: true } : {};
     if (p.kind === 'todo') {
       todos.unshift({ id: nextId++, text: pay.text || 'follow up', job: j, done: false,
         who: (pay.who && (pay.who === 'Me' || crew.includes(pay.who))) ? pay.who : 'Me',
@@ -7739,18 +7769,18 @@ function reviewAct(id, accept) {
       if (accept === 'pile') {
         const from = (pay.from || 'Unknown').trim();
         if (!knownTags().some(x => x.toLowerCase() === from.toLowerCase())) prefs.tags.unshift(from);
-        addEntry('Note', `Text from ${from}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { noSniff: true, tags: tagClean(from), ...phBits, ...(who ? { who } : {}) });
+        addEntry('Note', `Text from ${from}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { noSniff: true, tags: tagClean(from), ...phBits, ...jLock, ...(who ? { who } : {}) });
         renderTagChips();
         toast(`📚 Piled under ${from} — ask the Wizard for "the ${from} list" when you're ready ✓`);
       } else if (accept === 'todo') {
         // 🔥 a hot text becomes a TODAY to-do at full pressure — it stays in sight on the board
         todos.unshift({ id: nextId++, text: `${pay.from ? pay.from + ': ' : ''}${(pay.body || '').slice(0, 200)}`, job: j,
           done: false, who: who || 'Me', pri: pay.hot ? 3 : 1, due: pay.hot ? localDay(new Date()) : undefined,
-          ts: new Date().toISOString(), ...phBits });
+          ts: new Date().toISOString(), ...phBits, ...jLock });
         toast(pay.hot ? '🔥 On the board for TODAY, top pressure ✓' : 'To-do made from the text ✓' + (phs.length ? ' — photo rides on it' : ''));
       } else {
-        addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { noSniff: true, ...phBits, ...(who ? { who } : {}) });
-        toast('Text logged ✓');
+        addEntry('Note', `Text from ${pay.from || '?'}: ${(pay.body || '').slice(0, 800)}${phNote}`, j, { noSniff: true, ...phBits, ...jLock, ...(who ? { who } : {}) });
+        toast(isPersonalJob(j) ? '🔒 Logged on Personal — stays on your phone ✓' : j === '—' ? 'Text logged — no job on it ✓' : `Text logged on ${j} ✓`);
       }
     } else if (p.kind === 'mail') {
       // 📧 v6.41 — an IMPORTANT email card. Known sender: already on the log, so ✓ Got it clears
@@ -7796,10 +7826,7 @@ function reviewAct(id, accept) {
       // 🏠 v6.19 — Eric: "can we pick the job right there?" It used to land on '—' every time
       // and wait for him to go find it in the log and tap ✏️ — which is a second trip he has
       // to remember to make, on money that is already spent. The wheel is on the card now.
-      const sel = $('revJob-' + String(p.id).replace(/[^a-zA-Z0-9:_-]/g, ''));
-      const want = _qbJob[p.id] || (sel ? sel.value : '');
-      const picked = jobs.includes(want) ? want : '—';
-      delete _qbJob[p.id];
+      const picked = j;   // 🏠 v6.49 — read once at the top now, by the shared wheel
       const e = addEntry('Expense', `${pay.who || 'QB expense'}${pay.memo ? ' — ' + pay.memo : ''} (from QuickBooks import)`, picked,
         { amount: +pay.amt, noSniff: true, ts: new Date(pay.d + 'T12:00:00') });
       e.qbV = pay.d; e.qbQid = pay.qid;
@@ -15731,7 +15758,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.48';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.49';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
