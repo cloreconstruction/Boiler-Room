@@ -3315,8 +3315,10 @@
           <div class="hint" style="line-height: 1.5;">In QuickBooks Online → Reports, export to Excel — <b>ALL customers, All Dates, no filters</b> (Claude sorts by job). Three files total:<br>
             <b>1.</b> "Sales by Product/Service Detail" — feeds the phase breakdowns<br>
             <b>2.</b> "Invoice List by Date" — feeds invoiced / paid / open<br>
-            <b>3.</b> "Transaction List by Date" — powers the ✓✓ checkmarks</div>
-          <input type="file" id="qbDrop" accept=".xlsx" multiple style="display: none;" onchange="qbDropUpload(this)">
+            <b>3.</b> "Transaction List by Date" — powers the ✓✓ checkmarks<br>
+            <!-- 📄 v6.52 — Eric: "can i put it directly in clore daylog folder or can you take csv" -->
+            <span style="opacity: .85;">Excel or CSV, either one. If a file won't go up, put it straight into Dropbox → <b>Clore Project Tracker → QB Exports</b> — same result.</span></div>
+          <input type="file" id="qbDrop" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" multiple style="display: none;" onchange="qbDropUpload(this)">
           <!-- 🖱 v5.19 — a real drop ZONE: drag the exports from the PC straight onto the dashed box -->
           <div id="qbDropZone" style="margin-top: 10px; border: 2px dashed var(--line, #3a3226); border-radius: 12px; padding: 18px 12px; text-align: center; cursor: pointer;"
             onclick="$('qbDrop').click()"
@@ -3481,7 +3483,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.51 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.52 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -13538,6 +13540,28 @@ function qbDropFiles(fileList) {
   if (!files.length) { toast('Those aren\'t .xlsx exports — QuickBooks → Export to Excel first', false); return; }
   qbDropUpload({ files, value: '' });
 }
+// 📄 v6.52 — a filename Dropbox will actually accept. It refuses \ / : * ? " < > | outright,
+// and it refuses a name that ends in a dot or a space — a QuickBooks report saved as
+// "Invoice List by Date: All Dates.xlsx" is rejected on the colon alone, and the old code
+// swallowed the error whole. The extension is preserved so the books run still knows the type.
+function qbDropName(n) {
+  let s = String(n || 'export').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
+  s = s.replace(/[. ]+$/, '');
+  if (!s) s = 'export';
+  return s.slice(0, 180);
+}
+// what to tell him, in his words, when one does not go up
+function qbDropWhy(e) {
+  const w = String((e && e.why) || '');
+  const m = String((e && e.message) || e || '');
+  if (/empty/.test(m)) return 'it came through empty — re-export it';
+  if (/insufficient_space/.test(w)) return 'your Dropbox is full';
+  if (/no_write_permission|team_folder|disallowed_name/.test(w)) return "Dropbox won't let the app write there — put it in the folder yourself";
+  if (/malformed_path/.test(w)) return 'Dropbox refused the file name';
+  if (e && e.status === 401) return 'Dropbox needs reconnecting in ⚙ Setup';
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'no signal — try again where the bars are better';
+  return w || m.slice(0, 90) || 'it did not go through';
+}
 async function qbDropUpload(inp) {
   if (CREW_NAME) return; // owner's tool only
   const files = [...(inp.files || [])];
@@ -13545,13 +13569,25 @@ async function qbDropUpload(inp) {
   if (!dbx.refreshToken) { toast('Connect Dropbox first (⚙ Setup)', false); return; }
   $('qbDropMsg').textContent = 'Uploading…';
   let done = 0;
+  const bad = [];
   for (const f of files) {
-    try { await dbxUpload('/Clore Project Tracker/QB Exports/' + f.name, f, true); done++; } catch (e) {}
+    // 📄 v6.52 — Eric: "i am unable to upload the excel report for list of invoices. it just
+    // says 0 of 1 made it." A name Dropbox refuses killed the whole upload silently, so the
+    // name is cleaned first: Dropbox rejects \ / : * ? " < > | and any name that ends in a
+    // dot or a space. The extension is kept so the books session still knows what it is.
+    const safe = qbDropName(f.name);
+    try {
+      if (!f.size) throw new Error('that file is empty (0 bytes) — re-export it');
+      await dbxUpload('/Clore Project Tracker/QB Exports/' + safe, f, true);
+      done++;
+    } catch (e) {
+      bad.push(`${safe} — ${qbDropWhy(e)}`);
+    }
   }
   inp.value = '';
-  $('qbDropMsg').textContent = done === files.length
+  $('qbDropMsg').innerHTML = done === files.length
     ? `✓ ${done} file${done > 1 ? 's' : ''} in. Tap 📣 below for within-the-hour processing, or the nightly refresher gets them by morning.`
-    : `⚠ Only ${done} of ${files.length} made it — try the rest again.`;
+    : `⚠ Only ${done} of ${files.length} made it.<br>${bad.map(b => esc(b)).join('<br>')}<br>You can also drop the file straight into Dropbox → Clore Project Tracker → QB Exports and it works the same.`;
   toast(`💼 ${done} export${done === 1 ? '' : 's'} uploaded ✓`);
   renderQbLights(); // 💡 fresh upload = the lamp lights right away
 }
@@ -15947,7 +15983,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.51';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.52';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -16116,7 +16152,19 @@ async function dbxUpload(path, data, keepBoth) {
     },
     body: data
   });
-  if (!r.ok) throw new Error('upload failed: ' + path);
+  // 🗣 v6.52 — say WHY. This threw a bare "upload failed" for years, so the QuickBooks drop
+  // could only ever report "0 of 1 made it" with no reason. Dropbox always sends an
+  // error_summary; carry it, and the HTTP status, up to whoever is showing the message.
+  if (!r.ok) {
+    let why = '';
+    // keep the WHOLE summary: Dropbox puts the useful half second ("path/no_write_permission"),
+    // so splitting on the first slash threw away the only part worth reading.
+    try { const j = await r.json(); why = String(j.error_summary || '').replace(/\/\.\.\.$/, '').replace(/\/+$/, '').slice(0, 80); }
+    catch (e) { try { why = (await r.text()).slice(0, 120); } catch (e2) {} }
+    const err = new Error('upload failed (' + r.status + (why ? ': ' + why : '') + '): ' + path);
+    err.status = r.status; err.why = why;
+    throw err;
+  }
   return r.json();
 }
 async function dbxDownload(path) {
