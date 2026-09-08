@@ -819,6 +819,11 @@
     animation: panelIn 0.18s ease-out forwards;
     z-index: 60;
   }
+  /* ✏️ v6.51 — the log editor has to open OVER the receipts window, not under it. Panels sit at
+     60 and .rev-modal at 80, so "✏️ Fix it" on a receipt row opened the sheet behind the very
+     window he tapped it from and looked like a dead button — the same shape as the v6.42 bug on
+     the homeowner's Build List. It is the one panel reachable from inside a modal. */
+  #panel-logedit { z-index: 90; }
   body.modal-open { overflow: hidden; }
   @keyframes panelIn {
     from { opacity: 0; transform: translate(-50%, -14px); }
@@ -3476,7 +3481,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.50 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.51 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -11237,6 +11242,44 @@ async function openRcptReview(i) {
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
 }
+// 🧾 v6.51 — Eric, in the receipts window: "how can i click on a receipt to look at it before i
+// sort it" and "if something gets on there that doesn't belong i should be able to edit it or
+// send it back to a sort pile". Three buttons on every row, and a pile at the bottom that gives
+// anything back. He was approving money onto a homeowner's page off a one-line summary.
+function rcptRowBtns(e) {
+  const hasPh = !!(e.photoPath || (e.photoPaths || []).length);
+  return `<div class="frow" style="gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+    ${hasPh ? `<button type="button" class="btn-ghost" style="flex: 1 1 auto; min-height: 40px; font-size: 12.5px;" onclick="openEntryPhoto(${e.id}, event)">📷 Look at it${(e.photoPaths || []).length > 1 ? ` (${e.photoPaths.length})` : ''}</button>`
+      : `<span class="hint" style="flex: 1 1 auto; margin: 0; align-self: center;">no picture on this one</span>`}
+    <button type="button" class="btn-ghost" style="flex: 0 0 auto; min-height: 40px; font-size: 12.5px;" onclick="openLogEdit(${e.id}, event)">✏️ Fix it</button>
+    <button type="button" class="btn-ghost req-x" style="flex: 0 0 auto; min-height: 40px; font-size: 12.5px;" onclick="rcptSkip(${e.id}, event)">⏏ Not for them</button>
+  </div>`;
+}
+// ⏏ off this list, never gone: it drops into the ⚪ SKIPPED pile at the foot of the window and
+// one tap puts it back. estBillSkip() has set budg='no' since v6.35 — this is the same door,
+// with the way home attached, and it un-checks the row so a skipped receipt can't ride an approve.
+function rcptSkip(id, ev) {
+  if (ev) ev.stopPropagation();
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  e.budg = 'no';
+  _rcptSel.delete(id);
+  scheduleSave(); renderRcptReview(); renderLog();
+  toastUndo(`⏏ Off this list — it's in ⚪ SKIPPED at the bottom`, () => {
+    delete e.budg; scheduleSave(); renderRcptReview(); renderLog();
+  });
+}
+function rcptUnskip(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  delete e.budg;
+  scheduleSave(); renderRcptReview(); renderLog();
+  toast('↩ Back on the list ✓');
+}
+function rcptSkipped(job) {
+  return entries.filter(e => e && e.job === job && e.budg === 'no' && !e.sample &&
+    !e.personal && !(e.tags || []).includes('Personal') && estBillParse(e));
+}
 function renderRcptReview() {
   const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
   if (!c) return;
@@ -11287,8 +11330,23 @@ function renderRcptReview() {
       </div>
       <div style="font-size: 13px; margin-top: 4px;">receipt ${money(p.amt)} · <b>they see ${money(shown)}</b></div>
       ${cat ? '' : `<div class="hint" style="margin-top: 4px;">⚠ Give it a 🧾 category in the log before this one can go — it needs a budget line to land on.</div>`}
+      ${rcptRowBtns(e)}
     </div>`;
   }).join('');
+  // ⚪ v6.51 — the sort pile: everything he waved off this job, with the way back
+  const skipped = rcptSkipped(aj);
+  const skipBlock = skipped.length ? `<div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 14px 0 2px;">⚪ SKIPPED — ${skipped.length} off this list</div>
+    <div class="hint" style="margin: 0 0 4px;">Still in your log and still in the books — just not offered to this client. Put any of them back with one tap.</div>` +
+    skipped.map(e => { const p = estBillParse(e) || {};
+      return `<div class="g-step" style="margin-top: 8px;">
+        <div style="font-size: 13px;"><b>${esc((e.details || '').slice(0, 70))}</b></div>
+        <div style="font-size: 12px; opacity: .8; margin-top: 3px;">${esc(localDay(new Date(e.ts)))}${p.v ? ' · 🏪 ' + esc(p.v) : ''} · ${money(p.amt)}</div>
+        <div class="frow" style="gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+          ${(e.photoPath || (e.photoPaths || []).length) ? `<button type="button" class="btn-ghost" style="flex: 1 1 auto; min-height: 40px; font-size: 12.5px;" onclick="openEntryPhoto(${e.id}, event)">📷 Look at it</button>` : '<span class="hint" style="flex: 1 1 auto; margin: 0; align-self: center;">no picture on this one</span>'}
+          <button type="button" class="btn-ghost" style="flex: 0 0 auto; min-height: 40px; font-size: 12.5px;" onclick="openLogEdit(${e.id}, event)">✏️ Fix it</button>
+          <button type="button" class="btn-primary" style="flex: 0 0 auto; min-height: 40px; font-size: 12.5px;" onclick="rcptUnskip(${e.id})">↩ Put it back</button>
+        </div>
+      </div>`; }).join('') : '';
   const okCount = [..._rcptSel].filter(id => {
     const e = entries.find(x => x.id === id);
     return e && String(e.category || '').trim();
@@ -11310,7 +11368,7 @@ function renderRcptReview() {
         <button type="button" class="btn-ghost" style="min-height: 46px;" onclick="rcptAll()">${_rcptSel.size >= list.length ? '☐ Uncheck all' : '☑ Check all'}</button>
       </div>
     </div>` : ''}
-    ${sentBlock}${overBlock}</div>`;
+    ${sentBlock}${overBlock}${skipBlock}</div>`;
 }
 function rcptTog(id) { _rcptSel.has(id) ? _rcptSel.delete(id) : _rcptSel.add(id); renderRcptReview(); }
 function rcptAll() {
@@ -15836,6 +15894,7 @@ function saveLogEdit() {
   e.synced = false;
   editingLogId = null;
   renderAll(); scheduleSave(); closePanels();
+  if (_rcptIdx >= 0) renderRcptReview();   // 🧾 v6.51 — he fixed it FROM the receipts window; redraw it behind him
   if (visChanged) publishSharedNotes(); // unlocking travels out; re-locking sweeps it back off
   toast(visChanged ? (newVis ? (newVis === 'crew' ? 'Updated — 🔓 unlocked for all crew ✓' : `Updated — 📨 sent to ${Array.isArray(newVis) ? newVis.join(' + ') : newVis} ✓`) : 'Updated — 🔒 locked back to just you ✓') : 'Entry updated ✓');
 }
@@ -15846,6 +15905,7 @@ function deleteLogEntry() {
   entries = entries.filter(x => x.id !== editingLogId);
   editingLogId = null;
   renderAll(); scheduleSave(); closePanels();
+  if (_rcptIdx >= 0) renderRcptReview();   // 🧾 v6.51 — he fixed it FROM the receipts window; redraw it behind him
   toastUndo(`Entry deleted — ${e.details.slice(0, 32)}`, () => {
     entries.splice(Math.min(idx, entries.length), 0, e);
     renderAll(); scheduleSave();
@@ -15887,7 +15947,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.50';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.51';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
