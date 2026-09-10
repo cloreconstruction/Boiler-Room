@@ -2090,6 +2090,34 @@
      on one unwrappable line and pushed the whole document to 428px on a 390px screen, so every
      page slid sideways and the ⚙ Setup button hung off the edge. It wraps now. */
   .qn-div > span { min-width: 0; flex-wrap: wrap; }
+  /* 🧱 v6.56 — Eric: "the log tag buttons need rearranging and sized to fit much better."
+     They were a flex-wrap row, so every brass plate sized itself to its own word: nine
+     plates came out in six crooked rows of four different widths. One GRID with equal
+     columns instead — same width every plate, straight rows, like a real control panel.
+     A long word WRAPS inside its plate instead of stretching it (the v6.42 rule), and the
+     two that aren't filters — say something, and the person wheel — get their own full row. */
+  /* minmax(0, 1fr), NOT 1fr — a bare 1fr keeps an auto MINIMUM, so the column holding the
+     longest plate (QUESTIONS) quietly grew 15px wider than the other two in the steam skin. */
+  .rl-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 8px 0 6px; }
+  .rl-filters > .pick-chip {
+    width: 100%; margin: 0; padding: 5px 3px; min-height: 46px;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    /* the glyph and the word break onto two lines at the SPACE between them — never
+       inside the word. "QUESTIO NS" is worse than a tall plate. */
+    white-space: normal; overflow-wrap: normal; word-break: normal; hyphens: none;
+    line-height: 1.1; font-size: 10px; letter-spacing: 0;
+  }
+  /* the steam plate's 9px brass frame ate 18px of a 89px cell and "QUESTIONS" ran over the
+     edge. 7px here — the frame still renders (the border-image slice stretches), the word fits. */
+  :root[data-skin="steam"] .rl-filters > .pick-chip { border-width: 7px; padding: 4px 2px; }
+  .rl-filters > .rl-wide { grid-column: 1 / -1; min-height: 40px; }
+  .rl-filters > .mini-sel { grid-column: 1 / -1; width: 100%; min-height: 36px; }
+  /* the log card's own header: count, 🧾, 🔍 and the link sat on four ragged lines */
+  .rl-head { gap: 6px !important; }
+  .rl-head .pick-chip { font-size: 11px !important; padding: 5px 6px !important; min-height: 34px !important;
+    letter-spacing: 0 !important; flex: 0 0 auto; width: 116px; justify-content: center; }
+  .rl-head > span:last-child { flex: 1 1 auto; justify-content: flex-end; row-gap: 6px; }
+  @media (max-width: 344px) { .rl-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .qn-div::before { content: ''; position: absolute; top: -8px; left: -14px; right: -14px; height: 3px;
     background: color-mix(in srgb, var(--accent) 22%, transparent); }
   .qn-div-label { font-size: 11.5px; font-weight: 800; letter-spacing: 1.6px; color: var(--accent-ink, #fff);
@@ -2620,7 +2648,7 @@
        The one log is its OWN card now, right below the grinder. v5.78 still holds inside it:
        the whole book, newest first, tap 🔍 and the searches open right here. -->
   <div class="card ask-card" id="runLogCard">
-    <div class="qn-div" style="border-top: 0; margin-top: 0; padding-top: 0;">
+    <div class="qn-div rl-head" style="border-top: 0; margin-top: 0; padding-top: 0;">
       <span class="qn-div-label">📜 RUNNING LOG</span>
       <span style="display: flex; align-items: center; gap: 6px;">
         <span class="hint" id="rlCount" style="margin: 0; font-size: 11px;"></span>
@@ -3502,7 +3530,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.55 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.56 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -14773,15 +14801,15 @@ function renderAskRecent() {
   }
   const chip = (v, w) => {
     const only = f === v, off = !only && hide.includes(v);
-    return `<button type="button" class="pick-chip${only ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;${off ? ' opacity: .5; border-style: dashed;' : ''}"
+    return `<button type="button" class="pick-chip${only ? ' sel' : ''}"${off ? ' style="opacity: .5; border-style: dashed;"' : ''}
       title="${only ? 'tap again: 🚫 hide these' : off ? 'hidden — tap: let them back in' : 'tap: only these · tap tap: hide these'}"
       onclick="rlSet('${v}')">${only ? '✓ ' : off ? '🚫 ' : ''}${w}</button>`;
   };
-  box.innerHTML = `<div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 4px;">
-      <button type="button" class="pick-chip${!f && !who && !hide.length ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; prefs.rlHide = []; window._rlN = 12; scheduleSave(); renderAskRecent();">${!f && !who && !hide.length ? '✓ ' : ''}✳ All</button>
+  box.innerHTML = `<div class="rl-filters">
+      <button type="button" class="pick-chip${!f && !who && !hide.length ? ' sel' : ''}" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; prefs.rlHide = []; window._rlN = 12; scheduleSave(); renderAskRecent();">${!f && !who && !hide.length ? '✓ ' : ''}✳ All</button>
       ${chip('grind', '⚙ Grinder')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('mail', '📧 Emails')}${chip('photo', '📷 Pictures')}${chip('crew', '👷 Crew')}${chip('client', '🏠 Client')}${chip('fb', '💬 Feedback')}
-      <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="openFeedback()" title="Say what works and what doesn't — it lands right here in the log">➕ 💬 say something</button>
-      ${people.length ? `<select class="mini-sel" style="min-height: 26px; font-size: 11px; padding: 2px 6px;" onchange="rlWho(this.value)" title="Just one person's traffic">
+      <button type="button" class="pick-chip rl-wide" onclick="openFeedback()" title="Say what works and what doesn't — it lands right here in the log">➕ 💬 Say something</button>
+      ${people.length ? `<select class="mini-sel" style="font-size: 11px; padding: 2px 6px;" onchange="rlWho(this.value)" title="Just one person's traffic">
         <option value="">👤 person…</option>${people.map(pn => `<option${who === pn ? ' selected' : ''}>${esc(pn)}</option>`).join('')}</select>` : ''}
     </div>` +
     (page.length ? page.map(it => {
@@ -16165,7 +16193,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.55';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.56';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
