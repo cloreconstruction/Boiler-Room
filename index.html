@@ -3530,7 +3530,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.58 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.59 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5606,6 +5606,14 @@ function setCurTruck(n) { curTruck = n; prefs.lastTruck = n; renderTruckChips();
 // three, never a guess — each is a job he is already standing in.
 function renderQnJobChips() {
   const box = $('qnJobChips'); if (!box) return;
+  // 🎡 v6.59 — Eric: "on the pick the job i dont like the 'recent' tags, just leave the drop
+  // down menu only." The one-tap job plates from v6.42 (12) are OFF: the wheel gets the whole
+  // row back. The code stays, behind this one line, in case he wants them again.
+  if (!window.QN_JOB_CHIPS) {
+    const step0 = box.closest('.g-step'); if (step0) step0.classList.remove('has-jobchips');
+    box.innerHTML = '';
+    return;
+  }
   const last = (entries.find(e => !e.sample && e.job && e.job !== '—') || {}).job;
   const picks = [...new Set([clockJobName, last, curJob].filter(j => j && jobs.includes(j)))].slice(0, 3);
   const step = box.closest('.g-step');
@@ -14889,13 +14897,18 @@ async function askInstant(what) {
   try {
     // v4.50 — hand the Wizard any Dropbox filenames that match the question, so
     // "where's the Chafin invoice" can be answered with an actual file and folder
-    let fileCtx = '';
+    let fileCtx = '', wizFiles = [];
     if (dbx.refreshToken) {
       try {
         const fr = await dbxRpc('files/search_v2', { query: what.slice(0, 80), options: { path: DBX_ROOT, max_results: 8, filename_only: true, file_status: 'active' } });
-        const names = (fr.matches || []).map(m => m.metadata && m.metadata.metadata)
-          .filter(f => f && f['.tag'] === 'file')
-          .map(f => (f.path_display || '').replace(/^\/Clore DayLog\//i, ''));
+        const found = (fr.matches || []).map(m => m.metadata && m.metadata.metadata)
+          .filter(f => f && f['.tag'] === 'file');
+        const names = found.map(f => (f.path_display || '').replace(/^\/Clore DayLog\//i, ''));
+        // 📎 v6.59 — Eric: "show the dropbox file path to the results it finds so if something
+        // messes up or its taking too long i can just find the file in dropbox myself." The
+        // search has run since v5.x; he just never saw what it found. Full paths, kept for the
+        // answer screen.
+        wizFiles = found.map(f => f.path_display || '').filter(Boolean);
         if (names.length) fileCtx = '\nDROPBOX FILES WHOSE NAMES MATCH THE QUESTION: ' + JSON.stringify(names);
       } catch (e) { /* offline — the log context stands alone */ }
     }
@@ -14969,8 +14982,8 @@ async function askInstant(what) {
     let clean = text, srcIds = [];
     const sm = text.match(/\n?\s*SOURCES?:\s*([\d,\s]+)\s*$/i);
     if (sm) { clean = text.slice(0, sm.index).trim(); srcIds = sm[1].split(/[\s,]+/).map(Number).filter(Boolean); }
-    _lastAnswer = { q: what, text: clean, srcIds, at: Date.now() };
-    showWizFull(what, clean, srcIds, brainWord(aiWho) + (aiFell ? ' — the smart one was busy, so the quick one took it' : '')); // v5.08 — straight to full screen: the answer, nothing else
+    _lastAnswer = { q: what, text: clean, srcIds, files: wizFiles, at: Date.now() };
+    showWizFull(what, clean, srcIds, brainWord(aiWho) + (aiFell ? ' — the smart one was busy, so the quick one took it' : ''), wizFiles); // v5.08 — straight to full screen: the answer, nothing else
     saveRecentAnswer(what, clean);
   } catch (e) {
     delete st.dataset.busy; wizIdleLamp();
@@ -15194,10 +15207,23 @@ function reopenAnswer(i) {
   if (r) showWizFull(r.q, r.a);
 }
 // 🧙 v5.08 — the full-screen answer: nothing else on screen, ‹ Back at the bottom
-function showWizFull(q, md, srcIds, brain) {
+// 📎 v6.59 — the Dropbox paths the Wizard's file search turned up, in small letters under the
+// answer, so Eric can walk to the file himself when the Wizard is slow or wrong. Tap = copy.
+function wizFilesHtml(files) {
+  const list = (files || []).filter(Boolean).slice(0, 8);
+  if (!list.length) return '';
+  return `<div class="wf-files hint" style="margin-top: 12px; font-size: 11px; line-height: 1.7;">📎 Files in Dropbox whose names matched — tap one to copy its path:<br>` +
+    list.map(p => `<span class="wf-path" style="cursor: pointer; opacity: .85; word-break: break-all;" onclick="wizCopyPath('${escq(p)}')">${esc(p)}</span>`).join('<br>') + `</div>`;
+}
+async function wizCopyPath(p) {
+  try { await navigator.clipboard.writeText(p); toast('📋 Path copied — paste it into Dropbox\'s search'); }
+  catch (e) { prompt('Copy this path:', p); }
+}
+function showWizFull(q, md, srcIds, brain, files) {
   const srcs = (srcIds || []).map(id => entries.find(e => e.id === id)).filter(Boolean);
   const phSrcs = srcs.filter(e => e.photoPath || (e.photoPaths && e.photoPaths.length));
   $('wizFullBody').innerHTML = `<div class="wf-q">🧙 ${esc(q)}</div>` + mdToHtml(md) +
+    wizFilesHtml(files) +
     (brain ? `<div class="wf-brain hint" style="margin-top: 12px;">Answered by the ${esc(brain)}</div>` : '') +
     `<div class="rev-row" style="margin-top: 16px; flex-wrap: wrap;">` +
     phSrcs.slice(0, 3).map((e, i) =>
@@ -16557,7 +16583,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.58';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.59';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

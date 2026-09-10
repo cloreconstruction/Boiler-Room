@@ -219,19 +219,25 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
 
   // ── 12. picking a job was always a spinning wheel ──
-  ok('12. one-tap job buttons above the wheel, the clocked-in job first', await page.evaluate(() => {
+  // 🎡 v6.59 — Eric: "i dont like the 'recent' tags, just leave the drop down menu only." The
+  // one-tap plates are OFF; the wheel has the whole row. The code is behind window.QN_JOB_CHIPS.
+  ok('12. (v6.59) no one-tap job plates — the wheel alone, at full width', await page.evaluate(() => {
     clockJobName = 'Rininger'; curJob = 'Mery'; entries = []; nextId = 1;
     renderQnJobChips();
-    const box = $('qnJobChips'), btns = [...box.querySelectorAll('button')];
-    return btns.length >= 2 && btns.length <= 3 && /Rininger/.test(btns[0].textContent) && /⏱/.test(btns[0].textContent) &&
-      btns.every(b => b.getBoundingClientRect().height >= 38);
+    const box = $('qnJobChips'), step = box.closest('.g-step');
+    return box.querySelectorAll('button').length === 0 && !step.classList.contains('has-jobchips') &&
+      $('qnJob').getBoundingClientRect().width > 250;
   }));
 
-  ok('12b. tapping one picks that job; tapping it again clears it — no trip to the wheel', await page.evaluate(() => {
+  ok('12b. the plates come back only if asked for (window.QN_JOB_CHIPS), and pick/clear still works', await page.evaluate(() => {
+    window.QN_JOB_CHIPS = true; renderQnJobChips();
+    const btns = [...$('qnJobChips').querySelectorAll('button')];
     qnJobPick = ''; qnJobTap('Rininger');
     const on = qnJobPick === 'Rininger' && $('qnJob').value === 'Rininger';
     qnJobTap('Rininger');
-    return on && qnJobPick === '' && $('qnJob').value === '';
+    const off = qnJobPick === '' && $('qnJob').value === '';
+    window.QN_JOB_CHIPS = false; renderQnJobChips();
+    return btns.length >= 2 && on && off && $('qnJobChips').querySelectorAll('button').length === 0;
   }));
 
   // ── 13. two of the eight bottom buttons were dead weight ──
