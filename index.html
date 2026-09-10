@@ -3530,7 +3530,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.56 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.57 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8546,7 +8546,7 @@ function textAlreadyLogged(from, body, srcTs) {
   const wordy = String(body || '').trim().length >= 10; // "ok" twice is two texts, always
   return entries.some(e => {
     if (!e.texted || e.sample || e.out) return false;   // our own sent texts are not repeats
-    if (textFP((e.tags || [])[0], textBodyOf(e)) !== fp) return false;
+    if (textFP(textSender(e), textBodyOf(e)) !== fp) return false;   // ☎ v6.57 — a raw number's text has no tag; dedupe by the sender in the words
     if (e.textTs && srcTs) {
       if (e.textTs === srcTs) return true;                // the same file, read twice
       // 🪟 v5.99 — two automations can catch ONE message and write two files a breath apart.
@@ -8695,19 +8695,38 @@ function senderName(raw) {
   const key = s.replace(/\D/g, '');
   return (key && (prefs.senderAlias || {})[key]) || s;
 }
+// ☎ v6.57 — WHO SENT THIS TEXT, whatever the tag scrub did to it. v6.24's tagLooksJunky drops
+// a bare phone number as a tag (rightly — a number is not a name), which left a text from an
+// unnamed number with NO tag at all. The digest filed it under "?", the ✎ name chip never
+// appeared, the log's 💬 thread link had nothing to key on. Eric: "wheres the option for me
+// to add a name to the phone numbers from texts?" — it has been there since v5.26; the number
+// just could not reach it. The sender is still in the words ("Text from +1907…:"), so read it
+// from there, and a taught number wears its name even here.
+function textSender(e) {
+  if (!e) return '';
+  if (e.who && e.who !== 'Me') return String(e.who);
+  const t = (e.tags || [])[0];
+  if (t) return String(t);
+  const m = String(e.details || '').match(/^Text from ([^:]+):/);
+  return m ? senderName(m[1].trim()) : '';
+}
 function aliasSender(rawNum, name) {
   name = (name || '').trim().slice(0, 30);
   const key = (rawNum || '').replace(/\D/g, '');
   if (!name || !key) return;
   if (!prefs.senderAlias) prefs.senderAlias = {};
   prefs.senderAlias[key] = name;
-  // retro-fix: every entry tagged with the raw number flips to the name
+  // retro-fix: every entry tagged with the raw number flips to the name — and (v6.57) every
+  // text that carries the number only in its words gets the name as its tag from now on
   entries.forEach(e => {
-    if (e.tags && e.tags.some(t => String(t).replace(/\D/g, '') === key)) {
-      e.tags = e.tags.map(t => String(t).replace(/\D/g, '') === key ? name : t);
-      if (e.texted) e.details = e.details.replace(/^Text from [^:]*:/, `Text from ${name}:`);
-      e.synced = false;
-    }
+    const tagHit = !!(e.tags && e.tags.some(t => String(t).replace(/\D/g, '') === key));
+    const m = e.texted ? String(e.details || '').match(/^Text from ([^:]+):/) : null;
+    const wordHit = !!(m && m[1].replace(/\D/g, '') === key);
+    if (!tagHit && !wordHit) return;
+    if (tagHit) e.tags = e.tags.map(t => String(t).replace(/\D/g, '') === key ? name : t);
+    else e.tags = [name, ...(e.tags || [])];
+    if (e.texted) e.details = e.details.replace(/^Text from [^:]*:/, `Text from ${name}:`);
+    e.synced = false;
   });
   prefs.tags = (prefs.tags || []).map(t => String(t).replace(/\D/g, '') === key ? name : t);
   prefs.tags = [...new Set(prefs.tags)];
@@ -8738,7 +8757,8 @@ function telSet(who, num) {
 // every text with this person, both directions, oldest at the bottom like a message app
 function threadWith(who) {
   const key = String(who || '').toLowerCase();
-  return entries.filter(e => e.texted && !e.sample && (e.tags || []).some(t => String(t).toLowerCase() === key))
+  return entries.filter(e => e.texted && !e.sample &&
+      ((e.tags || []).some(t => String(t).toLowerCase() === key) || textSender(e).toLowerCase() === key))   // ☎ v6.57
     .sort((a, b) => +new Date(a.ts) - +new Date(b.ts));
 }
 let _thrWho = '';
@@ -8857,6 +8877,11 @@ function tdRenameStart(s, ev) {
   const b = $('tdRenBox'); if (b) b.focus();
 }
 function tdRenameDone(num, val) {
+  // ☎ v6.57 — runs ONCE per rename. Enter calls this, aliasSender re-renders the digest, the
+  // re-render removes the focused box, and the box's onblur called this again mid-render — a
+  // second aliasSender inside the first innerHTML write, and a DOM error in the console since
+  // v5.26. _tdRen is the ticket: the first caller takes it, the blur finds it gone and leaves.
+  if (_tdRen !== num) return;
   _tdRen = '';
   if ((val || '').trim()) aliasSender(num, val); else renderTextDigest();
 }
@@ -8949,9 +8974,9 @@ function renderTextDigest() {
   const needs = tx.filter(e => !e.personal && NEEDS_ANSWER.test((e.details || '').replace(/^Text from [^:]*: /, '')));
   // sender counts for the filter chips
   const byWho = {};
-  tx.forEach(e => { const s = (e.tags || [])[0] || '?'; byWho[s] = (byWho[s] || 0) + 1; });
+  tx.forEach(e => { const s = textSender(e) || '?'; byWho[s] = (byWho[s] || 0) + 1; });   // ☎ v6.57 — by the words when the tag is gone
   if (_tdSender && !byWho[_tdSender]) _tdSender = '';
-  const shown = _tdSender ? tx.filter(e => ((e.tags || [])[0] || '?') === _tdSender) : tx;
+  const shown = _tdSender ? tx.filter(e => (textSender(e) || '?') === _tdSender) : tx;
   // 📈 the interesting fact: texts per day, last 7 days
   const hist = [];
   for (let i = 6; i >= 1; i--) {
@@ -8978,7 +9003,7 @@ function renderTextDigest() {
         .map(([k, lab]) => `<button type="button" class="pick-chip${(_tdRange || 'today') === k ? ' sel' : ''}" style="font-size: 10.5px; padding: 4px 9px; min-height: 26px;" onclick="tdRange('${k}')">${(_tdRange || 'today') === k ? '✓ ' : ''}${lab}</button>`).join('')}
     </div>
     <div style="margin-top: 6px;" onclick="event.stopPropagation()">` + shown.slice(0, 40).map(e =>
-      `<div class="hint" style="margin: 3px 0;">${e.personal ? '🔒 ' : ''}<b>${esc((e.tags || [])[0] || '?')}</b> · ${new Date(e.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} — ${esc(e.details.replace(/^Text from [^:]*: /, '').slice(0, 110))}</div>`).join('') +
+      `<div class="hint" style="margin: 3px 0;">${e.personal ? '🔒 ' : ''}<b>${esc(textSender(e) || '?')}</b> · ${new Date(e.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} — ${esc(e.details.replace(/^Text from [^:]*: /, '').slice(0, 110))}</div>`).join('') +
       (shown.length > 40 ? `<div class="hint" style="margin: 3px 0;">…and ${shown.length - 40} more (ask the Wizard for the full ${esc(_tdSender || 'text')} list)</div>` : '') + `
     </div>
     <div class="hint" style="margin: 8px 0 0;" onclick="event.stopPropagation()">📈 past days: ${hist.join(' · ')}</div>` : ''}
@@ -14716,7 +14741,7 @@ function renderAskRecent() {
     : (e.photoPath || (e.photoPaths && e.photoPaths.length) || e.type === 'Photo') ? 'photo'
     : e.ask ? 'wiz' : 'grind';
   const GLYPH = { text: '📱', photo: '📷', wiz: '❓', grind: '⚙', fb: '💬', crew: '👷', client: '🏠', mail: '📧' };
-  const personOf = e => e.who && e.who !== 'Me' ? e.who : ((e.tags || [])[0] || '');
+  const personOf = e => textSender(e);   // ☎ v6.57 — same answer as before, plus the number in the words when the tag is gone
   const pendKind = p => p.kind === 'crew' ? 'crew' : p.kind === 'clientask' ? 'client'
     : p.kind === 'text' ? 'text' : p.kind === 'question' ? 'wiz' : 'grind';
   // 🏷 v6.10 — Eric, at a wall of identical "⚙ ⏳ waiting: …" rows: "what are all these?"
@@ -15879,7 +15904,10 @@ function logRowHtml(e) {
     const headsBit = e.heads ? `<span>·</span><span style="font-weight: 800;" title="Heads-up — this bites later work">⚠ HEADS-UP</span>` : '';
     const tagBit = (e.tags || []).length ? `<span>·</span>` + e.tags.map(t => `<span style="cursor: pointer;" title="Show everything tagged ${esc(t)}" onclick="logFilterTag('${escq(t)}', event)">🏷 ${esc(t)}</span>`).join(' ') : '';
     // 💬 v6.11 — a text row opens the whole back-and-forth, and writes back from there
-    const thrBit = e.texted && (e.tags || [])[0] ? `<span>·</span><span style="cursor: pointer; font-weight: 700;" title="The whole conversation with ${esc((e.tags || [])[0])}" onclick="openThread('${escq((e.tags || [])[0])}'); event.stopPropagation();">💬 thread ↩</span>` : '';
+    // ☎ v6.57 — keyed on the sender, not the tag: a raw number's text has no tag, and this
+    // link is the door to the name box in the thread window
+    const thrWho = e.texted ? textSender(e) : '';
+    const thrBit = thrWho ? `<span>·</span><span style="cursor: pointer; font-weight: 700;" title="The whole conversation with ${esc(thrWho)}${LOOKS_LIKE_PHONE.test(thrWho) ? ' — and where you give this number a name' : ''}" onclick="openThread('${escq(thrWho)}'); event.stopPropagation();">💬 thread ↩${LOOKS_LIKE_PHONE.test(thrWho) ? ' · ✎ name' : ''}</span>` : '';
     const visBit = e.vis ? `<span>·</span><span title="${e.vis === 'crew' ? 'Unlocked — every crew folder gets this' : 'Sent to ' + esc(Array.isArray(e.vis) ? e.vis.join(' + ') : e.vis) + ' only'}">${esc(visWord(e.vis))}</span>` : '';
     const ocrBit = e.ocr ? `<span>·</span><span title="Text was read from the photo — search can find it">📄 text</span>` : '';
     // 💰 v6.24 — Eric: "send to the budget" straight from the receipt. One tap lands on this
@@ -16193,7 +16221,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.56';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.57';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
