@@ -3530,7 +3530,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.57 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.58 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8154,6 +8154,8 @@ async function mailSort(m, f, id) {
     mailRingAdd({ ...row, g: '', why: 'other', by: 'list' }); mailDayBump('ign'); done(true); scheduleSave(); return;
   }
   if (mailIsPersonal(m)) { autoLogMail(m, ts); done(); scheduleSave(); return; }                    // 🔒 locked, never read by the judge
+  // 👷 v6.58 — Phil's weekly job recap: known by sender + subject, parsed, never judged
+  if (laborRecapIs(m)) { laborRecapTake(m, ts); done(); scheduleSave(); return; }
   const known = !m.addr || mailListed(mailOk(), m.addr);
   if (!mailSortOn()) {                                                                              // sorting off = v6.12, word for word
     if (known) autoLogMail(m, ts);
@@ -10787,6 +10789,284 @@ function estMk() { return _estD && +_estD.mk >= 0 ? +_estD.mk : 20; }
 function estFreshBoard() {
   return { updated: '', mk: 20, cats: EST_DEFAULT_CATS.map(n => ({ n, appr: false, bids: [] })) };
 }
+// ═══════════ 👷 v6.58 — CREW LABOR, FROM PHIL'S WEEKLY RECAP ═══════════
+// Eric: "we know the crews' pay, and we have the crews' summary now. You can capture that and
+// maybe have a crew labor hours page … pushing send to the homeowner's estimated summary."
+// The time-clock app (Eric's — he paid Phil to build it) emails a job recap every Thursday and
+// the email pipe already lands it in /Inbox. This recognises it by SENDER + SUBJECT — exact,
+// never the judge — reads hours per job / work type / person, and prices them with Eric's
+// LABOR HOUR RATE SCHEDULE (his sheet, 2026-09-10): a billing rate per work type per tier.
+// Hours × rate = the labor that is coming on the next invoice. NO markup — his schedule is
+// already loaded. Wages never enter this: only hours and BILLING rates, and only a total ever
+// leaves the phone. The JSON hand-off from Phil's app is parked for later; the email is the
+// source today.
+const LABOR_RECAP_FROM = 'pdkneela@gmail.com';
+const LABOR_RECAP_SUBJ = /^job recap, week of /i;
+const LABOR_RATES = {                                 // row → [Laborer 1, Laborer 2, Laborer 3] $/hr
+  'Demo': [60, 80, 100], 'Pre Construction': [60, 80, 100], 'Framing & Siding': [60, 80, 100],
+  'Foundation Labor': [60, 100, 135], 'Windows & Doors': [60, 100, 135], 'Exterior Finish': [60, 100, 135], 'Interior Paint': [60, 100, 135],
+  'Equipment Operating': [60, 115, 155], 'Roofing': [60, 115, 155], 'Trim/Finish': [60, 115, 155], 'Tile': [60, 115, 155], 'Cabinetry & Countertops': [60, 115, 155],
+  'Winter Costs': [60, 80, 100], 'Misc Labor': [60, 80, 100], 'Logistical Labor': [60, 80, 100],
+};
+// the recap's work types → a schedule row. A fixed table Eric can read, not a score. A work
+// type that is not here bills at Misc Labor and SAYS so on the page, so he adds the name
+// rather than have it guessed.
+const LABOR_CAT_MAP = {
+  'demo': 'Demo', 'pre construction': 'Pre Construction', 'preconstruction': 'Pre Construction',
+  'framing': 'Framing & Siding', 'siding': 'Framing & Siding', 'framing & siding': 'Framing & Siding', 'decks': 'Framing & Siding', 'trusses': 'Framing & Siding',
+  'foundation': 'Foundation Labor', 'foundation labor': 'Foundation Labor', 'concrete and foundation': 'Foundation Labor', 'icf walls': 'Foundation Labor',
+  'windows': 'Windows & Doors', 'windows/doors': 'Windows & Doors', 'windows & doors': 'Windows & Doors', 'exterior doors': 'Windows & Doors', 'int doors': 'Windows & Doors',
+  'exterior finish': 'Exterior Finish', 'ext painting': 'Exterior Finish', 'gutters': 'Exterior Finish',
+  'interior paint': 'Interior Paint', 'paint': 'Interior Paint',
+  'equipment operating': 'Equipment Operating', 'dirt work': 'Equipment Operating',
+  'roofing': 'Roofing',
+  'trim': 'Trim/Finish', 'trim/finish': 'Trim/Finish', 'finish': 'Trim/Finish', 'drywall': 'Trim/Finish', 'drywall, mud and texture': 'Trim/Finish', 'flooring': 'Trim/Finish', 'carpet': 'Trim/Finish', 'appliances': 'Trim/Finish', 'closet interiors': 'Trim/Finish', 'drop ceiling': 'Trim/Finish',
+  'tile': 'Tile', 'tile (floors)': 'Tile', 'tile (showers)': 'Tile',
+  'kitchen cabinets': 'Cabinetry & Countertops', 'kitchen cabinets and vanities': 'Cabinetry & Countertops', 'countertops': 'Cabinetry & Countertops', 'vanities and sinks': 'Cabinetry & Countertops', 'cabinetry & countertops': 'Cabinetry & Countertops',
+  'winter costs': 'Winter Costs',
+  'misc': 'Misc Labor', 'misc labor': 'Misc Labor', 'cleanup': 'Misc Labor', 'landfill & cleanup': 'Misc Labor',
+  'logistics / maintenance': 'Logistical Labor', 'logistics': 'Logistical Labor', 'logistical labor': 'Logistical Labor',
+};
+// who is which tier — Eric, 2026-09-10: "canaan and milo are labor 1, nathan is labor 2, phil
+// and aaron are labor 3". By FIRST name, lower-cased (the recap writes "Last, First").
+// prefs.crewTier overrides any of these; a name in neither reads as tier 1 and is flagged.
+const LABOR_TIER_DEFAULT = { canaan: 1, milo: 1, nathan: 2, nathaniel: 2, phil: 3, philip: 3, aaron: 3, eric: 3 };
+function laborFirstName(full) {
+  const s = String(full || '').trim();
+  const m = s.match(/^([^,]+),\s*(.+)$/);                 // "Kneeland, Philip" → Philip
+  return (m ? m[2] : s.split(/\s+/)[0]).trim().toLowerCase();
+}
+function laborTier(full) {
+  const k = laborFirstName(full);
+  const t = +((prefs.crewTier || {})[k] || LABOR_TIER_DEFAULT[k] || 0);
+  return { tier: t || 1, known: !!t };
+}
+function laborRow(cat) {
+  const k = String(cat || '').trim().toLowerCase();
+  const row = LABOR_CAT_MAP[k];
+  return { row: row || 'Misc Labor', known: !!row };
+}
+function laborWeekLabel(wk) {
+  const d = new Date(String(wk || '') + 'T00:00:00');
+  return isNaN(+d) ? String(wk || '?') : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+function laborRecapIs(m) { return !!(m && String(m.addr || '').toLowerCase() === LABOR_RECAP_FROM && LABOR_RECAP_SUBJ.test(String(m.subj || ''))); }
+// the parser. The email is regular — "<job> · <N> h", a paragraph, "ready to forward to the
+// homeowner", "Work" lines, "Crew" lines — with ONE trap: the pipe glues a job header onto the
+// end of the previous crew line ("Clore, Milo 1 h rininger · 35.12 h"), so a header is found
+// by its " · N h" tail and its name is whatever follows the last "N h" on that line.
+function laborRecapParse(m, ts) {
+  const body = String((m && m.body) || '').replace(/\r/g, '');
+  const out = { week: '', to: '', asOf: ts || '', total: 0, jobs: [], missing: [] };
+  const wk = body.match(/week of\s+([A-Za-z]{3,9})\s+(\d{1,2})\s+to\s+([A-Za-z]{3,9})\s+(\d{1,2})/i);
+  const yr = (ts && !isNaN(new Date(ts))) ? new Date(ts).getFullYear() : new Date().getFullYear();
+  const mon = s => new Date(`${s} 1, 2000`).getMonth();
+  if (wk) {
+    let y = yr, m1 = mon(wk[1]), m2 = mon(wk[3]);
+    if (ts && !isNaN(new Date(ts)) && m1 > new Date(ts).getMonth()) y--;   // a December recap read in January
+    const pad = n => String(n).padStart(2, '0');
+    out.week = `${y}-${pad(m1 + 1)}-${pad(wk[2])}`;
+    out.to = `${m2 < m1 ? y + 1 : y}-${pad(m2 + 1)}-${pad(wk[4])}`;
+  }
+  const tot = body.match(/(\d+(?:\.\d+)?)\s*h across \d+ jobs?/i);
+  if (tot) out.total = +tot[1];
+  const heads = [];
+  const re = /([^\n·]{1,60}?)\s·\s(\d+(?:\.\d+)?)\s*h(?![\w])/g;
+  let mm;
+  while ((mm = re.exec(body))) {
+    const raw = mm[1];
+    const name = raw.replace(/^.*\b\d+(?:\.\d+)?\s*h\s+/, '').trim();   // drop a glued crew line
+    if (!name || /job recap/i.test(name)) continue;
+    heads.push({ name, hours: +mm[2], start: mm.index + (raw.length - raw.lastIndexOf(name) >= 0 ? raw.lastIndexOf(name) : 0), end: re.lastIndex });
+  }
+  const missAt = body.search(/still missing this week/i);
+  for (let i = 0; i < heads.length; i++) {
+    const h = heads[i];
+    const segEnd = i + 1 < heads.length ? heads[i + 1].start : (missAt >= 0 ? missAt : body.length);
+    const seg = body.slice(h.end, segEnd);
+    const lines = seg.split('\n').map(s => s.trim()).filter(Boolean);
+    const job = { name: h.name, hours: h.hours, note: '', work: [], crew: [] };
+    let mode = 'note';
+    for (const ln of lines) {
+      if (/^ready to forward/i.test(ln)) { mode = 'after'; continue; }
+      if (/^work$/i.test(ln)) { mode = 'work'; continue; }
+      if (/^crew$/i.test(ln)) { mode = 'crew'; continue; }
+      const hm = ln.match(/^(.+?)\s(\d+(?:\.\d+)?)\s*h$/);
+      if (mode === 'note') job.note += (job.note ? ' ' : '') + ln;
+      else if (mode === 'work' && hm) job.work.push({ cat: hm[1].trim(), h: +hm[2] });
+      else if (mode === 'crew' && hm) job.crew.push({ name: hm[1].trim(), h: +hm[2] });
+    }
+    out.jobs.push(job);
+  }
+  if (missAt >= 0) {
+    body.slice(missAt).split('\n').map(s => s.trim()).forEach(ln => {
+      const mm2 = ln.match(/^([A-Za-z-]+,\s*[A-Za-z-]+)\s+((?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}\s*)+)$/);
+      if (mm2) out.missing.push({ name: mm2[1], days: mm2[2].trim().split(/\s+(?=(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun))/) });
+    });
+  }
+  return out;
+}
+// the recap's job name → Eric's job. His exact-name rule: a name he has taught (prefs.recapJobs)
+// wins; else the job spelled the same; else the ONE job that starts with it ("josten" →
+// Josten/Weiser). Two candidates or none = unmatched, and the page asks him — once.
+function laborJobFor(recapName) {
+  const k = String(recapName || '').trim().toLowerCase();
+  if (!k) return '';
+  const taught = (prefs.recapJobs || {})[k];
+  if (taught && jobs.includes(taught)) return taught;
+  const exact = jobs.find(j => j.toLowerCase() === k);
+  if (exact) return exact;
+  const starts = jobs.filter(j => j !== '—' && j.toLowerCase().startsWith(k));
+  return starts.length === 1 ? starts[0] : '';
+}
+function laborJobLearn(recapName, job) {
+  const k = String(recapName || '').trim().toLowerCase();
+  if (!k || !job) return;
+  prefs.recapJobs = prefs.recapJobs || {};
+  prefs.recapJobs[k] = job;
+  scheduleSave();
+  if (_rcptIdx >= 0) renderRcptReview();
+}
+// hours × rate. The recap gives hours by WORK TYPE and hours by PERSON but not the cross, so the
+// tier is blended from that week's crew mix on the job (Canaan 27.72 h of 62 = 44.7% at tier 1,
+// and so on) — arithmetic, not a guess, and each line says which row and rate it used.
+function laborPrice(job) {
+  const crewH = (job.crew || []).reduce((s, c) => s + (+c.h || 0), 0);
+  const share = [0, 0, 0, 0];
+  const unknownCrew = [];
+  (job.crew || []).forEach(c => { const t = laborTier(c.name); share[t.tier] += (+c.h || 0); if (!t.known) unknownCrew.push(c.name); });
+  const mix = crewH > 0 ? share.map(s => s / crewH) : [0, 0, 0, 1];   // nobody listed → tier 3, the safe side
+  const lines = (job.work || []).map(w => {
+    const r = laborRow(w.cat);
+    const rates = LABOR_RATES[r.row];
+    const rate = Math.round((mix[1] * rates[0] + mix[2] * rates[1] + mix[3] * rates[2]) * 100) / 100;
+    return { cat: w.cat, h: +w.h || 0, row: r.row, known: r.known, rate, amt: Math.round((+w.h || 0) * rate * 100) / 100 };
+  });
+  const total = Math.round(lines.reduce((s, l) => s + l.amt, 0) * 100) / 100;
+  const hours = Math.round(lines.reduce((s, l) => s + l.h, 0) * 100) / 100 || (+job.hours || 0);
+  return { lines, total, hours, mix, unknownCrew };
+}
+function laborWeeks() { return prefs.laborWeeks && typeof prefs.laborWeeks === 'object' ? prefs.laborWeeks : (prefs.laborWeeks = {}); }
+// the recap walks in from the mail sweep: parsed, kept by week, filed as an email entry under
+// Shop / Admin with a 👷 chip — never judged, never a card
+function laborRecapTake(m, ts) {
+  const r = laborRecapParse(m, ts);
+  if (!r.week || !r.jobs.length) return false;
+  laborWeeks()[r.week] = r;
+  const e = autoLogMail(m, ts, { labor: r.week });
+  if (e) { e.job = jobs.find(j => /^shop/i.test(j)) || e.job || '—'; e.category = 'Office/Admin'; }
+  return true;
+}
+// what has already gone to their page for this job+week, and what the books have since taken in
+function laborState(wk) {
+  let pend = null, ci = -1, pi = -1;
+  if (_estD) _estD.cats.forEach((x, i) => (x.pend || []).forEach((p, j) => { if (p.kind === 'labor' && p.wk === wk) { pend = p; ci = i; pi = j; } }));
+  const trail = _estD ? (_estD.cleared || []).find(t => t.kind === 'labor' && t.wk === wk) : null;   // newest first
+  const paired = !pend && !!trail && /qb/.test(String(trail.why || ''));
+  const back = !pend && !!trail && trail.why === 'eric';
+  // a week taken back is NOT sent — it is open again, and the send button comes back with it
+  return { sent: !!pend || paired, paired, back, pend, ci, pi, trail };
+}
+// ✓ SEND TO THEIR PAGE — the same trip a receipt makes (v6.28 guards, v6.33 fresh-board rule),
+// landing as ONE labor line: the week, the hours, the dollars. No names, no rates, no markup.
+async function laborSend(wk) {
+  const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
+  const r = laborWeeks()[wk];
+  if (!c || !r) return;
+  const aj = portalAppJob(c);
+  const job = r.jobs.find(j => laborJobFor(j.name) === aj);
+  if (!job) return;
+  const price = laborPrice(job);
+  if (!(price.total > 0)) { toast('No hours priced for that week', false); return; }
+  if (window._qUpBusy) return;
+  window._qUpBusy = true;
+  try {
+    toast('⏳ Sending the week to their page…');
+    let raw = null, failed = false;
+    try { raw = await dbxDownload(estPath(c.code)); } catch (err) { failed = true; }
+    if (!failed && raw == null) {
+      let missing = false;
+      try { missing = !(await dbxPathExists(estPath(c.code))); } catch (err) { missing = false; }
+      if (missing) raw = JSON.stringify(estFreshBoard());
+    }
+    if (failed || raw == null) { toast('Couldn\'t read the estimates board — nothing sent. Try again on a better signal', false); return; }
+    try { _estD = JSON.parse(raw || 'null'); } catch (err) { _estD = null; }
+    if (!_estD || !Array.isArray(_estD.cats)) { toast('That estimates board didn\'t read cleanly — open 💰 Estimates and check it first', false); return; }
+    let pageRaw = null, pageFailed = false;
+    try { pageRaw = await dbxDownload(portalRoot() + '/' + c.code + '.json'); } catch (err) { pageFailed = true; }
+    if (pageFailed || pageRaw == null) { toast('Couldn\'t read their page — nothing sent. Try again on a better signal', false); return; }
+    try { _estPage = JSON.parse(pageRaw || 'null'); } catch (err) { _estPage = null; }
+    if (!(+_estD.mk >= 0)) _estD.mk = 20;
+    if (laborState(wk).pend) { toast('That week is already on their page', false); return; }
+    let x = _estD.cats.find(k => String(k.n).toLowerCase().trim() === 'labor');
+    if (!x) { x = { n: 'Labor', appr: false, bids: [] }; _estD.cats.push(x); }
+    x.pend = x.pend || [];
+    // base = what they had been INVOICED when this went up; the week clears once that grows by it
+    x.pend.push({ a: price.total, inc: true, kind: 'labor', wk, hrs: price.hours, v: '', ts: localDay(new Date()),
+      base: Math.round((+((_estPage || {}).invoiced) || 0) * 100) / 100 });
+    _estIdx = _rcptIdx;
+    clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
+    await estSave();
+    _estIdx = -1;
+    renderRcptReview();
+    toast(`👷 On their page under UPCOMING — Labor, week of ${laborWeekLabel(wk)}: ${price.hours} h, $${price.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ✓`);
+  } finally {
+    window._qUpBusy = false;
+  }
+}
+async function laborTakeBack(wk) {
+  // the window's copy of the board is usually here; if it is not, read it — never guess
+  if (!_estD) {
+    const c = (((_portalIdx || {}).clients) || [])[_rcptIdx];
+    if (!c) return;
+    try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (err) { _estD = null; }
+    if (!_estD || !Array.isArray(_estD.cats)) { _estD = null; toast('Couldn\'t read the estimates board — try again on a better signal', false); return; }
+  }
+  const st = laborState(wk);
+  if (!st.pend) { toast('That week is not on their page', false); return; }
+  _estIdx = _rcptIdx;
+  await estPendClear(st.ci, st.pi, 'back');
+  _estIdx = -1;
+  renderRcptReview();
+}
+// the 👷 section of a job's receipts window: every week the recap has seen this job, priced,
+// with what went where. Crew names show HERE only.
+function laborBlockHtml(aj, money) {
+  const wks = Object.keys(laborWeeks()).sort().reverse();
+  const rows = [];
+  const unmatched = new Set();
+  for (const wk of wks) {
+    const r = laborWeeks()[wk];
+    (r.jobs || []).forEach(j => { if (!laborJobFor(j.name)) unmatched.add(j.name); });
+    const job = (r.jobs || []).find(j => laborJobFor(j.name) === aj);
+    if (!job) continue;
+    const p = laborPrice(job);
+    const st = laborState(wk);
+    const lamp = st.paired ? '<span class="rc-lamp rc-on">📗 ✓ INVOICED — off their list</span>'
+      : st.sent ? '<span class="rc-lamp rc-on">🟢 ✓ ON THEIR PAGE</span>'
+      : st.back ? '<span class="rc-lamp rc-off">↩ TAKEN BACK</span>'
+      : '<span class="rc-lamp rc-wait">🔴 ✕ NOT ON IT</span>';
+    rows.push(`<div class="g-step" style="margin-top: 8px;">
+      <div style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13px;">
+        <b>Week of ${esc(laborWeekLabel(wk))} — ${p.hours} h</b><b>they see ${money(p.total)}</b></div>
+      <div style="font-size: 12px; margin-top: 4px;">${lamp}</div>
+      <div style="font-size: 12px; opacity: .85; margin-top: 6px; line-height: 1.7;">${p.lines.map(l =>
+        `${esc(l.cat)} ${l.h} h → ${esc(l.row)}${l.known ? '' : ' <b>⚠ NOT IN THE RATE TABLE — billed as Misc</b>'} @ $${l.rate}/h = ${money(l.amt)}`).join('<br>')}</div>
+      <div style="font-size: 12px; opacity: .75; margin-top: 6px;">👷 ${(job.crew || []).map(c => { const t = laborTier(c.name); return `${esc(c.name)} ${c.h} h · tier ${t.tier}${t.known ? '' : ' <b>⚠ TIER NOT SET</b>'}`; }).join(' · ')}</div>
+      ${job.note ? `<div class="hint" style="margin-top: 6px;">📖 ${esc(job.note.slice(0, 220))}${job.note.length > 220 ? '…' : ''}</div>` : ''}
+      <div class="frow" style="gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+        ${!st.sent ? `<button type="button" class="btn-primary" style="flex: 1; min-width: 160px; min-height: 44px; font-weight: 800;" onclick="laborSend('${escq(wk)}')">✓ SEND WEEK → THEIR PAGE</button>` : ''}
+        ${st.pend ? `<button type="button" class="btn-ghost" style="min-height: 44px;" onclick="laborTakeBack('${escq(wk)}')">↩ Take back</button>` : ''}
+      </div>
+    </div>`);
+  }
+  const ask = [...unmatched].length ? `<div class="g-step" style="margin-top: 8px;">
+      <div style="font-size: 12px; font-weight: 800;">⚠ ${unmatched.size} job name${unmatched.size > 1 ? 's' : ''} in the recap not matched to a job yet — pick once, it remembers:</div>
+      ${[...unmatched].map(n => `<div class="frow" style="gap: 6px; align-items: center; margin-top: 6px;"><span style="font-size: 12px; min-width: 110px;">"${esc(n)}"</span>
+        <select class="mini-sel" style="flex: 1;" onchange="laborJobLearn('${escq(n)}', this.value)"><option value="">— which job? —</option>${jobs.filter(j => j !== '—').map(j => `<option>${esc(j)}</option>`).join('')}</select></div>`).join('')}</div>` : '';
+  if (!rows.length && !ask) return '';
+  return `<div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 14px 0 2px;">👷 CREW LABOR — from the weekly recap · hours × your rate schedule, no markup</div>${rows.join('')}${ask}`;
+}
 // one BID's client-facing number — same markup rule, any bid
 function estBidClient(b) {
   const raw = (+b.e1 || 0) + (+b.e2 || 0);
@@ -10975,9 +11255,14 @@ function estUpcoming() {
   if (!_estD) return null;
   const items = _estD.cats
     .filter(x => !(x.appr && estTotal(x) > 0))   // shown in the budget row instead — not twice
-    .map(x => ({ n: x.n, a: estPendUp(x) }))
+    .map(x => ({ n: x.n, a: Math.round((x.pend || []).filter(p => p.kind !== 'labor').reduce((s, p) => s + estPendMk(p), 0) * 100) / 100 }))
     .filter(x => x.a > 0)
     .sort((a, b) => b.a - a.a);
+  // 👷 v6.58 — labor rides as its own line per week: the week, the hours, the dollars. No
+  // names, no rates, no markup (inc is set on every labor pend; the schedule is already loaded).
+  _estD.cats.forEach(x => (x.pend || []).forEach(p => {
+    if (p.kind === 'labor' && +p.a > 0) items.push({ n: `Labor — week of ${laborWeekLabel(p.wk)} (${+p.hrs || 0} h)`, a: Math.round(+p.a * 100) / 100 });
+  }));
   if (!items.length) return null;
   return { items, tot: Math.round(items.reduce((s, x) => s + x.a, 0) * 100) / 100 };
 }
@@ -10997,6 +11282,8 @@ function estAutoClear() {
   const used = estUsedBy();
   const today = localDay(new Date());
   let n = 0;
+  const inv = +((_estPage || {}).invoiced) || 0;   // 👷 v6.58 — the pot labor weeks clear against
+  let potInv = inv;
   _estD.cats.forEach(x => {
     if (!Array.isArray(x.pend) || !x.pend.length) return;
     const saw = +used[x.n] || 0;
@@ -11010,8 +11297,19 @@ function estAutoClear() {
     let pot = saw;
     x.pend = x.pend.filter(p => {
       const base = +p.base || 0, amt = +p.a || 0;
+      if (!(amt > 0)) return true;
+      // 👷 v6.58 — a labor week clears when the homeowner's INVOICED total has grown by it since
+      // it went up (labor is billed to them on Logan's invoices, so it never shows as a job cost)
+      if (p.kind === 'labor') {
+        if (potInv - base < amt * 0.98) return true;
+        potInv -= amt;
+        _estD.cleared = [{ n: x.n, a: amt, v: '', kind: 'labor', wk: p.wk, hrs: p.hrs, ts: p.ts || '',
+          cl: today, base: Math.round(base * 100) / 100, saw: Math.round(inv * 100) / 100, why: 'qb' }, ...(_estD.cleared || [])].slice(0, 400);
+        n++;
+        return false;
+      }
       // 0.98 leaves room for a cent of rounding between the receipt read and the ledger
-      if (!(amt > 0) || pot - base < amt * 0.98) return true;
+      if (pot - base < amt * 0.98) return true;
       pot -= amt;
       _estD.cleared = [{ n: x.n, a: amt, v: p.v || '', eid: p.eid, ts: p.ts || '',
         cl: today, base: Math.round(base * 100) / 100, saw: Math.round(saw * 100) / 100,
@@ -11521,6 +11819,8 @@ function renderRcptReview() {
     </div>`;
   }).join('');
   const sentBlock = sentAll.length ? `<div style="font-weight: 800; font-size: 11.5px; letter-spacing: .4px; margin: 14px 0 2px;">💡 SENT — ${sent.length} on the way${settled.length ? ` · ✓ ${settled.length} fully settled, off the list` : ''}</div>${sentRows}` : '';
+  // 👷 v6.58 — the crew's weeks on this job, priced from Phil's recap
+  const laborBlock = laborBlockHtml(aj, money);
   // 🏢 v6.35 — overhead on this job: recorded, never billed to them
   const over = rcptOverhead(aj);
   const overTot = over.reduce((s, e) => s + ((estBillParse(e) || {}).amt || 0), 0);
@@ -11600,7 +11900,7 @@ function renderRcptReview() {
         <button type="button" class="btn-ghost" style="min-height: 46px;" onclick="rcptAll()">${_rcptSel.size >= list.length ? '☐ Uncheck all' : '☑ Check all'}</button>
       </div>
     </div>` : ''}
-    ${sentBlock}${overBlock}${skipBlock}</div>`;
+    ${laborBlock}${sentBlock}${overBlock}${skipBlock}</div>`;
 }
 function rcptTog(id) { _rcptSel.has(id) ? _rcptSel.delete(id) : _rcptSel.add(id); renderRcptReview(); }
 function rcptAll() {
@@ -11750,6 +12050,7 @@ async function estPendClear(ci, pi, how = 'qb') {
   x.pend.splice(pi, 1);
   if (!x.pend.length) delete x.pend;
   _estD.cleared = [{ n: x.n, a: +p.a || 0, v: p.v || '', eid: p.eid, ts: p.ts || '',
+    ...(p.kind ? { kind: p.kind, wk: p.wk, hrs: p.hrs } : {}),   // 👷 v6.58 — a labor week keeps its week on the trail
     cl: localDay(new Date()), why: back ? 'eric' : 'qb-eric' }, ...(_estD.cleared || [])].slice(0, 400);
   const e = p.eid != null ? entries.find(k => k.id === p.eid) : null;
   if (back && e) { delete e.budg; scheduleSave(); }   // back to waiting — both doors reopen
@@ -12173,6 +12474,9 @@ async function openJournal(i) {
          last week's words again as this week's update is worse than not seeing them at all.
          So: last week sits above the box, plainly readable, and moves into his words only
          when he taps ⤵ Build on it. -->
+    <!-- 👷 v6.58 — Phil wrote this week's paragraph FOR the homeowner; it is offered here, never
+         placed in the box on its own, same rule as LAST POSTED -->
+    <div id="jrnRecap" style="margin: 10px 0 0;"></div>
     <div id="jrnLast" style="margin: 10px 0 0;"></div>
     <div class="field"><label>The entry — your words, in your voice</label>
       <div class="hint" id="jrnAiHint" style="margin: 0 0 4px;"></div>
@@ -12189,6 +12493,7 @@ async function openJournal(i) {
   _jrnEditIdx = null; _jrnRetractArm = null;
   // ✍ v5.84 — a chip flip or draft re-render hands Eric's words straight back to the box
   if (_jrnKeepText != null) { const b = $('jrnText'); if (b) { b.value = _jrnKeepText; fitTa(b); } _jrnKeepText = null; }
+  renderJrnRecap(c);    // 👷 v6.58 — the crew's own paragraph for this week, to build on
   renderJrnPhotos();    // 📷 v5.38 — the photo picker fills + loads its thumbnails
   // 🧙 v5.20's auto-tidy retired v5.84 — the Wizard only writes when ✍ Draft it is tapped
   renderJrnReleased();  // ↩ v5.20 — released weeks: editable, retractable
@@ -12379,6 +12684,37 @@ function renderJrnLast(js) {
     </div>` : ''}</div>`;
 }
 function jrnLastFold() { _jrnLastOpen = !_jrnLastOpen; renderJrnLast(_jrnLastJ ? [_jrnLastJ] : []); }
+// 👷 v6.58 — the newest recap week's paragraph for THIS client's job. Phil marked it "ready to
+// forward to the homeowner"; Eric still decides. ⤵ lands it under his own words, never over them.
+let _jrnRecapText = '';
+function renderJrnRecap(c) {
+  const box = $('jrnRecap');
+  if (!box) return;
+  _jrnRecapText = '';
+  const wks = Object.keys(laborWeeks()).sort().reverse();
+  const aj = c ? portalAppJob(c) : '';
+  for (const wk of wks) {
+    const job = ((laborWeeks()[wk] || {}).jobs || []).find(j => laborJobFor(j.name) === aj);
+    if (!job || !String(job.note || '').trim()) continue;
+    _jrnRecapText = String(job.note).trim();
+    box.innerHTML = `<div class="g-step" style="margin-top: 0;">
+      <div class="g-step-label">👷 THE CREW'S WORDS · WEEK OF ${esc(laborWeekLabel(wk).toUpperCase())} · ${job.hours} H</div>
+      <div style="white-space: pre-wrap; font-size: 13px; line-height: 1.55; opacity: .8; padding: 8px 2px 8px 10px; border-left: 3px solid var(--accent); margin-top: 6px;">${esc(_jrnRecapText)}</div>
+      <div class="hint" style="margin: 6px 0 0;">From the weekly recap — reading only until you bring it down.</div>
+      <div class="frow" style="gap: 8px; margin-top: 8px;"><button type="button" class="btn-ghost" style="flex: 1; min-height: 42px; font-weight: 800;" onclick="jrnBuildOnRecap()">⤵ Build on it — copy into my box</button></div></div>`;
+    return;
+  }
+  box.innerHTML = '';
+}
+function jrnBuildOnRecap() {
+  const b = $('jrnText');
+  if (!b || !_jrnRecapText) return;
+  const mine = String(b.value || '').trim();
+  b.value = mine ? `${mine}\n\n${_jrnRecapText}` : _jrnRecapText;
+  fitTa(b); b.focus();
+  try { b.setSelectionRange(b.value.length, b.value.length); } catch (e) {}
+  toast('⤵ Copied down — make it yours before you release');
+}
 function jrnBuildOn() {
   const b = $('jrnText');
   if (!b || !_jrnLastText) return;
@@ -16221,7 +16557,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.57';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.58';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
