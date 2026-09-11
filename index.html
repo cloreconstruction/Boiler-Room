@@ -3530,7 +3530,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.59 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.60 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -12534,16 +12534,27 @@ function jrnSelPaths(e) {
   const all = entryAllPhotos(e);
   return Array.isArray(e.jrnPh) ? all.filter(p => e.jrnPh.includes(p)) : all;
 }
+// 📷 v6.60 — Eric, on Josten's journal: "trying to add more photos, but I think the number of
+// photos in the preview is limited … the photos I added are not showing up." The grid stopped
+// at 24 in whatever order the entries happened to sit, so on a busy job the pile he had JUST
+// ground could fall off the end and he had no way to know. Now: picked-and-unsent first, then
+// newest first, and room for 48 — the thumbnails load lazily, a phone can carry that.
 function jrnPhotoList(aj) {
   const from = new Date(); from.setDate(from.getDate() - 30);
-  const out = [];
+  const pool = [];
   for (const e of entries) {
     if (!e.photoPath || e.personal || e.sample || e.job !== aj) continue;
-    if (!((e.jrn && !e.jrnDone) || new Date(e.ts) >= from)) continue;
+    const picked = !!(e.jrn && !e.jrnDone);
+    if (!(picked || new Date(e.ts) >= from)) continue;
+    pool.push({ e, picked, t: +new Date(e.ts) || 0 });
+  }
+  pool.sort((a, b) => (b.picked - a.picked) || (b.t - a.t));
+  const out = [];
+  for (const { e } of pool) {
     const all = entryAllPhotos(e);
     for (let pi = 0; pi < all.length; pi++) {
       out.push({ e, pi, path: all[pi] });
-      if (out.length >= 24) return out;
+      if (out.length >= 48) return out;
     }
   }
   return out;
@@ -16583,7 +16594,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.59';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.60';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

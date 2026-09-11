@@ -759,8 +759,19 @@ async function boot() {
   // 📖 the job journal: ONLY the latest week shows; older weeks live behind one fold
   if ((d.journal || []).length && sh('journal')) {
     const js = d.journal.slice(0, 26);
-    const shots = j => (j.photos || []).length
-      ? `<div class="jr-shots">${j.photos.slice(0, 8).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="job photo" onclick="event.stopPropagation(); shotOpen('${photoUrl(n)}')">`).join('')}</div>` : '';
+    // 📷 v6.60 — Eric, on Josten's page: "I think the number of photos in the preview is limited."
+    // It was: a week showed its first 8 and silently dropped the rest (Josten's 9/4 week has 11).
+    // The first 8 still show; the rest wait behind ONE plain button that says how many, and only
+    // load when tapped, so the page stays light.
+    let jrsN = 0;
+    const shots = j => {
+      const ph = j.photos || [];
+      if (!ph.length) return '';
+      const id = 'jrs' + (jrsN++);
+      return `<div class="jr-shots" id="${id}">${ph.map((n, i) => `<img loading="lazy" src="${photoUrl(n)}" alt="job photo"${i >= 8 ? ' class="jr-more" style="display: none;"' : ''} onclick="event.stopPropagation(); shotOpen('${photoUrl(n)}')">`).join('')}</div>` +
+        (ph.length > 8 ? `<button type="button" class="opt-lockbtn jr-morebtn" style="margin-top: 6px;" onclick="event.stopPropagation(); jrMore('${id}', this)">📷 +${ph.length - 8} more photo${ph.length - 8 > 1 ? 's' : ''} — tap to see them all</button>` : '');
+    };
+    window.jrMore = (id, btn) => { document.querySelectorAll('#' + id + ' .jr-more').forEach(i => { i.style.display = ''; }); if (btn) btn.remove(); ping('journal:morephotos'); };
     h += `<div class="card"><h3>JOB JOURNAL</h3>
       <div class="ph open">
         <div class="ph-head"><span>📖 Week of ${esc(js[0].week)}</span></div>
