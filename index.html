@@ -1306,6 +1306,29 @@
      phone set to reduce motion gets a steady lamp with the same words. */
   /* ✕ v6.32 — one close button for every window (see winX). Top-right, 44px so a thumb hits
      it first time, brass-rimmed so it reads as a control rather than as decoration. */
+  /* ⚙ v6.62 — the working band. Eric: "id like something to let me know when its thinking. the
+     'instant' light at the top of the main page does that but i think another way to tell it is
+     when i click ask the wizard or uploading photos." The lamp is 14px and a scroll away; a toast
+     is gone in 2.6 seconds. This is brass across the top of the phone with WORDS — THE WIZARD IS
+     THINKING…, UPLOADING PHOTO 2 OF 5… — moving while the work runs, ✓ for a beat when it lands.
+     z-index above every window and the client preview, so an upload inside the journal shows too.
+     Never colour or motion alone: the words carry it, and a phone set to reduce motion gets a
+     steady band with the same words. */
+  #busyBand { position: fixed; top: 0; left: 0; right: 0; z-index: 200; padding: calc(8px + env(safe-area-inset-top)) 14px 8px;
+    font-size: 12.5px; font-weight: 800; letter-spacing: .8px; text-align: center; color: #1c1608;
+    background: linear-gradient(90deg, #7a5c26 0%, #d9b45c 35%, #f2d98a 50%, #d9b45c 65%, #7a5c26 100%);
+    background-size: 220% 100%; animation: busyShimmer 1.3s linear infinite; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+  #busyBand.done { animation: none; background: #d9b45c; }
+  @keyframes busyShimmer { from { background-position: 110% 0; } to { background-position: -110% 0; } }
+  @media (prefers-reduced-motion: reduce) { #busyBand { animation: none; background: #d9b45c; } }
+  /* the ASK plate and the grinder plate say it too, right under his thumb */
+  .wiz-side.busy { opacity: .75; }
+  .wiz-side.busy .wiz-side-tx { animation: busyPulse 1s ease-in-out infinite; }
+  @keyframes busyPulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+  @media (prefers-reduced-motion: reduce) { .wiz-side.busy .wiz-side-tx { animation: none; } }
+  .plate-btn--grind.busy { position: relative; pointer-events: none; }
+  .plate-btn--grind.busy::after { content: attr(data-busy); position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%);
+    background: #1c1608; color: #f2d98a; font-size: 11px; font-weight: 800; letter-spacing: .6px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
   .win-x { float: right; font-size: 15px; font-weight: 800; min-width: 44px; min-height: 44px;
     background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);
     border-radius: 10px; margin-left: 8px; }
@@ -2407,7 +2430,7 @@
   @media (prefers-reduced-motion: reduce) { .btn-busy .hourglass { animation: none; } }
 </style>
 </head>
-<body class="parked-630"><!-- 🅿 v6.30 parked: 🔥 needs-you strip + to-dos. Drop this class to bring both back. -->
+<body class="parked-630"><!-- ⚙ v6.62 — THE WORKING BAND. Eric: "id like something to let me know when its thinking … when i click ask the wizard or uploading photos." Pinned across the top, above every window, words not just a lamp. --><div id="busyBand" role="status" aria-live="polite" hidden></div><!-- 🅿 v6.30 parked: 🔥 needs-you strip + to-dos. Drop this class to bring both back. -->
 <div id="backdrop" onclick="closePanels()"></div>
 <div id="toast"></div>
 <div id="lightbox" onclick="closeLightbox()">
@@ -3530,7 +3553,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.61 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.62 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6843,11 +6866,13 @@ async function saveFiling(shareToo) {
       const whoPart = who !== 'Me' ? ` — ${cleanName(who)}` : '';
       const numPart = files.length > 1 ? ` (${i + 1})` : '';
       $('fcMsg').textContent = `Uploading ${i + 1} of ${files.length}…`;
+      busyShow(files.length > 1 ? `🗄 FILING ${i + 1} OF ${files.length}…` : '🗄 FILING…');   // ⚙ v6.62
       btnBusy('fcSaveBtn', files.length > 1 ? `Filing… ${i + 1} of ${files.length}` : 'Filing…');
       const upPath = `${DBX_ROOT}${fcPath}/${base}${catPart}${jobPart}${whoPart} — ${stamp}${numPart}.${ext}`;
       await dbxUpload(upPath, f, true);
       if (!firstUploadPath && /^image\//.test(f.type)) firstUploadPath = upPath;
     }
+    if (busyIs(/FILING/)) busyDone('🗄 ✓ FILED');   // ⚙ v6.62
     const shown = noPaper ? 'Logged — no receipt' : (fcPath ? fcPath.split('/').filter(Boolean).join(' / ') : 'Clore DayLog');
     const extra = isNaN(amount) ? { filedTo: shown } : { amount, filedTo: shown };
     if (noPaper) extra.noReceipt = true;
@@ -7127,6 +7152,8 @@ async function attachEntryPhotos(entry, files, folder) {
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
     toast(files.length > 1 ? `⏳ Uploading photo ${i + 1} of ${files.length}…` : '⏳ Uploading photo…');
+    busyShow(files.length > 1 ? `📷 UPLOADING PHOTO ${i + 1} OF ${files.length}…` : '📷 UPLOADING PHOTO…');   // ⚙ v6.62
+    grindBusy(files.length > 1 ? `⏳ ${i + 1} OF ${files.length} UP` : '⏳ UPLOADING');
     try {
       const d = new Date();
       const stamp = d.toISOString().slice(0, 10) + ' ' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
@@ -7140,6 +7167,9 @@ async function attachEntryPhotos(entry, files, folder) {
       paths.push(path);
     } catch (e) { /* keep going — partial success beats losing the rest */ }
   }
+  // ⚙ v6.62 — the band says how many actually landed, so a dropped one is never a surprise
+  busyDone(paths.length === files.length ? `📷 ✓ ${files.length > 1 ? files.length + ' PHOTOS UP' : 'PHOTO UP'}` : `📷 ⚠ ${paths.length} OF ${files.length} UP — check the connection`);
+  grindBusy('');
   files.forEach(f => { const m = fcMeta.get(f); if (m && m.url) URL.revokeObjectURL(m.url); fcMeta.delete(f); });
   if (!paths.length) { toast('⚠ Photo upload failed — note saved without photos', false); return; }
   entry.photoPath = paths[0];
@@ -13302,6 +13332,7 @@ async function matAddPhotos(id, files) {
   let n = 0;
   for (const f of imgs) {
     toast(`⏳ Photo ${++n} of ${imgs.length} going up…`);
+    busyShow(`📷 UPLOADING PHOTO ${n} OF ${imgs.length}…`);   // ⚙ v6.62
     const clean = (f.name || 'photo.jpg').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
     const path = `${portalRoot()}/mat-photos-${c.code}/${it.id} ${clean}`;
     try {
@@ -13310,6 +13341,7 @@ async function matAddPhotos(id, files) {
       matLog(`📷 photo "${clean}" onto ${it.n}`);
     } catch (e) { toast(`⚠ ${clean} didn't make it — check the connection`, false); }
   }
+  if (busyIs(/UPLOADING/)) busyDone('📷 ✓ PHOTOS UP');   // ⚙ v6.62 — only if this loop lit the band
   _matDirty = true;
   renderMatMgr();
   toast(`📷 ${it.phs.length} photo${it.phs.length > 1 ? 's' : ''} on ${it.n} — 💾 Save makes it stick ✓`);
@@ -13403,6 +13435,7 @@ async function matAddDocs(id, files) {
       matLog(`📁 "${clean}" into the pocket of ${it.n}`);
     } catch (e) { toast(`⚠ ${clean} didn't make it — check the connection`, false); }
   }
+  if (busyIs(/UPLOADING/)) busyDone('📷 ✓ PHOTOS UP');   // ⚙ v6.62 — only if this loop lit the band
   _matDirty = true;
   renderMatMgr();
   toast(`📁 In the pocket — ${it.pkt.docs.length} paper${it.pkt.docs.length > 1 ? 's' : ''} on ${it.n} ✓`);
@@ -14595,7 +14628,39 @@ let _wizRevert = null;
 // The words are baked into the art, so the state never rides on color alone.
 // v4.72 — the wizard indicator is a small lamp+word chip in the header now (Eric: the big
 // plate ate too much room by the quick note). Lens pattern + brightness + the word carry state.
+// ⚙ v6.62 — the band. One place shows it, one place clears it; whoever is working writes the
+// words. A second job starting mid-way simply takes the band over — last words win.
+let _busyT = null;
+function busyShow(word) {
+  const b = $('busyBand'); if (!b) return;
+  clearTimeout(_busyT); _busyT = null;
+  b.textContent = word; b.classList.remove('done'); b.hidden = false;
+}
+function busyDone(word) {
+  const b = $('busyBand'); if (!b) return;
+  clearTimeout(_busyT);
+  b.textContent = word || '✓ DONE'; b.classList.add('done'); b.hidden = false;
+  _busyT = setTimeout(() => { b.hidden = true; b.classList.remove('done'); }, 1100);
+}
+function busyIs(re) { const b = $('busyBand'); return !!(b && !b.hidden && re.test(b.textContent)); }
+// the ASK plate under his thumb says THINKING… and will not take a second tap until it is done
+function wizBtnBusy(on) {
+  const btn = $('wizSideBtn'); if (!btn) return;
+  btn.classList.toggle('busy', !!on); btn.disabled = !!on;
+  const tx = btn.querySelector('.wiz-side-tx'); if (tx) tx.textContent = on ? 'THINKING…' : 'ASK';
+}
+function busyWiz(state) {
+  if (state === 'thinking') { busyShow('🧙 THE WIZARD IS THINKING…'); wizBtnBusy(true); return; }
+  if (busyIs(/WIZARD/)) busyDone(state === 'sent' ? '🧙 ✓ SENT — the answer rides the hourly check' : '🧙 ✓ DONE');
+  wizBtnBusy(false);
+}
+// the grinder plate wears the upload count while pictures go up, and takes no tap meanwhile
+function grindBusy(word) {
+  const p = document.querySelector('.plate-btn--grind'); if (!p) return;
+  if (word) { p.classList.add('busy'); p.dataset.busy = word; } else { p.classList.remove('busy'); delete p.dataset.busy; }
+}
 function setWizLamp(state, holdMs) {
+  busyWiz(state);
   const l = $('wizLamp');
   if (!l) return;
   const m = WIZ_LAMP[state] || WIZ_LAMP.hourly;
@@ -16655,7 +16720,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.61';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.62';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
