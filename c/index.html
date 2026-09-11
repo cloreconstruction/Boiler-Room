@@ -14,6 +14,18 @@
   /* 🌙 v6.33 — paint the root dark before anything else: this page loads inside the app's
      preview frame and used to show the browser's white until its CSS arrived. */
   html { background: var(--bg); }
+  /* 👁 v6.61 — the owner bars. Brass on the card, never on the homeowner's screen (they only
+     exist in OWNER mode). A hidden card stays readable but dims and wears a dashed rim. */
+  .own-head { background: var(--gold); color: #1c1608; font-weight: 800; font-size: 12px; letter-spacing: .5px; padding: 8px 12px; border-radius: 10px; margin: 0 0 12px; }
+  .own-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
+  .own-bar button, .own-inline { font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .3px; padding: 6px 10px; min-height: 36px;
+    border-radius: 999px; border: 2px solid var(--gold); background: var(--card); color: var(--ink); cursor: pointer; }
+  .own-bar.off .own-vis, .own-off .own-inline { background: var(--gold); color: #1c1608; }
+  .own-lbl { font-size: 12px; font-weight: 800; margin-right: 2px; }
+  .own-tiles { margin: 0 0 12px; }
+  .own-tiles .own-bar { border-top: 1px dashed var(--line); padding-top: 6px; }
+  .own-off { opacity: .55; outline: 2px dashed var(--gold); outline-offset: 2px; }
+  .own-inline { display: inline-block; margin-top: 6px; min-height: 32px; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 640px; margin: 0 auto; padding: 22px 16px 60px; }
   header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 8px; }
@@ -124,6 +136,49 @@
 const code = new URLSearchParams(location.search).get('c') || location.hash.slice(1);
 // 👁 pv=1 = Eric previewing from inside his app — real page, but his taps don't count
 const PV = !!new URLSearchParams(location.search).get('pv');
+// 👁 v6.61 — OWNER MODE. Eric: "I want my project portal to basically look exactly like the
+// client page, and it will also control the client page … I have my edit buttons there and my
+// add photos, and I can hide windows from them." The REAL page, inside his app's preview frame,
+// with a small bar on every card. The bar only draws when the page is embedded (a parent frame
+// exists) AND the app asked for it (&owner=1): a homeowner pasting &owner=1 into a browser gets
+// the plain page. And the bar never writes anything itself — every tap is a message to the app
+// above it, which does the work with Eric's own Dropbox. The page gains no powers.
+const OWNER = PV && !!new URLSearchParams(location.search).get('owner') && window.parent !== window;
+function ownerMsg(m) { try { window.parent.postMessage({ boiler: 'owner', ...m }, '*'); } catch (e) {} }
+// what the homeowner is NOT shown. money and phases are opt-IN (their switch must be true —
+// a page with no books numbers must never show a zero); everything else is opt-OUT.
+function hidOwner(k) {
+  const s = (_d && _d.show) || {};
+  return (k === 'money' || k === 'phases') ? !s[k] : s[k] === false;
+}
+const OWN_CARDS = [                       // key · element id · what ✎ Edit opens in the app
+  ['journal', 'journalCard', 'journal'], ['money', 'moneyCard', 'tracker'], ['budget', 'budgetCard', 'budget'],
+  ['upcoming', 'upcomingCard', 'upcoming'], ['phases', 'phasesCard', 'tracker']];
+const OWN_TILES = [['photos', '📷 Photos', 'journal'], ['ask', '💬 Ask / Remark', 'review'], ['boards', '🖼 Options', 'boards'], ['mat', '📋 Build List', 'mat']];
+function ownerBar(key, edit, extra) {
+  const off = hidOwner(key);
+  return `<div class="own-bar${off ? ' off' : ''}" data-own="${key}">
+    <button type="button" class="own-vis" onclick="event.stopPropagation(); ownerMsg({ act: '${off ? 'show' : 'hide'}', card: '${key}' })">${off ? '○ HIDDEN FROM THEM — tap to show' : '✓ THEY SEE THIS — tap to hide'}</button>
+    ${edit ? `<button type="button" onclick="event.stopPropagation(); ownerMsg({ act: 'edit', card: '${key}', to: '${edit}' })">✎ Edit</button>` : ''}
+    ${extra || ''}</div>`;
+}
+function ownerDecorate() {
+  if (!OWNER) return;
+  const app = document.getElementById('app'); if (!app) return;
+  app.insertAdjacentHTML('afterbegin', `<div class="own-head">👁 OWNER VIEW — this is exactly what they see. The bars are yours; they never see them.</div>`);
+  OWN_CARDS.forEach(([key, id, edit]) => {
+    const el = document.getElementById(id); if (!el) return;
+    el.classList.toggle('own-off', hidOwner(key));
+    el.insertAdjacentHTML('afterbegin', ownerBar(key, edit, key === 'journal'
+      ? `<button type="button" onclick="event.stopPropagation(); ownerMsg({ act: 'photos', card: 'journal' })">➕ Add photos</button>` : ''));
+  });
+  const grid = document.querySelector('.soon-grid');
+  if (grid) grid.insertAdjacentHTML('afterend', `<div class="own-tiles">${OWN_TILES.map(([key, label, edit]) => {
+    const off = hidOwner(key);
+    return `<div class="own-bar${off ? ' off' : ''}" data-own="${key}"><span class="own-lbl">${label}</span>
+      <button type="button" class="own-vis" onclick="ownerMsg({ act: '${off ? 'show' : 'hide'}', card: '${key}' })">${off ? '○ HIDDEN — tap to show' : '✓ THEY SEE — tap to hide'}</button>
+      <button type="button" onclick="ownerMsg({ act: 'edit', card: '${key}', to: '${edit}' })">✎ Edit</button></div>`; }).join('')}</div>`);
+}
 const $ = s => document.querySelector(s);
 const money = n => '$' + (+n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const FN = '/.netlify/functions/client-portal';
@@ -243,8 +298,13 @@ async function boardsLoad() {
     const j = r.ok ? await r.json() : null;
     _boards = (j && Array.isArray(j.boards)) ? j.boards : [];
   } catch (e) { _boards = []; }
+  // 👁 v6.61 — boards Eric switched off for THIS client (page.boardsOff) never reach the
+  // homeowner; in owner mode they stay in the list, marked, so he can switch them back
+  const off = (_d && Array.isArray(_d.boardsOff)) ? _d.boardsOff : [];
+  if (!OWNER && off.length) _boards = _boards.filter(b => !off.includes(b.id));
   return _boards;
 }
+function boardOffHere(id) { return !!(_d && Array.isArray(_d.boardsOff) && _d.boardsOff.includes(id)); }
 function boardTile() {
   const t = document.getElementById('boardTile'); if (!t) return;
   const n = (_boards || []).length;
@@ -276,11 +336,12 @@ function renderBoards() {
   if (!_bOpen) {
     box.innerHTML = `<h3>🖼 OPTIONS — HAVE A LOOK</h3>
       <p class="hint">Browse the choices for your job. Tick what you like, say anything you'd change, and send it over. Nothing is decided until you send it.</p>
-      ${list.map(b => { const a = (_bAns || {})[b.id];
-        return `<div class="bd-row" onclick="boardOpen('${bEscq(b.id)}')">
+      ${list.map(b => { const a = (_bAns || {})[b.id]; const off = OWNER && boardOffHere(b.id);
+        return `<div class="bd-row${off ? ' own-off' : ''}" onclick="boardOpen('${bEscq(b.id)}')">
           ${b.img ? `<img loading="lazy" src="${boardImg(b.img)}" alt="">` : '<div class="bd-noimg">🖼</div>'}
           <div class="bd-row-t"><b>${bEsc(b.name || b.id)}</b>
-            <span class="hint">${a ? '✓ Answered — tap to change' : (b.groups || []).map(g => bEsc(g.n)).join(' · ') || 'have a look'}</span></div>
+            <span class="hint">${a ? '✓ Answered — tap to change' : (b.groups || []).map(g => bEsc(g.n)).join(' · ') || 'have a look'}</span>
+            ${OWNER ? `<button type="button" class="own-vis own-inline" onclick="event.stopPropagation(); ownerMsg({ act: '${off ? 'boardOn' : 'boardOff'}', id: '${bEscq(b.id)}' })">${off ? '○ HIDDEN FROM THEM — tap to show' : '✓ THEY SEE THIS BOARD — tap to hide'}</button>` : ''}</div>
           <span class="bd-go">›</span></div>`; }).join('')}`;
     return;
   }
@@ -721,7 +782,9 @@ async function boot() {
   _bAns = (d.boardPicks && typeof d.boardPicks === 'object') ? d.boardPicks : {};   // 🖼 v6.50
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // 🎛 per-page switches Eric flips from his phone: absent = ON, explicit false = OFF
-  const sh = k => !d.show || d.show[k] !== false;
+  // 👁 v6.61 — in OWNER mode every card draws (a hidden one dimmed, with the words) so Eric can
+  // flip it back; for the homeowner the switch is the switch
+  const sh = k => OWNER || !d.show || d.show[k] !== false;
   // 💡 the lamp: LIT when the page got fresher since this client's last visit
   const seenKey = 'clore-seen-' + code;
   const lastSeen = localStorage.getItem(seenKey) || '';
@@ -772,7 +835,7 @@ async function boot() {
         (ph.length > 8 ? `<button type="button" class="opt-lockbtn jr-morebtn" style="margin-top: 6px;" onclick="event.stopPropagation(); jrMore('${id}', this)">📷 +${ph.length - 8} more photo${ph.length - 8 > 1 ? 's' : ''} — tap to see them all</button>` : '');
     };
     window.jrMore = (id, btn) => { document.querySelectorAll('#' + id + ' .jr-more').forEach(i => { i.style.display = ''; }); if (btn) btn.remove(); ping('journal:morephotos'); };
-    h += `<div class="card"><h3>JOB JOURNAL</h3>
+    h += `<div class="card" id="journalCard"><h3>JOB JOURNAL</h3>
       <div class="ph open">
         <div class="ph-head"><span>📖 Week of ${esc(js[0].week)}</span></div>
         <div class="ph-cats" style="white-space: pre-wrap; padding-left: 4px;">${esc(js[0].text)}${shots(js[0])}</div>
@@ -787,11 +850,11 @@ async function boot() {
           <div class="ph-cats" style="white-space: pre-wrap;">${esc(j.text)}${shots(j)}</div>
         </div>`).join('') + `</div></div>` : '') + `</div>`;
   }
-  if (d.show && d.show.money) {
+  if ((d.show && d.show.money) || OWNER) {
     // 💵 open-balance breakdown — tap the number, see what the bill is FOR (categories only,
     // matched to what they see happening on site). Renders only when Eric's books provide it.
     const brk = (d.open > 0 && Array.isArray(d.openBrk) && d.openBrk.length) ? d.openBrk : null;
-    h += `<div class="card" onclick="ping('money')"><h3>WHERE IT STANDS</h3><div class="money">
+    h += `<div class="card" id="moneyCard" onclick="ping('money')"><h3>WHERE IT STANDS</h3><div class="money">
       <div class="m"><div class="v">${money(d.invoiced)}</div><div class="l">INVOICED TO DATE</div></div>
       <div class="m"><div class="v">${money(d.paid)}</div><div class="l">PAID — THANK YOU</div></div>
       <div class="m${brk ? '" style="cursor: pointer;" onclick="event.stopPropagation(); document.getElementById(\'obBrk\').classList.toggle(\'open\'); ping(\'money:openbrk\')"' : '"'}>
@@ -805,11 +868,12 @@ async function boot() {
     </div>` : ''}</div>`;
   }
   // 💰 approved estimates — the card lives in budgetHtml() so a pick can redraw it in place
-  h += budgetHtml(d);
+  // 👁 v6.61 — both cards now answer to a per-client switch, like the rest
+  if (sh('budget')) h += budgetHtml(d);
   // 🔮 v6.27 — under the approved budget: what is coming but not yet invoiced
-  h += upcomingHtml(d);
-  if (d.show && d.show.phases && (d.phases || []).length) {
-    h += `<div class="card"><h3>WORK BY PHASE — tap a phase for detail</h3>` +
+  if (sh('upcoming')) h += upcomingHtml(d);
+  if (((d.show && d.show.phases) || OWNER) && (d.phases || []).length) {
+    h += `<div class="card" id="phasesCard"><h3>WORK BY PHASE — tap a phase for detail</h3>` +
       d.phases.map((p, i) => `<div class="ph" id="ph${i}"><div class="ph-head" onclick="document.getElementById('ph${i}').classList.toggle('open'); ping('phase:${esc(p.name).slice(0, 20)}')">
         <span>${p.n ? p.n + '. ' : ''}${esc(p.name)}</span><span>${money(p.total)}</span></div>
         <div class="ph-cats">${(p.cats || []).map(c => `${esc(c[0])} — ${money(c[1])}`).join('<br>')}</div>
@@ -818,6 +882,7 @@ async function boot() {
   h += `<button class="theme-btn" style="display: block; margin: 22px auto 0;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
     <div class="foot">${sh('ask') ? 'Questions? Use 💬 Ask / Remark above, or call or text Eric directly.' : 'Questions? Call or text Eric directly.'}</div>`;
   $('#app').innerHTML = h;
+  ownerDecorate();               // 👁 v6.61 — the owner bars, only inside Eric's app
   if (sh('ask')) loadAsks(false); // 💬 their open questions + the three lamps
   // 📋 the materials board comes alive when Eric has published one
   loadMat().then(() => {

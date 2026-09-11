@@ -3530,7 +3530,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.60 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.61 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -12307,13 +12307,74 @@ function portalUrl(i) { return location.origin + '/c/?c=' + encodeURIComponent(_
 // 👁 v5.29 — the client page opens INSIDE the app, gold banner to come back. window.open
 // hijacked the whole installed app with no way home (and broke the no-external-tabs rule).
 // &pv=1 keeps Eric's own looks out of the "What they look at" tallies.
+let _cpIdx = -1;
 function clientPreviewOpen(i) {
   // 👁 v5.59 — NOT office-gated. Looking at the page a homeowner looks at is the whole point
   // of giving crew the portal; the office gate belongs on the tools that CHANGE things.
   if (!_portalIdx || !(_portalIdx.clients || [])[i]) return;
-  $('cpFrame').src = portalUrl(i) + '&pv=1';
+  _cpIdx = i;
+  // 👁 v6.61 — on Eric's phone the page comes up in OWNER mode: the same page, with his bars
+  // on every card. A crew phone gets the plain page, exactly as the homeowner does.
+  $('cpFrame').src = portalUrl(i) + '&pv=1' + (CREW_NAME ? '' : '&owner=1');
   $('cliPrev').classList.add('show');
 }
+// 👁 v6.61 — THE OWNER BARS TALK TO THE APP THROUGH HERE. Eric: "The project portal is for me,
+// and I can basically look at exactly what the client is looking at. I have my edit buttons
+// there and my add photos, and I can hide windows from them." Only the preview frame is
+// listened to, never a crew phone, and every act maps to a door that already exists — hide
+// and show flip the page's own switch through Eric's Dropbox; edit closes the preview and
+// opens the window that has always owned that card. The page itself gains no write.
+const OWN_KEYS = ['journal', 'money', 'budget', 'upcoming', 'phases', 'photos', 'ask', 'boards', 'mat'];
+const OWN_WORDS = { journal: 'the journal', money: 'where it stands', budget: 'the budget', upcoming: 'upcoming costs', phases: 'work by phase', photos: 'the photos', ask: 'ask / remark', boards: 'the options boards', mat: 'the build list' };
+window.addEventListener('message', async ev => {
+  const m = ev.data;
+  if (!m || typeof m !== 'object' || m.boiler !== 'owner') return;
+  const fr = $('cpFrame');
+  if (!fr || ev.source !== fr.contentWindow) return;      // the preview frame, nobody else
+  if (CREW_NAME || _cpIdx < 0) return;
+  const i = _cpIdx, act = String(m.act || ''), card = String(m.card || '').replace(/[^a-z]/g, '');
+  if (act === 'hide' || act === 'show') { await pageShowSet(i, card, act === 'show'); return; }
+  if (act === 'boardOff' || act === 'boardOn') { await pageBoardSet(i, String(m.id || '').slice(0, 60), act === 'boardOff'); return; }
+  if (act === 'edit' || act === 'photos') {
+    const to = act === 'photos' ? 'journal' : String(m.to || '');
+    clientPreviewClose();
+    if (to === 'journal') { await openJournal(i); if (act === 'photos') toast('➕ Add photos is right here — tap it under the photo grid'); }
+    else if (to === 'budget') openEstimates(i);
+    else if (to === 'upcoming') openRcptReview(i);
+    else if (to === 'mat') openMaterials(i);
+    else if (to === 'boards') jumpSetup('setBoards');
+    else if (to === 'review') openReview();
+    else if (to === 'tracker') openMoneyPage('tracker');
+  }
+});
+async function pageShowSet(i, key, on) {
+  const c = (((_portalIdx || {}).clients) || [])[i];
+  if (!c || !OWN_KEYS.includes(key)) return;
+  const path = portalRoot() + '/' + c.code + '.json';
+  let pg = null;
+  try { pg = JSON.parse(await dbxDownload(path) || 'null'); } catch (e) { pg = null; }
+  if (!pg) { toast('Couldn\'t read their page — nothing changed', false); return; }
+  pg.show = pg.show || {};
+  pg.show[key] = !!on;                      // money and phases are opt-in, the rest opt-out — true/false serves both
+  try { await dbxUpload(path, JSON.stringify(pg, null, 1)); } catch (e) { toast('Couldn\'t save their page — try again', false); return; }
+  toast(on ? `👁 ${OWN_WORDS[key] || key} — they see it again ✓` : `🙈 ${OWN_WORDS[key] || key} — hidden from them ✓`);
+  cpReload();
+}
+async function pageBoardSet(i, id, off) {
+  const c = (((_portalIdx || {}).clients) || [])[i];
+  if (!c || !id) return;
+  const path = portalRoot() + '/' + c.code + '.json';
+  let pg = null;
+  try { pg = JSON.parse(await dbxDownload(path) || 'null'); } catch (e) { pg = null; }
+  if (!pg) { toast('Couldn\'t read their page — nothing changed', false); return; }
+  pg.boardsOff = (Array.isArray(pg.boardsOff) ? pg.boardsOff : []).filter(x => x !== id);
+  if (off) pg.boardsOff.push(id);
+  if (!pg.boardsOff.length) delete pg.boardsOff;
+  try { await dbxUpload(path, JSON.stringify(pg, null, 1)); } catch (e) { toast('Couldn\'t save their page — try again', false); return; }
+  toast(off ? '🙈 That board is hidden from them ✓' : '👁 That board is back on their page ✓');
+  cpReload();
+}
+function cpReload() { const fr = $('cpFrame'); if (fr && fr.src && fr.src !== 'about:blank') { const s = fr.src; fr.src = 'about:blank'; setTimeout(() => { fr.src = s; }, 30); } }
 function clientPreviewClose() {
   $('cliPrev').classList.remove('show');
   $('cpFrame').src = 'about:blank';
@@ -16594,7 +16655,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.60';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.61';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
