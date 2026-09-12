@@ -118,6 +118,22 @@ const http = require('http'), fs = require('fs'), path = require('path');
     return rows.length === 4 && rows.every(r => /THEY SEE|HIDDEN/.test(r.textContent)) && /Options/.test(rows[2].textContent);
   }));
 
+  // 👁 v6.63 — "when i have 'options' or 'build list' hidden and i still see it above, do they
+  // still see it?" No — and now his own screen says so on the tile itself.
+  ok('hide a TILE and it dims on Eric\'s screen with the words, while the homeowner never gets it', await (async () => {
+    await frame().evaluate(() => ownerMsg({ act: 'hide', card: 'mat' }));
+    const wrote = await wait(() => pageJson().show.mat === false);
+    const back = await frameReady();
+    const dim = back && await frame().evaluate(() => { const t = document.getElementById('matTile'); return !!t && t.classList.contains('own-off') && /HIDDEN FROM THEM/.test(t.textContent); });
+    const live = back && await frame().evaluate(() => { const t = document.getElementById('boardTile'); return !!t && !t.classList.contains('own-off') && !/HIDDEN FROM THEM/.test(t.textContent); });
+    const h3 = await ctx.newPage(); await h3.goto(SRV + '/c/?c=' + CODE); await h3.waitForTimeout(600);
+    const gone = await h3.evaluate(() => !document.getElementById('matTile') && !document.getElementById('matCard') && !!document.getElementById('boardTile'));
+    await h3.close();
+    await frame().evaluate(() => ownerMsg({ act: 'show', card: 'mat' }));
+    await wait(() => pageJson().show.mat === true); await frameReady();
+    return wrote && dim && live && gone;
+  })());
+
   ok('in owner mode the switched-off board is still listed, marked, with its own switch', await frame().evaluate(async () => {
     await boardsOpen();
     const rows = [...document.querySelectorAll('#boardCard .bd-row')];

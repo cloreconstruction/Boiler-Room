@@ -26,6 +26,8 @@
   .own-tiles .own-bar { border-top: 1px dashed var(--line); padding-top: 6px; }
   .own-off { opacity: .55; outline: 2px dashed var(--gold); outline-offset: 2px; }
   .own-inline { display: inline-block; margin-top: 6px; min-height: 32px; }
+  .soon.own-off { position: relative; }
+  .own-tag { position: absolute; left: 0; right: 0; bottom: 0; background: var(--gold); color: #1c1608; font-size: 10px; font-weight: 800; letter-spacing: .4px; text-align: center; padding: 3px 4px; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 640px; margin: 0 auto; padding: 22px 16px 60px; }
   header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 8px; }
@@ -171,6 +173,15 @@ function ownerDecorate() {
     el.classList.toggle('own-off', hidOwner(key));
     el.insertAdjacentHTML('afterbegin', ownerBar(key, edit, key === 'journal'
       ? `<button type="button" onclick="event.stopPropagation(); ownerMsg({ act: 'photos', card: 'journal' })">➕ Add photos</button>` : ''));
+  });
+  // 👁 v6.63 — Eric: "when i have 'options' or 'build list' hidden and i still see it above, do
+  // they still see it?" They never did — but the tile looked the same as a live one on his
+  // screen. A hidden tile now dims and wears the words, exactly like a hidden card.
+  [['photos', 'photoTile'], ['ask', 'askTile'], ['boards', 'boardTile'], ['mat', 'matTile']].forEach(([key, id]) => {
+    const t = document.getElementById(id); if (!t) return;
+    const off = hidOwner(key);
+    t.classList.toggle('own-off', off);
+    if (off) t.insertAdjacentHTML('beforeend', `<div class="own-tag">○ HIDDEN FROM THEM</div>`);
   });
   const grid = document.querySelector('.soon-grid');
   if (grid) grid.insertAdjacentHTML('afterend', `<div class="own-tiles">${OWN_TILES.map(([key, label, edit]) => {
@@ -797,9 +808,9 @@ async function boot() {
     <div class="lamp${fresh ? ' lit' : ''}"><span class="dot"></span>${fresh ? 'UPDATED FOR YOU — ' + esc(d.updated || '') : 'CURRENT AS OF ' + esc(d.updated || '')}</div>
     <div class="soon-grid">
       ${sh('photos') ? (allShots.length
-        ? `<div class="soon live" onclick="toggleCard('photoCard', 'photos')"><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">${allShots.length} progress picture${allShots.length > 1 ? 's' : ''}</div></div></div>`
-        : `<div class="soon" onclick="ping('soon:photos')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">progress pictures from the job</div></div></div>`) : ''}
-      ${sh('ask') ? `<div class="soon live" onclick="toggleCard('askCard', 'ask:open')"><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>` : ''}
+        ? `<div class="soon live" id="photoTile" onclick="toggleCard('photoCard', 'photos')"><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">${allShots.length} progress picture${allShots.length > 1 ? 's' : ''}</div></div></div>`
+        : `<div class="soon" id="photoTile" onclick="ping('soon:photos')"><div class="ribbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📷</div><div class="t">Photos</div><div class="s">progress pictures from the job</div></div></div>`) : ''}
+      ${sh('ask') ? `<div class="soon live" id="askTile" onclick="toggleCard('askCard', 'ask:open')"><div class="inner"><div class="ic">💬</div><div class="t">Ask / Remark</div><div class="s">tag it Phil · Eric · General</div></div></div>` : ''}
       ${sh('boards') ? `<div class="soon" id="boardTile" onclick="boardsOpen()"><div class="ribbon" id="boardRibbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">🖼</div><div class="t">Options</div><div class="s" id="boardSub">browse &amp; choose</div></div></div>` : ''}
       ${sh('mat') ? `<div class="soon" id="matTile" onclick="ping('soon:materials')"><div class="ribbon" id="matRibbon">UNDER CONSTRUCTION</div><div class="inner"><div class="ic">📋</div><div class="t">Build List</div><div class="s" id="matTileSub">the job's checklist — lists & picks</div></div></div>` : ''}
     </div>
