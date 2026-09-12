@@ -3566,7 +3566,7 @@
       <div class="hint" style="margin: 0 0 8px;">Who the app keeps and who it skips. ✓ ALWAYS files their emails onto your log, locked to you. 🚫 NEVER drops them into the Robots folder, nothing logged. A name that starts with @ means everyone at that company.</div>
       <label class="hint" style="display: flex; gap: 8px; align-items: center; margin: 0 0 8px; cursor: pointer;">
         <input type="checkbox" id="sMailSort" onchange="prefs.mailSort = this.checked; scheduleSave(); renderMailSenders();">
-        📧 Sort the mail — the ⚡ quick brain reads each email and files it as ★ IMPORTANT (a card), ? MAYBE (a fold to look through) or ○ IGNORED (a spot-check list). Your lists always win, and nothing is decided without your tap. Off = every email from a kept sender just goes on the log, as before.
+        📧 Sort the mail — every email is captured on the log (v6.67: no more "keep this sender?" and no ✓ Seen chore). The ⚡ quick brain only says where it lands: ★ IMPORTANT (a card), ? MAYBE (on the log) or ○ SKIPPED (a spot-check list, and the 🔎 double check re-reads those for money, dates and job names). 🚫 NEVER and 🔒 PERSONAL always win. Off = everything goes on the log plain, nothing judged.
       </label>
       <div id="mailListsBox"></div>
       <div class="frow" style="margin-top: 8px; gap: 6px; flex-wrap: wrap;">
@@ -3625,7 +3625,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.66 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.67 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6649,32 +6649,59 @@ function billParseOcr(ocr) {
   const amt = am ? +am[1].replace(/,/g, '') : null;
   return { due, amt: amt != null && !isNaN(amt) ? amt : null };
 }
+// 💳 v6.67 — THE BILL CARD, REDESIGNED. Eric, on "Pay this bill — $30.3 · Hertz · due 2026-10-10":
+// "i have no idea what this is for or what was purchased and if it even belongs to hertz project
+// … i don't pay very many bills, logan pays most of them or they are on auto pay. so if this is
+// just a job receipt then this might not work?" So: (1) a PAID slip is never a bill, whatever
+// date is printed on it — only a read with due words and none of a paid receipt's; (2) the card
+// says what it is: vendor, the amount to the cent, the date, what the read saw, the photo when
+// the entry is on the log, and the job wheel pre-lit where it was when he took the picture;
+// (3) the answers are his world — 📗 Logan pays it, 🔁 Autopay (that exact vendor never asks
+// again), ✓ I'll pay it (a to-do with the date), ✕ Not a bill; (4) the push says only that a bill
+// is waiting — never the amount or the name (standing rule; the old one carried both).
+const BILL_PAID_RE = /\b(paid in full|payment received|thank you for your (?:payment|purchase|order|business)|amount paid|change due|cash tendered|card ending|auth(?:orization)? code|approved)\b/i;
+const BILL_DUE_RE = /\b(balance due|amount due|total due|minimum (?:payment )?due|past due|due (?:date|by|on|upon)|please pay|remit|pay by)\b/i;
+function billVendorOf(meta) {
+  const m = (meta.ai || '').match(/🏪 ([^\n·]+)/) || (meta.ai || '').match(/\[([^\]—]+)/);
+  return m ? m[1].trim().slice(0, 60) : 'this bill';
+}
+function billEntryOf(pay) {
+  const nm = String(pay.fname || '').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80).toLowerCase();
+  if (!nm) return null;
+  return entries.find(e => !e.sample && [e.photoPath, ...(e.photoPaths || [])].filter(Boolean).some(pth => String(pth).toLowerCase().endsWith(nm))) || null;
+}
 function billMaybeSuggest(f, meta) {
   try {
     if (CREW_NAME) return;
+    const read = `${meta.ai || ''}\n${meta.ocr || ''}`;
     let due = meta.aiDue || '', amt = meta.aiDueAmt != null ? meta.aiDueAmt : meta.aiTotal;
     if (!due && meta.ocr) { const p = billParseOcr(meta.ocr); due = p.due; if (amt == null) amt = p.amt; }
     if (!due) return;
+    if (BILL_PAID_RE.test(read) && !BILL_DUE_RE.test(read)) return;   // a receipt for something already paid is not a bill
     const today = localDay(new Date());
     // a due date that JUST passed (≤45 days) is MORE urgent, not less — likely still owed.
     // Anything older is history and stays quiet.
     const ageDays = Math.round((new Date(today) - new Date(due)) / 86400000);
     if (due <= today && ageDays > 45) return;
     const overdue = due <= today;
-    const vendor = (meta.ai || '').match(/\[([^\]—]+)/);
-    const who = vendor ? vendor[1].trim() : 'this bill';
-    const id = `bill:${due}:${String(who).toLowerCase().slice(0, 20)}`;
+    const who = billVendorOf(meta);
+    const vkey = who.toLowerCase();
+    if (who !== 'this bill' && (prefs.billAuto || {})[vkey]) return;   // 🔁 his word: that vendor is on autopay
+    const id = `bill:${due}:${vkey.slice(0, 20)}`;
     if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
-    pendingQueue.push({ id, kind: 'todo', payload: {
-      text: `${overdue ? '⚠ OVERDUE — ' : ''}Pay ${who}${amt != null ? ` — $${amt}` : ''}`,
-      due: overdue ? today : due, pri: overdue ? 3 : 2, job: curJob,
+    const money = n => '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    pendingQueue.push({ id, kind: 'bill', payload: {
+      who, amt: amt != null && isFinite(+amt) ? Math.round(+amt * 100) / 100 : null, due, overdue, job: curJob, fname: String((f && f.name) || ''),
+      what: String(meta.ai || '').replace(/\s+/g, ' ').trim().slice(0, 240),
+      text: `${overdue ? '⚠ OVERDUE — ' : ''}Pay ${who}${amt != null && isFinite(+amt) ? ` — ${money(amt)}` : ''}`,
+      pri: overdue ? 3 : 2,
       note: `From the statement photo — ${overdue ? `statement said due ${due} (already passed!)` : `due ${due}`}. Check the photo if the number looks off.` } });
     renderPendBanner(); savePendingSoon();
-    toast(overdue ? `⚠ 💳 OVERDUE bill spotted — was due ${due}! Suggested to-do is in review` : `💳 Bill spotted — due ${due}${amt != null ? ` · $${amt}` : ''}. Suggested to-do is in review ✓`);
+    toast(overdue ? `⚠ 💳 OVERDUE bill spotted — was due ${due}! It's in Review` : `💳 Bill spotted — due ${due}${amt != null && isFinite(+amt) ? ` · ${money(amt)}` : ''}. It's in Review ✓`);
     if (prefs.pushSecret) {
       fetch('/.netlify/functions/notify', { method: 'POST',
         headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
-        body: JSON.stringify({ title: '💳 Bill spotted', body: `Pay ${who}${amt != null ? ` — $${amt}` : ''} · due ${due} — to-do waiting in review`, tag: 'bill-due' })
+        body: JSON.stringify({ title: '💳 Bill spotted', body: overdue ? 'An overdue bill is waiting in Review' : 'A bill with a due date is waiting in Review', tag: 'bill-due' })
       }).catch(() => {});
     }
   } catch (e) { /* radar is best-effort — never break a photo read */ }
@@ -7706,7 +7733,7 @@ function isPersonalJob(j) { return String(j || '').trim().toLowerCase() === 'per
 function isLocked(e) {
   return !!(e && (e.personal || (e.tags || []).includes('Personal') || isPersonalJob(e.job)));
 }
-const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '🔥 Text — needs you', crew: '👷 From the crew', match: '⚙ The Grinder noticed', qb: '💼 In QuickBooks, not in your log', clientask: '💬 From a CLIENT', mail: '📧 Email — looks IMPORTANT' };
+const PEND_KINDS = { todo: '✅ Suggested to-do', todos: '📋 Suggested checklist', note: '📝 Suggested note', question: '🔮 What is this?', text: '🔥 Text — needs you', crew: '👷 From the crew', match: '⚙ The Grinder noticed', qb: '💼 In QuickBooks, not in your log', clientask: '💬 From a CLIENT', mail: '📧 Email — looks IMPORTANT', bill: '💳 Bill spotted — who pays it?' };   // 💳 v6.67
 const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', tomorrow: '🌙 by tomorrow' };
 // 🧹 v6.45 — SORT THE PILE. Eric, at 97 waiting: "could you help me sort it and get it to zero
 // then i can take over?" The app owns removal (the pending.json contract), so the pile clears
@@ -7781,6 +7808,17 @@ function renderReview() {
     pendingQueue.map(p => {
       let body = '';
       if (p.kind === 'todo') body = `<div class="rev-text">${esc(p.payload.text || '')}</div>`;
+      else if (p.kind === 'bill') { const pay = p.payload; const money = n => '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        // 💳 v6.67 — Eric: "i have no idea what this is for or what was purchased and if it even
+        // belongs to hertz project." What it is, from whom, what the read saw, the photo, the wheel.
+        const ent = billEntryOf(pay);
+        if (!_qbJob[p.id] && jobs.includes(pay.job)) _qbJob[p.id] = pay.job;   // the wheel starts where it was when he took the photo — his own pick, pre-lit
+        body = `<div class="rev-text"><b>${pay.amt != null ? money(pay.amt) : 'Amount not read'}</b> · due ${esc(pay.due || '?')}${pay.overdue ? ' · <b>⚠ OVERDUE</b>' : ''}</div>
+        <div class="rev-text">from <b>${esc(pay.who || '?')}</b></div>
+        <div class="rev-why" style="white-space: pre-wrap;">${esc(pay.what || 'The read gave no detail — look at the photo.')}</div>
+        <div class="rev-why">Read off the photo${pay.fname ? ' ' + esc(pay.fname) : ''}.${ent ? '' : ' Grind that photo and 📷 shows up here.'}</div>
+        ${ent ? `<div class="rev-row"><button class="btn-ghost" onclick="openEntryPhoto(${ent.id}, event)">📷 Look at it</button></div>` : ''}
+        ${revJobWheel(p, `🏠 Which job is this bill for? (the wheel was on ${esc(pay.job && pay.job !== '—' ? pay.job : 'nothing')} when you took it)`)}`; }
       else if (p.kind === 'todos') body = `<div class="rev-text">${esc((p.payload.parent && p.payload.parent.text) || '')}</div>
         <ol class="rev-steps">${(p.payload.steps || []).map(st => `<li>${esc(st)}</li>`).join('')}</ol>`;
       else if (p.kind === 'note') body = `<div class="rev-text">${esc(p.payload.text || '')}</div>`;
@@ -7792,7 +7830,7 @@ function renderReview() {
         ${(p.payload.photos || []).length ? `<div class="rev-row">${p.payload.photos.map((ph, i) =>
           `<button class="btn-ghost" onclick="showPhoto('${escq(ph)}')">📷 View photo${p.payload.photos.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}</div>` : ''}
         ${revJobWheel(p, '🏠 Which job is this text about?')}`;
-      if (p.kind === 'mail') body = `<div class="rev-text">From <b>${esc(p.payload.from || '?')}</b>${p.payload.addr ? ` · <span class="hint" style="margin: 0; word-break: break-all;">${esc(p.payload.addr)}</span>` : ''} · ${p.payload.known ? '✓ KNOWN sender' : '⚡ NEW sender — nothing filed yet'}</div>
+      if (p.kind === 'mail') body = `<div class="rev-text">From <b>${esc(p.payload.from || '?')}</b>${p.payload.addr ? ` · <span class="hint" style="margin: 0; word-break: break-all;">${esc(p.payload.addr)}</span>` : ''} · ${p.payload.entryId ? '✓ on your log' : p.payload.known ? '✓ KNOWN sender' : '⚡ NEW sender — nothing filed yet'}</div>
         <div class="rev-text" style="font-weight: 700;">${esc(p.payload.subj || '(no subject)')}</div>
         <div class="rev-why">${esc(MAIL_WHY_WORD[p.payload.why] || MAIL_WHY_WORD.other)}${p.payload.gist ? ' — ' + esc(p.payload.gist) : ''} · ${esc(MAIL_BY_WORD[p.payload.by] || MAIL_BY_WORD.none)}${p.payload.att ? ' · 📎 attachment not captured — the Zap sends words only' : ''}</div>
         <div class="rev-why" style="font-size: 13px; color: var(--ink-2); white-space: pre-wrap;">${esc((p.payload.body || '').slice(0, 500))}</div>`;
@@ -7839,6 +7877,11 @@ function renderReview() {
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log just this one</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'never')">🚫 Never this sender</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`)
+        : p.kind === 'bill'
+        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'logan')">📗 Logan pays it</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'auto')">🔁 Autopay — never ask about ${esc(String(p.payload.who || 'them').slice(0, 24))}</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'pay')">✓ I'll pay it — remind me</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not a bill</button>`
         : (p.kind === 'text' || p.kind === 'crew')
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log it</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'todo')">➕ Make it a to-do</button>
@@ -7919,7 +7962,7 @@ function reviewAct(id, accept) {
     // 🏠 v6.49 — a card that WEARS the wheel is filed by the wheel, and an untouched wheel means
     // '— unfiled', not jobs[0]. Every other kind keeps the old fallback: a crew note and a radar
     // to-do arrive carrying their own job, so nothing there was ever guessing.
-    const wheeled = p.kind === 'text' || p.kind === 'qb';
+    const wheeled = p.kind === 'text' || p.kind === 'qb' || p.kind === 'bill';   // 💳 v6.67 — the bill card wears it too
     let j;
     if (wheeled) {
       const sel = $(revJobId(p.id));
@@ -7937,6 +7980,26 @@ function reviewAct(id, accept) {
         pri: Math.min(Math.max(+pay.pri || 1, 0), 3),
         note: pay.note || undefined, ifThen: pay.ifThen || undefined, ts: new Date().toISOString() });
       toast(pay.waitUntil ? `To-do added — 💤 sleeps until ${pay.waitUntil} ✓` : 'To-do added ✓');
+    } else if (p.kind === 'bill') {
+      // 💳 v6.67 — his four answers. Only "I'll pay it" makes a to-do; the others say who pays.
+      const ent = billEntryOf(pay);
+      if (ent && j !== '—' && ent.job === '—') ent.job = j;   // the wheel names the photo's entry too, if it had no job
+      if (accept === 'pay') {
+        todos.unshift({ id: nextId++, text: pay.text || `Pay ${pay.who || 'this bill'}`, job: j, done: false, who: 'Me',
+          due: /^\d{4}-\d{2}-\d{2}$/.test(pay.due || '') ? (pay.overdue ? localDay(new Date()) : pay.due) : undefined,
+          pri: Math.min(Math.max(+pay.pri || 2, 0), 3), note: pay.note || undefined, ts: new Date().toISOString() });
+        toast(`✓ On your list — pay ${pay.who || 'it'}${pay.due ? ' by ' + pay.due : ''}`);
+      } else if (accept === 'auto') {
+        // 🔁 exact vendor name, his tap — never guessed. The radar skips that vendor from now on.
+        const k = String(pay.who || '').toLowerCase().trim();
+        if (k && k !== 'this bill') { prefs.billAuto = prefs.billAuto || {}; prefs.billAuto[k] = localDay(new Date()); }
+        toast(k && k !== 'this bill' ? `🔁 ${pay.who} is on autopay — I won't ask about them again` : '🔁 Autopay — noted');
+      } else {
+        // 📗 Logan pays it — the photo's entry wears the bookkeeper tag, the same mark the receipts window reads
+        if (ent) { ent.tags = Array.isArray(ent.tags) ? ent.tags : []; if (!ent.tags.includes('Bookkeeper')) ent.tags.push('Bookkeeper'); }
+        toast(ent ? '📗 Logan pays it — the receipt is tagged for the bookkeeper ✓' : '📗 Logan pays it ✓');
+      }
+      scheduleSave();
     } else if (p.kind === 'todos') {
       const par = pay.parent || {};
       const pj = jobs.includes(par.job) ? par.job : j; // checklist job rides on the parent
@@ -8270,12 +8333,14 @@ async function mailSort(m, f, id) {
   if (mailIsPersonal(m)) { autoLogMail(m, ts); done(); scheduleSave(); return; }                    // 🔒 locked, never read by the judge
   // 👷 v6.58 — Phil's weekly job recap: known by sender + subject, parsed, never judged
   if (laborRecapIs(m)) { laborRecapTake(m, ts); done(); scheduleSave(); return; }
-  const known = !m.addr || mailListed(mailOk(), m.addr);
-  if (!mailSortOn()) {                                                                              // sorting off = v6.12, word for word
-    if (known) autoLogMail(m, ts);
-    else if (!mailAsk().some(x => String(x.a || x) === m.addr)) mailAsk().push({ a: m.addr, s: subj, w: m.who, b: row.b, ts, f: f.name });
-    done(); scheduleSave(); return;
-  }
+  // 📥 v6.67 — CAPTURE EVERYTHING. Eric: "maybe we just capture all of them and the ones that are
+  // junk will just never be used. the wizard and my questions and my searches will still pull
+  // from the pile … suggestions?" Every sender not on 🚫 NEVER or 🔒 PERSONAL is kept — no more
+  // "keep them or not?" question, no ✓ Seen chore. The judge still runs, but only to say WHERE
+  // it lands: ★ important = a card; the rest = the log, searchable, with its word on it. The
+  // ✓ ALWAYS list stays in Setup for the books and means nothing extra now.
+  const known = true;
+  if (!mailSortOn()) { autoLogMail(m, ts); done(); scheduleSave(); return; }                       // sorting off = everything on the log, plain
   const cloud = (_mailJudged || {})[f.name];
   const haveCloud = !!(cloud && MAIL_BUCKETS.includes(cloud.bucket));
   if (!haveCloud && _mailJudgedN >= MAIL_JUDGE_CAP && aiKey()) return 'later';                       // the rest wait for the next sweep
@@ -8291,13 +8356,12 @@ async function mailSort(m, f, id) {
     mailDayBump('ign'); done('Mail Ignored'); scheduleSave(); return;
   }
   if (v.bucket === 'maybe') {
-    if (known) autoLogMail(m, ts, vx);
-    else if (!mailAsk().some(x => String(x.a || x) === m.addr)) mailAsk().push({ a: m.addr, s: subj, w: m.who, g: v.gist, why: v.why, by: v.by, b: row.b, ts, f: f.name, bucket: 'maybe' });
+    autoLogMail(m, ts, vx);                                                                         // 📥 v6.67 — on the log, no question asked
     mailDayBump('maybe'); done(); scheduleSave(); return;
   }
-  // ★ IMPORTANT → a card in the Review pile. Known sender: logged now, the card wants his eyes.
-  // New sender: NOTHING is logged until his tap (v6.12's "never log behind his back" holds).
-  const e = known ? autoLogMail(m, ts, vx) : null;
+  // ★ IMPORTANT → a card in the Review pile, and the email is on the log already (v6.67: every
+  // sender is kept, so the card's ✓ Got it just clears it).
+  const e = autoLogMail(m, ts, vx);
   pendingQueue.push({ id, kind: 'mail', source: f.name, payload: { from: m.who, addr: m.addr, subj: subj.slice(0, 120), body: row.b,
     why: v.why, gist: v.gist, bucket: 'important', by: v.by, known, entryId: e ? e.id : undefined, path, ts,
     att: /\battach/i.test(m.body) && String(m.body).length < 600 ? true : undefined } });
@@ -8461,11 +8525,24 @@ function autoLogMail(m, srcTs, extra) {
     ...extra });
 }
 // the rows that do the learning — and since v6.41 ✓ Always also FILES the email(s) that asked
-function mailFileWaiting(list) {
+// ✓ v6.67 — `seen`: Eric: "i like always keep and then later it shows up and i have to push seen
+// on the same email. why is that?" Because WHO (the lists) and WHAT (the judge) were two doors.
+// An email he files with his own tap has been seen; it never asks again.
+function mailFileWaiting(list, seen) {
   let n = 0;
   list.forEach(x => { if (x && x.b != null) { autoLogMail({ who: x.w || String(x.a || '').split('@')[0] || '?', addr: String(x.a || ''), subj: x.s || '', body: x.b || '' }, x.ts,
-    { mailBucket: x.bucket || 'maybe', mailWhy: x.why || 'other', mailGist: x.g || '', mailBy: x.by || 'none' }); n++; } });
+    { mailBucket: x.bucket || 'maybe', mailWhy: x.why || 'other', mailGist: x.g || '', mailBy: x.by || 'none', ...(seen ? { mailSeen: true } : {}) }); n++; } });
   if (n) renderLog();
+  return n;
+}
+// 📥 v6.67 — capture everything: whatever was still waiting on "keep them or not?" files now, as
+// seen. A row that carries no words (the oldest ones) has nothing to file and is dropped.
+function mailFileLegacyAsks() {
+  const waiting = mailAsk();
+  if (!waiting.length) return 0;
+  const n = mailFileWaiting(waiting, true);
+  prefs.mailAsk = [];
+  scheduleSave();
   return n;
 }
 function mailSay(addr, yes) {
@@ -8475,7 +8552,7 @@ function mailSay(addr, yes) {
   const to = yes ? mailOk() : mailNo(), from = yes ? mailNo() : mailOk();
   const k = from.findIndex(x => String(x).toLowerCase() === a); if (k >= 0) from.splice(k, 1);   // one list or the other, never both
   if (!to.some(x => String(x).toLowerCase() === a)) to.push(a);
-  const n = yes ? mailFileWaiting(waiting) : 0;
+  const n = yes ? mailFileWaiting(waiting, true) : 0;
   scheduleSave(); renderMailAsk(); renderMailSenders();
   toast(yes ? `📧 ${a} — kept from now on ✓${n ? ` · ${n} email${n > 1 ? 's' : ''} filed` : ''}` : `🚫 ${a} — never again ✓`);
 }
@@ -8484,7 +8561,7 @@ function mailSayDom(addr, yes) {
   const waiting = mailAsk().filter(x => mailDom(String(x.a || x).toLowerCase()) === d.slice(1));
   prefs.mailAsk = mailAsk().filter(x => mailDom(String(x.a || x).toLowerCase()) !== d.slice(1));
   (yes ? mailOk() : mailNo()).push(d);
-  const n = yes ? mailFileWaiting(waiting) : 0;
+  const n = yes ? mailFileWaiting(waiting, true) : 0;
   scheduleSave(); renderMailAsk(); renderMailSenders();
   toast(`📧 everyone at ${d} — ${yes ? 'kept' : 'skipped'} from now on ✓${n ? ` · ${n} filed` : ''}`);
 }
@@ -8535,7 +8612,7 @@ function mailListAdd(which) {
   if (!to.some(x => String(x).toLowerCase() === a)) to.push(a);
   const waiting = mailAsk().filter(x => String(x.a || x).toLowerCase() === a);
   prefs.mailAsk = mailAsk().filter(x => String(x.a || x).toLowerCase() !== a);   // no longer a question
-  const n = which === true ? mailFileWaiting(waiting) : 0;
+  const n = which === true ? mailFileWaiting(waiting, true) : 0;
   if (inp) inp.value = '';
   scheduleSave(); renderMailSenders(); renderMailAsk();
   toast(which === true ? `📧 ${a} — kept from now on ✓${n ? ` · ${n} filed` : ''}` : which === false ? `🚫 ${a} — never again ✓` : `🔒 ${a} — personal, locked, never read by the sorter ✓`);
@@ -8547,22 +8624,47 @@ function mailListDel(which, i) {
 }
 
 // 📧 v6.41 — THE EMAIL CARD, on the grinder form where the NEW-SENDERS card sat (v6.38 put it
-// outside the crew-only wall). One header with the day's counts and three folds, each a glyph
-// and a word: ★ IMPORTANT (a door to the Review pile), ? MAYBE (known senders' maybes to mark
-// seen, and brand-new senders to keep or skip), ○ IGNORED (the spot-check ledger, ↩ Rescue).
-// Nothing here writes a list by itself — every chip is Eric's tap. Crew phones never see it.
+// outside the crew-only wall). Three folds, each a glyph and a word: ★ IMPORTANT (a door to
+// the Review pile), ? MAYBE, ○ SKIPPED (the spot-check ledger, ↩ Rescue). Crew phones never see it.
+// 🔎 v6.67 — THE DOUBLE CHECK. Eric: "how do i know im not missing important emails? wheres the
+// double check?" Every skipped email of the last 7 days is read AGAIN by plain word rules — money,
+// a date, a due word, one of his job names — and the ones that trip a rule are listed on the card
+// to rescue or wave off. Bulk senders (no-reply, newsletter, promo…) are left out, or every flyer
+// with "$5 off" would ring. No AI in the check, no guessing: exact words, and the card ALWAYS says
+// whether it found anything, so silence never has to be trusted. The ✓ Seen chore is gone with
+// v6.67's capture-everything: a maybe is on the log, nothing to do here.
+const MAIL_CHECK_RE = /\$\s?\d|\b\d{1,3}(?:,\d{3})+(?:\.\d{2})?\b|\b\d+\.\d{2}\b|\binvoice|\bbill(?:ing)?\b|\bdue\b|deadline|\bpermit|\binspect|\bpayment|\bbalance\b|\bquote\b|\bestimate|\bcontract\b|\bschedul|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.? \d{1,2}\b|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/i;
+const MAIL_BULK_RE = /no-?reply|donotreply|do-not-reply|newsletter|marketing|promo|offers?@|deals?@|news@|notifications?@|mailer|bounce/i;
+function mailCheckWhy(row) {
+  const text = `${row.s || ''} ${row.b || ''}`;
+  const hits = [];
+  const jobHit = (jobs || []).find(j => j && j !== '—' && j.length >= 4 && text.toLowerCase().includes(j.toLowerCase()));
+  if (jobHit) hits.push(`the job name "${jobHit}"`);
+  const money = text.match(/\$\s?[\d,]+(?:\.\d{2})?/);   // a dollar figure is the strongest tell — name it whole
+  const m = money || text.match(MAIL_CHECK_RE);
+  if (m) hits.push(`"${m[0].trim()}"`);
+  return hits;
+}
+function mailChecks() {
+  const cut = Date.now() - 7 * 86400000;
+  return mailIgnored().map((r, i) => ({ r, i }))
+    .filter(({ r }) => !r.ok && r.ts && +new Date(r.ts) >= cut && !MAIL_BULK_RE.test(String(r.a || '')))
+    .map(x => ({ ...x, why: mailCheckWhy(x.r) })).filter(x => x.why.length);
+}
+function mailCheckOk(i) { const r = mailIgnored()[i]; if (r) { r.ok = 1; scheduleSave(); renderMailAsk(); } }
 function renderMailAsk() {
   const box = $('mailAskCard');
   if (!box) return;
   if (CREW_NAME) { box.style.display = 'none'; box.innerHTML = ''; return; }
-  const now = Date.now();
+  const now = Date.now(), cut = now - 7 * 86400000;
   const imp = pendingQueue.filter(p => p.kind === 'mail');
-  const asks = mailAsk().slice(0, 12);
-  const maybes = entries.filter(e => e.mail && !e.sample && !e.personal && e.mailBucket === 'maybe' && !e.mailSeen && now - +new Date(e.ts) < 14 * 86400000).slice(0, 30);
+  const week = entries.filter(e => e.mail && !e.sample && !e.personal && +new Date(e.ts) >= cut);
+  const maybes = week.filter(e => e.mailBucket === 'maybe').slice(0, 30);
+  const nImp = week.filter(e => e.mailBucket === 'important').length;
   const ring = mailIgnored();
-  const nMaybe = maybes.length + asks.length;
-  if (!imp.length && !nMaybe && !ring.length && !_mcOffer) { box.style.display = 'none'; box.innerHTML = ''; return; }
-  if (!_mcFold && asks.length) _mcFold = 'maybe';   // a new sender is a question — open on it
+  const skippedWeek = ring.filter(r => r.ts && +new Date(r.ts) >= cut).length;
+  const checks = mailChecks();
+  if (!imp.length && !week.length && !ring.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
   box.style.display = '';
   const fold = (k, label, n, extra) => `<button type="button" class="pick-chip${_mcFold === k ? ' sel' : ''}" style="font-size: 12px; padding: 5px 10px; min-height: 30px;" onclick="mcFold('${k}')" aria-expanded="${_mcFold === k}">${_mcFold === k ? '▾ ' : '▸ '}${label} (${n})${extra || ''}</button>`;
   const whyW = w => MAIL_WHY_WORD[w] || MAIL_WHY_WORD.other;
@@ -8574,27 +8676,13 @@ function renderMailAsk() {
   if (_mcFold === 'imp') body = imp.length
     ? `<button type="button" class="btn-primary" style="width: 100%; margin-top: 6px;" onclick="openReview()">★ ${imp.length} IMPORTANT — open Review ›</button>`
     : '<div class="hint" style="margin: 6px 0 0;">Nothing important waiting.</div>';
-  if (_mcFold === 'maybe') body = (asks.length ? `<div class="hint" style="margin: 6px 0 2px;">⚡ NEW EMAIL SENDERS — keep them or not? Nothing is filed until you say. ✓ Always also files what they sent.</div>` + asks.map(x => { const a = String(x.a || x), sub = String(x.s || '');
-      return `<div style="border-top: 1px solid var(--border); padding: 6px 0;">
-      <div style="font-weight: 700; font-size: 13px; word-break: break-all;">${esc(a)}${x.w ? ` <span class="hint" style="margin: 0;">${esc(x.w)}</span>` : ''}</div>
-      ${sub ? `<div class="hint" style="margin: 1px 0 2px;">${esc(sub.slice(0, 80))}</div>` : ''}
-      ${x.why ? `<div class="hint" style="margin: 0 0 4px;">${esc(whyW(x.why))}${x.g ? ' — ' + esc(x.g) : ''} · ${esc(byW(x.by))}</div>` : ''}
-      <div class="chips-row" style="display: flex; gap: 5px; flex-wrap: wrap;">
-        <button type="button" class="pick-chip sel" style="font-size: 11px;" onclick="mailSay('${escq(a)}', true)">✓ Always</button>
-        <button type="button" class="pick-chip" style="font-size: 11px;" onclick="mailSay('${escq(a)}', false)">🚫 Never</button>
-        <button type="button" class="btn-ghost req-x" style="font-size: 10.5px;" onclick="mailSayDom('${escq(a)}', true)">✓ everyone @${esc(mailDom(a))}</button>
-      </div></div>`; }).join('') : '') +
-    (maybes.length ? `<div class="frow" style="align-items: center; margin: 8px 0 2px;"><div class="hint" style="margin: 0; flex: 1;">? MAYBE from senders you keep — ${maybes.length} to look at</div>${maybes.length > 1 ? `<button type="button" class="btn-ghost req-x" style="font-size: 10.5px;" onclick="mailSeenAll()">✓ Seen all ${maybes.length}</button>` : ''}</div>` +
+  if (_mcFold === 'maybe') body = (maybes.length ? `<div class="hint" style="margin: 6px 0 2px;">? MAYBE — these are on your log already; nothing to do here. 📣 makes a sender always important.</div>` +
       maybes.map(e => `<div style="border-top: 1px solid var(--border); padding: 6px 0;">
       <div style="font-size: 13px;"><b>${esc((e.tags || [])[0] || e.mailAddr || '?')}</b> · ${when(e.ts)} — ${esc(e.mailSubj || '')}</div>
       <div class="hint" style="margin: 1px 0 4px;">${esc(whyW(e.mailWhy))}${e.mailGist ? ' — ' + esc(e.mailGist) : ''} · ${esc(byW(e.mailBy))}${e.mailRescued ? ' · ↩ rescued' : ''}</div>
-      <div class="chips-row" style="display: flex; gap: 5px; flex-wrap: wrap;">
-        <button type="button" class="pick-chip sel" style="font-size: 11px;" onclick="mailSeen(${e.id})">✓ Seen</button>
-        ${e.mailAddr && !mailListed(mailLoud(), e.mailAddr) ? `<button type="button" class="btn-ghost req-x" style="font-size: 10.5px;" onclick="mailLoudAdd('${escq(e.mailAddr)}')">📣 Always IMPORTANT from ${esc(e.mailAddr)}</button>` : ''}
-      </div></div>`).join('') : '') +
-    (!asks.length && !maybes.length ? '<div class="hint" style="margin: 6px 0 0;">Nothing to sort.</div>' : '');
+      ${e.mailAddr && !mailListed(mailLoud(), e.mailAddr) ? `<div class="chips-row" style="display: flex; gap: 5px; flex-wrap: wrap;"><button type="button" class="btn-ghost req-x" style="font-size: 10.5px;" onclick="mailLoudAdd('${escq(e.mailAddr)}')">📣 Always IMPORTANT from ${esc(e.mailAddr)}</button></div>` : ''}
+      </div>`).join('') : '<div class="hint" style="margin: 6px 0 0;">No maybes this week.</div>');
   if (_mcFold === 'ign') body = `<div class="hint" style="margin: 6px 0 2px;">○ The last ${ring.length} skipped, newest first — a spot check; nothing here is lost, the files sit in Dropbox under Texts.</div>` +
-    (_mcOffer ? `<div style="border: 1.5px solid var(--accent); border-radius: 10px; padding: 6px 8px; margin: 6px 0;"><div class="hint" style="margin: 0 0 4px;">↩ Rescued. Keep everything from <b>${esc(_mcOffer)}</b> from now on?</div><div class="chips-row" style="display: flex; gap: 5px; flex-wrap: wrap;"><button type="button" class="pick-chip sel" style="font-size: 11px;" onclick="mailSay('${escq(_mcOffer)}', true); _mcOffer = ''; renderMailAsk();">✓ Always</button><button type="button" class="pick-chip" style="font-size: 11px;" onclick="_mcOffer = ''; renderMailAsk();">not now</button></div></div>` : '') +
     (ring.length ? ring.slice(0, 40).map((r, i) => `<div style="border-top: 1px solid var(--border); padding: 6px 0;">
       <div style="font-size: 13px;"><b>${esc(r.who || '?')}</b>${r.a ? ` <span class="hint" style="margin: 0; word-break: break-all;">${esc(r.a)}</span>` : ''} · ${when(r.ts)} — ${esc(r.s || '')}</div>
       <div class="hint" style="margin: 1px 0 4px;">${esc(whyW(r.why))}${r.g ? ' — ' + esc(r.g) : ''} · ${esc(byW(r.by))}</div>
@@ -8602,10 +8690,22 @@ function renderMailAsk() {
         <button type="button" class="pick-chip" style="font-size: 11px;" onclick="mailRescue(${i})">↩ Rescue</button>
         ${r.a && r.by !== 'list' && !mailListed(mailNo(), r.a) ? `<button type="button" class="btn-ghost req-x" style="font-size: 10.5px;" onclick="mailSay('${escq(r.a)}', false); mailIgnRow(${i});">🚫 Never ${esc(r.a)}</button>` : ''}
       </div></div>`).join('') : '<div class="hint" style="margin: 6px 0 0;">Nothing skipped yet.</div>');
-  box.innerHTML = `<div style="font-weight: 800; font-size: 13px; letter-spacing: .5px;">📧 EMAIL — today: ${md.imp || 0} important · ${md.maybe || 0} maybe · ${md.ign || 0} ignored</div>
+  // 🔎 the double check — it always says whether it found anything
+  const check = checks.length
+    ? `<div style="border: 1.5px solid var(--warn, #b8860b); border-radius: 10px; padding: 6px 8px; margin: 8px 0 0;">
+        <div style="font-weight: 800; font-size: 12.5px; letter-spacing: .5px;">🔎 DOUBLE CHECK — ${checks.length} skipped this week mention${checks.length > 1 ? '' : 's'} money, a date or a job</div>
+        ${checks.slice(0, 8).map(({ r, i, why }) => `<div style="border-top: 1px solid var(--border); padding: 6px 0;">
+          <div style="font-size: 13px;"><b>${esc(r.who || '?')}</b>${r.a ? ` <span class="hint" style="margin: 0; word-break: break-all;">${esc(r.a)}</span>` : ''} · ${when(r.ts)} — ${esc(r.s || '')}</div>
+          <div class="hint" style="margin: 1px 0 4px;">saw ${esc(why.join(' and '))} · ${esc(whyW(r.why))}${r.g ? ' — ' + esc(r.g) : ''}</div>
+          <div class="chips-row" style="display: flex; gap: 5px; flex-wrap: wrap;">
+            <button type="button" class="pick-chip sel" style="font-size: 11px;" onclick="mailRescue(${i})">↩ Rescue — put it on the log</button>
+            <button type="button" class="btn-ghost req-x" style="font-size: 10.5px;" onclick="mailCheckOk(${i})">✓ Fine, it's junk</button>
+          </div></div>`).join('')}</div>`
+    : `<div class="hint" style="margin: 6px 0 0;">🔎 Double check: nothing skipped this week mentions money, a date or a job name. ✓</div>`;
+  box.innerHTML = `<div style="font-weight: 800; font-size: 13px; letter-spacing: .5px;">📧 EMAIL — this week: ${nImp} important · ${maybes.length} maybe · ${skippedWeek} skipped</div>
     <div class="chips-row" style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px;">
-      ${fold('imp', '★ IMPORTANT', imp.length)}${fold('maybe', '? MAYBE', nMaybe)}${fold('ign', '○ IGNORED', ring.length, seenAgo != null && seenAgo >= 7 ? ` · ${seenAgo}d since you looked` : '')}
-    </div>${body}`;
+      ${fold('imp', '★ IMPORTANT', imp.length)}${fold('maybe', '? MAYBE', maybes.length)}${fold('ign', '○ SKIPPED', ring.length, seenAgo != null && seenAgo >= 7 ? ` · ${seenAgo}d since you looked` : '')}
+    </div>${body}${check}`;
 }
 // 🤖 v5.99 — ALL SENDERS means the machines write too. Eric: skip the robots entirely.
 // Deliberately narrow, because a wrong guess means he never sees that text:
@@ -8684,6 +8784,7 @@ async function checkInboxTexts() {
   try { await (window._pendReady || Promise.resolve()); } catch (e) {}
   _mailJudgedN = 0;
   await readMailJudged();          // ☁ v6.43 — what the watcher already worked out, free
+  mailFileLegacyAsks();            // 📥 v6.67 — capture everything: anything still waiting on "keep them or not?" files now
   // 📮 v6.44 — publish the lists from HERE, not only from the Setup card. The watcher FAILS CLOSED
   // with no mail-rules.json, and until now that file was written only when Eric happened to open
   // ⚙ → 📧 Email senders. A man who never opens that card had a watcher that idled forever and
@@ -16940,7 +17041,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.66';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.67';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

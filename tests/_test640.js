@@ -74,10 +74,10 @@ const { chromium } = require('playwright');
     return JSON.stringify([mailOk(), mailNo()]) === before && /Type an address like/.test($('toast').textContent);
   }));
 
-  ok('adding a sender who was still waiting on the NEW EMAIL SENDERS card clears that question', await page.evaluate(() => {
+  ok('adding a sender who was still waiting on the old "keep them?" question clears that question (v6.67: the card no longer asks at all)', await page.evaluate(() => {
     mailAsk().push({ a: 'new@vendor.com', s: 'quote' }); renderMailAsk();
     $('mailAddInput').value = 'new@vendor.com'; mailListAdd(true);
-    return !mailAsk().length && $('mailAskCard').style.display === 'none' && mailOk().includes('new@vendor.com');
+    return !mailAsk().length && mailOk().includes('new@vendor.com') && !/NEW EMAIL SENDERS/.test($('mailAskCard').textContent);
   }));
 
   ok('the sweep honours the edited lists — Never means archived, nothing logged', await page.evaluate(() =>

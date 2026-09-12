@@ -67,7 +67,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('the banner counts it in words, and the Review card says who, what, why, and that the sender is known', await page.evaluate(() => {
     renderPendBanner(); renderReview();
     const b = $('pendBanner').textContent, r = $('revBox').textContent;
-    return /1 IMPORTANT email/.test(b) && /Bob Ashman/.test(r) && /Invoice 4471/.test(r) && /🧾 INVOICE/.test(r) && /Bill for the rough-in/.test(r) && /KNOWN sender/.test(r) && /⚙ judged/.test(r) && /✓ Got it/.test(r) && /Never more than a maybe/.test(r);
+    return /1 IMPORTANT email/.test(b) && /Bob Ashman/.test(r) && /Invoice 4471/.test(r) && /🧾 INVOICE/.test(r) && /Bill for the rough-in/.test(r) && /on your log/.test(r) && /⚙ judged/.test(r) && /✓ Got it/.test(r) && /Never more than a maybe/.test(r);   // v6.67 — "✓ on your log" (every sender is kept)
   }));
 
   ok('✓ Got it clears the card; 🔕 on a known sender caps them at maybe from now on', await page.evaluate(() => {
@@ -76,12 +76,14 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return gone && e.mailBucket === 'maybe' && mailHush().includes('bob@ashmanplumbing.com');
   }));
 
-  ok('⚡ a NEW sender + important → a card, NOTHING logged yet, no ask row; the card says NEW', await page.evaluate(async () => {
+  // 📥 v6.67 — CAPTURE EVERYTHING (Eric: "maybe we just capture all of them"). A new sender is kept
+  // like any other: the email is on the log right away and the card is the KNOWN kind.
+  ok('⚡ v6.67 a NEW sender + important → logged right away, and a card that says KNOWN with ✓ Got it', await page.evaluate(async () => {
     T.reset(); prefs.mailOk = []; prefs.mailHush = []; window._verdict = { bucket: 'important', why: 'question', gist: 'Asks whether the deck stain can go darker.' };
     await T.sweep([T.mail('Email -deck stain.txt', 'Dale Rininger <dale@rininger.com>', 'deck stain', 'Can we go darker on the deck stain? Let me know.')]);
     renderReview();
     const c = T.cards()[0]; window._c2 = c;
-    return !!c && c.payload.known === false && !entries.length && !mailAsk().length && /NEW sender/.test($('revBox').textContent) && /❓ QUESTION/.test($('revBox').textContent) && /Always \+ log it/.test($('revBox').textContent);
+    return !!c && c.payload.known === true && entries.length === 1 && entries[0].mailBucket === 'important' && !mailAsk().length && /on your log/.test($('revBox').textContent) && /❓ QUESTION/.test($('revBox').textContent) && /✓ Got it/.test($('revBox').textContent) && !/Always \+ log it/.test($('revBox').textContent);
   }));
 
   ok('✓ Always + log it: the entry is born, the sender is kept, the card is gone', await page.evaluate(() => {
@@ -89,11 +91,11 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return entries.length === 1 && entries[0].mailBucket === 'important' && entries[0].mailAddr === 'dale@rininger.com' && mailOk().includes('dale@rininger.com') && !T.cards().length;
   }));
 
-  ok('🚫 Never on a new-sender card: listed, nothing logged, card gone', await page.evaluate(async () => {
+  ok('🚫 Never on a card: the sender is listed, the card is gone — the email he already got stays on the log (v6.67)', await page.evaluate(async () => {
     T.reset(); prefs.mailOk = []; window._verdict = { bucket: 'important', why: 'other', gist: 'x' };
     await T.sweep([T.mail('Email -offer.txt', 'Sales <sales@coldcall.com>', 'offer', 'We can save you money on siding.')]);
     const c = T.cards()[0]; reviewAct(String(c.id), 'never');
-    return !entries.length && mailNo().includes('sales@coldcall.com') && !T.cards().length;
+    return entries.length === 1 && mailNo().includes('sales@coldcall.com') && !T.cards().length;
   }));
 
   ok('○ a KEPT sender + ignore → still on the log (Always means always) but never a card; ledger row; file to Mail Ignored', await page.evaluate(async () => {
@@ -103,36 +105,32 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return !!e && e.mailBucket === 'ignore' && !T.cards().length && mailIgnored().length === 1 && mailIgnored()[0].known === true && /\/texts\/mail ignored\//.test(T.movedTo('Email -lumber deals.txt'));
   }));
 
-  ok('○ a NEW sender + ignore → ledger only, nothing logged, and the sender is NOT added to Never by itself', await page.evaluate(async () => {
+  ok('○ v6.67 a NEW sender + ignore → on the log with its word, a ledger row, and the sender is NOT added to Never by itself', await page.evaluate(async () => {
     T.reset(); prefs.mailOk = []; prefs.mailNo = []; window._verdict = { bucket: 'ignore', why: 'newsletter', gist: 'A promo.' };
     await T.sweep([T.mail('Email -promo.txt', 'Promo <promo@store.com>', 'promo', 'Big sale!')]);
-    return !entries.length && mailIgnored().length === 1 && !mailIgnored()[0].known && !mailNo().length && !T.cards().length;
+    return entries.length === 1 && entries[0].mailBucket === 'ignore' && mailIgnored().length === 1 && mailIgnored()[0].known === true && !mailNo().length && !T.cards().length;
   }));
 
-  ok('↩ Rescue puts it on the log as a maybe and OFFERS ✓ Always — the list is untouched until he taps', await page.evaluate(() => {
+  ok('↩ Rescue flips that same entry to a maybe, off the ledger — and no list is touched or offered (v6.67)', await page.evaluate(() => {
     mailRescue(0);
     const e = entries[0]; const card = $('mailAskCard').textContent;
-    return !!e && e.mailRescued === true && e.mailBucket === 'maybe' && !mailIgnored().length && !mailOk().includes('promo@store.com') && /Rescued/.test(card) && /promo@store\.com/.test(card) && /✓ Always/.test(card);
+    return !!e && entries.length === 1 && e.mailRescued === true && e.mailBucket === 'maybe' && !mailIgnored().length && !mailOk().includes('promo@store.com') && !/Keep everything from/.test(card);
   }));
 
-  ok('? a NEW sender + maybe → the 📧 card asks, with the why-word and gist; ✓ Always then FILES the waiting email', await page.evaluate(async () => {
-    T.reset(); prefs.mailOk = []; _mcOffer = ''; _mcFold = ''; window._verdict = { bucket: 'maybe', why: 'receipt', gist: 'Your order shipped.' };
+  ok('? v6.67 a NEW sender + maybe → straight onto the log with the why-word; nobody is asked, nothing waits', await page.evaluate(async () => {
+    T.reset(); prefs.mailOk = []; _mcFold = ''; window._verdict = { bucket: 'maybe', why: 'receipt', gist: 'Your order shipped.' };
     await T.sweep([T.mail('Email -order shipped.txt', 'Kenai Supply <orders@kenaisupply.com>', 'order shipped', 'Your order 1234 has shipped.', '2026-09-06T16:00:00Z')]);
-    const row = mailAsk()[0]; const card = $('mailAskCard');
-    const asked = !!row && row.g === 'Your order shipped.' && row.why === 'receipt' && typeof row.b === 'string' && !entries.length && card.offsetParent !== null && /NEW EMAIL SENDERS/.test(card.textContent) && /kenaisupply/.test(card.textContent) && /📦 RECEIPT/.test(card.textContent);
-    mailSay('orders@kenaisupply.com', true);
+    renderMailAsk();
     const e = entries[0];
-    return asked && !!e && e.mailBucket === 'maybe' && e.mailWhy === 'receipt' && e.mailAddr === 'orders@kenaisupply.com' && !mailAsk().length && mailOk().includes('orders@kenaisupply.com');
+    return !!e && e.mailBucket === 'maybe' && e.mailWhy === 'receipt' && e.mailGist === 'Your order shipped.' && e.mailAddr === 'orders@kenaisupply.com' && !mailAsk().length && !T.cards().length && !/NEW EMAIL SENDERS/.test($('mailAskCard').textContent);
   }));
 
-  ok('? a KEPT sender + maybe → on the log, in the MAYBE fold with ✓ Seen and 📣 Loud; Seen drops it from the fold', await page.evaluate(async () => {
+  ok('? a maybe sits in the MAYBE fold to read, with 📣 Loud — and NO ✓ Seen chore any more (v6.67)', await page.evaluate(async () => {
     T.reset(); prefs.mailOk = ['orders@kenaisupply.com']; window._verdict = { bucket: 'maybe', why: 'receipt', gist: 'Second order shipped.' };
-    await T.sweep([T.mail('Email -order 2.txt', 'Kenai Supply <orders@kenaisupply.com>', 'order 2', 'Order 2 shipped.')]);
+    await T.sweep([T.mail('Email -order 2.txt', 'Kenai Supply <orders@kenaisupply.com>', 'order 2', 'Order 2 shipped.', new Date().toISOString())]);
     _mcFold = 'maybe'; renderMailAsk();
     const t = $('mailAskCard').textContent;
-    const inFold = /MAYBE from senders you keep/.test(t) && /Second order shipped/.test(t) && /✓ Seen/.test(t) && /Always IMPORTANT from orders@kenaisupply\.com/.test(t);
-    mailSeen(entries[0].id);
-    return inFold && entries[0].mailSeen === true && !/Second order shipped/.test($('mailAskCard').textContent);
+    return /on your log already/.test(t) && /Second order shipped/.test(t) && !/✓ Seen/.test(t) && /Always IMPORTANT from orders@kenaisupply\.com/.test(t);
   }));
 
   ok('📣 LOUD forces a maybe up to IMPORTANT and says so; 🔕 HUSH caps an important down to maybe', await page.evaluate(async () => {
@@ -218,10 +216,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return src.includes("title: '🔥 A text needs you'") && !src.includes('🔥 ${from} — needs you');
   })());
 
-  ok('sorting OFF = the old way: no judge call, kept senders logged plain, new senders asked (with the email kept for later)', await page.evaluate(async () => {
+  ok('sorting OFF = no judge call, and every sender is logged plain — nobody is asked (v6.67)', await page.evaluate(async () => {
     T.reset(); prefs.mailSort = false; prefs.mailOk = ['k@x.com'];
     await T.sweep([T.mail('Email -off1.txt', 'K <k@x.com>', 'off1', 'hi'), T.mail('Email -off2.txt', 'N <n@x.com>', 'off2', 'hello there')]);
-    const good = window._aiCalls.length === 0 && entries.length === 1 && !entries[0].mailBucket && mailAsk().length === 1 && typeof mailAsk()[0].b === 'string';
+    const good = window._aiCalls.length === 0 && entries.length === 2 && entries.every(e => !e.mailBucket) && !mailAsk().length;
     delete prefs.mailSort; return good;
   }));
 

@@ -34,21 +34,25 @@ const { chromium } = require('playwright');
     return m.who === 'Eric Clore' && m.addr === 'cloreeric@gmail.com' && m.subj === 'test from cloreeric@gmail.com to the boiler room' && m.body === 'testing body of email';
   }, RAW));
 
-  ok('a brand-new sender lands on the NEW EMAIL SENDERS card, and the card is VISIBLE on Eric\'s phone', await page.evaluate(() => {
-    mailAsk().push({ a: _m.addr, s: _m.subj });
+  // 📥 v6.67 — capture everything: nobody is asked "keep them or not?" any more. A row left over
+  // from before files itself onto the log, already seen; the oldest rows carried no words and drop.
+  ok('v6.67: a leftover "keep them or not?" row files itself onto the log as seen — nobody is asked', await page.evaluate(() => {
+    mailAsk().push({ a: _m.addr, s: _m.subj, w: _m.who, b: _m.body, ts: '2026-09-07T02:43:19Z' });
+    mailAsk().push({ a: 'old@nowords.com', s: 'no words kept' });
+    const n = mailFileLegacyAsks();
     renderMailAsk();
-    const card = $('mailAskCard');
-    return card.offsetParent !== null && /NEW EMAIL SENDERS/.test(card.textContent) && card.textContent.includes('cloreeric@gmail.com') && /✓ Always/.test(card.textContent) && /🚫 Never/.test(card.textContent);
+    const e = entries.find(x => x.mailAddr === _m.addr);
+    return n === 1 && !mailAsk().length && !!e && e.mailSeen === true && e.mailBucket === 'maybe' && !/NEW EMAIL SENDERS/.test($('mailAskCard').textContent);
   }));
 
   ok('the card is no longer inside the crew-only block', await page.evaluate(() => !$('mailAskCard').closest('#crewRoute')));
 
   ok('a crew phone never sees it — the render still gates on CREW_NAME (it is Eric\'s decision, not theirs)', await page.evaluate(() =>
-    /if \(CREW_NAME\)/.test(renderMailAsk.toString()) && CREW_NAME === '' && $('mailAskCard').offsetParent !== null));   // v6.41 — the card gates on CREW_NAME first thing
+    /if \(CREW_NAME\)/.test(renderMailAsk.toString()) && CREW_NAME === ''));   // v6.41 — the card gates on CREW_NAME first thing
 
-  ok('✓ Always keeps the sender, clears the card, and the toast says so in words', await page.evaluate(() => {
+  ok('✓ Always (Setup) still keeps the sender, and the toast says so in words', await page.evaluate(() => {
     mailSay('cloreeric@gmail.com', true);
-    return mailOk().includes('cloreeric@gmail.com') && !mailAsk().length && $('mailAskCard').style.display === 'none' && /kept from now on/.test($('toast').textContent);
+    return mailOk().includes('cloreeric@gmail.com') && !mailAsk().length && /kept from now on/.test($('toast').textContent);
   }));
 
   ok('a kept sender\'s email files onto the running log as a 📧 note', await page.evaluate(() => {
