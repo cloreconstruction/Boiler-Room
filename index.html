@@ -3553,7 +3553,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.63 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.64 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -11163,6 +11163,11 @@ async function openEstimates(i) {
   }
   const gone = estAutoClear();
   if (gone) { window._estPub = true; scheduleEstSave(true); toast(`📗 ${gone} bill${gone > 1 ? 's' : ''} matched in QuickBooks — off their upcoming list`); }
+  // 🩹 v6.64 — SELF-HEAL. Eric, on Josten: a $15,600 receipt "says sent on their page" but the
+  // page's upcoming block was gone — another writer had rewritten the page without it (the
+  // books run rebuilds pages from QuickBooks and did not carry `upcoming` over). The board is
+  // the truth for what is pending; if the page disagrees, republish it right here, on open.
+  else if (estUpcomingStale()) { window._estPub = true; scheduleEstSave(true); toast('🩹 Their page had lost the upcoming costs — putting them back'); }
   renderEstimates();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -11289,6 +11294,14 @@ function estPendUp(x) { return Math.round((x.pend || []).reduce((s, p) => s + es
 // to help them add up their own page. A category rides here only when the budget card has
 // nothing to say about it: the cut in estSave() is `appr && estTotal > 0`, so that is exactly
 // what this skips. A lit category with no estimate still belongs here (the cut drops it too).
+// 🩹 v6.64 — does the client page carry what the board says is pending? Compared as the page
+// would print it, so a stale, missing or half-written block all read as "no".
+function estUpcomingStale() {
+  if (!_estD || !_estPage) return false;
+  const want = JSON.stringify(estUpcoming() || null);
+  const have = JSON.stringify(_estPage.upcoming || null);
+  return want !== have;
+}
 function estUpcoming() {
   if (!_estD) return null;
   const items = _estD.cats
@@ -11786,6 +11799,19 @@ async function openRcptReview(i) {
   if (!_estD || !Array.isArray(_estD.cats)) _estD = null;
   // 💵 v6.35 — light ③ comes from the books side: paid-<code>.json, if it exists yet
   try { _estPaid = JSON.parse(await dbxDownload(portalRoot() + '/paid-' + c.code + '.json') || 'null'); } catch (err) { _estPaid = null; }
+  // 🩹 v6.64 — the same self-heal the estimates board does: if their page has lost the upcoming
+  // block the board says it should have, put it back now, while he is looking at the receipts
+  // The page is republished ONLY — the board file is not rewritten from here (that stays behind
+  // rcptApprove's guards), and the markup default rides the same as everywhere else.
+  try { _estPage = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (err) { _estPage = null; }
+  if (_estD && _estPage && !window._qUpBusy) {
+    if (!(+_estD.mk >= 0)) _estD.mk = 20;
+    if (estUpcomingStale()) {
+      _estIdx = _rcptIdx;
+      try { await estPublish(c, estCut()); toast('🩹 Their page had lost the upcoming costs — put back'); } catch (err) { /* next open tries again */ }
+      _estIdx = -1;
+    }
+  }
   renderRcptReview();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -12178,9 +12204,20 @@ async function estSave() {
   // v5.89 — snapshot everything BEFORE the first await, so closing the board mid-save
   // can't null the data out from under the write
   const body = JSON.stringify(_estD);
+  const cut = estCut();
+  const doPub = !!window._estPub;
+  window._estPub = false;
+  try {
+    await dbxUpload(estPath(c.code), body);
+    if (doPub) await estPublish(c, cut);
+  } catch (e) { toast('Couldn\'t save the estimates — check the connection', false); }
+}
+// the approved cut, as the homeowner's page prints it. 🩹 v6.64 — its own function, so the
+// receipts window can republish a page that lost its upcoming block WITHOUT saving the board.
+function estCut() {
   // 🏠 v5.91 — a category with 2+ offered bids goes out as tap-to-choose OPTIONS (marked-up
   // numbers + Eric's client-facing labels only); otherwise the accepted number, as always.
-  const cut = _estD.cats.filter(x => x.appr && estTotal(x) > 0).map(x => {
+  return _estD.cats.filter(x => x.appr && estTotal(x) > 0).map(x => {
     const opts = estOpts(x);
     // 🗒 v5.93 — a note rides out ONLY when its bid wears 🏠 THEY SEE THIS NOTE
     const shD = b => b.shN && (b.note || '').trim() ? { d: b.note.trim().slice(0, 200) } : {};
@@ -12194,12 +12231,6 @@ async function estSave() {
     }
     return { n: x.n, est: estTotal(x), ...shD(estAccBid(x) || {}), ...up };
   });
-  const doPub = !!window._estPub;
-  window._estPub = false;
-  try {
-    await dbxUpload(estPath(c.code), body);
-    if (doPub) await estPublish(c, cut);
-  } catch (e) { toast('Couldn\'t save the estimates — check the connection', false); }
 }
 // the approved cut: category name + the ACCEPTED number only. Bids, notes, papers stay home.
 async function estPublish(c, cut) {
@@ -16720,7 +16751,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.63';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.64';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

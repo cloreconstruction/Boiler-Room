@@ -92,7 +92,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
 
   console.log('— 👁 v6.61 the OWNER view inside the app —');
   const frame = () => page.frames().find(f => /\/c\/\?c=/.test(f.url()));
-  const frameReady = async () => wait(async () => { const f = frame(); return f && await f.evaluate(() => !!document.querySelector('.own-head')); }, 8000);
+  const frameReady = async () => wait(async () => { const f = frame(); return f && /owner=1/.test(f.url()) && await f.evaluate(() => !!document.querySelector('.own-head')); }, 12000);
 
   ok('View as this client opens the page in owner mode, banner and all', await (async () => {
     await page.evaluate(() => clientPreviewOpen(0));
@@ -223,6 +223,28 @@ const http = require('http'), fs = require('fs'), path = require('path');
     await frame().evaluate(() => ownerMsg({ act: 'hide', card: 'wages' }));
     await page.waitForTimeout(500);
     return JSON.stringify(pageJson()) === before;
+  })());
+
+  // 👁 v6.64 — "is that only on there once i enter an estimate in?" Yes; and the owner view says so
+  ok('with NO approved estimate: nothing for the homeowner, a dim placeholder with ✎ for Eric', await (async () => {
+    const pg = pageJson(); delete pg.budget; store.set(state.base + '/' + CODE + '.json', JSON.stringify(pg));
+    const h4 = await ctx.newPage(); await h4.goto(SRV + '/c/?c=' + CODE); await h4.waitForTimeout(600);
+    const none = await h4.evaluate(() => !document.getElementById('budgetCard'));
+    await h4.close();
+    // a fresh load of the frame: blank it, let that settle, then open again (the same src twice is not a reload)
+    await page.evaluate(() => { $('cpFrame').src = 'about:blank'; });
+    await page.waitForTimeout(300);
+    await page.evaluate(() => clientPreviewOpen(0));
+    if (!(await frameReady())) return false;
+    const ph = await frame().evaluate(() => { const c = document.getElementById('budgetCard'); return !!c && c.classList.contains('own-off') && /NOT ON THEIR PAGE YET/.test(c.textContent) && /✎ Edit/.test(c.querySelector('.own-bar').textContent) && !c.querySelector('.own-vis'); });
+    const btn = await frame().$('#budgetCard .own-bar button');
+    if (!btn) return false;
+    await btn.click();
+    const opened = await wait(() => page.evaluate(() => !$('cliPrev').classList.contains('show') && $('revModal').classList.contains('show') && /estimates/i.test($('revBox').textContent)));
+    await page.evaluate(() => closeEstimates());
+    pg.budget = [{ n: 'Framing', est: 5000 }]; store.set(state.base + '/' + CODE + '.json', JSON.stringify(pg));
+    await page.evaluate(() => clientPreviewOpen(0)); await frameReady();
+    return none && ph && opened;
   })());
 
   ok('every owner control is a WORD, never a lamp alone', await frame().evaluate(() =>

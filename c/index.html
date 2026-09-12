@@ -170,6 +170,10 @@ function ownerDecorate() {
   app.insertAdjacentHTML('afterbegin', `<div class="own-head">👁 OWNER VIEW — this is exactly what they see. The bars are yours; they never see them.</div>`);
   OWN_CARDS.forEach(([key, id, edit]) => {
     const el = document.getElementById(id); if (!el) return;
+    if (el.dataset.ownEmpty) {   // 👁 v6.64 — an empty card has no switch, only the door in
+      el.insertAdjacentHTML('afterbegin', `<div class="own-bar" data-own="${key}"><button type="button" onclick="event.stopPropagation(); ownerMsg({ act: 'edit', card: '${key}', to: '${edit}' })">✎ Edit — open the estimates board</button></div>`);
+      return;
+    }
     el.classList.toggle('own-off', hidOwner(key));
     el.insertAdjacentHTML('afterbegin', ownerBar(key, edit, key === 'journal'
       ? `<button type="button" onclick="event.stopPropagation(); ownerMsg({ act: 'photos', card: 'journal' })">➕ Add photos</button>` : ''));
@@ -880,7 +884,15 @@ async function boot() {
   }
   // 💰 approved estimates — the card lives in budgetHtml() so a pick can redraw it in place
   // 👁 v6.61 — both cards now answer to a per-client switch, like the rest
-  if (sh('budget')) h += budgetHtml(d);
+  if (sh('budget')) {
+    const bh = budgetHtml(d);
+    // 👁 v6.64 — Eric: "what about the estimates? is that only on there once i enter an estimate
+    // in?" Yes: the card exists for the homeowner only once a lamp is lit with a number on it.
+    // In OWNER view an empty budget draws a dim placeholder that says so, with the ✎ door to the
+    // estimates board — nothing for them, a way in for him.
+    h += bh || (OWNER ? `<div class="card own-off" id="budgetCard" data-own-empty="1"><h3>BUDGET — APPROVED ESTIMATES</h3>
+      <div class="hint" style="margin: 0;">○ NOT ON THEIR PAGE YET — nothing approved. Light a category's lamp on the estimates board, with a number on it, and this card appears for them.</div></div>` : '');
+  }
   // 🔮 v6.27 — under the approved budget: what is coming but not yet invoiced
   if (sh('upcoming')) h += upcomingHtml(d);
   if (((d.show && d.show.phases) || OWNER) && (d.phases || []).length) {
