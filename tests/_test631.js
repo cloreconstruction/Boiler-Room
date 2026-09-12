@@ -19,23 +19,26 @@ const { chromium } = require('playwright');
     window._ago = ago;
   });
 
-  console.log('— 🔝 v6.31 the project portal sits at the top of Setup —');
+  // 🏠 v6.65 — the portal LEFT Setup for a window of its own (Eric: "have the project portal open
+  // to its own window and no longer in the setup"). v6.31 put it first here; these checks now
+  // hold the new truth: it is gone from Setup, and Setup lost nothing else.
+  console.log('— 🔝 v6.31 → v6.65 the project portal is no longer in Setup —');
 
-  ok('the portal section is the FIRST section on the Setup page', await page.evaluate(() => {
+  ok('there is no portal section on the Setup page any more', await page.evaluate(() => {
     const secs = [...document.querySelectorAll('#panel-settings .set-section')].map(s => s.id);
-    return secs[0] === 'portalSec';
+    return !secs.includes('portalSec') && !document.querySelector('#panel-settings #portalList');
   }));
 
-  ok('it comes before Appearance, Jobs, Crew and the QuickBooks updater', await page.evaluate(() => {
+  ok('Appearance, Jobs, Crew and the QuickBooks updater are still in order', await page.evaluate(() => {
     const secs = [...document.querySelectorAll('#panel-settings .set-section')].map(s => s.id);
-    const p = secs.indexOf('portalSec');
-    return ['setAppear', 'setJobs', 'setCrew', 'qbSec'].every(id => secs.indexOf(id) > p);
+    const idx = ['setAppear', 'setJobs', 'setCrew', 'qbSec'].map(id => secs.indexOf(id));
+    return idx.every(i => i >= 0) && idx.every((v, i) => i === 0 || v > idx[i - 1]);
   }));
 
   ok('nothing was lost in the move — every section is still there once', await page.evaluate(() => {
     const secs = [...document.querySelectorAll('#panel-settings .set-section')].map(s => s.id);
     return secs.length === new Set(secs).size &&
-      ['portalSec', 'setAppear', 'setJobs', 'setCrew', 'qbSec', 'setDbx'].every(id => secs.includes(id));
+      ['setAppear', 'setJobs', 'setCrew', 'qbSec', 'setDbx'].every(id => secs.includes(id));
   }));
 
   console.log('— 📊 v6.31 seven spaces, one per day —');
@@ -155,6 +158,7 @@ const { chromium } = require('playwright');
       { code: 'mery-224374', job: 'Mery' }, { code: 'scr-1', job: 'Scritchfield' }] });
     window._dbxFiles[portalRoot() + '/scr-1.json'] = JSON.stringify({ journal: [{ released: _ago(9) }] });
     _portalOpen = -1;
+    openPortalWin();   // 🏠 v6.65 — the list lives in the portal's own window now, not in Setup
     await renderPortalList();
     // v6.54 hung a second meter (📗 the books) beside each journal one, so the journal meters
     // are now .jm:not(.jm-qb) — the guarantee is unchanged: one per job, saying the right thing.
@@ -166,8 +170,11 @@ const { chromium } = require('playwright');
       meters.every(m => /📖/.test(m.textContent)) && books.every(b => /📗/.test(b.textContent));
   }));
 
-  ok('the meter rides the job NAME, where his eye already is', await page.evaluate(() =>
-    !!$('portalList').querySelector('.sum-title .jm')));
+  ok('the meter rides the job NAME, where his eye already is', await page.evaluate(() => {
+    const r = !!$('portalList').querySelector('.sum-title .jm');
+    closePortalWin();
+    return r;
+  }));
 
   console.log('— 📖 v6.31 last week\'s words, where he can build on them —');
 

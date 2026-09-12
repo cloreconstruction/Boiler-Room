@@ -155,8 +155,11 @@ const { chromium } = require('playwright');
     dbx.refreshToken = dbx.refreshToken || 'test-token';
     window._dbxFiles[portalRoot() + '/index.json'] = JSON.stringify({ clients: [{ code: 'mery-224374', job: 'Mery' }] });
     _portalOpen = 0;   // the accordion has to be unfolded for that job's buttons to be drawn
+    openPortalWin();   // 🏠 v6.65 — the list lives in the portal's own window now, not in Setup
     await renderPortalList();
-    return /🧾 Receipts to approve · 3 WAITING/.test(document.body.innerHTML);
+    const r = /🧾 Receipts to approve · 3 WAITING/.test(document.body.innerHTML);
+    closePortalWin();
+    return r;
   }));
 
   ok('the window opens and lists all three', await page.evaluate(async () => {

@@ -50,8 +50,11 @@ const { chromium } = require('playwright');
   ok('the tracker button says 1 WAITING for Josten', await page.evaluate(async () => {
     dbx.refreshToken = dbx.refreshToken || 'test-token';
     _portalOpen = 0;
+    openPortalWin();   // 🏠 v6.65 — the list lives in the portal's own window now, not in Setup
     await renderPortalList();
-    return /🧾 Receipts to approve · 1 WAITING/.test($('portalList').innerHTML);
+    const r = /🧾 Receipts to approve · 1 WAITING/.test($('portalList').innerHTML);
+    closePortalWin();
+    return r;
   }));
 
   ok('the bill strip on the estimates board finds it too (empty since v5.94 — this was why)', await page.evaluate(() => {
@@ -151,21 +154,27 @@ const { chromium } = require('playwright');
     return kept && !window._logRcptOnly;
   }));
 
-  console.log('— 🔝 v6.33 Project portal opens at the TOP of Setup —');
+  // 🏠 v6.65 — the portal is its own window now; v6.33's "opens at the top of Setup" became
+  // "opens at the top of its own window, Setup untouched". The old door still lands there.
+  console.log('— 🔝 v6.33 → v6.65 Project portal opens at the TOP of its own window —');
 
-  ok('jumpSetup lands with the panel scrolled to 0, and stays there after the late layout', await page.evaluate(async () => {
+  ok('jumpSetup("portalSec") opens the portal window scrolled to 0 and leaves Setup shut', await page.evaluate(async () => {
     closePanels();
-    const panel = $('panel-settings');
-    panel.classList.add('open'); panel.scrollTop = 600; panel.classList.remove('open');   // a stale scroll from last time
+    const w = $('portalWin');
+    w.classList.add('show'); w.scrollTop = 600; w.classList.remove('show');   // a stale scroll from last time
     jumpSetup('portalSec');
     await new Promise(r => setTimeout(r, 500));
-    const top = panel.scrollTop === 0 && panel.classList.contains('open');
-    closePanels();
+    const top = w.scrollTop === 0 && w.classList.contains('show') && !$('panel-settings').classList.contains('open');
+    closePortalWin();
     return top;
   }));
 
-  ok('the portal is still the first section, so "top" is the right answer', await page.evaluate(() =>
-    document.querySelector('#panel-settings .set-section').id === 'portalSec'));
+  ok('the job list lives inside that window, not in Setup', await page.evaluate(() => {
+    openPortalWin();
+    const inWin = !!document.querySelector('#portalWin #portalList') && !document.querySelector('#panel-settings #portalList');
+    closePortalWin();
+    return inWin;
+  }));
 
   console.log('— 🔲 v6.33 the 🧾 category window: same-size plates, three across —');
 

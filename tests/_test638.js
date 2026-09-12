@@ -63,6 +63,8 @@ const { chromium } = require('playwright');
     mailAsk().push({ a: 'a@spammy.co', s: 'x' }); mailSayDom('a@spammy.co', false);
     return mailListed(mailNo(), 'deals@junkmail.com') && mailListed(mailNo(), 'b@spammy.co') && !mailListed(mailNo(), 'cloreeric@gmail.com') && !mailAsk().length;
   }));
+  // 🏠 v6.65 — the list lives in the portal's own window now, not in Setup: open it once for the checks below
+  await page.evaluate(async () => { openPortalWin(); await renderPortalList(); });
 
   ok('a MISSING client index no longer crashes the portal list — the list he has stays ON SCREEN', await page.evaluate(async () => {
     delete window._dbxFiles[portalRoot() + '/index.json'];
@@ -126,6 +128,7 @@ const { chromium } = require('playwright');
     await renderPortalList();
     return /Mery Addition/.test($('portalList').textContent) && /Receipts to approve/.test($('portalList').textContent);
   }));
+  await page.evaluate(() => closePortalWin());
 
   ok('version bumped — APP_VER and the footer agree', await page.evaluate(() => {
     const num = v => (String(v).match(/(\d+)\.(\d+)/) || []).slice(1).reduce((a, b) => a * 1000 + +b, 0);
