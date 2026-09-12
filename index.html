@@ -137,6 +137,44 @@
     --chart-bar: #2a78d6; --err: #d03b3b;
     --panel-glow: rgba(11,98,196,0.22); --panel-shadow: rgba(16,20,24,0.2);
   }
+  /* 🕯 v6.66 — CALM BRASS. Eric: "something still easy on the eyes in the dark but also easy to
+     read … the boxes and windows and chips and buttons and all the things are easy to read and
+     important things draw my eye." Built from the 2026-09-11 research (WCAG 2.2 / APCA, Material
+     and Apple dark-mode guidance, NN/g on hierarchy): warm near-black, never pure black; three
+     text levels and no more; ONE brass, and brass means "tap me"; green = on their page, orange =
+     needs you, coral = wrong — and every one of those also says it in words. On the page: text
+     16:1, dim text 10:1, brass 11.7:1, green 11:1, orange 9.7:1, coral 8.2:1. Same tokens as the
+     proposal page Eric said go to. Always dark, like Command Center and Steel. */
+  :root[data-skin="calm"] {
+    color-scheme: dark;
+    --surface-1: #1e1a14; --page: #14110d;
+    --ink-1: #f4eee0; --ink-2: #c8bea6; --ink-muted: #8e8570;
+    --grid: #3a3226; --baseline: #7a6540; --border: #4a3f2c;
+    --good: #8fd694; --good-text: #8fd694;
+    --chip-blue-bg: #22303a; --chip-orange-bg: #3d2a1a; --chip-aqua-bg: #1d3a2e; --chip-violet-bg: #322a45; --chip-gray-bg: #2a2419;
+    --btn-bg: #f2c66d; --btn-ink: #1c1506;
+    --accent: #f2c66d; --accent-ink: #1c1506;
+    --chart-bar: #f2c66d; --err: #ff8a70; --warn: #ffa657;
+    --panel-glow: rgba(242,198,109,0.22); --panel-shadow: rgba(0,0,0,0.6);
+  }
+  :root[data-skin="calm"] body { font-size: 16px; }
+  :root[data-skin="calm"] .hint { font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+  /* a chip is a quiet raised plate; the picked one is the only brass on its row */
+  :root[data-skin="calm"] .pick-chip {
+    background: #2a2419; border: 1px solid var(--baseline); color: var(--ink-1);
+    border-radius: 10px; font-weight: 600; font-size: 13px; min-height: 40px; padding: 8px 12px;
+  }
+  :root[data-skin="calm"] .pick-chip.sel {
+    background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700;
+    filter: none; box-shadow: none;
+  }
+  :root[data-skin="calm"] .btn-ghost { border: 1px solid var(--baseline); border-radius: 10px; color: var(--ink-2); font-size: 14px; min-height: 44px; }
+  :root[data-skin="calm"] .btn-primary { border-radius: 10px; }
+  :root[data-skin="calm"] .set-section { border-color: var(--grid); }
+  :root[data-skin="calm"] .fc-sec { background: var(--surface-1); }
+  :root[data-skin="calm"] select, :root[data-skin="calm"] input, :root[data-skin="calm"] textarea {
+    background-color: #1a1611; color: var(--ink-1); border-color: var(--baseline); border-radius: 8px;
+  }
   :root[data-skin="steam"] {
     color-scheme: dark;
     /* v4.40: lifted the whole palette a stop. Eric: "hard to see… lighter browns, brighten the text".
@@ -1472,6 +1510,35 @@
   .est-board .hint { font-size: 11px; line-height: 1.4; }
   /* the two that stay big on purpose: the close plate, and the lamp that shows a client */
   .est-board .rev-row .btn-ghost { font-size: 14px !important; padding: 11px !important; min-height: 44px !important; }
+  /* 🕯 v6.66 — THE ESTIMATES PAGE, LAID OUT TO BE READ. Eric: "especially the estimates page is a
+     good example of really great information but i quickly get overwheled with everything im
+     trying to see." Sections — NEEDS YOU first, then the build phases — one line per category
+     with the number in its own column and the detail on a second line, empty rows folded away,
+     the how-it-works words behind one tap. The words and the controls are the ones that were
+     there; only where they sit changed. Every skin gets the layout; Calm Brass also gets the
+     hairlines, the two text sizes and the thumb-sized controls. */
+  .est-phase { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 16px 0 2px; padding: 0 2px 6px; border-bottom: 2px solid var(--baseline); font-weight: 800; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+  .est-phase span { font-weight: 600; font-size: 12px; letter-spacing: 0; text-transform: none; opacity: .85; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .est-phase.need { border-bottom-color: var(--warn, #ffa657); color: var(--warn, #ffa657); }
+  .est-line { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+  .est-name { min-width: 0; cursor: pointer; font-weight: 800; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .est-num { font-variant-numeric: tabular-nums; font-weight: 800; white-space: nowrap; text-align: right; font-size: 14px; }
+  .est-num.mute { opacity: .5; font-weight: 500; }
+  .est-sub { margin: 2px 0 0 !important; white-space: normal !important; }
+  .est-row[hidden] { display: none !important; }
+  .est-empty-fold { width: 100%; text-align: left; margin-top: 4px; border-style: dashed !important; }
+  .est-help-btn { width: 100%; text-align: left; margin: 0 0 6px; }
+  :root[data-skin="calm"] .est-board .set-section.est-row { background: transparent; border: 0; border-bottom: 1px solid var(--grid); border-radius: 0; padding: 8px 4px !important; margin-top: 0 !important; min-height: 48px; box-shadow: none; }
+  :root[data-skin="calm"] .est-board .set-section.est-row.est-open { background: var(--surface-1); border: 1px solid var(--grid); border-radius: 12px; padding: 10px !important; margin: 6px 0 !important; }
+  :root[data-skin="calm"] .est-board .est-name { font-size: 16px; font-weight: 600; }
+  :root[data-skin="calm"] .est-board .est-num { font-size: 17px; font-weight: 600; }
+  :root[data-skin="calm"] .est-board .hint { font-size: 13px; }
+  :root[data-skin="calm"] .est-board .pick-chip { font-size: 13px !important; min-height: 36px !important; padding: 6px 10px !important; }
+  :root[data-skin="calm"] .est-board .est-lamp { background: transparent !important; border: 1px solid var(--baseline) !important; color: var(--ink-2) !important; }
+  :root[data-skin="calm"] .est-board .est-lamp.sel { color: var(--good) !important; border-color: var(--good) !important; }
+  :root[data-skin="calm"] .est-board .btn-ghost { font-size: 14px !important; min-height: 44px !important; }
+  :root[data-skin="calm"] .est-board .field label { font-size: 11px !important; }
+  :root[data-skin="calm"] .est-board input, :root[data-skin="calm"] .est-board select { font-size: 15px !important; min-height: 40px; padding: 6px 8px !important; }
   /* 🏠 v6.05 — the Project Portal fold, on a phone. Eric: "the button size is still bad."
      They were sizing themselves to their own words and stair-stepping down the screen with
      the little ones floated off to the right. Now: two even columns, one full-width plate
@@ -3296,11 +3363,12 @@
         <button class="pick-chip" id="skin-winter" onclick="setSkin('winter')">❄ Winter Night</button>
         <button class="pick-chip" id="skin-daylight" onclick="setSkin('daylight')">☀ Daylight</button>
         <button class="pick-chip" id="skin-steam" onclick="setSkin('steam')">⚙ Steamworks</button>
+        <button class="pick-chip" id="skin-calm" onclick="setSkin('calm')">🕯 Calm Brass</button>
       </div>
       <div class="chips-row" style="margin-top: 10px;">
         <button class="pick-chip" id="lightDarkBtn" onclick="toggleLightDark()">◐ Light / dark</button>
       </div>
-      <div class="hint" style="margin-top: 8px;">Command Center and Steel are always dark. Clore Gold follows the ◐ Light / dark toggle. Your pick syncs to all your devices.</div>
+      <div class="hint" style="margin-top: 8px;">Command Center, Steel and Calm Brass are always dark. Clore Gold follows the ◐ Light / dark toggle. Your pick syncs to all your devices.</div>
     </div>
     <div class="set-section" id="setDayGoal">
       <h4>Day goal</h4>
@@ -3557,7 +3625,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.65 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.66 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5603,7 +5671,7 @@ function applySkin(s) {
   renderSkinChips();
   renderChart();
 }
-const SKIN_NAMES = { '': 'Clore Gold', command: 'Command Center', steel: 'Steel', hiviz: 'High-Vis', blueprint: 'Blueprint', winter: 'Winter Night', daylight: 'Daylight', steam: 'Steamworks' };
+const SKIN_NAMES = { '': 'Clore Gold', command: 'Command Center', steel: 'Steel', hiviz: 'High-Vis', blueprint: 'Blueprint', winter: 'Winter Night', daylight: 'Daylight', steam: 'Steamworks', calm: 'Calm Brass' };   // 🕯 v6.66
 function setSkin(s) {
   prefs.skin = s;
   applySkin(s);
@@ -11167,7 +11235,7 @@ async function openEstimates(i) {
   // 💰 v6.07 — this used to turn away every crew phone. An OFFICE phone reads and writes the
   // same estimate files Eric does, through the folder he shares to that person's Dropbox.
   if (CREW_NAME && !amOffice()) { toast('💰 Estimates are office-side — ask Eric to switch your phone to office in Setup → Crew', false); return; }
-  _estIdx = i; _estArm = ''; _estOpenCats = new Set();
+  _estIdx = i; _estArm = ''; _estOpenCats = new Set(); _estShowEmpty = new Set(); _estHelp = false;   // 🕯 v6.66 — the folds start shut
   const c = _portalIdx.clients[i];
   toast('⏳ Opening the estimates…');
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
@@ -11415,6 +11483,22 @@ function estAutoClear() {
   });
   return n;
 }
+// 🕯 v6.66 — THE BUILD PHASES: a fixed, readable table (never a guess). A category Eric adds
+// himself lands under OTHER COSTS. Ids carry no & or quotes so they can ride an onclick.
+const EST_PHASES = [
+  ['site', 'Site & utilities', ['Demo', 'Well line, sewerline to house', 'Septic', 'Dirt work', 'Enstar', 'HEA', 'Temporary Electric', 'Well', 'Helical Piers', 'Surveying', 'Engineering', 'Inspections / Permit']],
+  ['shell', 'Foundation & shell', ['Concrete and foundation', 'ICF Walls', 'Window Wells', 'Framing', 'Trusses', 'Roofing', 'Windows', 'Exterior Doors', 'Siding', 'Decks', 'Ext Painting', 'Gutters', 'Garage Doors']],
+  ['mech', 'Mechanical', ['Plumbing', 'Heating', 'Air', 'Water Softener', 'Electrical', 'Insulation', 'Urethane', 'Woodstove or fireplace']],
+  ['finish', 'Interior finish', ['Gypcrete', 'Drywall, Mud and Texture', 'Interior Paint', 'Kitchen cabinets', 'Countertops', 'Vanities and sinks', 'Bathrooms', 'Int Doors', 'Trim', 'Drop ceiling', 'Tile (floors)', 'Tile (Showers)', 'Flooring', 'Carpet', 'Closet Interiors', 'Appliances']],
+  ['other', 'Other costs', ['Winter costs', 'Snow Plowing', 'Trash / Construction Debris', 'Misc', 'Contingency', 'Add ons']],
+];
+const EST_PHASE_OF = {}, EST_PHASE_NAME = {};
+EST_PHASES.forEach(([id, name, names]) => { EST_PHASE_NAME[id] = name; names.forEach(n => { EST_PHASE_OF[n.toLowerCase()] = id; }); });
+function estPhaseOf(n) { return EST_PHASE_OF[String(n || '').trim().toLowerCase()] || 'other'; }
+// the folds of the v6.66 layout — reset every time the board opens
+let _estHelp = false, _estShowEmpty = new Set();
+function estHelp() { _estHelp = !_estHelp; renderEstimates(); }
+function estShowEmpty(ph) { _estShowEmpty.has(ph) ? _estShowEmpty.delete(ph) : _estShowEmpty.add(ph); renderEstimates(); }
 function renderEstimates() {
   const c = _portalIdx.clients[_estIdx];
   if (!c || !_estD) return;
@@ -11422,14 +11506,14 @@ function renderEstimates() {
   const apprN = _estD.cats.filter(x => x.appr && estTotal(x) > 0).length;
   const totAppr = _estD.cats.filter(x => x.appr).reduce((s, x) => s + estTotal(x), 0);
   const money0 = n => '$' + (+n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  // 🕯 v6.66 — what needs him: a bill waiting on a category, or a category over its estimate
+  const estNeeds = x => (x.pend || []).length > 0 || (estTotal(x) > 0 && (used[x.n] || 0) > estTotal(x));
+  const needN = _estD.cats.filter(estNeeds).length;
   $('revBox').innerHTML = `<div class="est-board"><h3>💰 ${esc(c.job)} — estimates
     ${winX('closeEstimates()', 'close estimates')}</h3>
-    <div class="hint" style="margin: 0 0 8px;">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. ${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}</div>
-    <div class="frow" style="gap: 8px; align-items: center; margin: 0 0 8px; flex-wrap: wrap;">
-      <span style="font-weight: 800;">💹 Clore markup</span>
-      <input inputmode="decimal" value="${estMk()}" style="width: 64px; font-weight: 800; text-align: center;" onchange="estSetMk(this.value)"><span style="font-weight: 800;">%</span>
-      <span class="hint" style="margin: 0; flex: 1; min-width: 150px;">rides on every number the client sees — they NEVER see the markup itself. A line can say ✓ already included instead.</span>
-    </div>
+    <div style="margin: 0 0 8px; font-size: 14px; line-height: 1.4;">${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}${needN ? ` · <b style="color: var(--warn, #ffa657);">⚠ ${needN} need${needN > 1 ? '' : 's'} you</b>` : ''} <span class="hint" style="margin: 0;">· 💹 markup ${estMk()}%</span></div>
+    <button type="button" class="btn-ghost est-help-btn" onclick="estHelp()" aria-expanded="${_estHelp}">${_estHelp ? '▾' : '▸'} ? How this works</button>
+    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing.</div>
     ${(() => { const bills = estBillCands();
       // 📥 v6.02 — Eric: "keep it small until it has something to deal with." Nothing waiting
       // = one thin line you can tap open to file a bill by hand. A bill arrives = it opens
@@ -11438,9 +11522,15 @@ function renderEstimates() {
       if (bills.length > _estBillSeen) _estBillFold = null;
       _estBillSeen = bills.length;
       const open = bills.length ? _estBillFold !== false : _estBillFold === true;
-      if (!open) return `<button type="button" class="btn-ghost" style="width: 100%; margin: 0 0 8px; text-align: left; font-size: 12.5px; padding: 7px 10px; min-height: 34px; border: 1px dashed var(--border);" onclick="estBillFold()">▸ 📥 Bills that came in — <b>nothing waiting</b> · tap to file one by hand</button>`;
+      if (!open) return `<button type="button" class="btn-ghost" style="width: 100%; margin: 0 0 8px; text-align: left; font-size: 12.5px; padding: 7px 10px; min-height: 34px; border: 1px dashed var(--border);" onclick="estBillFold()">▸ 📥 Bills that came in — <b>nothing waiting</b> · 💹 markup ${estMk()}% · tap to file one by hand</button>`;
       return `<div class="set-section fc-sec" style="margin: 0 0 8px; padding: 8px 12px; border: 2px solid var(--accent);">
       <div role="button" style="font-weight: 800; cursor: pointer;" onclick="estBillFold()">▾ 📥 BILLS THAT CAME IN — yours to approve first${bills.length ? ` (${bills.length})` : ''}</div>
+      <!-- 🕯 v6.66 — the markup lives in here now, not above every row: it is set once and read from the header line -->
+      <div class="frow" style="gap: 8px; align-items: center; margin: 6px 0 0; flex-wrap: wrap;">
+        <span style="font-weight: 800;">💹 Clore markup</span>
+        <input inputmode="decimal" value="${estMk()}" style="width: 64px; font-weight: 800; text-align: center;" onchange="estSetMk(this.value)"><span style="font-weight: 800;">%</span>
+        <span class="hint" style="margin: 0; flex: 1; min-width: 150px;">rides on every number the client sees — they NEVER see the markup itself. A line can say ✓ already included instead.</span>
+      </div>
       ${bills.length ? '' : `<div class="hint" style="margin: 4px 0 0;">Nothing waiting from the grinder. An invoice photographed under this job lands here once its read finds a total (🔮 describe on the log entry re-reads it) — or add one by hand below.</div>`}
       ${bills.map(e => { const p = estBillParse(e); const gi = estBillGuess(e); const inc = !!(window._estBillInc || {})[e.id];
         const toLogan = (e.tags || []).includes('Bookkeeper') || e.shared;
@@ -11461,7 +11551,9 @@ function renderEstimates() {
       </div>
       <div class="hint" style="margin: 6px 0 0;">These are the grinder's receipt reads for this job. ✓ Approve = it shows on their page as "billed — on the way," markup riding invisibly. When a QuickBooks run catches it, retire the line inside its category. 🏢 not budget just leaves it in the log.</div>
     </div>`; })()}
-    ${_estD.cats.map((x, ci) => {
+    ${(() => {
+      // 🕯 v6.66 — one row per category, drawn by rowOf; the sections underneath decide WHERE it sits.
+      const rowOf = (x, ci, ph) => {
       const open = _estOpenCats.has(ci);
       const tot = estTotal(x);
       const rawT = estRaw(x);
@@ -11474,12 +11566,29 @@ function renderEstimates() {
       const pgB = x.appr && nOpt >= 2 ? (((_estPage || {}).budget) || []).find(b => b && b.n === x.n && Array.isArray(b.opts)) : null;
       const theirPick = pgB && Number.isInteger(pgB.pick) && pgB.opts[pgB.pick] ? pgB.pick : null;
       let oi = -1; const optIdx = (x.bids || []).map(b => b.opt ? ++oi : -1);
-      return `<div class="set-section fc-sec" style="margin-top: 6px; padding: 8px 12px;">
-      <div class="frow" style="gap: 6px; align-items: center; flex-wrap: nowrap;">
-        <span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; cursor: pointer; font-weight: 800; line-height: 1.3;" onclick="estFold(${ci})">${open ? '▾' : '▸'} ${esc(x.n)}
-          <span class="hint" style="margin: 0; font-weight: 400; white-space: nowrap;">${tot ? ` · est ${money0(tot)}${rawT !== tot ? ` <span style="opacity:.7">(bid ${money0(rawT)})</span>` : ''}` : nb ? ` · ${nb} bid${nb > 1 ? 's' : ''}, none picked` : ''}${u ? ` · ${money0(u)} in` : ''}${estPendUp(x) ? ` · 📥 ${money0(estPendUp(x))} on the way` : ''}${over ? ` · <b style="color: var(--err, #b3452f);">over ${money0(over)}</b>` : ''}${x.appr && nOpt >= 2 ? ` · <b>🏠 ${theirPick != null ? `${pgB.lk ? '🔒 LOCKED IN' : 'they picked'} "${esc(pgB.opts[theirPick].t)}"` : nOpt + ' choices out — waiting on their pick'}</b>` : ''}</span></span>
-        <button type="button" class="pick-chip${x.appr ? ' sel' : ''}" style="flex: none; font-size: 10.5px; padding: 5px 9px; min-height: 28px; font-weight: 800;${x.appr ? '' : ' border-style: dashed;'}" onclick="estApprove(${ci})">${_estArm === 'ap' + ci ? '⚠ SURE?' : x.appr ? '✓ ON PAGE' : '🏢 office'}</button>
+      const pendUp = estPendUp(x);
+      // an EMPTY row — no bid, no bill, no books money, not on their page — folds away under its
+      // phase unless he asked to see them, or has this one open
+      const empty = !x.appr && !tot && !nb && !u && !pendUp;
+      const hid = empty && !open && !_estShowEmpty.has(ph);
+      // the number column: the estimate if there is one, else what is on the way, else what the books show
+      const numTxt = tot ? money0(tot) : pendUp ? money0(pendUp) : u ? money0(u) : '—';
+      const sub = [
+        x.appr ? '✓ ON THEIR PAGE' : '',
+        tot && rawT !== tot ? `<span style="opacity:.8">bid ${money0(rawT)}</span>` : '',
+        !tot && nb ? `${nb} bid${nb > 1 ? 's' : ''}, none picked` : '',
+        u ? `${money0(u)} in` : '',
+        pendUp ? `📥 ${money0(pendUp)} on the way` : '',
+        over ? `<b style="color: var(--err, #b3452f);">over ${money0(over)}</b>` : '',
+        x.appr && nOpt >= 2 ? `<b>🏠 ${theirPick != null ? `${pgB.lk ? '🔒 LOCKED IN' : 'they picked'} "${esc(pgB.opts[theirPick].t)}"` : nOpt + ' choices out — waiting on their pick'}</b>` : '',
+      ].filter(Boolean).join(' · ');
+      return `<div class="set-section fc-sec est-row${open ? ' est-open' : ''}${x.appr ? ' est-lit' : ''}"${hid ? ' hidden' : ''} data-ci="${ci}" style="margin-top: 6px; padding: 8px 12px;">
+      <div class="est-line">
+        <span role="button" class="est-name" aria-expanded="${open}" onclick="estFold(${ci})">${open ? '▾' : '▸'} ${esc(x.n)}</span>
+        <span class="est-num${tot ? '' : ' mute'}">${numTxt}</span>
+        <button type="button" class="pick-chip est-lamp${x.appr ? ' sel' : ''}" style="flex: none; font-size: 10.5px; padding: 5px 9px; min-height: 28px; font-weight: 800;${x.appr ? '' : ' border-style: dashed;'}" onclick="estApprove(${ci})">${_estArm === 'ap' + ci ? '⚠ SURE?' : x.appr ? '✓ ON PAGE' : '🏢 office'}</button>
       </div>
+      ${sub ? `<div class="hint est-sub">${sub}</div>` : ''}
       ${tot > 0 || u > 0 ? `<div style="margin: 5px 0 2px; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--ink-muted) 22%, transparent); overflow: hidden;">
         <div style="height: 100%; width: ${tot ? pct : 0}%; background: ${over ? 'var(--err, #c0392b)' : 'var(--accent)'};"></div></div>` : ''}
       ${open ? `
@@ -11529,7 +11638,34 @@ function renderEstimates() {
           <input type="text" id="estRn-${ci}" value="${esc(x.n)}" style="flex: 1; font-weight: 700;" onkeydown="if(event.key==='Enter'){event.preventDefault();estRenameSave(${ci});}">
           <button type="button" class="btn-ghost" onclick="estRenameSave(${ci})">✓ Save</button>
         </div>` : ''}` : ''}
-    </div>`; }).join('')}
+    </div>`; };
+      // 🕯 v6.66 — THE SECTIONS. NEEDS YOU first: a bill waiting on its category, or a category
+      // over its estimate. Then the build phases in build order (EST_PHASES). Inside a phase the
+      // rows keep Eric's order; the empty ones fold into one line per phase.
+      const needs = [], byPh = new Map();
+      _estD.cats.forEach((x, ci) => {
+        if (estNeeds(x)) { needs.push(ci); return; }
+        const ph = estPhaseOf(x.n);
+        if (!byPh.has(ph)) byPh.set(ph, []);
+        byPh.get(ph).push(ci);
+      });
+      let out = '';
+      if (needs.length) {
+        const nBills = needs.reduce((s, ci) => s + (_estD.cats[ci].pend || []).length, 0);
+        out += `<div class="est-phase need">⚠ Needs you <span>${nBills ? `${nBills} bill${nBills > 1 ? 's' : ''} waiting` : 'over the estimate'}</span></div>` + needs.map(ci => rowOf(_estD.cats[ci], ci, '')).join('');
+      }
+      EST_PHASES.forEach(([ph, name]) => {
+        const list = byPh.get(ph) || [];
+        if (!list.length) return;
+        const appr = list.filter(ci => _estD.cats[ci].appr && estTotal(_estD.cats[ci]) > 0).reduce((s, ci) => s + estTotal(_estD.cats[ci]), 0);
+        const emptyN = list.filter(ci => { const x = _estD.cats[ci]; return !x.appr && !estTotal(x) && !(x.bids || []).length && !(used[x.n] || 0) && !estPendUp(x) && !_estOpenCats.has(ci); }).length;
+        const show = _estShowEmpty.has(ph);
+        out += `<div class="est-phase">${esc(name)} <span>${appr ? `${money0(appr)} approved` : 'nothing approved'}</span></div>` +
+          list.map(ci => rowOf(_estD.cats[ci], ci, ph)).join('') +
+          (emptyN ? `<button type="button" class="btn-ghost est-empty-fold" onclick="estShowEmpty('${ph}')" aria-expanded="${show}">${show ? `▾ hide the ${emptyN} empty` : `▸ +${emptyN} empty — tap to show`}</button>` : '');
+      });
+      return out;
+    })()}
     <div class="frow" style="margin-top: 12px;">
       <div class="field" style="flex: 1;"><input type="text" id="estNewCat" placeholder="new category…" onkeydown="if(event.key==='Enter'){event.preventDefault();estAddCat();}"></div>
       <button class="btn-ghost" onclick="estAddCat()">➕ category</button>
@@ -11537,7 +11673,7 @@ function renderEstimates() {
     <div class="rev-row" style="margin-top: 12px;">
       <button class="btn-ghost" style="flex: 1; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800; font-size: 14.5px;" onclick="closeEstimates()">✕ Close</button>
     </div>
-    </div><div class="hint" style="margin-top: 8px;">Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing.</div>`;
+    </div>`;   // 🕯 v6.66 — the closing paragraph moved up into "? How this works"
 }
 function estBidSet(ci, bi, k, v) {
   const b = ((_estD.cats[ci] || {}).bids || [])[bi];
@@ -12195,6 +12331,7 @@ function estAddCat() {
   if (_estD.cats.some(x => x.n.toLowerCase() === v.toLowerCase())) { toast('That category is already on the board', false); return; }
   _estD.cats.push({ n: v, appr: false, bids: [] });
   _estOpenCats.add(_estD.cats.length - 1);
+  _estShowEmpty.add(estPhaseOf(v));   // 🕯 v6.66 — a new, empty category must not fold away the moment it is made
   scheduleEstSave();
   renderEstimates();
 }
@@ -16803,7 +16940,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.65';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.66';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
