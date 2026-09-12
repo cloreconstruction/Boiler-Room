@@ -3625,7 +3625,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.67 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.68 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -12513,11 +12513,24 @@ function estCut() {
     return { n: x.n, est: estTotal(x), ...shD(estAccBid(x) || {}), ...up };
   });
 }
+// 🔔 v6.68 — HOMEOWNER PINGS. Two triggers, by Eric's spec: a journal entry posted, the budget
+// changed. The words are fixed on the server; the phone only says WHICH page and WHICH kind.
+// The client-push function holds the secret gate, the 9–5 Alaska window, the overnight queue and
+// the one-ping-per-burst rule — so a run of lamp taps is one ping, and nothing rings at 11pm.
+function cpPush(code, kind) {
+  if (!code || !prefs.pushSecret || (kind !== 'journal' && kind !== 'budget')) return;
+  try {
+    fetch('/.netlify/functions/client-push', { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
+      body: JSON.stringify({ c: code, kind }) }).catch(() => {});
+  } catch (e) { /* best effort — the page itself is already updated */ }
+}
 // the approved cut: category name + the ACCEPTED number only. Bids, notes, papers stay home.
 async function estPublish(c, cut) {
   try {
     const pg = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null');
     if (!pg) return;
+    const before = JSON.stringify([pg.budget || null, pg.upcoming || null]);   // 🔔 v6.68 — ping only when what THEY see changed
     // 🏠 v5.91 — the homeowner's own pick SURVIVES a republish (it's their choice, not ours)
     // 🔒 v5.93 — and so does their lock
     const oldPick = {};
@@ -12528,9 +12541,11 @@ async function estPublish(c, cut) {
     // category whose lamp is dark, which is the whole point of it.
     const upc = estUpcoming();
     if (upc) pg.upcoming = upc; else delete pg.upcoming;
+    const changed = JSON.stringify([pg.budget || null, pg.upcoming || null]) !== before;
     pg.updated = localDay(new Date());
     await dbxUpload(portalRoot() + '/' + c.code + '.json', JSON.stringify(pg, null, 1));
     _estPage = pg;
+    if (changed) cpPush(c.code, 'budget');   // 🔔 v6.68
   } catch (e) { toast('Saved here, but their page didn\'t take the update — try the lamp again', false); }
 }
 async function estAddDocs(ci, bi, files) {
@@ -13285,6 +13300,7 @@ async function journalRelease() {
     scheduleSave();
     closeReview();
     toast(`📖 Journal released — ${c.job}'s page carries it now${photos.length ? ` with ${photos.length} photo${photos.length > 1 ? 's' : ''}` : ''} ✓`);
+    cpPush(c.code, 'journal');   // 🔔 v6.68 — a new week on their page is the one journal ping (an ✎ edit above is not)
   } catch (e) { toast('Couldn\'t reach the client file — check the connection and try again', false); }
 }
 // 📋 v5.28 — THE MATERIALS BOARD MANAGER. Eric's side of the card table: rooms → items →
@@ -17041,7 +17057,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.67';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.68';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

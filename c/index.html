@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#171410">
+<!-- 🔔 v6.68 — a Home Screen copy of this page is what lets an iPhone deliver pings; the manifest
+     link (per client code) is added by the script below once the code is known -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="My Project">
 <title>Clore Construction — Project</title>
 <style>
   :root { --bg: #171410; --card: #201c15; --line: #3a3226; --gold: #c9a24b; --ink: #efe7d5; --ink2: #b0a488; }
@@ -76,6 +80,10 @@
   .tagchip.sel { border-color: var(--gold); color: var(--gold); font-weight: 700; }
   .ask-ta { width: 100%; min-height: 90px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; }
   .send-btn { margin-top: 10px; width: 100%; border: none; border-radius: 10px; background: var(--gold); color: #201c15; font-weight: 800; font-size: 15px; padding: 12px; cursor: pointer; }
+  /* 🔔 v6.68 — the pings switch: one line of words, one plain button */
+  .bell { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .bell .s { color: var(--ink2); font-size: 13.5px; line-height: 1.45; flex: 1 1 210px; }
+  .bell .bell-btn { margin: 0; width: auto; flex: 0 0 auto; padding: 10px 16px; min-height: 44px; }
   @media (max-width: 420px) { .soon-grid { grid-template-columns: 1fr 1fr; } .soon:last-child { grid-column: 1 / -1; } }
   /* 📋 v5.35 — the materials board is its own FULL SCREEN, not a card squeezed between boxes */
   #matCard.fs { position: fixed; inset: 0; z-index: 150; margin: 0; border: none; border-radius: 0;
@@ -224,6 +232,55 @@ function applyTheme(t) {
   const b = $('#themeBtn'); if (b) b.textContent = t === 'light' ? '☾ Dark' : '☀ Light';
 }
 function toggleTheme() { applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'); ping('theme'); }
+// 🔔 v6.68 — HOMEOWNER PINGS, opt-in. Eric's spec (parked since v6.35, built on his "do 1-5"):
+// two triggers only — a journal entry posted, the budget changed; fixed words on the server, no
+// name and no dollar figure on a lock screen; 9am–5pm Alaska; and THIS phone's subscription
+// lives in the client's own file, never with Eric's or the crew's. Same public key as the app —
+// the server signs with its private half. In Eric's preview (pv=1) the switch is shown as words
+// only, so his own phone can never end up on a homeowner's list by a stray tap.
+const VAPID_PUBLIC = 'BMreGdBGDcLJCWcNsDd6ClX-NhievSimv25Rw1kxH1w_VJ3hJ-7eH9mpd1h0_HJBMmwlod7G_TvD4TbdGVXJnCo';
+function b64ToU8(s) { const pad = '='.repeat((4 - s.length % 4) % 4); const b = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...b].map(c => c.charCodeAt(0))); }
+const bellKey = () => 'clore-bell-' + code;
+function bellState() { try { return localStorage.getItem(bellKey()) || ''; } catch (e) { return ''; } }
+const BELL_ON = '✓ On — this phone gets a ping when a journal entry is posted or the budget changes. Only that, and only between 9am and 5pm.';
+const BELL_OFF = 'Get a ping on this phone when a journal entry is posted or the budget changes. Nothing else, and only between 9am and 5pm.';
+const iosHome = () => /iPhone|iPad/.test(navigator.userAgent) && !navigator.standalone;
+function bellHtml() {
+  if (PV) return `<div class="card" id="bellCard"><h3>🔔 PINGS</h3><div class="bell"><div class="s">This is the homeowner's switch — it works on their phone, not here. When it is on, they get a ping when you post a journal entry or change the budget, 9am to 5pm.</div></div></div>`;
+  const on = bellState() === 'on';
+  return `<div class="card" id="bellCard"><h3>🔔 PINGS</h3><div class="bell"><div class="s" id="bellTxt">${on ? BELL_ON : BELL_OFF + (iosHome() ? ' On an iPhone: first add this page to your Home Screen (Share → Add to Home Screen) and open it from there.' : '')}</div>
+    <button type="button" class="send-btn bell-btn" id="bellBtn" onclick="bellTap()">${on ? 'Turn off' : 'Turn on'}</button></div></div>`;
+}
+async function bellTap() {
+  const txt = $('#bellTxt'), btn = $('#bellBtn');
+  const say = s => { if (txt) txt.textContent = s; };
+  if (bellState() === 'on') {
+    try {
+      const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration('/sw.js') : null;
+      const sub = reg && reg.pushManager ? await reg.pushManager.getSubscription() : null;
+      if (sub) {
+        await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ c: code, push: { off: sub.endpoint } }) });
+        try { await sub.unsubscribe(); } catch (e) {}
+      }
+    } catch (e) {}
+    try { localStorage.removeItem(bellKey()); } catch (e) {}
+    say('Off — no more pings on this phone.'); if (btn) btn.textContent = 'Turn on'; ping('bell:off'); return;
+  }
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      say("This browser can't do pings." + (iosHome() ? ' On an iPhone: Share → Add to Home Screen, then open the page from there and tap again.' : '')); return;
+    }
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { say('Pings are blocked for this page — allow notifications in your phone settings, then tap again.'); return; }
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(VAPID_PUBLIC) });
+    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ c: code, push: { sub: sub.toJSON() } }) });
+    if (!r.ok) throw new Error('the page did not take it');
+    try { localStorage.setItem(bellKey(), 'on'); } catch (e) {}
+    say(BELL_ON); if (btn) btn.textContent = 'Turn off'; ping('bell:on');
+  } catch (e) { say("Couldn't turn pings on — " + ((e && e.message) || e) + '.' + (iosHome() ? ' On an iPhone this only works from the Home Screen copy of the page.' : '')); }
+}
+if (code) document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="${FN}?c=${encodeURIComponent(code)}&manifest=1">`);
 (() => {
   let t = null;
   try { t = localStorage.getItem('clore-theme'); } catch (e) {}
@@ -902,6 +959,7 @@ async function boot() {
         <div class="ph-cats">${(p.cats || []).map(c => `${esc(c[0])} — ${money(c[1])}`).join('<br>')}</div>
       </div>`).join('') + `</div>`;
   }
+  h += bellHtml();   // 🔔 v6.68 — the pings switch, last card before the foot
   h += `<button class="theme-btn" style="display: block; margin: 22px auto 0;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
     <div class="foot">${sh('ask') ? 'Questions? Use 💬 Ask / Remark above, or call or text Eric directly.' : 'Questions? Call or text Eric directly.'}</div>`;
   $('#app').innerHTML = h;

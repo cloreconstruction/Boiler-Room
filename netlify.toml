@@ -12,6 +12,12 @@
 [functions."mail-watch"]
   schedule = "*/15 * * * *"
 
+# 🔔 v6.68 — HOMEOWNER PINGS, the 9am drain. A ping asked for outside 9am–5pm Alaska waits in
+# Client Portal/push-queue.json; this timer sends it at 9. Two runs so the hour lands in both
+# summer (17Z = 9 AKDT) and winter (18Z = 9 AKST) — the other run sees a shut window and holds.
+[functions."client-push-drain"]
+  schedule = "0 17,18 * * *"
+
 # 🔒 v6.26 — the repo root IS the live site, so every file in git was also a public URL.
 # CLAUDE.md and the test suites belong in git, not on the web address. 404 them.
 # Eric: "they don't need to be readable on your live website." Blocking here, not in
