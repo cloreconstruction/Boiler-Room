@@ -71,7 +71,7 @@ const { chromium } = require('playwright');
   ok('the headings come in the agreed order with counts, and the personal note is nowhere on the page', await (async () => {
     const h = await secs();
     const t = await page.evaluate(() => $('revBox').textContent);
-    return h.map(x => x.key).join(',') === 'need,people,money,photos,wizard,sched,get,logan,record' && !/dentist/.test(t);
+    return h.map(x => x.key).join(',') === 'need,people,money,photos,wizard,sched,get,pocket,logan,record' && !/dentist/.test(t);
   })());
 
   { const t = await body('need'); ok('NEEDS YOU says what waits, in words, with a way over to the sort tab', /1 waiting/.test(t) && /1 bills/.test(t) && /Open the sort tab/.test(t)); }

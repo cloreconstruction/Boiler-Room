@@ -869,16 +869,17 @@
   }
   .panel-close {
     position: absolute; top: 8px; right: 8px;
-    background: var(--chip-gray-bg); border: 1px solid var(--border); border-radius: 10px;
-    color: var(--ink-1); font-size: 17px; font-weight: 700; padding: 8px 15px; cursor: pointer; font-family: inherit;
+    background: var(--accent); border: 3px solid var(--accent); border-radius: 10px;   /* ✕ v6.78 — brighter, heavier edge (Eric) */
+    color: var(--accent-ink); font-size: 17px; font-weight: 800; padding: 8px 15px; cursor: pointer; font-family: inherit;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
     min-height: 42px;
   }
   .panel-close:hover { border-color: var(--baseline); }
   .panel-foot { margin-top: 16px; }
   .panel-back {
     display: block; width: 100%; text-align: center;
-    background: none; border: 1px solid var(--border); border-radius: 10px;
-    color: var(--ink-2); font-size: 15px; font-weight: 600; padding: 13px; cursor: pointer; font-family: inherit;
+    background: color-mix(in srgb, var(--accent) 14%, transparent); border: 3px solid var(--accent); border-radius: 10px;   /* ← v6.78 — the way back catches the eye (Eric) */
+    color: var(--ink-1); font-size: 16px; font-weight: 800; padding: 13px; cursor: pointer; font-family: inherit;
   }
   .panel-back:hover { border-color: var(--baseline); color: var(--ink-1); }
   #backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.62); z-index: 50; }
@@ -1367,9 +1368,13 @@
   .plate-btn--grind.busy { position: relative; pointer-events: none; }
   .plate-btn--grind.busy::after { content: attr(data-busy); position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%);
     background: #1c1608; color: #f2d98a; font-size: 11px; font-weight: 800; letter-spacing: .6px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
-  .win-x { float: right; font-size: 15px; font-weight: 800; min-width: 44px; min-height: 44px;
-    background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);
+  /* ✕ v6.78 — Eric: "check all the X's for closing the page and any 'back to main page' buttons need to have a
+     brighter look or a heavier outline for quick eye catch." Filled brass, a 3px edge, a glow ring, 17px words. */
+  .win-x { float: right; font-size: 17px; font-weight: 800; min-width: 48px; min-height: 44px;
+    background: var(--accent); border: 3px solid var(--accent); color: var(--accent-ink);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent), 0 2px 6px rgba(0,0,0,0.3);
     border-radius: 10px; margin-left: 8px; }
+  .win-x.req-x, .win-x.btn-ghost { font-size: 17px; padding: 4px 10px; margin-top: 0; }   /* the ✕ also wears req-x (.72rem) and btn-ghost — the plate wins */
   /* 🟢🔴 v6.32 — the receipt lamp in the running log. Colour is the fast read, but it is
      never the ONLY read: each state carries its own glyph and its own spelled word, so the
      row says the same thing in bright sun, on a cracked screen, or to colour-blind eyes. */
@@ -1586,8 +1591,10 @@
   body.crew-mode #scRow { grid-template-columns: 1fr 1fr; }
   body.crew-mode #scRow .sc-btn { font-size: 14px; min-height: 52px; }
   /* 📇 v6.17 — the job card's own furniture */
-  .jc-head { font-size: 12px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase;
-    color: var(--ink-muted); margin: 14px 0 6px; border-bottom: 1px solid var(--border); padding-bottom: 3px; }
+  /* 📇 v6.78 — Eric: "on the job cards the 'address' 'people' words need to be the first ones my eye sees … i want
+     those words to be bright and big." Brass, 16px, a brass rule under each. The pick window still wins (3px rim + glow). */
+  .jc-head { font-size: 16px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--accent); margin: 18px 0 8px; border-bottom: 2px solid var(--accent); padding-bottom: 4px; }
   .jc-blk { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px; margin: 0 0 8px; background: var(--surface-1); }
   .jc-add { width: 100%; font-weight: 800; }
   .jc-x { font-size: 12.5px; padding: 10px 12px; min-height: 44px; margin-top: 6px; }   /* 👍 v6.42 — it sits beside the code box */
@@ -2234,6 +2241,9 @@
     background: color-mix(in srgb, var(--accent) 22%, transparent); }
   .qn-div-label { font-size: 11.5px; font-weight: 800; letter-spacing: 1.6px; color: var(--accent-ink, #fff);
     background: var(--accent, #a8812c); padding: 3px 10px; border-radius: 5px; box-shadow: 0 1px 3px #00000044; }
+  /* 📜 v6.78 — Eric: "the words 'running log' on the main page need to be bigger and bolder, the 'all' button
+     underneath it is bigger and catches my eye first and I miss the 'running log' quite a bit." */
+  .rl-head .qn-div-label { font-size: 17px; letter-spacing: 1.4px; padding: 7px 14px; border-radius: 8px; }
   /* ✓✓ v5.06 verification lamps: word + glyph + weight, never color alone */
   .vv { white-space: nowrap; letter-spacing: .4px; }
   .vv-on { font-weight: 800; opacity: 1; }
@@ -3553,20 +3563,24 @@
           <h4>💼 QuickBooks updater</h4>
           <!-- 💡 v5.21 — three lamps, one per report: all three lit = the books feed is FRESH -->
           <div id="qbLights" style="margin: 4px 0 8px;"></div>
-          <div class="hint" style="line-height: 1.5;">In QuickBooks Online → Reports, export to Excel — <b>ALL customers, All Dates, no filters</b> (Claude sorts by job). Three files total:<br>
-            <b>1.</b> "Sales by Product/Service Detail" — feeds the phase breakdowns<br>
+          <!-- 📒 v6.78 — Eric: "accrual with the reports correct?" (yes) "put that in the quickbooks updater instructions
+               next to sales by product." The words from the HOW TO EXPORT read-me in QB Exports, so whoever sets the saved
+               reports sees them here too. -->
+          <div class="hint" style="line-height: 1.5;">In QuickBooks Online → Reports, export to Excel — <b>ALL customers, report period ALL DATES, no filters</b> (Claude sorts by job; a shorter window cannot rebuild the Profit Ticker). Three files total:<br>
+            <b>1.</b> "Sales by Product/Service Detail" — feeds the phase breakdowns. <b>Accounting method: ACCRUAL</b> — Customize → General → Accounting method → Accrual. The footer of the export must say <b>"Accrual Basis"</b>. Cash Basis shows only PAID work, so anyone with an open balance drops out and the balance folds cannot be built.<br>
             <b>2.</b> "Invoice List by Date" — feeds invoiced / paid / open<br>
-            <b>3.</b> "Transaction List by Date" — powers the ✓✓ checkmarks<br>
+            <b>3.</b> "Transaction List by Date" — powers the ✓✓ checkmarks and the Profit Ticker<br>
             <!-- 📄 v6.52 — Eric: "can i put it directly in clore daylog folder or can you take csv" -->
             <span style="opacity: .85;">Excel or CSV, either one. If a file won't go up, put it straight into Dropbox → <b>Clore Project Tracker → QB Exports</b> — same result.</span></div>
           <input type="file" id="qbDrop" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" multiple style="display: none;" onchange="qbDropUpload(this)">
           <!-- 🖱 v5.19 — a real drop ZONE: drag the exports from the PC straight onto the dashed box -->
-          <div id="qbDropZone" style="margin-top: 10px; border: 2px dashed var(--line, #3a3226); border-radius: 12px; padding: 18px 12px; text-align: center; cursor: pointer;"
+          <!-- 📥 v6.78 — Eric: "make the box for dragging qb exports to, bigger." A target you cannot miss from the PC. -->
+          <div id="qbDropZone" style="margin-top: 10px; border: 3px dashed var(--line, #3a3226); border-radius: 14px; padding: 28px 14px; min-height: 160px; display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; font-size: 17px; line-height: 1.45;"
             onclick="$('qbDrop').click()"
             ondragover="event.preventDefault(); this.style.borderColor = 'var(--accent)';"
             ondragleave="this.style.borderColor = '';"
             ondrop="event.preventDefault(); this.style.borderColor = ''; qbDropFiles(event.dataTransfer.files);">
-            📥 <b>Drag QB exports here</b> — or tap to pick files
+            <span>📥 <b>Drag QB exports here</b><br>or tap to pick files</span>
           </div>
           <div id="qbDropMsg" class="hint" style="margin-top: 6px;"></div>
           <!-- 📣 v5.21 — the button rings Claude: raises a flag file the hourly watcher grabs -->
@@ -3724,7 +3738,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.77 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.78 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7444,7 +7458,7 @@ function lbNav(d) {
 // installed app, unlike external browser tabs, and it displays HEIC/odd formats as JPEG)
 async function showPhoto(path) {
   try {
-    toast('Loading photo…');
+    busyShow('📷 LOADING THE PHOTO…');   // 📷 v6.78 — Eric: "there should be a 'thinking' banner on the top too as sometimes it takes a bit to load the photos"
     const t = await getToken();
     const r = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', {
       method: 'POST',
@@ -7463,11 +7477,13 @@ async function showPhoto(path) {
     $('lbPrev').style.display = $('lbNext').style.display = multi ? '' : 'none';
     $('lbCount').textContent = multi ? `${lbIdx + 1} of ${lbPaths.length}` : '';
     $('lightbox').classList.add('show');
+    busyDone('📷 ✓ PHOTO');
     $('lbOrig').onclick = async ev2 => {
       ev2.stopPropagation();
-      try { const j = await dbxRpc('files/get_temporary_link', { path }); if (j.link) window.open(j.link, '_blank'); } catch (e) {}
+      busyShow('📷 FETCHING THE ORIGINAL…');
+      try { const j = await dbxRpc('files/get_temporary_link', { path }); if (j.link) { busyDone('📷 ✓ OPENING THE ORIGINAL'); window.open(j.link, '_blank'); } else busyDone('⚠ NO LINK CAME BACK'); } catch (e) { busyDone('⚠ COULD NOT FETCH THE ORIGINAL'); }
     };
-  } catch (e) { toast('Couldn\'t load the photo — check your connection', false); }
+  } catch (e) { busyDone('⚠ PHOTO DID NOT LOAD — check the connection'); toast('Couldn\'t load the photo — check your connection', false); }
 }
 function closeLightbox() {
   const img = $('lbImg');
@@ -15871,7 +15887,7 @@ function renderPocket() {
 // doors. Nothing in the SUMMARY tab needs a tap; it is for reading.
 let _revTab = 'sort', _sumSpan = 'week', _sumSec = null;
 const SUM_SECS = [['need', '⚠ NEEDS YOU'], ['people', '👥 PEOPLE'], ['money', '💵 MONEY'], ['photos', '📷 PHOTOS'], ['wizard', '🧙 WIZARD'],
-  ['sched', '📅 SCHEDULE'], ['get', '🎒 TO GET'], ['logan', '📗 SENT TO LOGAN'], ['record', '📜 THE RECORD']];
+  ['sched', '📅 SCHEDULE'], ['get', '🎒 TO GET'], ['pocket', '🎒 POCKET — not done'], ['logan', '📗 SENT TO LOGAN'], ['record', '📜 THE RECORD']];
 function revTabsHtml() {
   const n = pendingQueue.length + revRcptRows().n;
   return `<div class="rev-tabs"><button type="button" class="rev-tab${_revTab === 'sort' ? ' on' : ''}" onclick="revTab('sort')" aria-pressed="${_revTab === 'sort'}">📥 SORT${n ? ` · ${n}` : ''}</button><button type="button" class="rev-tab${_revTab === 'summary' ? ' on' : ''}" onclick="revTab('summary')" aria-pressed="${_revTab === 'summary'}">📊 SUMMARY</button></div>`;
@@ -15926,11 +15942,17 @@ function renderSummary() {
     ...es.filter(e => e.mail && ['deadline', 'schedule'].includes(e.mailWhy)).map(e => line('📧', `<b>${who(e)}</b> — ${esc(e.mailSubj || '')}`, `${esc(MAIL_WHY_WORD[e.mailWhy] || '')}${e.mailGist ? ' — ' + esc(e.mailGist) : ''}`)),
     ...pocket().map(it => line('🎒', `<b>${it.day === todayD ? 'today' : it.day === tomD ? 'tomorrow' : esc(it.day)}</b> — ${esc(it.t)}`, '')),
   ];
-  // 🎒 TO GET — the pocket as it stands, then the span's pocket notes (done, swept, overflow, flushed)
+  // 🎒 TO GET — the pocket as it stands, then what got done
   S.get = [
     ...pocket().map(it => line('🎒', esc(it.t), it.day === todayD ? 'today' : 'tomorrow')),
-    ...es.filter(e => e.pocket).map(e => line(e.pocket === 'done' ? '✓' : '○', words(e), when(e))),
+    ...es.filter(e => e.pocket === 'done').map(e => line('✓', words(e), when(e))),
   ];
+  // 🎒 POCKET — not done: what left the pocket unfinished (flushed, overflow, swept by the morning). Eric: "make a
+  // category for the pocket list flushes so if i don't get to the item itll go to the summary page and i can then
+  // put it in the right category for the next day." ↩ puts it on tomorrow's pocket; moving it to another heading
+  // is the board's job (parked, 2026-09-14).
+  S.pocket = es.filter(e => ['flushed', 'over', 'swept'].includes(e.pocket)).sort((a, b) => +new Date(b.ts) - +new Date(a.ts)).map(e =>
+    line('🎒', `<b>${esc(pocketWords(e))}</b>`, `${e.pocket === 'flushed' ? 'flushed' : e.pocket === 'over' ? 'overflow' : 'not done'} · ${when(e)} <button type="button" class="btn-ghost req-x" onclick="pocketBack(${e.id})">↩ Pocket it for tomorrow</button>`));
   // 📗 SENT TO LOGAN — the bookkeeper tag, shared notes, receipts sent onto a client page
   S.logan = es.filter(e => (e.tags || []).includes('Bookkeeper') || e.shared || e.budg === 'sent').map(e =>
     line(e.budg === 'sent' ? '🏠' : '📗', `<b>${esc(e.job || '—')}</b> — ${words(e)}`, `${e.budg === 'sent' ? 'on their page' : 'to Logan'} · ${when(e)}`));
@@ -15953,13 +15975,23 @@ function renderSummary() {
       <button type="button" class="pick-chip${_sumSpan === 'today' ? ' sel' : ''}" onclick="sumSpan('today')" aria-pressed="${_sumSpan === 'today'}">${_sumSpan === 'today' ? '✓ ' : ''}TODAY</button>
       <button type="button" class="pick-chip${_sumSpan === 'week' ? ' sel' : ''}" onclick="sumSpan('week')" aria-pressed="${_sumSpan === 'week'}">${_sumSpan === 'week' ? '✓ ' : ''}THIS WEEK</button>
     </div>
-    <div class="rev-sub">${es.length} on the log ${_sumSpan === 'today' ? 'today' : 'this week'} · nothing here needs a tap — the sort tab is for that</div>` +
+    <div class="rev-sub">${es.length} on the log ${_sumSpan === 'today' ? 'today' : 'this week'} · the sort tab is where the taps are; here only 🎒 POCKET has one</div>` +
     secs.map(s => { const open = _sumSec === s.key, n = s.items.length;
       return `<button type="button" class="rev-sec${open ? ' open' : ''}${n ? '' : ' empty'}" data-sec="${s.key}" onclick="sumSecTap('${s.key}')" aria-expanded="${open}">${open ? '▾' : '▸'} ${s.label} <span class="rev-n">${n ? n : '○ nothing'}</span></button>
         <div class="rev-sec-body" data-sec="${s.key}"${open ? '' : ' hidden'}>${n ? s.items.join('') : `<div class="hint" style="margin: 6px 2px 8px;">Nothing here ${_sumSpan === 'today' ? 'today' : 'this week'}.</div>`}</div>`; }).join('') +
     `<div class="rev-row" style="margin-top: 12px;"><button class="btn-ghost" style="flex: 1;" onclick="openPanel('summary')">📄 Older summary pages</button><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close</button></div>`;
 }
 
+// 🎒 v6.78 — the words of a pocket note without its stamp, and the way back onto tomorrow's pocket
+function pocketWords(e) { return String(e.details || '').replace(/^🎒 (Flushed|Overflow|Not done) — /, '').trim(); }
+function pocketBack(id) {
+  const e = entries.find(x => x.id === id); if (!e || !e.pocket) return;
+  const t = pocketWords(e); if (!t) return;
+  pocket().unshift({ id: Date.now().toString(36) + Math.random().toString(16).slice(2, 6), t, day: pocketDay(1), ts: new Date().toISOString() });
+  e.pocket = 'back';   // off the POCKET heading; the note itself stays on the log as the record
+  pocketOverflow(); scheduleSave(); renderPocket(); renderReview();
+  toast(`🎒 "${t.slice(0, 40)}" is on tomorrow's pocket ✓`);
+}
 function recentAnswers() { try { return JSON.parse(lsGet('daylog-answers') || '[]'); } catch (e) { return []; } }
 function saveRecentAnswer(q, a) {
   const arr = [{ q, a, ts: new Date().toISOString() }, ...recentAnswers()].slice(0, 10);
@@ -17562,7 +17594,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.77';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.78';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
