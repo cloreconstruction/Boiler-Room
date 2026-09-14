@@ -2450,6 +2450,14 @@
   .rev-bulk-row .btn-ghost { flex: 0 0 auto; min-height: 42px; font-weight: 800; }
   .rev-bulk-row .btn-ghost.arm { border-color: #ffd88a; color: #ffe9bd; }
   .rev-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 13px; margin-top: 10px; }
+  /* 🗂 v6.69 — the sort page: five fixed headings, one open at a time, each a word and a count */
+  .rev-sec { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; padding: 10px 12px; min-height: 44px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); color: var(--ink-1);
+    font: inherit; font-weight: 800; font-size: 13.5px; letter-spacing: .4px; text-align: left; cursor: pointer; }
+  .rev-sec.open { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .rev-sec.empty { color: var(--ink-muted); font-weight: 600; }
+  .rev-sec .rev-n { margin-left: auto; font-weight: 700; font-size: 12.5px; opacity: .9; white-space: nowrap; }
+  .rev-sec-body[hidden] { display: none !important; }
   .rev-kind { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--ink-muted); text-transform: uppercase; }
   .rev-text { font-size: 15px; font-weight: 650; margin-top: 5px; line-height: 1.45; }
   .rev-why { font-size: 12.5px; color: var(--ink-muted); margin-top: 5px; line-height: 1.4; }
@@ -3625,7 +3633,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.68 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.69 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7796,16 +7804,51 @@ function revBulk(k) {
     : k === 'text' ? `📚 ${n} texts piled under their senders — they're on the log ✓`
     : `✓ ${n} crew notes logged ✓`);
 }
+// 🗂 v6.69 — THE SORT PAGE. Eric: "the review … feels complicated and long list … maybe the
+// review turns into this summary … drop down each section and answer maybe emails, and drop
+// down $ and correct a receipt and send to client page and phil send a job photo it lands in
+// photos and i sort from there. seems like a 10 minute sort per day might get a lot done if
+// its organized … but dont want it get too complex too quick." So: the SAME cards with the SAME
+// buttons, under five fixed headings in the same order every time, one open at a time, the page
+// opening on whichever has the most waiting. Nothing underneath changed — a card still answers
+// to reviewAct, the 🧹 plate still sweeps. Closed sections keep their cards in the page (hidden),
+// so counts and searches see the whole pile. Step 2 (the pocket list, keeping his questions)
+// and step 3 (the summary tab) come on his go.
+const REV_SECS = [
+  ['need', '⚠ NEEDS YOU', 'Client questions, hot texts, "what is this" photos and suggestions land here.'],
+  ['people', '👥 PEOPLE', 'Important emails, texts and crew notes land here.'],
+  ['money', '💵 MONEY', 'Bills, QuickBooks lines and each job\'s receipts to approve land here.'],
+  ['photos', '📷 PHOTOS', 'Crew photos land here, to journal or stamp.'],
+  ['wizard', '🧙 WIZARD', 'Your questions, answers and corrections will land here once they are kept — the next build.'],
+];
+let _revSec = null, _rcptBack = false;   // null = pick the fullest; '' = he folded them all himself
+function revSecOf(p) {
+  const k = p.kind, pay = p.payload || {};
+  if (k === 'bill' || k === 'qb') return 'money';
+  if (k === 'crew') return (pay.photo || pay.photoPath || (pay.photos || []).length) ? 'photos' : 'people';
+  if (k === 'mail') return 'people';
+  if (k === 'text') return pay.hot ? 'need' : 'people';
+  return 'need';   // clientask, question, match, todo, todos, note — his yes or no
+}
+function revSecTap(key) { _revSec = _revSec === key ? '' : key; renderReview(); }
+// 🧾 each job's receipts waiting for approval: the door is the job's receipts window, and
+// closing that window comes straight back here (see closeRcptReview)
+function revRcptRows() {
+  if (CREW_NAME || !_portalIdx || !Array.isArray(_portalIdx.clients)) return { rows: [], n: 0 };
+  const jobs_ = _portalIdx.clients.map((c, i) => ({ c, i, n: rcptCount(portalAppJob(c)) })).filter(x => x.n > 0);
+  return { n: jobs_.reduce((s, x) => s + x.n, 0), rows: jobs_.map(x => `<div class="rev-card rev-rcpt"><div class="rev-kind">🧾 Receipts to approve</div>
+      <div class="rev-text"><b>${esc(x.c.job)}</b> — ${x.n} waiting</div>
+      <div class="rev-row"><button class="btn-primary" onclick="_rcptBack = true; openRcptReview(${x.i})">🧾 Open — check them and send to their page</button></div></div>`) };
+}
 function renderReview() {
   const box = $('revBox');
-  if (!pendingQueue.length) {
+  const { rows: rcptRows, n: rcptN } = revRcptRows();
+  if (!pendingQueue.length && !rcptRows.length) {
     box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3><div class="rev-done">All caught up — nothing waiting. ✓</div>
       <div class="rev-row"><button class="btn-primary" onclick="closeReview()">Done</button></div>`;
     return;
   }
-  box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3><div class="rev-sub">${pendingQueue.length} waiting · nothing is added until you tap ✓</div>` +
-    renderRevBulk() +   // 🧹 v6.45 — the sort-the-pile plate, only when there IS a pile
-    pendingQueue.map(p => {
+  const cardOf = p => {
       let body = '';
       if (p.kind === 'todo') body = `<div class="rev-text">${esc(p.payload.text || '')}</div>`;
       else if (p.kind === 'bill') { const pay = p.payload; const money = n => '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -7895,7 +7938,22 @@ function renderReview() {
         ${meta ? `<div class="rev-why">${esc(meta)}</div>` : ''}
         <div class="rev-row">${btns}</div>
       </div>`;
-    }).join('') +
+  };
+  // 🗂 v6.69 — the five headings, in order; one open, opening on the fullest
+  const secs = REV_SECS.map(([key, label, hint]) => {
+    const cards = pendingQueue.filter(p => revSecOf(p) === key);
+    const extra = key === 'money' ? rcptRows : [];
+    return { key, label, hint, cards, extra, n: cards.length + (key === 'money' ? rcptN : 0) };   // the count is receipts, not jobs
+  });
+  if (_revSec == null || (_revSec && !(secs.find(s => s.key === _revSec) || {}).n)) {
+    const fullest = secs.slice().sort((a, b) => b.n - a.n)[0];   // a stable sort: a tie goes to the earlier heading
+    _revSec = fullest && fullest.n ? fullest.key : '';
+  }
+  box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3><div class="rev-sub">${pendingQueue.length + rcptN} waiting · nothing is added until you tap ✓</div>` +
+    renderRevBulk() +   // 🧹 v6.45 — the sort-the-pile plate, only when there IS a pile
+    secs.map(s => { const open = _revSec === s.key;
+      return `<button type="button" class="rev-sec${open ? ' open' : ''}${s.n ? '' : ' empty'}" data-sec="${s.key}" onclick="revSecTap('${s.key}')" aria-expanded="${open}">${open ? '▾' : '▸'} ${s.label} <span class="rev-n">${s.n ? `${s.n} waiting` : '○ nothing'}</span></button>
+        <div class="rev-sec-body" data-sec="${s.key}"${open ? '' : ' hidden'}>${s.n ? s.extra.join('') + s.cards.map(cardOf).join('') : `<div class="hint" style="margin: 6px 2px 8px;">${s.hint}</div>`}</div>`; }).join('') +
     `<div class="rev-row"><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close — finish later</button></div>`;
   loadCaPhotos();
 }
@@ -7946,6 +8004,7 @@ function openReview() {
     }
   });
   if (stamped) publishSharedNotes();
+  _revSec = null;   // 🗂 v6.69 — every open lands on the fullest section
   renderReview(); $('revModal').classList.add('show'); document.body.classList.add('modal-open');
 }
 function closeReview() {
@@ -12258,6 +12317,7 @@ function closeRcptReview() {
   modalOpenSync();   // 🏠 v6.65
   _rcptSel = new Set(); _rcptIdx = -1; _estD = null; _estPage = null; _estPaid = null;
   if (typeof renderPortalList === "function") renderPortalList();   // the button’s count is now one lower
+  if (_rcptBack) { _rcptBack = false; _revSec = 'money'; openReview(); _revSec = 'money'; renderReview(); }   // 🗂 v6.69 — opened from the sort page: land back on MONEY
 }
 // the batch send. One board read, one save, one publish — and the SAME refusals the one-tap
 // door learned in v6.28: a read that does not come back stops everything, because an empty
@@ -17057,7 +17117,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.68';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.69';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
