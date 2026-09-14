@@ -67,7 +67,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('the banner counts it in words, and the Review card says who, what, why, and that the sender is known', await page.evaluate(() => {
     renderPendBanner(); renderReview();
     const b = $('pendBanner').textContent, r = $('revBox').textContent;
-    return /1 IMPORTANT email/.test(b) && /Bob Ashman/.test(r) && /Invoice 4471/.test(r) && /🧾 INVOICE/.test(r) && /Bill for the rough-in/.test(r) && /on your log/.test(r) && /⚙ judged/.test(r) && /✓ Got it/.test(r) && /Never more than a maybe/.test(r);   // v6.67 — "✓ on your log" (every sender is kept)
+    return /1 IMPORTANT email/.test(b) && /Bob Ashman/.test(r) && /Invoice 4471/.test(r) && /🧾 INVOICE/.test(r) && /Bill for the rough-in/.test(r) && /on your log/.test(r) && /⚙ judged/.test(r) && /send to grinder/.test(r) && /Personal — grinder, locked/.test(r) && /Never this sender/.test(r);   // v6.67 — "✓ on your log" (every sender is kept); v6.71 — the four buttons
   }));
 
   ok('✓ Got it clears the card; 🔕 on a known sender caps them at maybe from now on', await page.evaluate(() => {
@@ -83,7 +83,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await T.sweep([T.mail('Email -deck stain.txt', 'Dale Rininger <dale@rininger.com>', 'deck stain', 'Can we go darker on the deck stain? Let me know.')]);
     renderReview();
     const c = T.cards()[0]; window._c2 = c;
-    return !!c && c.payload.known === true && entries.length === 1 && entries[0].mailBucket === 'important' && !mailAsk().length && /on your log/.test($('revBox').textContent) && /❓ QUESTION/.test($('revBox').textContent) && /✓ Got it/.test($('revBox').textContent) && !/Always \+ log it/.test($('revBox').textContent);
+    return !!c && c.payload.known === true && entries.length === 1 && entries[0].mailBucket === 'important' && !mailAsk().length && /on your log/.test($('revBox').textContent) && /❓ QUESTION/.test($('revBox').textContent) && /send to grinder/.test($('revBox').textContent) && !/Always \+ log it/.test($('revBox').textContent);
   }));
 
   ok('✓ Always + log it: the entry is born, the sender is kept, the card is gone', await page.evaluate(() => {

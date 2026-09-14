@@ -56,7 +56,7 @@ const { chromium } = require('playwright');
     await T.sweep([T.mail('Email -inv.txt', 'Bob Ashman <bob@ashmanplumbing.com>', 'Invoice 4471', 'Please find the invoice attached. Due in 30 days.')]);
     renderReview();
     const c = T.cards()[0];
-    const good = !!c && c.payload.known === true && !!c.payload.entryId && entries.length === 1 && /✓ Got it/.test($('revBox').textContent) && !/Always \+ log it/.test($('revBox').textContent);
+    const good = !!c && c.payload.known === true && !!c.payload.entryId && entries.length === 1 && /send to grinder/.test($('revBox').textContent) && !/Always \+ log it/.test($('revBox').textContent);
     reviewAct(String(c.id), 'log');
     return good && !T.cards().length && entries.length === 1;
   }));

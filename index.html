@@ -3633,7 +3633,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.70 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.71 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7108,6 +7108,35 @@ function saveHours() {
   toast(`Hours logged — ${hours.toFixed(1)} hrs · ${curJob}${cats.length ? ` · ${cats.join(' + ')}` : ''}${dayStr && dayStr !== localDay(new Date()) ? ` · ${dayStr}` : ''} ✓`);
 }
 function saveNote() { saveNoteFrom('nText', true); }
+// 📥 v6.71 — AN EMAIL INTO THE GRINDER. Eric: "important, send to grinder … 'personal' which
+// would still send to grinder but lock as personal." The email is already a log entry (v6.67
+// captures every one); the card hands THAT entry to the grinder — its words in the box, the
+// sender's tag lit — and the grind UPDATES it (job, tags, 🧾 category, unlock) instead of making
+// a second one, so the 📧 chip, the address and the arrival date stay on it. Personal locks the
+// record the moment he taps, not when he gets round to grinding, and puts the address on the
+// 🔒 PERSONAL list so the next one from there is locked before anyone reads it.
+let _grindMail = null;
+function mailToGrinder(pay, personal) {
+  const e = entries.find(x => x.id === pay.entryId) ||
+    autoLogMail({ who: pay.from || '?', addr: pay.addr || '', subj: pay.subj || '', body: pay.body || '' }, pay.ts, { mailBucket: 'important', mailWhy: pay.why, mailGist: pay.gist, mailBy: pay.by });
+  if (personal) {
+    e.personal = true; e.tags = [...new Set([...(e.tags || []), 'Personal'])];
+    delete e.vis; delete e.sendTo; delete e.ask;                       // the lock wins over everything
+    const a = String(pay.addr || '').toLowerCase();
+    if (a && !mailListed(mailPersonal(), a)) { mailPersonal().push(a); publishMailRules(); }
+  }
+  _grindMail = e.id;
+  closeReview();
+  const box = $('askText');
+  if (box) { box.value = `Email from ${pay.from || '?'}: ${pay.subj || '(no subject)'}\n${String(pay.body || '').slice(0, 1500)}`.trim(); fitTa(box); }
+  qnSel = new Set(e.tags || []);
+  renderTagChips(); updateStepFlow();
+  const card = document.querySelector('.ask-card');
+  if (card && card.scrollIntoView) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (box) setTimeout(() => { try { box.focus(); } catch (err) {} }, 200);
+  scheduleSave(); renderLog();
+  toast(personal ? '🔒 In the grinder, locked as personal — pick the job, tag it, grind' : '📥 In the grinder — pick the job, tag it, grind');
+}
 function saveQuickNote() { saveNoteFrom('askText', false); }
 function saveNoteFrom(boxId, fromPanel) {
   const t = $(boxId).value.trim();
@@ -7194,7 +7223,21 @@ function saveNoteFrom(boxId, fromPanel) {
       if (am) nExtra.ai = '💵 $' + am[1];
     }
   }
-  const e = addEntry('Note', t, noteJob, nExtra);
+  // 📥 v6.71 — an email handed over from its card: the grind UPDATES that entry, never doubles it.
+  // Only while the box still holds that email's words — a fresh note typed over it is a new note.
+  let e = null, updated = false;
+  if (_grindMail != null) {
+    const m = entries.find(x => x.id === _grindMail);
+    if (m && m.mail && /^Email from /.test(t)) {
+      Object.assign(m, nExtra);
+      m.details = t; m.job = noteJob;
+      if (m.personal || nExtra.personal) { m.personal = true; delete m.vis; delete m.sendTo; delete m.ask; }
+      e = m; updated = true;
+      scheduleSave(); renderLog(); renderKpis();
+    }
+    _grindMail = null;
+  }
+  if (!e) e = addEntry('Note', t, noteJob, nExtra);
   aiRegisterLate(photos, 'entry', e.id);
   ['nText', 'askText'].forEach(id => { if ($(id)) { $(id).value = ''; fitTa(id); } });
   if (fromPanel) closePanels();
@@ -7230,7 +7273,8 @@ function saveNoteFrom(boxId, fromPanel) {
   // ↩ v6.42 — Eric: "no undo where a slip costs you." A plain note is the one he sends fifty
   // times a day and the one a fat thumb loses half of. Nothing was published, so taking it back
   // is honest: the entry goes, and his words and job come back to the box exactly as typed.
-  if (!routed && !wasAsk && !vis) toastUndo(`Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`, () => {
+  if (updated) toast(`📧 Filed · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`);   // 📥 v6.71 — an undo here would delete the email itself
+  else if (!routed && !wasAsk && !vis) toastUndo(`Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`, () => {
     const i = entries.findIndex(x => x.id === e.id);
     if (i >= 0) entries.splice(i, 1);
     const box = $(boxId); if (box) { box.value = _undoText; if (typeof fitTa === 'function') fitTa(box); }
@@ -7919,15 +7963,14 @@ function renderReview() {
            ${p.payload.tag === 'Materials' && _portalIdx ? `<button class="btn-ghost" onclick="caOpenBoard('${escq(p.payload.code || '')}')">📋 Open on the board</button>` : ''}
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕</button>`
         : p.kind === 'mail'
-        ? (p.payload.known
-          ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Got it</button>
-           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'hush')">🔕 Never more than a maybe from them</button>
+        // 📥 v6.71 — Eric: "on the email sort lets do 'important, send to grinder'. keep 'never
+        // from sender' and 'personal' which would still send to grinder but lock as personal."
+        // The email is on the log already (v6.67), so the card's job is only to say WHAT KIND of
+        // important it is: into the grinder to file it properly, locked, never again, or nothing.
+        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'grind')">📥 Important — send to grinder</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'personal')">🔒 Personal — grinder, locked</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'never')">🚫 Never this sender</button>
-           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`
-          : `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'always')">✓ Always + log it</button>
-           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Log just this one</button>
-           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'never')">🚫 Never this sender</button>
-           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Skip</button>`)
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not important — it stays on the log</button>`
         : p.kind === 'bill'
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'logan')">📗 Logan pays it</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'auto')">🔁 Autopay — never ask about ${esc(String(p.payload.who || 'them').slice(0, 24))}</button>
@@ -8110,7 +8153,8 @@ function reviewAct(id, accept) {
       // the card. New sender: nothing was logged until this tap. Every list change is his tap.
       const mm = { who: pay.from || '?', addr: pay.addr || '', subj: pay.subj || '', body: pay.body || '' };
       const vx = { mailBucket: 'important', mailWhy: pay.why, mailGist: pay.gist, mailBy: pay.by };
-      if (accept === 'always') { if (!pay.entryId) autoLogMail(mm, pay.ts, vx); if (mm.addr) mailSay(mm.addr, true); }
+      if (accept === 'grind' || accept === 'personal') mailToGrinder(pay, accept === 'personal');   // 📥 v6.71
+      else if (accept === 'always') { if (!pay.entryId) autoLogMail(mm, pay.ts, vx); if (mm.addr) mailSay(mm.addr, true); }
       else if (accept === 'never') { if (mm.addr) mailSay(mm.addr, false); }
       else if (accept === 'hush') { const e = entries.find(x => x.id === pay.entryId); if (e) e.mailBucket = 'maybe'; if (mm.addr) mailHushAdd(mm.addr); }
       else { if (!pay.entryId) autoLogMail(mm, pay.ts, vx); toast(pay.entryId ? '✓ Got it' : '📧 Logged ✓'); }
@@ -17133,7 +17177,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.70';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.71';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
