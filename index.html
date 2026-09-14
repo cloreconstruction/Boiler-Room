@@ -1586,12 +1586,12 @@
   body.crew-mode #scRow { grid-template-columns: 1fr 1fr; }
   body.crew-mode #scRow .sc-btn { font-size: 14px; min-height: 52px; }
   /* 📇 v6.17 — the job card's own furniture */
-  .jc-head { font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase;
+  .jc-head { font-size: 12px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase;
     color: var(--ink-muted); margin: 14px 0 6px; border-bottom: 1px solid var(--border); padding-bottom: 3px; }
   .jc-blk { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px; margin: 0 0 8px; background: var(--surface-1); }
   .jc-add { width: 100%; font-weight: 800; }
   .jc-x { font-size: 12.5px; padding: 10px 12px; min-height: 44px; margin-top: 6px; }   /* 👍 v6.42 — it sits beside the code box */
-  .jc-big { font-size: 17px; font-weight: 800; line-height: 1.3; }
+  .jc-big { font-size: 18px; font-weight: 800; line-height: 1.3; }
   .jc-lnk { display: inline-block; margin: 5px 10px 0 0; font-weight: 800; font-size: 14px;
     color: var(--ink); text-decoration: underline; }
   .jc-code { display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
@@ -1601,6 +1601,23 @@
     font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: .3px; text-align: left;
     background: var(--surface-1); color: var(--ink); border: 2px dashed var(--border); }
   .jc-lock.on { border-style: solid; border-color: var(--accent); }
+  /* 📇 v6.77 — the card READS first (see openJobCard): the address big with a Maps plate, a person = a plate
+     with tap-to-call and tap-to-email rows a finger tall, codes as big numbers; the form sits behind ✎ Edit.
+     Eric: "after that gets confusing to the eye" — same words, fewer boxes. */
+  .jc-person { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 12px; margin: 0 0 8px; background: var(--surface-1); }
+  .jc-name { font-size: 16px; font-weight: 800; line-height: 1.3; }
+  .jc-role { font-size: 13px; font-weight: 600; color: var(--ink-muted); }
+  .jc-taps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .jc-tap { display: inline-flex; align-items: center; justify-content: center; flex: 1 1 100%; min-height: 44px; padding: 8px 12px; border-radius: 10px;
+    border: 2px solid var(--accent); color: var(--ink); background: var(--surface-1); font-size: 15px; font-weight: 800; text-decoration: none;
+    overflow-wrap: anywhere; text-align: center; }
+  .jc-map { display: flex; margin: 8px 0 0; }
+  .jc-notes { white-space: pre-wrap; font-size: 15px; line-height: 1.45; }
+  .jc-edit { width: 100%; min-height: 46px; margin-top: 14px; font-weight: 800; }
+  .jc-coderow { display: grid; grid-template-columns: minmax(0, 1fr) 104px 44px; gap: 6px; align-items: end; }
+  .jc-coderow .field { min-width: 0; }
+  .jc-coderow .jc-x { width: 44px; padding: 10px 0; margin: 0; }
+  .jc-blk .field input { min-width: 0; }   /* the phone rule pins every input to 120px wide — in these tight rows ("Who they are", "Code") that ran past the block and under the ✕ */
   :root[data-skin="steam"] .sc-btn {
     border: 2px solid transparent;
     border-image: linear-gradient(160deg, #f0d79a, #8a6a2a 45%, #f3e0ac 70%, #6b4f1c) 1;
@@ -2494,9 +2511,12 @@
   .sc-btn .sc-n:empty { display: none; }
   /* 🎒 v6.73 — the pocket list: one line in, ✓ and ➡ out. v6.75 — inside the grinder above ①,
      the cap between tiny − and +, ⤵ Flush at the right; kept short so the writing box stays close */
-  .pk-card { padding: 6px 0 8px; margin: 0 0 8px; border-bottom: 1px dashed var(--border); }
+  /* 🎒 v6.77 — Eric: "make the pocket say pocket list and make it seperate from the pick the job 1."
+     Its own framed box with its name on it, a clear gap before ①; still inside the grinder card so the
+     grinder stays first after the plates (v6.12, _test612). */
+  .pk-card { padding: 8px 10px 10px; margin: 0 0 14px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface-1); }
   .pk-top { display: flex; align-items: center; gap: 8px; }
-  .pk-title { font-weight: 800; font-size: 12.5px; letter-spacing: .6px; }
+  .pk-title { font-weight: 800; font-size: 13px; letter-spacing: .7px; }
   .pk-cap { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-variant-numeric: tabular-nums; }
   .pk-cap b { font-size: 12px; min-width: 30px; text-align: center; }
   .pk-tiny { min-width: 30px; min-height: 30px; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; line-height: 1; }
@@ -2699,7 +2719,7 @@
          between − and +, ⤵ Flush at the right. See pocketAdd / pocketOverflow / pocketFlush. -->
     <div class="pk-card" id="pocketCard">
       <div class="pk-top">
-        <span class="pk-title">🎒 POCKET</span>
+        <span class="pk-title">🎒 POCKET LIST</span>
         <span class="pk-cap"><button type="button" class="pk-tiny" onclick="pocketCapSet(-1)" aria-label="hold one less" title="hold one less">−</button><b id="pocketCount">0/8</b><button type="button" class="pk-tiny" onclick="pocketCapSet(1)" aria-label="hold one more" title="hold one more">+</button></span>
         <button type="button" class="pk-tiny pk-flush" onclick="pocketFlush()" aria-label="flush: clear the list, everything goes to the grinder's pile" title="clear the list — everything goes to the grinder's pile">⤵ Flush</button>
       </div>
@@ -3704,7 +3724,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.76 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.77 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8143,6 +8163,7 @@ function openReview(tab) {
   renderReview(); $('revModal').classList.add('show'); document.body.classList.add('modal-open');
 }
 function closeReview() {
+  if (_jcEdit) { cardStash(); _jcEdit = false; }   // 📇 v6.77 — the job card closed mid-edit: the words are saved first
   $('revModal').classList.remove('show', 'mat-full');
   modalOpenSync();   // 🏠 v6.65 — the portal window may still be under this
   savePendingSoon();
@@ -10018,27 +10039,58 @@ async function jcCopyPicked() {
   try { await navigator.clipboard.writeText(text); toast(`📋 ${bits.length} copied — paste it into a text or email ✓`); }
   catch (e) { prompt('Copy this:', text); }
 }
-function openJobCards() { openJobCard(_cardJob || (jobs.includes(curJob) ? curJob : '')); }   // 📇 v6.65 — never the first name by default
+function openJobCards() { openJobCard(_cardJob || lsGet('daylog-cardjob') || ''); }   // 📇 v6.65 — never the first name by default. v6.77 — never the app's job either (that wheel rides the running shift, which is why the card "always opened on hertz"): the last card opened on THIS phone, else the wheel waits on ▲ Choose the job
 function cardJobList() {
   if (!CREW_NAME) return jobs.filter(j => j && j !== '—');
   const seen = [];
   Object.values(crewCards || {}).forEach(c => { if (c && c.job && !seen.includes(c.job)) seen.push(c.job); });
   return seen.sort((a, b) => a.localeCompare(b));
 }
-function openJobCard(job) {
+// 📇 v6.77 — Eric: "rework the job card layout and font etc. i like the size of the pick the job first
+// window its great but after that gets confusing to the eye." The card used to be one long form — every
+// name, number and code in its own input box, all the same weight, the hand-out block under Save. Now it
+// READS first: the address big with a Maps plate, each person a plate with tap-to-call and tap-to-email
+// rows, codes as big numbers, the notes, then the hand-out ticks; the form only shows behind ✎ Edit (a
+// card with nothing on it yet opens on the form — there is nothing to read). Words typed on the form
+// never vanish: turning the wheel or closing the window mid-edit saves first (cardStash).
+let _jcEdit = false;
+function cardStash() {                     // save whatever the form holds, quietly — no toast, no change of face
+  if (CREW_NAME || !_cardJob || !$('jcAddr')) return false;
+  cardRead(); scheduleSave(); publishSharedNotes(); return true;
+}
+function cardViewHtml(c, mine) {
+  const ppl = (c.people || []).filter(p => p.n || p.tel || p.em), cds = (c.codes || []).filter(k => k.w || k.c);
+  const tel = t => `<a href="tel:${esc(String(t).replace(/[^0-9+]/g, ''))}" class="jc-tap">📞 ${esc(t)}</a>`;
+  const em = m => `<a href="mailto:${esc(m)}" class="jc-tap">✉ ${esc(m)}</a>`;
+  return `
+    ${c.addr ? `<div class="jc-head">📍 Address</div><div class="jc-big">${esc(c.addr)}</div>
+      <a href="${esc('https://maps.apple.com/?q=' + encodeURIComponent(c.addr))}" class="jc-tap jc-map">🗺 Open in Maps</a>` : ''}
+    ${ppl.length ? `<div class="jc-head">👤 People</div>` + ppl.map(p => `<div class="jc-person">
+        <div class="jc-name">${esc(p.n || '(no name)')}${p.r ? ` <span class="jc-role">· ${esc(p.r)}</span>` : ''}</div>
+        ${p.tel || p.em ? `<div class="jc-taps">${p.tel ? tel(p.tel) : ''}${p.em ? em(p.em) : ''}</div>` : ''}</div>`).join('') : ''}
+    ${cds.length ? `<div class="jc-head">🔑 Codes</div>` + cds.map(k => `<div class="jc-code"><span>${esc(k.w || 'code')}</span><b>${esc(k.c || '')}</b></div>`).join('') : ''}
+    ${c.notes ? `<div class="jc-head">📝 Worth knowing</div><div class="jc-notes">${esc(c.notes)}</div>` : ''}
+    ${cardHas(c) ? '' : `<div class="hint">${mine ? 'Nothing on this card yet.' : 'Nothing on this card yet — Eric fills these in and they land here on your next sync.'}</div>`}`;
+}
+function openJobCard(job, edit) {
   const list = cardJobList();
   // 📇 v6.65 — Eric: "theres somewhere else … the hertz tag is always lit up and selected." With
   // nothing picked this card opened on the FIRST job of his list, wearing "✓ SHOWING — Hertz" as
-  // if he had chosen it — and a number read off the wrong card goes to the wrong person. Now: the
-  // job he is set to if there is one, else the wheel sits on "▲ Choose the job" and no card is
-  // drawn until he picks (the clock's v6.21 rule: no silent default).
+  // if he had chosen it — and a number read off the wrong card goes to the wrong person. The wheel
+  // sits on "▲ Choose the job" and no card is drawn until he picks (the clock's v6.21 rule: no
+  // silent default). v6.77 — and the app's own job is not a pick either (see openJobCards).
   if (job && !list.some(j => cardKey(j) === cardKey(job))) job = '';
+  const mine = !CREW_NAME, same = cardKey(_cardJob) === cardKey(job);
+  if (mine && _jcEdit && _cardJob && !same) cardStash();   // 📇 v6.77 — the wheel moved mid-edit: keep the words first
   // a tick belongs to the card it was made on — changing job drops them all
   if (_jcPickJob !== cardKey(job)) { _jcPick = new Set(); _jcPickJob = cardKey(job); }
   _cardJob = job;
-  const mine = !CREW_NAME;
+  if (job) lsSet('daylog-cardjob', job);   // 📇 v6.77 — remembered on this phone: the next open lands here
   const c = (mine ? (job ? cardMake(job) : null) : cardGet(job)) || { job, addr: '', people: [], codes: [], notes: '' };
   const ppl = c.people || [], cds = c.codes || [];
+  // 📇 v6.77 — which face: ✎ Edit asks for the form (true), ✓ Save asks for the card (false); otherwise the
+  // same card keeps the face it had, and a card just turned to reads — unless there is nothing on it to read
+  _jcEdit = mine && !!job && (edit === true || (edit !== false && (same ? _jcEdit : !cardHas(c))));
   // 🔦 v6.30 — Eric: "at the top where i select the job i need that to be much brighter than
   // the rest of the the page as it needs to attract my eyes to it first to select the correct
   // job." Reading the WRONG job's card is how a code or a number goes to the wrong person, so
@@ -10075,8 +10127,6 @@ function openJobCard(job) {
       <button type="button" class="btn-primary" style="flex: 1; min-width: 150px; min-height: 46px; font-weight: 800;" ${_jcPick.size ? '' : 'disabled'} onclick="jcCopyPicked()">📋 COPY ${_jcPick.size ? _jcPick.size + ' TICKED' : '— tick something first'}</button>
       <button type="button" class="btn-ghost" style="min-height: 46px;" onclick="jcPickAll()">${_jcPick.size >= shareBits.length ? '☐ Untick all' : '☑ Tick all'}</button>
     </div>` : '';
-  const dial = t => `<a href="tel:${esc(String(t).replace(/[^0-9+]/g, ''))}" class="jc-lnk">📞 ${esc(t)}</a>`;
-  const mail = m => `<a href="mailto:${esc(m)}" class="jc-lnk">✉ ${esc(m)}</a>`;
   // ⚠ v6.24 — the job's landmines, right on the card. Eric's phone counts his own log;
   // a crew phone counts the unlocked notes Eric shared. Tap-through shows the actual notes.
   const headsList = mine
@@ -10088,14 +10138,16 @@ function openJobCard(job) {
         ⚠ ${headsList.length} HEADS-UP${headsList.length > 1 ? 'S' : ''} on this job${mine ? ' — tap to read them' : ''}
         ${mine ? '' : headsList.slice(0, 5).map(n => `<div style="font-weight: 400; margin-top: 6px;">⚠ ${esc(String(n.text || '').slice(0, 160))}</div>`).join('')}</div>`
     : '';
-  const body = mine ? `
+  // 👷/🔒 the crew line sits on both faces — one tap either way, and it always says which way it is
+  const lockBtn = `<button type="button" class="jc-lock${c.lock ? ' on' : ''}" onclick="cardLock()">${c.lock ? '🔒 ERIC ONLY — this card stays off every crew phone and out of their Wizard · tap to hand it to the crew' : '👷 THE CREW GETS THIS ONE — they can look it up and ask their Wizard for it · tap to keep it yours'}</button>`;
+  const form = `
     <div class="field"><label>📍 Physical address</label>
       <input type="text" id="jcAddr" value="${esc(c.addr || '')}" placeholder="38210 K-Beach Rd, Soldotna"></div>
-    <div class="jc-head">👤 People — homeowner, spouse, inspector, whoever</div>
+    <div class="jc-head">👤 People</div>
     ${ppl.length ? ppl.map((p, i) => `<div class="jc-blk">
       <div class="frow" style="gap: 6px;">
         <div class="field" style="flex: 2; min-width: 130px; margin: 0;"><label>Name</label><input type="text" id="jcPn${i}" value="${esc(p.n || '')}" placeholder="Dale Rininger"></div>
-        <div class="field" style="flex: 1; min-width: 100px; margin: 0;"><label>Who they are</label><input type="text" id="jcPr${i}" value="${esc(p.r || '')}" placeholder="Homeowner"></div>
+        <div class="field" style="flex: 1; min-width: 100px; margin: 0;"><label>Who they are</label><input type="text" id="jcPr${i}" value="${esc(p.r || '')}" placeholder="Homeowner · spouse · inspector"></div>
       </div>
       <div class="frow" style="gap: 6px; margin-top: 6px;">
         <div class="field" style="flex: 1; min-width: 120px; margin: 0;"><label>Phone</label><input type="tel" inputmode="tel" id="jcPt${i}" value="${esc(p.tel || '')}" placeholder="907-555-0100"></div>
@@ -10104,32 +10156,25 @@ function openJobCard(job) {
       <button type="button" class="btn-ghost jc-x" onclick="cardDropPerson(${i})">✕ Take this person off</button>
     </div>`).join('') : '<div class="hint" style="margin: 0 0 6px;">Nobody on this card yet.</div>'}
     <button type="button" class="btn-ghost jc-add" onclick="cardAddPerson()">➕ Add a person</button>
-    <div class="jc-head">🔑 Codes — door, gate, lockbox, alarm, wifi</div>
-    ${cds.length ? cds.map((k, i) => `<div class="frow jc-blk" style="gap: 6px; align-items: flex-end;">
-      <div class="field" style="flex: 2; min-width: 120px; margin: 0;"><label>What it opens</label><input type="text" id="jcCw${i}" value="${esc(k.w || '')}" placeholder="Front door · Gate · Shop"></div>
-      <div class="field" style="flex: 1; min-width: 90px; margin: 0;"><label>Code</label><input type="text" id="jcCc${i}" value="${esc(k.c || '')}" placeholder="1379#"></div>
-      <button type="button" class="btn-ghost jc-x" style="flex: none;" onclick="cardDropCode(${i})">✕</button>
+    <div class="jc-head">🔑 Codes</div>
+    ${cds.length ? cds.map((k, i) => `<div class="jc-blk jc-coderow">
+      <div class="field" style="margin: 0;"><label>What it opens</label><input type="text" id="jcCw${i}" value="${esc(k.w || '')}" placeholder="Front door · Gate · Shop · Wifi"></div>
+      <div class="field" style="margin: 0;"><label>Code</label><input type="text" id="jcCc${i}" value="${esc(k.c || '')}" placeholder="1379#"></div>
+      <button type="button" class="btn-ghost jc-x" onclick="cardDropCode(${i})" aria-label="take this code off" title="take this code off">✕</button>
     </div>`).join('') : '<div class="hint" style="margin: 0 0 6px;">No codes on this card yet.</div>'}
     <button type="button" class="btn-ghost jc-add" onclick="cardAddCode()">➕ Add a code</button>
     <div class="field" style="margin-top: 12px;"><label>📝 Anything else worth knowing here</label>
       <textarea id="jcNotes" rows="2" class="grow" oninput="fitTa(this)" placeholder="Dog in the back yard · park on the gravel · water shutoff is under the deck">${esc(c.notes || '')}</textarea></div>
-    <button type="button" class="jc-lock${c.lock ? ' on' : ''}" onclick="cardLock()">${c.lock ? '🔒 ERIC ONLY — this card stays off every crew phone and out of their Wizard' : '👷 THE CREW GETS THIS ONE — they can look it up and ask their Wizard for it'}</button>
-    <button type="button" class="btn-primary" style="width: 100%; font-weight: 800; margin-top: 10px; padding: 13px;" onclick="cardSave()">✓ Save this card</button>`
-  : `
-    ${c.addr ? `<div class="jc-head">📍 Address</div><div class="jc-big">${esc(c.addr)}</div>
-      <a href="${esc('https://maps.apple.com/?q=' + encodeURIComponent(c.addr))}" class="jc-lnk">🗺 Open in Maps</a>` : ''}
-    ${ppl.filter(p => p.n || p.tel || p.em).length ? `<div class="jc-head">👤 People</div>` +
-      ppl.filter(p => p.n || p.tel || p.em).map(p => `<div class="jc-blk">
-        <div style="font-weight: 800;">${esc(p.n || '(no name)')}${p.r ? ` <span class="hint" style="margin: 0;">· ${esc(p.r)}</span>` : ''}</div>
-        ${p.tel ? dial(p.tel) : ''}${p.em ? mail(p.em) : ''}</div>`).join('') : ''}
-    ${cds.filter(k => k.w || k.c).length ? `<div class="jc-head">🔑 Codes</div>` +
-      cds.filter(k => k.w || k.c).map(k => `<div class="jc-code"><span>${esc(k.w || 'code')}</span><b>${esc(k.c || '')}</b></div>`).join('') : ''}
-    ${c.notes ? `<div class="jc-head">📝 Worth knowing</div><div style="white-space: pre-wrap;">${esc(c.notes)}</div>` : ''}
-    ${cardHas(c) ? '' : '<div class="hint">Nothing on this card yet — Eric fills these in and they land here on your next sync.</div>'}`;
+    ${lockBtn}
+    <button type="button" class="btn-primary" style="width: 100%; font-weight: 800; margin-top: 10px; padding: 13px;" onclick="cardSave()">✓ Save this card</button>`;
+  const body = !mine ? cardViewHtml(c, false)
+    : _jcEdit ? form
+    : cardViewHtml(c, true) + share +
+      `<button type="button" class="btn-ghost jc-edit" onclick="openJobCard(_cardJob, true)">✎ Edit this card — names, numbers, codes, notes</button>` + lockBtn;
   $('revBox').innerHTML = `<h3>📇 Job Card
     ${winX('closeReview()', 'close')}</h3>
-    <div class="hint" style="margin: 0 0 8px;">Addresses, numbers, emails and door codes for one job${mine ? ' — and the Wizard reads every card, so you can just ask it.' : ' — read-only; ask your Wizard for it out loud too.'}</div>
-    ${pick}${job ? headsBar + body + share : ''}`;
+    <div class="hint" style="margin: 0 0 8px;">${mine ? 'Numbers, emails, the address and door codes for one job. The Wizard reads every card — just ask it.' : 'Addresses, numbers, emails and door codes for one job — read-only; ask your Wizard for it out loud too.'}</div>
+    ${pick}${job ? headsBar + body : ''}`;
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
 }
@@ -10164,7 +10209,7 @@ function cardLock() {
 function cardSave() {
   const c = cardRead(); if (!c) return;
   scheduleSave(); publishSharedNotes();
-  openJobCard(_cardJob);
+  openJobCard(_cardJob, false);   // 📇 v6.77 — saved: back to the reading face
   toast(`📇 ${c.job} card saved ✓ — ask the Wizard for it any time`);
 }
 // what travels: every card he hasn't locked, and only the cards that actually hold something
@@ -17517,7 +17562,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.76';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.77';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

@@ -192,13 +192,18 @@ const { chromium } = require('playwright');
     return r;
   }));
 
-  ok('job cards: with a job set, that job\'s card opens, and picking on the wheel switches it', await page.evaluate(() => {
-    _cardJob = ''; curJob = 'Mery'; openJobCards();
-    const a = $('jcJob').value === 'Mery' && /SHOWING — Mery/.test($('revBox').textContent) && !!$('jcAddr');
+  // 📇 v6.77 — Eric: "its always opened on hertz" — the running shift kept curJob on Hertz, and this
+  // check had blessed curJob as the pick. Now the app's job never picks the card: the last card OPENED
+  // on this phone does (daylog-cardjob), else the wheel waits.
+  ok('job cards: the app\'s job never picks the card (v6.77) — the last card opened does, and the wheel still switches', await page.evaluate(() => {
+    _cardJob = ''; lsSet('daylog-cardjob', ''); curJob = 'Mery'; openJobCards();
+    const a = $('jcJob').value === '' && /NOTHING PICKED YET/.test($('revBox').textContent) && !$('jcAddr');
     openJobCard('Hertz');
     const b = $('jcJob').value === 'Hertz' && /SHOWING — Hertz/.test($('revBox').textContent);
-    closeReview(); curJob = '—'; _cardJob = '';
-    return a && b;
+    closeReview(); _cardJob = ''; openJobCards();
+    const c = $('jcJob').value === 'Hertz';   // remembered on this phone
+    closeReview(); curJob = '—'; _cardJob = ''; lsSet('daylog-cardjob', '');
+    return a && b && c;
   }));
 
   ok('version bumped — APP_VER and the footer agree', await page.evaluate(() => {
