@@ -241,12 +241,12 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
 
   // ── 13. two of the eight bottom buttons were dead weight ──
-  ok('13. six bottom buttons while to-dos are parked, each one wider', await page.evaluate(() => {
+  ok('13. five bottom buttons while to-dos (and, since v6.74, Note) are parked, each one wider', await page.evaluate(() => {
     const shown = [...document.querySelectorAll('.capture .cap-btn')].filter(b => b.offsetParent !== null);
     const names = shown.map(b => (b.querySelector('.lb-short') || {}).textContent);
     const wide = shown.every(b => b.getBoundingClientRect().width >= 55);
     const parked = document.body.classList.contains('parked-630');
-    return parked && shown.length === 6 && !names.includes('To-Do') && !names.includes('Job') && wide;
+    return parked && shown.length === 5 && !names.includes('To-Do') && !names.includes('Job') && !names.includes('Note') && wide;
   }));
 
   ok('13b. the panel you are in is marked with a word, not just a border colour', await page.evaluate(() => {

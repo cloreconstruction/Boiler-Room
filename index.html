@@ -752,7 +752,7 @@
        this bar too tall and too wide for its own columns. */
     /* 🅿 v6.42 — six live buttons on a parked phone, so each gets a real slice and a label
        he can read at arm's length. Eight columns stays the rule if to-dos ever come back. */
-    body.parked-630 .capture { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    body.parked-630 .capture { grid-template-columns: repeat(5, minmax(0, 1fr)); }   /* 📝 v6.74 — Note parked too: five plates */
     body.parked-630 .capture .cap-btn { font-size: 11.5px; letter-spacing: .2px; }
     .capture .cap-btn {
       padding: 6px 0 5px; font-size: 9.5px; gap: 3px; border: none;
@@ -1427,6 +1427,11 @@
      read. Add a job now lives in ⚙ Setup beside the job list. */
   body.parked-630 .capture .cap-btn[data-panel="todo"],
   body.parked-630 .capture .cap-btn[data-panel="job"],
+  /* 📝 v6.74 — Eric: "the note button between hours and vault, i think that can go away … put it
+     in the historical app folder, like we dont need it anymore but could always come back to it
+     someday." The grinder has been the note since v6.22; the plate is parked the same way To-Do
+     and New Job were in v6.30 — the panel and its code stay, openPanel('note') still works. */
+  body.parked-630 .capture .cap-btn[data-panel="note"],
   body.parked-630 #setPipes,
   body.parked-630 #hotStrip,
   body.parked-630 #todoCard,
@@ -3658,7 +3663,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.73 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.74 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -17335,7 +17340,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.73';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.74';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
