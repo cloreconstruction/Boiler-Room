@@ -115,7 +115,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('tap the words: the row opens with the edit box, ✎ Save rewrites the entry\'s words and the log', await page.evaluate(() => {
     const id = _e.thought.id;
     brdOpen('e', id);
-    const row = document.querySelector(`.bd-row[data-for="e:${id}"]`), inp = $(`bdEd-e-${id}`);
+    const row = document.querySelector(`.bd-row[data-for="e:${id}"]`), inp = $(`brdEd-e-${id}`);
     const opened = !!row && !!inp && inp.value === 'frame the deck this week' && /PRIORITY —/.test(row.textContent);
     inp.value = 'frame the deck by Friday';
     brdEditSave('e', id);
@@ -125,7 +125,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('a sub-line: ➕ opens a box under the line, the sub-line lands indented with its own ○, and its ✓ strikes it through', await page.evaluate(() => {
     const id = _e.thought.id;
     brdOpen('e', id); brdSubAdd(id);
-    const box = $('bdSubIn'); if (!box) return false;
+    const box = $('brdSubIn'); if (!box) return false;
     box.value = 'get the 2x6s'; brdSubSave(id);
     const sub = document.querySelector(`.bd-line[data-key="e:${id}"] + .bd-sub`);
     const a = _e.thought.board.sub.length === 1 && _e.thought.board.sub[0].t === 'get the 2x6s' && !!sub && /get the 2x6s/.test(sub.textContent) && sub.querySelector('.bd-ck').textContent === '○';
@@ -141,10 +141,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
 
   ok('the add box: a last-minute thing on the board AND on the log, under the job he picked', await page.evaluate(() => {
-    $('bdIn').value = 'buy shims'; $('bdJob').value = 'Hertz';
+    $('brdIn').value = 'buy shims'; $('brdJob').value = 'Hertz';
     brdAdd();
     const e = entries[0];
-    return e.details === 'buy shims' && e.job === 'Hertz' && e.type === 'Note' && !!e.board && $('bdIn').value === '' && document.querySelector(`.bd-line[data-key="e:${e.id}"]`).closest('.bd-body').dataset.job === 'Hertz';
+    return e.details === 'buy shims' && e.job === 'Hertz' && e.type === 'Note' && !!e.board && $('brdIn').value === '' && document.querySelector(`.bd-line[data-key="e:${e.id}"]`).closest('.bd-body').dataset.job === 'Hertz';
   }));
 
   ok('a heading folds and unfolds, and says so', await page.evaluate(() => {
@@ -166,7 +166,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     chip.click(); await new Promise(r => setTimeout(r, 20));
     const sent = Array.isArray(_e.thought.sendTo) && _e.thought.sendTo.includes('Phil') && _e.thought.vis === 'Phil' && (window._pubN || 0) > 0 &&
       window._pushes.length === 1 && window._pushes[0].tag === 'board' && !/Phil|\$|\d{3}/.test(window._pushes[0].title + ' ' + window._pushes[0].body) &&
-      /👷 Phil/.test(document.querySelector(`.bd-line[data-key="e:${id}"] .bd-meta`).textContent);
+      document.querySelector(`.bd-line[data-key="e:${id}"] .bd-lamp`).classList.contains('on');   // v6.80 — the line is open (its words are a box), so the 👷 lamp is what shows it on the line
     const bits = brdShareBits(_e.thought);
     const rides = bits.board && bits.board.p === 0 && bits.board.sub.length === 1 && bits.board.sub[0].t === 'get the 2x6s' && bits.board.sub[0].done === true && bits.boardDone === undefined;
     if (_brdOpen !== 'e:' + id) brdOpen('e', id);   // the row stayed open through the re-render

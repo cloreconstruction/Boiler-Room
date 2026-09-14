@@ -870,7 +870,7 @@
   .panel-close {
     position: absolute; top: 8px; right: 8px;
     background: var(--accent); border: 3px solid var(--accent); border-radius: 10px;   /* ✕ v6.78 — brighter, heavier edge (Eric) */
-    color: var(--accent-ink); font-size: 17px; font-weight: 800; padding: 8px 15px; cursor: pointer; font-family: inherit;
+    color: #111; font-size: 17px; font-weight: 800; padding: 8px 15px; cursor: pointer; font-family: inherit;   /* ✕ v6.80 — black */
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
     min-height: 42px;
   }
@@ -1371,10 +1371,10 @@
   /* ✕ v6.78 — Eric: "check all the X's for closing the page and any 'back to main page' buttons need to have a
      brighter look or a heavier outline for quick eye catch." Filled brass, a 3px edge, a glow ring, 17px words. */
   .win-x { float: right; font-size: 17px; font-weight: 800; min-width: 48px; min-height: 44px;
-    background: var(--accent); border: 3px solid var(--accent); color: var(--accent-ink);
+    background: var(--accent); border: 3px solid var(--accent); color: #111;   /* ✕ v6.80 — Eric: "make the X black and then it's perfect" — black in every skin */
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent), 0 2px 6px rgba(0,0,0,0.3);
     border-radius: 10px; margin-left: 8px; }
-  .win-x.req-x, .win-x.btn-ghost { font-size: 17px; padding: 4px 10px; margin-top: 0; color: var(--accent-ink); }   /* the ghost rule later in the file was washing the ✕ out */   /* the ✕ also wears req-x (.72rem) and btn-ghost — the plate wins */
+  .win-x.req-x, .win-x.btn-ghost { font-size: 17px; padding: 4px 10px; margin-top: 0; color: #111; }   /* the ghost rule later in the file was washing the ✕ out */   /* the ✕ also wears req-x (.72rem) and btn-ghost — the plate wins */
   /* 🟢🔴 v6.32 — the receipt lamp in the running log. Colour is the fast read, but it is
      never the ONLY read: each state carries its own glyph and its own spelled word, so the
      row says the same thing in bright sun, on a cracked screen, or to colour-blind eyes. */
@@ -2506,6 +2506,14 @@
   .bd-body[hidden] { display: none !important; }
   .bd-line { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--grid); }
   .bd-line.hi .bd-t { font-weight: 800; }
+  /* 📋 v6.80 — two small lamps after the cubes (👷 crew sees it · 🏠 on their page): lit = filled brass, unlit = a dim
+     outline; the words ride in the title and in the open row. The open line's words become a box in place. */
+  .bd-lamps { display: inline-flex; flex-direction: column; gap: 3px; flex: 0 0 auto; }
+  .bd-lamp { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 15px; border: 1.5px solid var(--border); border-radius: 3px; font-size: 10px; line-height: 1; font-style: normal; opacity: .45; background: transparent; }
+  .bd-lamp.on { border-color: var(--accent); background: var(--accent); opacity: 1; }
+  .bd-hint { font-size: 12px; color: var(--ink-muted); }
+  .bd-inline { flex: 1 1 auto; min-width: 0; flex-basis: auto; margin: 0; }
+  .bd-row .pick-chip[disabled] { opacity: .4; }
   .bd-pri { display: inline-flex; align-items: center; justify-content: center; gap: 3px; flex: 0 0 auto; min-width: 44px; min-height: 40px; padding: 0 6px; background: none; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
   .bd-pri--ro { min-width: 0; min-height: 0; padding: 2px 4px; border: none; vertical-align: middle; }
   .bd-cube { display: inline-block; width: 9px; height: 9px; border: 1.5px solid var(--accent); border-radius: 2px; background: transparent; }
@@ -3766,7 +3774,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.79 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.80 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -16048,6 +16056,13 @@ function pocketBack(id) {
 // man's phone (FROM ERIC, marked FOR YOU) with a ✓ he can touch; his ✓ rides back as a note with boardRef
 // and lands here (checkCrewLogs). The cubes are brightness + count, never colour alone; the word rides
 // in the label and shows when the line is open.
+// 📋 v6.80 — Eric: "make it so i can edit the text and arrange the notes' order. also there should be more
+// cube lights maybe? one saying that phil and the crew can see it and one that shows if its on the client
+// page?" Tap the words and they become a box right there in the line; ⬆ ⬇ move a line inside its heading
+// (once he arranges a heading by hand, the hand wins — brand-new lines land at the top, by priority, until
+// he places them); two small lamps after the cubes: 👷 lit when a crew phone can see the line, 🏠 lit when
+// it went onto the client page (a released journal week, or a receipt sent) — the words spell it out in
+// the open row.
 let _brdFold = new Set(), _brdOpen = '', _brdSubFor = '';
 const BRD_WORDS = ['—', 'LOW', 'MED', 'HIGH'];
 function brdTouch(e) {
@@ -16075,21 +16090,40 @@ function brdShareBits(e) {   // what a crew phone gets to know about a line: the
   return { board: ever ? { p: brdP((e.board || {}).p), sub: ((e.board || {}).sub || []).map(s => ({ t: s.t, done: !!s.done })) } : undefined,
     boardDone: (e.board && e.board.done) ? (e.board.by || 'Eric') : undefined };
 }
+// 👷 who can see it, 🏠 whether it went onto the client page — the two lamps, in words
+function brdCrewWho(e) { return e.vis === 'crew' ? 'everyone' : Array.isArray(e.vis) ? e.vis.join(', ') : e.vis === 'Eric' ? '' : (e.vis || ''); }
+function brdPageState(e) {
+  if (e.jrnSent || e.jrnDone) { const d = typeof e.jrnSent === 'string' ? new Date(e.jrnSent + 'T12:00') : null; return { on: true, word: `ON THEIR PAGE${d && !isNaN(d) ? ' — sent ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}` }; }
+  if (e.budg === 'sent') return { on: true, word: 'ON THEIR PAGE — upcoming costs' };
+  if (e.jrn) return { on: false, word: 'STAMPED — rides with the next journal week' };
+  return { on: false, word: 'not on their page' };
+}
 function boardLines() {
   const L = [];
-  entries.forEach(e => { if (boardOn(e)) L.push({ k: 'e', id: e.id, job: e.job || '—', t: String(e.details || ''), p: brdP((e.board || {}).p), ts: String(e.ts instanceof Date ? e.ts.toISOString() : e.ts || ''), sub: (e.board && e.board.sub) || [], src: e }); });
-  todos.forEach(t => { if (t && !t.done && !t.parentId) L.push({ k: 't', id: t.id, job: t.job || '—', t: String(t.text || ''), p: brdP(t.pri), ts: String(t.ts || ''), due: t.due || '', sub: [], src: t }); });
+  entries.forEach(e => { if (boardOn(e)) L.push({ k: 'e', id: e.id, job: e.job || '—', t: String(e.details || ''), p: brdP((e.board || {}).p), ord: (e.board && e.board.ord != null) ? +e.board.ord : null, ts: String(e.ts instanceof Date ? e.ts.toISOString() : e.ts || ''), sub: (e.board && e.board.sub) || [], src: e }); });
+  todos.forEach(t => { if (t && !t.done && !t.parentId) L.push({ k: 't', id: t.id, job: t.job || '—', t: String(t.text || ''), p: brdP(t.pri), ord: t.bOrd != null ? +t.bOrd : null, ts: String(t.ts || ''), due: t.due || '', sub: [], src: t }); });
   return L;
 }
 function brdFind(k, id) { return k === 't' ? todos.find(t => String(t.id) === String(id)) : entries.find(e => String(e.id) === String(id)); }
 function brdWords(t) { return String(t || '').replace(/^🎒 (Flushed|Overflow|Not done) — /, ''); }
-function renderBoard() {
-  const box = $('revBox');
+// the order inside a heading: lines he has not placed first (priority, then newest), then the ones he arranged
+function brdCmp(a, b) {
+  if (a.ord == null && b.ord == null) return (b.p - a.p) || b.ts.localeCompare(a.ts);
+  if (a.ord == null) return -1;
+  if (b.ord == null) return 1;
+  return a.ord - b.ord;
+}
+function brdOrder() {   // the headings in order, and each heading's lines as shown
   const L = boardLines();
   const order = [...(jobs.includes(curJob) && curJob !== '—' ? [curJob] : []), ...jobs.filter(j => j && j !== '—' && j !== curJob), '—'];
   const by = {};
   L.forEach(l => { const j = order.includes(l.job) ? l.job : '—'; (by[j] = by[j] || []).push(l); });
-  const cmp = (a, b) => (b.p - a.p) || b.ts.localeCompare(a.ts);
+  Object.keys(by).forEach(j => by[j].sort(brdCmp));
+  return { L, order, by };
+}
+function renderBoard() {
+  const box = $('revBox');
+  const { L, order, by } = brdOrder();
   const day = ts => { const d = new Date(ts); return isNaN(d) ? '' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
   const meta = l => {
     const bits = [];
@@ -16106,20 +16140,31 @@ function renderBoard() {
     return bits.filter(Boolean).join(' · ');
   };
   const jobName = j => j === '—' ? 'GENERAL' : esc(j);
-  const lineHtml = l => {
+  const lamps = l => {
+    if (l.k !== 'e') return '';
+    const who = brdCrewWho(l.src), pg = brdPageState(l.src);
+    return `<span class="bd-lamps"><i class="bd-lamp${who ? ' on' : ''}" title="${who ? 'crew can see it: ' + esc(who) : 'no crew phone sees it'}" aria-label="${who ? 'crew can see it: ' + esc(who) : 'no crew phone sees it'}">👷</i><i class="bd-lamp${pg.on ? ' on' : ''}" title="${esc(pg.word)}" aria-label="${esc(pg.word)}">🏠</i></span>`;
+  };
+  const lineHtml = (l, i, rows) => {
     const key = l.k + ':' + l.id, open = _brdOpen === key, k = l.k, id = escq(String(l.id)), idA = esc(String(l.id));
-    const subs = (l.sub || []).map((s, i) => `<div class="bd-sub${s.done ? ' done' : ''}"><span class="bd-t">${esc(s.t || '')}</span><button type="button" class="bd-ck" onclick="brdSubDone('${id}', ${i})" aria-label="${s.done ? 'sub-line done — tap to reopen' : 'mark this sub-line done'}" title="${s.done ? 'done — tap to reopen' : 'done'}">${s.done ? '✓' : '○'}</button></div>`).join('');
-    const subIn = _brdSubFor === key ? `<div class="bd-sub"><input type="text" id="bdSubIn" class="bd-edit" placeholder="the sub-line — a step under this one" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdSubSave('${id}');}"><button type="button" class="bd-ck" onclick="brdSubSave('${id}')" aria-label="add the sub-line">➕</button></div>` : '';
+    const subs = (l.sub || []).map((s, si) => `<div class="bd-sub${s.done ? ' done' : ''}"><span class="bd-t">${esc(s.t || '')}</span><button type="button" class="bd-ck" onclick="brdSubDone('${id}', ${si})" aria-label="${s.done ? 'sub-line done — tap to reopen' : 'mark this sub-line done'}" title="${s.done ? 'done — tap to reopen' : 'done'}">${s.done ? '✓' : '○'}</button></div>`).join('');
+    const subIn = _brdSubFor === key ? `<div class="bd-sub"><input type="text" id="brdSubIn" class="bd-edit" placeholder="the sub-line — a step under this one" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdSubSave('${id}');}"><button type="button" class="bd-ck" onclick="brdSubSave('${id}')" aria-label="add the sub-line">➕</button></div>` : '';
     const words = brdWords(l.t);
     const crewBtns = k === 'e' && !CREW_NAME ? crew.filter(n => n && !(typeof isOffice === 'function' && isOffice(n))).map(n => { const on = Array.isArray(l.src.sendTo) && l.src.sendTo.includes(n); return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="brdCrew('${id}', '${escq(n)}')" aria-pressed="${on}">${on ? '✓ ' : '👷 '}${esc(n)}${on ? ' — on their board · tap to take back' : ''}</button>`; }).join('') : '';
-    return `<div class="bd-line${l.p === 3 ? ' hi' : ''}" data-key="${esc(key)}">
-        <button type="button" class="bd-pri" onclick="brdPri('${k}', '${id}')" aria-label="priority ${BRD_WORDS[l.p]} — tap to change" title="priority ${BRD_WORDS[l.p]} — tap to change">${brdCubes(l.p)}</button>
-        <span class="bd-t" onclick="brdOpen('${k}', '${id}')" role="button" tabindex="0">${esc(words)}<span class="bd-meta"> — ${meta(l)}</span></span>
+    const who = k === 'e' ? brdCrewWho(l.src) : '', pg = k === 'e' ? brdPageState(l.src) : null;
+    // 📋 v6.80 — open = the words become a box right in the line
+    const textCell = open
+      ? `<input type="text" class="bd-edit bd-inline" id="brdEd-${k}-${idA}" value="${esc(words)}" placeholder="the words" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdEditSave('${k}','${id}');}">`
+      : `<span class="bd-t" onclick="brdOpen('${k}', '${id}')" role="button" tabindex="0">${esc(words)}<span class="bd-meta"> — ${meta(l)}</span><span class="bd-hint" aria-hidden="true"> ✎</span></span>`;
+    return `<div class="bd-line${l.p === 3 ? ' hi' : ''}${open ? ' open' : ''}" data-key="${esc(key)}">
+        <button type="button" class="bd-pri" onclick="brdPri('${k}', '${id}')" aria-label="priority ${BRD_WORDS[l.p]} — tap to change" title="priority ${BRD_WORDS[l.p]} — tap to change">${brdCubes(l.p)}</button>${lamps(l)}
+        ${textCell}
         <button type="button" class="bd-ck" onclick="brdDone('${k}', '${id}')" aria-label="done — take it off the board" title="done — off the board">✓</button>
       </div>${subs}${subIn}${open ? `<div class="bd-row" data-for="${esc(key)}">
-        <div class="bd-pw">PRIORITY ${BRD_WORDS[l.p]}${l.p ? '' : ' — tap the cubes to set it'}</div>
-        <input type="text" class="bd-edit" id="bdEd-${k}-${idA}" value="${esc(words)}" placeholder="the words" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdEditSave('${k}','${id}');}">
+        <div class="bd-pw">PRIORITY ${BRD_WORDS[l.p]}${l.p ? '' : ' — tap the cubes to set it'}${k === 'e' ? ` · 👷 CREW: ${who ? esc(who) : 'nobody yet'} · 🏠 ${esc(pg.word)}` : ''}</div>
         <button type="button" class="pick-chip" onclick="brdEditSave('${k}', '${id}')">✎ Save the words</button>
+        <button type="button" class="pick-chip" onclick="brdShift('${k}', '${id}', -1)"${i === 0 ? ' disabled' : ''} aria-label="move it up one">⬆ Up</button>
+        <button type="button" class="pick-chip" onclick="brdShift('${k}', '${id}', 1)"${i >= rows.length - 1 ? ' disabled' : ''} aria-label="move it down one">⬇ Down</button>
         ${k === 'e' ? `<button type="button" class="pick-chip" onclick="brdSubAdd('${id}')">➕ Add a sub-line</button>` : ''}
         <select class="mini-sel" onchange="brdMove('${k}', '${id}', this.value)" aria-label="move it to another job"><option value="">⇄ Move to…</option>${order.map(j => `<option value="${esc(j)}"${j === l.job ? ' disabled' : ''}>${jobName(j)}</option>`).join('')}</select>
         ${crewBtns}
@@ -16128,11 +16173,11 @@ function renderBoard() {
   const heads = order.filter(j => (by[j] || []).length);
   const n = L.length, hiAll = L.filter(l => l.p === 3).length;
   box.innerHTML = `<h3>📋 Board${winX('closeReview()', 'close')}</h3>${revTabsHtml()}
-    <div class="rev-sub">${n ? `<b>${n} open</b>${hiAll ? ` · ${hiAll} high` : ''}` : '<b>nothing open</b>'} · a thought ground in lands here under its job · cubes = priority · tap the words to edit, move or send · ✓ = done</div>
-    <div class="bd-add"><input type="text" id="bdIn" placeholder="add a thing…" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdAdd();}"><select id="bdJob" class="mini-sel" aria-label="which job">${order.map(j => `<option value="${esc(j)}"${j === (jobs.includes(curJob) && curJob !== '—' ? curJob : '—') ? ' selected' : ''}>${jobName(j)}</option>`).join('')}</select><button type="button" class="bd-plus" onclick="brdAdd()" aria-label="add it to the board">+</button></div>` +
-    (heads.length ? heads.map(j => { const rows = (by[j] || []).slice().sort(cmp), folded = _brdFold.has(j), hi = rows.filter(r => r.p === 3).length;
+    <div class="rev-sub">${n ? `<b>${n} open</b>${hiAll ? ` · ${hiAll} high` : ''}` : '<b>nothing open</b>'} · a thought ground in lands here under its job · cubes = priority · 👷 crew sees it · 🏠 on their page · tap the words to edit, move or send · ✓ = done</div>
+    <div class="bd-add"><input type="text" id="brdIn" placeholder="add a thing…" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdAdd();}"><select id="brdJob" class="mini-sel" aria-label="which job">${order.map(j => `<option value="${esc(j)}"${j === (jobs.includes(curJob) && curJob !== '—' ? curJob : '—') ? ' selected' : ''}>${jobName(j)}</option>`).join('')}</select><button type="button" class="bd-plus" onclick="brdAdd()" aria-label="add it to the board">+</button></div>` +
+    (heads.length ? heads.map(j => { const rows = by[j] || [], folded = _brdFold.has(j), hi = rows.filter(r => r.p === 3).length;
       return `<button type="button" class="bd-hd${folded ? '' : ' open'}" data-job="${esc(j)}" onclick="brdFold('${escq(j)}')" aria-expanded="${!folded}">${folded ? '▸' : '▾'} ${j === '—' ? '📂 GENERAL' : '🏗 ' + esc(j)}<span class="rev-n">${rows.length}${hi ? ` · ${hi} high` : ''}${folded ? ' · folded' : ''}</span></button>
-        <div class="bd-body" data-job="${esc(j)}"${folded ? ' hidden' : ''}>${rows.map(lineHtml).join('')}</div>`; }).join('')
+        <div class="bd-body" data-job="${esc(j)}"${folded ? ' hidden' : ''}>${rows.map((l, i) => lineHtml(l, i, rows)).join('')}</div>`; }).join('')
       : `<div class="hint" style="margin: 10px 2px;">Nothing on the board yet. Grind a thought, or add one above.</div>`) +
     `<div class="rev-row" style="margin-top: 12px;"><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close</button></div>`;
 }
@@ -16142,6 +16187,18 @@ function brdPri(k, id) {
   const x = brdFind(k, id); if (!x) return;
   if (k === 't') x.pri = (brdP(x.pri) + 1) % 4;
   else { const b = brdTouch(x); b.p = (brdP(b.p) + 1) % 4; if (x.vis) publishSharedNotes(); }
+  scheduleSave(); renderReview();
+}
+// 📋 v6.80 — ⬆ ⬇ inside the heading. The first move stamps every line in that heading with its place, so
+// from then on the heading keeps the order he gave it; a brand-new line lands at the top until he places it.
+function brdShift(k, id, d) {
+  const { by } = brdOrder();
+  const key = k + ':' + id;
+  const j = Object.keys(by).find(jj => by[jj].some(l => l.k + ':' + l.id === key)); if (!j) return;
+  const rows = by[j], i = rows.findIndex(l => l.k + ':' + l.id === key), ni = i + d;
+  if (i < 0 || ni < 0 || ni >= rows.length) return;
+  [rows[i], rows[ni]] = [rows[ni], rows[i]];
+  rows.forEach((l, n) => { if (l.k === 't') l.src.bOrd = n + 1; else brdTouch(l.src).ord = n + 1; });
   scheduleSave(); renderReview();
 }
 function brdDone(k, id) {
@@ -16156,7 +16213,7 @@ function brdDone(k, id) {
   });
 }
 function brdEditSave(k, id) {
-  const x = brdFind(k, id); const i = $(`bdEd-${k}-${id}`); if (!x || !i) return;
+  const x = brdFind(k, id); const i = $(`brdEd-${k}-${id}`); if (!x || !i) return;
   const t = String(i.value || '').trim().slice(0, 500);
   if (!t) { toast('The words are empty — ✓ takes a line off instead', false); return; }
   if (k === 't') x.text = t;
@@ -16164,9 +16221,9 @@ function brdEditSave(k, id) {
   _brdOpen = ''; scheduleSave(); if (k === 'e') renderLog();
   renderReview(); toast('✎ Saved ✓');
 }
-function brdSubAdd(id) { _brdSubFor = 'e:' + id; renderReview(); const i = $('bdSubIn'); if (i) try { i.focus(); } catch (e) {} }
+function brdSubAdd(id) { _brdSubFor = 'e:' + id; renderReview(); const i = $('brdSubIn'); if (i) try { i.focus(); } catch (e) {} }
 function brdSubSave(id) {
-  const x = brdFind('e', id); const i = $('bdSubIn'); if (!x || !i) return;
+  const x = brdFind('e', id); const i = $('brdSubIn'); if (!x || !i) return;
   const t = String(i.value || '').trim().slice(0, 200); if (!t) { toast('Type the sub-line first', false); return; }
   brdTouch(x).sub.push({ t, done: '' }); _brdSubFor = ''; scheduleSave(); if (x.vis) publishSharedNotes(); renderReview();
 }
@@ -16177,12 +16234,13 @@ function brdSubDone(id, i) {
 }
 function brdMove(k, id, job) {
   if (!job) return; const x = brdFind(k, id); if (!x) return;
-  x.job = job === '—' ? '—' : job; if (k === 'e') { brdTouch(x); if (x.vis) publishSharedNotes(); }
+  x.job = job === '—' ? '—' : job;
+  if (k === 't') delete x.bOrd; else { const b = brdTouch(x); delete b.ord; if (x.vis) publishSharedNotes(); }   // a new heading: it lands at the top, unplaced
   _brdOpen = ''; scheduleSave(); if (k === 'e') renderLog();
   renderReview(); toast(`⇄ Moved to ${job === '—' ? 'GENERAL' : job} ✓`);
 }
 function brdAdd() {
-  const i = $('bdIn'), s = $('bdJob'); if (!i) return;
+  const i = $('brdIn'), s = $('brdJob'); if (!i) return;
   const t = String(i.value || '').trim().slice(0, 500); if (!t) { toast('Type the thing first', false); return; }
   const job = s && s.value && s.value !== '—' && jobs.includes(s.value) ? s.value : '—';
   addEntry('Note', t, job, { noSniff: true, board: { p: 0, sub: [], at: new Date().toISOString() } });   // a real grinder note — on the log, and here
@@ -17822,7 +17880,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.79';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.80';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

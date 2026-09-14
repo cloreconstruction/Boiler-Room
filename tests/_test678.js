@@ -62,7 +62,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const x = $('revBox').querySelector('.win-x'); const cs = getComputedStyle(x);
     const brass = getComputedStyle(document.querySelector('.qn-div-label')).backgroundColor;
     const r = !!x && parseFloat(cs.borderTopWidth) >= 3 && cs.backgroundColor === brass && parseFloat(cs.fontSize) >= 17 && x.getBoundingClientRect().height >= 44 && cs.boxShadow !== 'none' &&
-      cs.color === getComputedStyle(document.querySelector('.rev-tab.on')).color;   // dark words on the brass plate, like the lit tab — not the ghost grey
+      cs.color === 'rgb(17, 17, 17)';   // v6.80 — Eric: "make the X black" — black on the brass plate in every skin
     closeReview(); return r;
   }));
 
