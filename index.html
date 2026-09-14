@@ -2463,6 +2463,35 @@
   .rev-sec.empty { color: var(--ink-muted); font-weight: 600; }
   .rev-sec .rev-n { margin-left: auto; font-weight: 700; font-size: 12.5px; opacity: .9; white-space: nowrap; }
   .rev-sec-body[hidden] { display: none !important; }
+  /* 📊 v6.76 — the summaries page: two tabs on the review window, sections of one-line items */
+  .rev-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0 4px; }
+  .rev-tab { min-height: 44px; border-radius: 10px; border: 1px solid var(--border); background: none; color: var(--ink-2); font: inherit; font-weight: 800; font-size: 13px; letter-spacing: .5px; cursor: pointer; }
+  .rev-tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .sum-line { display: flex; gap: 8px; align-items: flex-start; padding: 6px 2px; border-top: 1px solid var(--grid); font-size: 13.5px; line-height: 1.4; }
+  .sum-line:first-child { border-top: 0; }
+  .sum-g { flex: 0 0 20px; text-align: center; }
+  .sum-m { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .sum-s { display: block; font-size: 12px; color: var(--ink-muted); margin-top: 1px; }
+  .sum-day { padding: 6px 0 2px; border-top: 1px solid var(--baseline); margin-top: 6px; }
+  .sum-dh { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 13px; }
+  .sum-dh span { font-size: 12px; color: var(--ink-muted); text-align: right; }
+  .sum-mail { margin: 6px 0 8px; padding: 10px 12px; }
+  /* the two that moved in: the Review banner under the clock and the 📧 card on the main page
+     still render (their words are read by tests and the banner's count feeds the plate) but stay off the screen */
+  #pendBanner, #mailAskCard { display: none !important; }
+  /* four across a 390px phone: the tracks must be allowed to shrink (v6.56's lesson — minmax(0,1fr), never 1fr:
+     with 1fr the Summary plate pushed the page to 423px in the steam skin, and a page wider than the phone
+     inflates innerHeight, which un-pins every sticky footer), the words a hair smaller with tighter padding,
+     and the waiting count sits on the plate's top corner so it never widens the row.
+     A crew phone keeps its two plates (🏠 and 📇) — the summary is the office's, like the Review banner it replaced. */
+  .sc-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  body:not(.crew-mode) #scRow .sc-btn { font-size: 12px; letter-spacing: 0.2px; padding: 12px 4px; gap: 4px; }
+  #scRow .sc-btn { position: relative; }
+  body.crew-mode #scRow .sc-btn:nth-child(4) { display: none; }
+  .sc-btn .sc-n { position: absolute; top: -7px; right: -5px; min-width: 18px; padding: 0 5px; border-radius: 999px; box-sizing: border-box;
+    background: #141414; color: #ffffff; border: 2px solid rgba(255,255,255,0.85); font-size: 11px; font-weight: 800; line-height: 18px; letter-spacing: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
+  .sc-btn .sc-n:empty { display: none; }
   /* 🎒 v6.73 — the pocket list: one line in, ✓ and ➡ out. v6.75 — inside the grinder above ①,
      the cap between tiny − and +, ⤵ Flush at the right; kept short so the writing box stays close */
   .pk-card { padding: 6px 0 8px; margin: 0 0 8px; border-bottom: 1px dashed var(--border); }
@@ -2618,7 +2647,7 @@
         <span class="hb-med"><span class="sync-lamp sync-lamp--off" aria-hidden="true"></span><span class="hb-bolt" aria-hidden="true">⚡</span></span>
         <span class="hb-tx"><strong id="hbWizWord">HOURLY</strong></span>
       </button>
-      <button class="hdr-btn" id="summaryBtn" onclick="openPanel('summary')" title="View summaries or request today's">
+      <button class="hdr-btn" id="summaryBtn" onclick="openReview('summary')" title="The summaries page — and the sort tab, what waits for you">
         <span class="hb-med"><span class="hb-bars" aria-hidden="true"><i style="height: 10px;"></i><i style="height: 17px;"></i><i style="height: 13px;"></i></span></span>
         <span class="hb-tx"><strong>SUMMARY</strong></span>
       </button>
@@ -2639,6 +2668,8 @@
     <button type="button" class="sc-btn" onclick="crewViewMenu()">👷 <span>Crew portal</span></button>
     <!-- 📇 v6.17 — addresses, numbers, emails, door codes. One tap, out of the way. -->
     <button type="button" class="sc-btn" onclick="openJobCards()">📇 <span>Job cards</span></button>
+    <!-- 📊 v6.76 — Eric: "make a button for it up to the right of job cards at the top of main page." The summaries page: the sort tab and the summary tab; the count is what waits to be sorted. -->
+    <button type="button" class="sc-btn" onclick="openReview('summary')" title="Summary — and the sort tab, what waits for you">📊 <span>Summary<span class="sc-n" id="scSumN"></span></span></button>
   </div>
 
 
@@ -3673,7 +3704,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.75 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.76 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7701,6 +7732,7 @@ function renderPendBanner() {
   const hotN = pendingQueue.filter(p => p.payload && p.payload.hot).length;
   const mailN = pendingQueue.filter(p => p.kind === 'mail').length;   // 📧 v6.41
   b.style.display = n ? '' : 'none';
+  const sn = $('scSumN'); if (sn) sn.textContent = n ? String(n) : '';   // 📊 v6.76 — the count rides the Summary plate now
   if (n) b.innerHTML = `📥 <b>${n} item${n === 1 ? '' : 's'} waiting for review</b>${hotN ? ` · <b>🔥 ${hotN} HOT</b>` : ''}${mailN ? ` · <b>📧 ${mailN} IMPORTANT email${mailN === 1 ? '' : 's'}</b>` : ''} — tap to go through ${n === 1 ? 'it' : 'them'}<span class="ab-go">›</span>`;
   renderHotCards();
 }
@@ -7934,10 +7966,12 @@ function revRcptRows() {
 }
 function renderReview() {
   const box = $('revBox');
+  if (_revTab === 'summary') return renderSummary();   // 📊 v6.76 — the other tab of the same window
   const { rows: rcptRows, n: rcptN } = revRcptRows();
   const wiz = revWizRows();   // 🧙📜 v6.73 — the kept answers, under WIZARD
-  if (!pendingQueue.length && !rcptRows.length && !wiz.n) {
-    box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3><div class="rev-done">All caught up — nothing waiting. ✓</div>
+  const mailBlock = CREW_NAME ? '' : mailAskHtml();   // 📧 v6.76 — the email sort lives in here now, at the top of PEOPLE
+  if (!pendingQueue.length && !rcptRows.length && !wiz.n && !mailBlock) {
+    box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3>${revTabsHtml()}<div class="rev-done">All caught up — nothing waiting. ✓</div>
       <div class="rev-row"><button class="btn-primary" onclick="closeReview()">Done</button></div>`;
     return;
   }
@@ -8041,7 +8075,7 @@ function renderReview() {
   // 🗂 v6.69 — the five headings, in order; one open, opening on the fullest
   const secs = REV_SECS.map(([key, label, hint]) => {
     const cards = pendingQueue.filter(p => revSecOf(p) === key);
-    const extra = key === 'money' ? rcptRows : key === 'wizard' ? wiz.rows : [];
+    const extra = key === 'money' ? rcptRows : key === 'wizard' ? wiz.rows : key === 'people' && mailBlock ? [`<div class="sum-mail card">${mailBlock}</div>`] : [];
     return { key, label, hint, cards, extra, n: cards.length + (key === 'money' ? rcptN : key === 'wizard' ? wiz.n : 0) };   // the count is receipts, not jobs
   });
   if (_revSec == null || (_revSec && !(secs.find(s => s.key === _revSec) || {}).n)) {
@@ -8049,11 +8083,11 @@ function renderReview() {
     const fullest = live.slice().sort((a, b) => b.n - a.n)[0];   // a stable sort: a tie goes to the earlier heading
     _revSec = fullest && fullest.n ? fullest.key : wiz.n ? 'wizard' : '';
   }
-  box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3><div class="rev-sub">${pendingQueue.length + rcptN} waiting · nothing is added until you tap ✓</div>` +
+  box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3>${revTabsHtml()}<div class="rev-sub">${pendingQueue.length + rcptN} waiting · nothing is added until you tap ✓</div>` +
     renderRevBulk() +   // 🧹 v6.45 — the sort-the-pile plate, only when there IS a pile
     secs.map(s => { const open = _revSec === s.key;
-      return `<button type="button" class="rev-sec${open ? ' open' : ''}${s.n ? '' : ' empty'}" data-sec="${s.key}" onclick="revSecTap('${s.key}')" aria-expanded="${open}">${open ? '▾' : '▸'} ${s.label} <span class="rev-n">${s.n ? `${s.n} waiting` : '○ nothing'}</span></button>
-        <div class="rev-sec-body" data-sec="${s.key}"${open ? '' : ' hidden'}>${s.n ? s.extra.join('') + s.cards.map(cardOf).join('') : `<div class="hint" style="margin: 6px 2px 8px;">${s.hint}</div>`}</div>`; }).join('') +
+      return `<button type="button" class="rev-sec${open ? ' open' : ''}${s.n ? '' : ' empty'}" data-sec="${s.key}" onclick="revSecTap('${s.key}')" aria-expanded="${open}">${open ? '▾' : '▸'} ${s.label} <span class="rev-n">${s.n ? `${s.n} waiting` : s.extra.length ? '📧 email sort' : '○ nothing'}</span></button>
+        <div class="rev-sec-body" data-sec="${s.key}"${open ? '' : ' hidden'}>${s.n || s.extra.length ? s.extra.join('') + s.cards.map(cardOf).join('') : `<div class="hint" style="margin: 6px 2px 8px;">${s.hint}</div>`}</div>`; }).join('') +
     `<div class="rev-row"><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close — finish later</button></div>`;
   loadCaPhotos();
 }
@@ -8095,7 +8129,8 @@ async function caAiRead(btn, rel) {
     toast('Could not read it just now — try again', false);
   }
 }
-function openReview() {
+function openReview(tab) {
+  _revTab = tab === 'summary' ? 'summary' : 'sort'; _sumSec = null;   // 📊 v6.76 — which tab of the summaries page
   // 📨 receipt stamp #2 — the sender's card is now on Eric's screen
   let stamped = false;
   pendingQueue.forEach(p => {
@@ -8820,10 +8855,16 @@ function mailChecks() {
     .map(x => ({ ...x, why: mailCheckWhy(x.r) })).filter(x => x.why.length);
 }
 function mailCheckOk(i) { const r = mailIgnored()[i]; if (r) { r.ok = 1; scheduleSave(); renderMailAsk(); } }
+// 📊 v6.76 — the 📧 card on the main page is off the screen (CSS); it still renders — its words
+// are what the tests read — and the same HTML rides the summaries page under PEOPLE.
 function renderMailAsk() {
   const box = $('mailAskCard');
   if (!box) return;
-  if (CREW_NAME) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const h = mailAskHtml();
+  box.style.display = h ? '' : 'none'; box.innerHTML = h;
+}
+function mailAskHtml() {
+  if (CREW_NAME) return '';
   const now = Date.now(), cut = now - 7 * 86400000;
   const imp = pendingQueue.filter(p => p.kind === 'mail');
   const week = entries.filter(e => e.mail && !e.sample && !e.personal && +new Date(e.ts) >= cut);
@@ -8832,8 +8873,7 @@ function renderMailAsk() {
   const ring = mailIgnored();
   const skippedWeek = ring.filter(r => r.ts && +new Date(r.ts) >= cut).length;
   const checks = mailChecks();
-  if (!imp.length && !week.length && !ring.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
-  box.style.display = '';
+  if (!imp.length && !week.length && !ring.length) return '';
   const fold = (k, label, n, extra) => `<button type="button" class="pick-chip${_mcFold === k ? ' sel' : ''}" style="font-size: 12px; padding: 5px 10px; min-height: 30px;" onclick="mcFold('${k}')" aria-expanded="${_mcFold === k}">${_mcFold === k ? '▾ ' : '▸ '}${label} (${n})${extra || ''}</button>`;
   const whyW = w => MAIL_WHY_WORD[w] || MAIL_WHY_WORD.other;
   const byW = b => MAIL_BY_WORD[b] || MAIL_BY_WORD.none;
@@ -8870,7 +8910,7 @@ function renderMailAsk() {
             <button type="button" class="btn-ghost req-x" style="font-size: 10.5px;" onclick="mailCheckOk(${i})">✓ Fine, it's junk</button>
           </div></div>`).join('')}</div>`
     : `<div class="hint" style="margin: 6px 0 0;">🔎 Double check: nothing skipped this week mentions money, a date or a job name. ✓</div>`;
-  box.innerHTML = `<div style="font-weight: 800; font-size: 13px; letter-spacing: .5px;">📧 EMAIL — this week: ${nImp} important · ${maybes.length} maybe · ${skippedWeek} skipped</div>
+  return `<div style="font-weight: 800; font-size: 13px; letter-spacing: .5px;">📧 EMAIL — this week: ${nImp} important · ${maybes.length} maybe · ${skippedWeek} skipped</div>
     <div class="chips-row" style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px;">
       ${fold('imp', '★ IMPORTANT', imp.length)}${fold('maybe', '? MAYBE', maybes.length)}${fold('ign', '○ SKIPPED', ring.length, seenAgo != null && seenAgo >= 7 ? ` · ${seenAgo}d since you looked` : '')}
     </div>${body}${check}`;
@@ -15775,6 +15815,106 @@ function renderPocket() {
     '';   // empty = nothing drawn: the box's own words say what to do, and the writing box stays within a thumb's reach (v6.75, _test612)
   const c = $('pocketCount'); if (c) c.textContent = `${items.length}/${pocketCap()}`;
 }
+// 📊 v6.76 — THE SUMMARIES PAGE. Eric: "build the summaries page and make a button for it up to
+// the right of job cards at the top of main page. make it so the email sort is in the summaries
+// page and the items to review page in it. and keep our categories for the summary page and then
+// we will work on it from there." One window, two tabs: 📥 SORT (the pile, v6.69) and 📊 SUMMARY
+// (the same five headings plus SCHEDULE, TO GET, SENT TO LOGAN and THE RECORD), today or this
+// week, built from the log with the emails in it, the receipts flow, the pocket notes and the kept
+// Wizard answers. The 📧 email card lives in here now (PEOPLE, both tabs) and the Review banner
+// under the clock is gone from the main page — the 📊 plate and the SUMMARY header button are the
+// doors. Nothing in the SUMMARY tab needs a tap; it is for reading.
+let _revTab = 'sort', _sumSpan = 'week', _sumSec = null;
+const SUM_SECS = [['need', '⚠ NEEDS YOU'], ['people', '👥 PEOPLE'], ['money', '💵 MONEY'], ['photos', '📷 PHOTOS'], ['wizard', '🧙 WIZARD'],
+  ['sched', '📅 SCHEDULE'], ['get', '🎒 TO GET'], ['logan', '📗 SENT TO LOGAN'], ['record', '📜 THE RECORD']];
+function revTabsHtml() {
+  const n = pendingQueue.length + revRcptRows().n;
+  return `<div class="rev-tabs"><button type="button" class="rev-tab${_revTab === 'sort' ? ' on' : ''}" onclick="revTab('sort')" aria-pressed="${_revTab === 'sort'}">📥 SORT${n ? ` · ${n}` : ''}</button><button type="button" class="rev-tab${_revTab === 'summary' ? ' on' : ''}" onclick="revTab('summary')" aria-pressed="${_revTab === 'summary'}">📊 SUMMARY</button></div>`;
+}
+function revTab(t) { _revTab = t === 'summary' ? 'summary' : 'sort'; renderReview(); }
+function sumSpan(s) { _sumSpan = s === 'today' ? 'today' : 'week'; _sumSec = null; renderReview(); }
+function sumSecTap(k) { _sumSec = _sumSec === k ? '' : k; renderReview(); }
+// 🔒 the lock reaches the summary too: a personal entry is never on it
+const sumHidden = e => !!(e.personal || (e.tags || []).includes('Personal') || isPersonalJob(e.job) || e.sample);
+function sumEntries() {
+  const todayD = localDay(new Date()), cut = Date.now() - 7 * 86400000;
+  return entries.filter(e => e && !sumHidden(e) && (_sumSpan === 'today' ? localDay(e.ts) === todayD : +new Date(e.ts) >= cut));
+}
+function renderSummary() {
+  const box = $('revBox');
+  const es = sumEntries();
+  const todayD = localDay(new Date()), tomD = pocketDay(1);
+  const when = e => { const d = new Date(e.ts); return `${localDay(d)} ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`; };
+  const line = (g, main, sub) => `<div class="sum-line"><span class="sum-g">${g}</span><span class="sum-m">${main}${sub ? `<span class="sum-s">${sub}</span>` : ''}</span></div>`;
+  const words = e => esc(String(e.details || '').replace(/\s+/g, ' ').slice(0, 110));
+  const who = e => esc((e.tags || [])[0] || e.mailAddr || (typeof textSender === 'function' && textSender(e)) || '?');
+  const S = {};
+  // ⚠ NEEDS YOU — what waits in the sort tab, by kind; one tap over
+  const rc = revRcptRows();
+  const kinds = {};
+  pendingQueue.forEach(p => { const k = p.kind === 'mail' && p.payload.needs ? 'needs review' : p.kind === 'mail' ? 'important emails' : p.kind === 'bill' ? 'bills' : p.kind === 'qb' ? 'QuickBooks lines' : p.kind === 'clientask' ? 'client questions' : p.kind === 'text' ? 'texts' : p.kind === 'crew' ? 'crew notes' : 'suggestions'; kinds[k] = (kinds[k] || 0) + 1; });
+  const waiting = pendingQueue.length + rc.n;
+  S.need = waiting ? [line('📥', `<b>${waiting} waiting</b> — ${[...Object.entries(kinds).map(([k, n]) => `${n} ${k}`), ...(rc.n ? [`${rc.n} receipts to approve`] : [])].join(', ')}`,
+    `<button type="button" class="btn-ghost req-x" onclick="revTab('sort')">📥 Open the sort tab</button>`)] : [];
+  // 👥 PEOPLE — the 📧 email sort first (this week), then every email and text in the span, one line each
+  const ppl = es.filter(e => e.mail || e.texted || /^Text from /.test(e.details || ''));
+  S.people = ppl.map(e => line(e.mail ? '📧' : '💬', `<b>${who(e)}</b> — ${esc(e.mail ? (e.mailSubj || '(no subject)') : String(e.details || '').replace(/^Text from [^:]+:\s*/, '').slice(0, 90))}`,
+    `${e.mailWhy ? esc(MAIL_WHY_WORD[e.mailWhy] || '') + ' · ' : ''}${when(e)}`));
+  if (_sumSpan === 'week') { const mc = mailAskHtml(); if (mc) S.people.unshift(`<div class="sum-mail card">${mc}</div>`); }
+  // 💵 MONEY — receipts and bills in the span, with their lights, and the money emails
+  const money = es.filter(e => (typeof isRcptEntry === 'function' && isRcptEntry(e)) || e.type === 'Expense' || (e.mail && ['invoice', 'money'].includes(e.mailWhy)));
+  S.money = money.map(e => line(e.mail ? '📧' : '🧾', `<b>${esc(e.job || '—')}</b> — ${e.mail ? esc(e.mailSubj || '') : words(e)}`,
+    `${e.mail ? esc(MAIL_WHY_WORD[e.mailWhy] || '') : (typeof rcptLampHtml === 'function' ? rcptLampHtml(e).replace(/<span>·<\/span>/, '') : '')} · ${when(e)}`));
+  // 📷 PHOTOS — per job
+  const ph = {};
+  es.forEach(e => { const n = (e.photoPaths || []).length || (e.photoPath ? 1 : 0); if (n) ph[e.job || '—'] = (ph[e.job || '—'] || 0) + n; });
+  S.photos = Object.entries(ph).map(([j, n]) => line('📷', `<b>${esc(j)}</b> — ${n} photo${n > 1 ? 's' : ''}`, ''));
+  // 🧙 WIZARD — the kept answers in the span
+  const wcut = _sumSpan === 'today' ? new Date(todayD + 'T00:00').getTime() : Date.now() - 7 * 86400000;
+  S.wizard = wizLog().filter(r => r && r.at && +new Date(r.at) >= wcut).slice(0, 15).map(r =>
+    line('🧙', `<b>${esc(r.q)}</b> — ${esc(String(r.a).replace(/\s+/g, ' ').slice(0, 120))}${r.fix && r.fix.length ? ' · ✎ corrected' : ''}`,
+      `<button type="button" class="btn-ghost req-x" onclick="wizReopen('${esc(r.at)}')">open</button>`));
+  // 📅 SCHEDULE — dated things: to-dos due in the next 7 days, emails judged deadline or schedule, the pocket's days
+  const horizon = localDay(new Date(Date.now() + 7 * 86400000));
+  S.sched = [
+    ...todos.filter(t => t && !t.done && t.due && t.due >= todayD && t.due <= horizon).sort((a, b) => a.due.localeCompare(b.due)).map(t => line('📅', `<b>${esc(t.due)}</b> — ${esc(t.text)}`, esc(t.job || ''))),
+    ...es.filter(e => e.mail && ['deadline', 'schedule'].includes(e.mailWhy)).map(e => line('📧', `<b>${who(e)}</b> — ${esc(e.mailSubj || '')}`, `${esc(MAIL_WHY_WORD[e.mailWhy] || '')}${e.mailGist ? ' — ' + esc(e.mailGist) : ''}`)),
+    ...pocket().map(it => line('🎒', `<b>${it.day === todayD ? 'today' : it.day === tomD ? 'tomorrow' : esc(it.day)}</b> — ${esc(it.t)}`, '')),
+  ];
+  // 🎒 TO GET — the pocket as it stands, then the span's pocket notes (done, swept, overflow, flushed)
+  S.get = [
+    ...pocket().map(it => line('🎒', esc(it.t), it.day === todayD ? 'today' : 'tomorrow')),
+    ...es.filter(e => e.pocket).map(e => line(e.pocket === 'done' ? '✓' : '○', words(e), when(e))),
+  ];
+  // 📗 SENT TO LOGAN — the bookkeeper tag, shared notes, receipts sent onto a client page
+  S.logan = es.filter(e => (e.tags || []).includes('Bookkeeper') || e.shared || e.budg === 'sent').map(e =>
+    line(e.budg === 'sent' ? '🏠' : '📗', `<b>${esc(e.job || '—')}</b> — ${words(e)}`, `${e.budg === 'sent' ? 'on their page' : 'to Logan'} · ${when(e)}`));
+  // 📜 THE RECORD — by day, newest first: the counts, then the first note lines
+  const days = {};
+  es.forEach(e => { const d = localDay(e.ts); (days[d] = days[d] || []).push(e); });
+  S.record = Object.keys(days).sort().reverse().map(d => {
+    const L = days[d];
+    const hrs = L.filter(e => e.type === 'Clock' || e.type === 'Hours').reduce((s, e) => s + (+e.hours || 0), 0);
+    const mi = L.filter(e => e.type === 'Mileage').reduce((s, e) => s + (+e.miles || 0), 0);
+    const nMail = L.filter(e => e.mail).length, nRc = L.filter(e => typeof isRcptEntry === 'function' && isRcptEntry(e)).length;
+    const notes = L.filter(e => !e.mail && e.type === 'Note' && !e.pocket).slice(0, 6);
+    return `<div class="sum-day"><div class="sum-dh"><b>${esc(d)}</b><span>${L.length} on the log${nMail ? ` · ${nMail} email${nMail > 1 ? 's' : ''}` : ''}${nRc ? ` · ${nRc} receipt${nRc > 1 ? 's' : ''}` : ''}${hrs ? ` · ${hrs.toFixed(1)} h` : ''}${mi ? ` · ${Math.round(mi)} mi` : ''}</span></div>` +
+      notes.map(e => line('·', `<b>${esc(e.job || '—')}</b> ${words(e)}`, '')).join('') + `</div>`;
+  });
+  const secs = SUM_SECS.map(([key, label]) => ({ key, label, items: S[key] || [] }));
+  if (_sumSec == null) { const f = secs.find(s => s.items.length); _sumSec = f ? f.key : ''; }
+  box.innerHTML = `<h3>📊 Summary${winX('closeReview()', 'close')}</h3>${revTabsHtml()}
+    <div class="chips-row" style="display: flex; gap: 6px; margin: 8px 0 4px;">
+      <button type="button" class="pick-chip${_sumSpan === 'today' ? ' sel' : ''}" onclick="sumSpan('today')" aria-pressed="${_sumSpan === 'today'}">${_sumSpan === 'today' ? '✓ ' : ''}TODAY</button>
+      <button type="button" class="pick-chip${_sumSpan === 'week' ? ' sel' : ''}" onclick="sumSpan('week')" aria-pressed="${_sumSpan === 'week'}">${_sumSpan === 'week' ? '✓ ' : ''}THIS WEEK</button>
+    </div>
+    <div class="rev-sub">${es.length} on the log ${_sumSpan === 'today' ? 'today' : 'this week'} · nothing here needs a tap — the sort tab is for that</div>` +
+    secs.map(s => { const open = _sumSec === s.key, n = s.items.length;
+      return `<button type="button" class="rev-sec${open ? ' open' : ''}${n ? '' : ' empty'}" data-sec="${s.key}" onclick="sumSecTap('${s.key}')" aria-expanded="${open}">${open ? '▾' : '▸'} ${s.label} <span class="rev-n">${n ? n : '○ nothing'}</span></button>
+        <div class="rev-sec-body" data-sec="${s.key}"${open ? '' : ' hidden'}>${n ? s.items.join('') : `<div class="hint" style="margin: 6px 2px 8px;">Nothing here ${_sumSpan === 'today' ? 'today' : 'this week'}.</div>`}</div>`; }).join('') +
+    `<div class="rev-row" style="margin-top: 12px;"><button class="btn-ghost" style="flex: 1;" onclick="openPanel('summary')">📄 Older summary pages</button><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close</button></div>`;
+}
+
 function recentAnswers() { try { return JSON.parse(lsGet('daylog-answers') || '[]'); } catch (e) { return []; } }
 function saveRecentAnswer(q, a) {
   const arr = [{ q, a, ts: new Date().toISOString() }, ...recentAnswers()].slice(0, 10);
@@ -17377,7 +17517,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.75';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.76';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

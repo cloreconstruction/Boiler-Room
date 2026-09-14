@@ -45,17 +45,23 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   });
   const g = await geom();
 
-  ok('the 📧 card sits BELOW the ⚙ grinder button on the page', g.card.top > g.grind.bottom, JSON.stringify({ card: g.card.top, grindBottom: g.grind.bottom }));
+  // 📊 v6.76 — Eric moved the email sort INTO the summaries page ("make it so the email sort is in the
+  // summaries page"). The card stays in the document, after the grinder and before the log, but CSS
+  // keeps it off the main page; its words still render and ride the summaries page under PEOPLE.
+  ok('the 📧 card is off the main page now (v6.76) — hidden by CSS, its words still rendered', await page.evaluate(() => {
+    const c = $('mailAskCard');
+    return getComputedStyle(c).display === 'none' && c.innerHTML.length > 0 && c.style.display !== 'none';
+  }));
   ok('it comes after the grinder in the document too, not just visually', g.afterGrindInDom);
   ok('it sits ABOVE the running log — the grinder, then mail, then the book', g.beforeLogInDom && g.card.bottom <= g.log.top + 1, JSON.stringify({ cardBottom: g.card.bottom, logTop: g.log.top }));
   ok('it is OUTSIDE the grinder card entirely — its own card now', !g.inAsk);
   // 🅿 v6.42's bug: the card lived inside .g-step[data-step="4"] and gFold() hid it outright
   ok('it is NOT inside any .g-step, so folding a step can never hide it', !g.inStep);
 
-  ok('folding every step leaves the 📧 card standing', await page.evaluate(() => {
+  ok('folding every step leaves the 📧 card standing (rendered, outside every step)', await page.evaluate(() => {
     [3, 4].forEach(n => gFold(n));
     const c = $('mailAskCard');
-    return c.style.display !== 'none' && c.getBoundingClientRect().height > 0;
+    return c.style.display !== 'none' && c.innerHTML.length > 0 && !c.closest('.g-step');
   }));
 
   // the whole point of the move: mail must no longer DISPLACE the grinder. A morning with a
@@ -64,20 +70,20 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const grind = () => document.querySelector('.plate-btn--grind').getBoundingClientRect().top + scrollY;
     const card = $('mailAskCard');
     const withMail = grind();
-    const tall = card.getBoundingClientRect().height;
+    const tall = card.getBoundingClientRect().height;   // v6.76 — it takes no room on the main page at all
     card.style.display = 'none';                 // the same page with an empty inbox
     const without = grind();
     card.style.display = '';
-    return tall > 40 && Math.abs(withMail - without) < 1;
+    return tall === 0 && Math.abs(withMail - without) < 1;
   }));
 
-  ok('nothing overlaps: mail card, grinder and log keep their own bands', (() => {
-    return g.grind.bottom <= g.card.top && g.card.bottom <= g.log.top + 1;
+  ok('nothing overlaps: the grinder and the log keep their own bands, and the mail card takes none (v6.76)', (() => {
+    return g.card.bottom - g.card.top === 0 && g.grind.bottom <= g.log.top + 1;
   })(), JSON.stringify(g));
 
-  ok('a crew phone still never sees it', await page.evaluate(() => {
+  ok('a crew phone still never sees it — the words gate on CREW_NAME (mailAskHtml, v6.76)', await page.evaluate(() => {
     const c = $('mailAskCard'); const before = c.style.display;
-    return before !== 'none' && /CREW_NAME/.test(renderMailAsk.toString());
+    return before !== 'none' && /CREW_NAME/.test(mailAskHtml.toString());
   }));
 
   ok('version bumped — APP_VER and the footer agree', await page.evaluate(() => {
