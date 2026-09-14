@@ -91,7 +91,7 @@ const { chromium } = require('playwright');
 
   ok('the whole writing box fits on one phone screen — no scroll to write and ask', await page.evaluate(() => {
     const r = $('askText').getBoundingClientRect(), w = $('wizSideBtn').getBoundingClientRect();
-    return r.top < 500 && w.bottom < 700;   // 844-tall viewport
+    return r.top < 600 && w.bottom < 800;   // 844-tall viewport — v6.75: the pocket list sits above ① at Eric's ask, so the box moved down a hand's width and still fits
   }));
 
   console.log('page errors:', errs.length); errs.forEach(e => console.log('  ' + e));

@@ -77,19 +77,21 @@ const { chromium } = require('playwright');
 
   console.log('— 🎒 v6.73 the pocket list —');
 
-  ok('the list sits right under the grinder (the writing box stays first, v6.12): one line, a + button, empty words', await page.evaluate(() => {
-    renderPocket();
+  ok('the list sits inside the grinder just above ① PICK THE JOB (v6.75, Eric\'s spot): one line, a + button, the cap between − and +, ⤵ Flush, empty words', await page.evaluate(() => {
+    prefs.pocketMax = 8; renderPocket();
     const card = $('pocketCard');
     const k = [...document.querySelector('.wrap').children].map(e => e.id).filter(Boolean);
-    return !!card && !!$('pocketIn') && !!document.querySelector('.pk-add') && /Empty\. Think of something at Home Depot/.test(card.textContent) &&
-      k.indexOf('qnCard') === k.indexOf('scRow') + 1 && k.indexOf('pocketCard') === k.indexOf('qnCard') + 1;
+    const step1 = document.querySelector('#qnCard .g-step[data-step="1"]');
+    return !!card && !!$('pocketIn') && !!document.querySelector('.pk-add') && $('pocketList').textContent === '' && /think of it, type it, tap \+/.test($('pocketIn').placeholder) &&
+      k.indexOf('qnCard') === k.indexOf('scRow') + 1 && $('qnCard').contains(card) && !!(card.compareDocumentPosition(step1) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+      $('pocketCount').textContent === '0/8' && !!document.querySelector('.pk-flush') && document.querySelectorAll('.pk-cap .pk-tiny').length === 2;
   }));
 
   ok('type it, tap + (or Enter): it lands under TODAY with ✓ Done and ➡ Tomorrow; the count says 2 of 8', await page.evaluate(() => {
     $('pocketIn').value = 'screws for Hertz'; pocketAddFromBox();
     $('pocketIn').value = 'call the inspector'; $('pocketIn').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const t = $('pocketList').textContent;
-    return pocket().length === 2 && $('pocketIn').value === '' && /TODAY/.test(t) && /call the inspector/.test(t) && /screws for Hertz/.test(t) && /✓ Done/.test(t) && /➡ Tomorrow/.test(t) && $('pocketCount').textContent === '2 of 8';
+    return pocket().length === 2 && $('pocketIn').value === '' && /TODAY/.test(t) && /call the inspector/.test(t) && /screws for Hertz/.test(t) && /✓ Done/.test(t) && /➡ Tomorrow/.test(t) && $('pocketCount').textContent === '2/8';
   }));
 
   ok('➡ Tomorrow moves it under TOMORROW, where the ➡ button is gone', await page.evaluate(() => {
@@ -114,11 +116,34 @@ const { chromium } = require('playwright');
     return !pocket().some(x => x.t === 'oops') && entries.length === n;
   }));
 
-  ok('eight is the limit — the ninth is refused, in words', await page.evaluate(() => {
-    prefs.pocket = [];
+  ok('over the cap the OLDEST goes to the grinder\'s pile as a pocket note — the newest stay in sight (v6.75)', await page.evaluate(() => {
+    prefs.pocket = []; prefs.pocketMax = 8;
     for (let i = 1; i <= 8; i++) pocketAdd('thing ' + i);
+    const n = entries.length;
     const ninth = pocketAdd('thing 9');
-    return pocket().length === 8 && ninth === false && /Eight is the limit/.test($('toast').textContent);
+    const e = entries[0];
+    return ninth === true && pocket().length === 8 && pocket()[0].t === 'thing 9' && !pocket().some(x => x.t === 'thing 1') &&
+      entries.length === n + 1 && e.details === '🎒 Overflow — thing 1' && e.pocket === 'over' && (e.tags || []).includes('pocket') && /went to the grinder/.test($('toast').textContent);
+  }));
+
+  ok('tiny − and +: the cap moves, the count says so, and shrinking it overflows the oldest; it never goes under 2 or over 30', await page.evaluate(() => {
+    pocketCapSet(-1);
+    const a = pocketCap() === 7 && pocket().length === 7 && !pocket().some(x => x.t === 'thing 2') && $('pocketCount').textContent === '7/7' && /Holds 7 now/.test($('toast').textContent);
+    pocketCapSet(1);
+    const b = pocketCap() === 8 && $('pocketCount').textContent === '7/8';
+    prefs.pocketMax = 2; pocketCapSet(-1); const c = pocketCap() === 2;
+    prefs.pocketMax = 30; pocketCapSet(1); const d = pocketCap() === 30;
+    prefs.pocketMax = 8; renderPocket();
+    return a && b && c && d;
+  }));
+
+  ok('⤵ Flush clears the list and sends every item to the grinder\'s pile; an empty flush just says so', await page.evaluate(() => {
+    prefs.pocket = []; pocketAdd('one'); pocketAdd('two');
+    const n = entries.length;
+    const flushed = pocketFlush();
+    const notes = entries.slice(0, 2).map(e => e.details).sort().join('|');
+    const empty = pocketFlush();
+    return flushed === 2 && pocket().length === 0 && entries.length === n + 2 && notes === '🎒 Flushed — one|🎒 Flushed — two' && entries[0].pocket === 'flushed' && empty === 0 && /Nothing to flush/.test($('toast').textContent);
   }));
 
   ok('the nightly sweep: what was not done yesterday leaves the list as a "not done" note tagged pocket; today\'s and tomorrow\'s stay', await page.evaluate(() => {
