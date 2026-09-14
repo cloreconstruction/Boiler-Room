@@ -3633,7 +3633,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.69 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.70 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7582,6 +7582,14 @@ async function checkPending() {
     const txt = await dbxDownload(PENDING_PATH());
     const arr = txt ? JSON.parse(txt) : [];
     pendingQueue = (Array.isArray(arr) ? arr : []).filter(p => p && p.id && p.kind && !pendDone.has(p.id));
+    // 🗑 v6.70 — the radar's suggested to-dos are off (RADAR_TODOS, see radarSweep); whatever is
+    // still waiting from them goes here, once, marked done — pending.json is the app's to prune.
+    const nags = pendingQueue.filter(p => /^(jobsilence|estchase|truck):/.test(String(p.id)));
+    if (nags.length) {
+      nags.forEach(p => pendMarkDone(p.id));
+      pendingQueue = pendingQueue.filter(p => !nags.includes(p));
+      savePendingSoon();
+    }
     // 📬 v5.19 — triage the BACKLOG too: non-hot texts already sitting in review auto-pile
     // under their senders and leave the queue. Review goes back to being for real decisions.
     if (!CREW_NAME) {
@@ -14715,6 +14723,14 @@ function qbVerifySweep() {
 }
 // 🕸 v5.04 job-silence radar — a job nobody has touched in 10+ days gets ONE card a week:
 // still rolling, or time to wrap it? Runs at most once a day, on Eric's phone only.
+// 🗑 v6.70 — OFF. Eric, on the sort page: "take out the suggested to dos as well the ones that
+// say 'nothing logged on carrick…' isn't useful." The three radars that only ever SUGGESTED a
+// to-do — the quiet-job nag, the estimate chase, the oil-change nudge — no longer card anything
+// (the code stays behind RADAR_TODOS). What still cards is a real event: a crew clock left
+// running (checkCrewLogs), a permit or policy about to expire (renewMaybeSuggest), tomorrow's
+// weather on top of weather-sensitive work (weatherSweep). Cards already waiting from the three
+// are swept out once in checkPending.
+const RADAR_TODOS = false;
 function radarSweep() {
   if (CREW_NAME) return;
   const today = localDay(new Date());
@@ -14723,7 +14739,7 @@ function radarSweep() {
   const now = Date.now();
   const epochWeek = Math.floor(now / 86400000 / 7);
   let flagged = false;
-  jobs.forEach(job => {
+  if (RADAR_TODOS) jobs.forEach(job => {
     const last = entries.find(e => !e.sample && e.job === job); // entries run newest-first
     if (!last) return; // brand-new job with nothing yet — leave it be
     const days = Math.floor((now - new Date(last.ts).getTime()) / 86400000);
@@ -14737,7 +14753,7 @@ function radarSweep() {
     flagged = true;
   });
   // 📄 v5.05 estimate-chase: a bid that went out 7–30 days ago with silence since = one nudge, ever
-  entries.filter(e => !e.sample && !e.personal && !e.mail && !e.texted && ['Note', 'Filed'].includes(e.type) &&   // v6.41 — an incoming message is never a bid Eric sent
+  if (RADAR_TODOS) entries.filter(e => !e.sample && !e.personal && !e.mail && !e.texted && ['Note', 'Filed'].includes(e.type) &&   // v6.41 — an incoming message is never a bid Eric sent
     /\b(estimate|bid|quote|proposal)\b/i.test((e.details || '') + ' ' + (e.ai || ''))).forEach(e => {
     const age = Math.floor((now - new Date(e.ts).getTime()) / 86400000);
     if (age < 7 || age > 30) return;
@@ -14750,7 +14766,7 @@ function radarSweep() {
     flagged = true;
   });
   // 🛢 v5.05 truck radar: 5,000+ miles on the odometer since the last oil/service note
-  trucks.forEach(tr => {
+  if (RADAR_TODOS) trucks.forEach(tr => {
     const mine = entries.filter(e => !e.sample && e.truck === tr.name && e.odometer);
     if (!mine.length) return;
     const newest = Math.max(...mine.map(e => +e.odometer || 0));
@@ -17117,7 +17133,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.69';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.70';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
