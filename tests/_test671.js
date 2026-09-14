@@ -37,7 +37,7 @@ const { chromium } = require('playwright');
     T.reset(); T.mail('mail:1', 'Bob Ashman', 'bob@ashmanplumbing.com', 'Invoice 4471', 'Rough-in plumbing invoice, $3,290.00 due Oct 10.');
     openReview();
     const t = $('revBox').textContent;
-    return /📥 Important — send to grinder/.test(t) && /🔒 Personal — grinder, locked/.test(t) && /🚫 Never this sender/.test(t) && /✕ Not important — it stays on the log/.test(t) &&
+    return /📥 Important — send to grinder/.test(t) && /🔒 Personal — grinder, locked/.test(t) && /🚫 Never this sender/.test(t) && /✕ Not important — it stays on the log/.test(t) && /💬 Needs review/.test(t) &&   // v6.72 added the fifth
       !/Got it/.test(t) && !/Never more than a maybe/.test(t) && !/Always \+ log it/.test(t);
   }));
 

@@ -3633,7 +3633,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.71 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.72 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7878,7 +7878,7 @@ function revSecOf(p) {
   const k = p.kind, pay = p.payload || {};
   if (k === 'bill' || k === 'qb') return 'money';
   if (k === 'crew') return (pay.photo || pay.photoPath || (pay.photos || []).length) ? 'photos' : 'people';
-  if (k === 'mail') return 'people';
+  if (k === 'mail') return pay.needs ? 'need' : 'people';   // 💬 v6.72 — a flagged email sits under NEEDS YOU
   if (k === 'text') return pay.hot ? 'need' : 'people';
   return 'need';   // clientask, question, match, todo, todos, note — his yes or no
 }
@@ -7967,10 +7967,17 @@ function renderReview() {
         // from sender' and 'personal' which would still send to grinder but lock as personal."
         // The email is on the log already (v6.67), so the card's job is only to say WHAT KIND of
         // important it is: into the grinder to file it properly, locked, never again, or nothing.
-        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'grind')">📥 Important — send to grinder</button>
+        // 💬 v6.72 — Eric: "do 4 but make it 'needs review' and it goes on the summary page." A
+        // flagged email keeps its card, moves under NEEDS YOU, and stays lit until he says done.
+        ? (p.payload.needs
+          ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'log')">✓ Reviewed — done</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'grind')">📥 Send to grinder</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not important — it stays on the log</button>`
+          : `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'grind')">📥 Important — send to grinder</button>
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'needs')">💬 Needs review — keep it under NEEDS YOU</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'personal')">🔒 Personal — grinder, locked</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'never')">🚫 Never this sender</button>
-           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not important — it stays on the log</button>`
+           <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not important — it stays on the log</button>`)
         : p.kind === 'bill'
         ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'logan')">📗 Logan pays it</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'auto')">🔁 Autopay — never ask about ${esc(String(p.payload.who || 'them').slice(0, 24))}</button>
@@ -7984,7 +7991,7 @@ function renderReview() {
         : `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', true)">✓ ${p.kind === 'question' ? 'Save answer' : 'Add it'}</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ No</button>`;
       return `<div class="rev-card" data-pid="${esc(String(p.id))}">
-        <div class="rev-kind">${PEND_KINDS[p.kind] || p.kind}</div>
+        <div class="rev-kind">${p.kind === 'mail' && p.payload.needs ? `💬 NEEDS REVIEW — an email you flagged${p.payload.needsTs ? ' on ' + esc(String(p.payload.needsTs).slice(0, 10)) : ''}` : PEND_KINDS[p.kind] || p.kind}</div>
         ${body}
         ${meta ? `<div class="rev-why">${esc(meta)}</div>` : ''}
         <div class="rev-row">${btns}</div>
@@ -8153,6 +8160,14 @@ function reviewAct(id, accept) {
       // the card. New sender: nothing was logged until this tap. Every list change is his tap.
       const mm = { who: pay.from || '?', addr: pay.addr || '', subj: pay.subj || '', body: pay.body || '' };
       const vx = { mailBucket: 'important', mailWhy: pay.why, mailGist: pay.gist, mailBy: pay.by };
+      if (accept === 'needs') {
+        // 💬 v6.72 — the card STAYS, flagged: it moves under NEEDS YOU and sits there until ✓ Reviewed
+        pay.needs = true; pay.needsTs = new Date().toISOString();
+        _revSec = 'need';
+        renderReview(); renderPendBanner(); savePendingSoon();
+        toast('💬 Under NEEDS YOU until you say done ✓');
+        return;
+      }
       if (accept === 'grind' || accept === 'personal') mailToGrinder(pay, accept === 'personal');   // 📥 v6.71
       else if (accept === 'always') { if (!pay.entryId) autoLogMail(mm, pay.ts, vx); if (mm.addr) mailSay(mm.addr, true); }
       else if (accept === 'never') { if (mm.addr) mailSay(mm.addr, false); }
@@ -17177,7 +17192,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.71';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.72';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
