@@ -2458,6 +2458,18 @@
   .rev-sec.empty { color: var(--ink-muted); font-weight: 600; }
   .rev-sec .rev-n { margin-left: auto; font-weight: 700; font-size: 12.5px; opacity: .9; white-space: nowrap; }
   .rev-sec-body[hidden] { display: none !important; }
+  /* 🎒 v6.73 — the pocket list: one line in, ✓ and ➡ out, never more than eight */
+  .pk-card { padding: 10px 12px; margin: 0 0 10px; }
+  .pk-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .pk-title { font-weight: 800; font-size: 12.5px; letter-spacing: .6px; }
+  .pk-in { display: flex; gap: 6px; margin-top: 6px; }
+  .pk-in input { flex: 1; min-width: 0; min-height: 44px; font-size: 16px; }
+  .pk-add { flex: 0 0 52px; min-height: 44px; border: none; border-radius: 10px; background: var(--btn-bg); color: var(--btn-ink); font-size: 24px; font-weight: 800; cursor: pointer; }
+  .pk-h { font-size: 11px; font-weight: 800; letter-spacing: .8px; color: var(--ink-muted); margin: 8px 0 2px; }
+  .pk-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--grid); flex-wrap: wrap; }
+  .pk-t { flex: 1 1 140px; min-width: 0; font-size: 15px; line-height: 1.3; }
+  .pk-btn { flex: 0 0 auto; min-height: 40px; padding: 6px 10px; border-radius: 10px; border: none; background: var(--btn-bg); color: var(--btn-ink); font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+  .pk-btn.pk-ghost { background: none; border: 1px solid var(--border); color: var(--ink-2); font-weight: 600; }
   .rev-kind { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--ink-muted); text-transform: uppercase; }
   .rev-text { font-size: 15px; font-weight: 650; margin-top: 5px; line-height: 1.45; }
   .rev-why { font-size: 12.5px; color: var(--ink-muted); margin-top: 5px; line-height: 1.4; }
@@ -2738,6 +2750,19 @@
     </div>
   </div>
 
+  <!-- 🎒 v6.73 — THE POCKET LIST. Eric: "a super quick fire list … just today and tomorrow …
+       add quickly during the day as i get thoughts … so that they dont get just longer and
+       longer." One line in, ✓ Done and ➡ Tomorrow out, never more than eight. See pocketAdd().
+       It sits right UNDER the grinder — v6.12's rule that the writing box is the first thing on
+       the screen still holds (a first draft put it above and _test612 caught it). -->
+  <div class="card pk-card" id="pocketCard">
+    <div class="pk-top"><span class="pk-title">🎒 POCKET — today and tomorrow</span><span class="hint" id="pocketCount" style="margin: 0;"></span></div>
+    <div class="pk-in">
+      <input type="text" id="pocketIn" placeholder="think of it, type it, tap +" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();pocketAddFromBox();}">
+      <button type="button" class="pk-add" onclick="pocketAddFromBox()" aria-label="add it to the pocket list">+</button>
+    </div>
+    <div id="pocketList"></div>
+  </div>
   <!-- 📧 v6.48 — Eric: "id like the email section to be below the grinder not above it."
        It sat between step ④ and the ⚙ plate, so a morning's mail pushed the grinder button —
        the thing he reaches for all day — down off the screen. It is its own card UNDER the
@@ -3633,7 +3658,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.72 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.73 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7871,7 +7896,7 @@ const REV_SECS = [
   ['people', '👥 PEOPLE', 'Important emails, texts and crew notes land here.'],
   ['money', '💵 MONEY', 'Bills, QuickBooks lines and each job\'s receipts to approve land here.'],
   ['photos', '📷 PHOTOS', 'Crew photos land here, to journal or stamp.'],
-  ['wizard', '🧙 WIZARD', 'Your questions, answers and corrections will land here once they are kept — the next build.'],
+  ['wizard', '🧙 WIZARD', 'Your questions and answers from the last 7 days land here — tap one to open it again or correct it.'],
 ];
 let _revSec = null, _rcptBack = false;   // null = pick the fullest; '' = he folded them all himself
 function revSecOf(p) {
@@ -7895,7 +7920,8 @@ function revRcptRows() {
 function renderReview() {
   const box = $('revBox');
   const { rows: rcptRows, n: rcptN } = revRcptRows();
-  if (!pendingQueue.length && !rcptRows.length) {
+  const wiz = revWizRows();   // 🧙📜 v6.73 — the kept answers, under WIZARD
+  if (!pendingQueue.length && !rcptRows.length && !wiz.n) {
     box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3><div class="rev-done">All caught up — nothing waiting. ✓</div>
       <div class="rev-row"><button class="btn-primary" onclick="closeReview()">Done</button></div>`;
     return;
@@ -8000,12 +8026,13 @@ function renderReview() {
   // 🗂 v6.69 — the five headings, in order; one open, opening on the fullest
   const secs = REV_SECS.map(([key, label, hint]) => {
     const cards = pendingQueue.filter(p => revSecOf(p) === key);
-    const extra = key === 'money' ? rcptRows : [];
-    return { key, label, hint, cards, extra, n: cards.length + (key === 'money' ? rcptN : 0) };   // the count is receipts, not jobs
+    const extra = key === 'money' ? rcptRows : key === 'wizard' ? wiz.rows : [];
+    return { key, label, hint, cards, extra, n: cards.length + (key === 'money' ? rcptN : key === 'wizard' ? wiz.n : 0) };   // the count is receipts, not jobs
   });
   if (_revSec == null || (_revSec && !(secs.find(s => s.key === _revSec) || {}).n)) {
-    const fullest = secs.slice().sort((a, b) => b.n - a.n)[0];   // a stable sort: a tie goes to the earlier heading
-    _revSec = fullest && fullest.n ? fullest.key : '';
+    const live = secs.filter(s => s.key !== 'wizard');   // 🧙 v6.73 — history never wins the first open; what WAITS does
+    const fullest = live.slice().sort((a, b) => b.n - a.n)[0];   // a stable sort: a tie goes to the earlier heading
+    _revSec = fullest && fullest.n ? fullest.key : wiz.n ? 'wizard' : '';
   }
   box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3><div class="rev-sub">${pendingQueue.length + rcptN} waiting · nothing is added until you tap ✓</div>` +
     renderRevBulk() +   // 🧹 v6.45 — the sort-the-pile plate, only when there IS a pile
@@ -15425,7 +15452,7 @@ function buildAskContext(question) {
     if (dref.kind === 'future') drefLine = `\nTHE QUESTION POINTS AT A COMING DAY: "${dref.word}" = ${fmtDayWd(dref.day)} (${localDay(dref.day)})${dref.span ? ` through ${localDay(dayShift(dref.day, dref.span - 1))}` : ''}. Nothing is logged in the future — answer from OPEN TO-DOS due that day and from notes whose saidDay translation lands on that date. A note's own "tomorrow" means the day after THAT note was written, never after today.`;
     else if (dref.kind === 'either') drefLine = `\nTHE QUESTION NAMES A WEEKDAY: "${dref.word}" — most recent past ${dref.word} was ${localDay(dref.past)}, the coming one is ${localDay(dref.next)}. Decide from the wording which he means (past tense → the past date, planning → the coming one) and say the exact date in your answer. Match entries by their DATE, not by where the word "${dref.word}" appears in old notes.`;
   }
-  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
+  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
 }
 // 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
 // offers their photos, a follow-up within 15 minutes remembers the exchange, and
@@ -15459,6 +15486,7 @@ function applyCorrection(corr) {
     });
   }
   addEntry('Note', `✎ Correction${_lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, curJob, { noSniff: true });
+  wizKeepFix(corr, _lastAnswer && _lastAnswer.keep);   // 🧙📜 v6.73 — and onto the kept answer it fixes
   scheduleSave();
   return touched;
 }
@@ -15585,11 +15613,125 @@ async function askInstant(what) {
     _lastAnswer = { q: what, text: clean, srcIds, files: wizFiles, at: Date.now() };
     showWizFull(what, clean, srcIds, brainWord(aiWho) + (aiFell ? ' — the smart one was busy, so the quick one took it' : ''), wizFiles); // v5.08 — straight to full screen: the answer, nothing else
     saveRecentAnswer(what, clean);
+    _lastAnswer.keep = wizKeep(what, clean, srcIds, brainWord(aiWho)).at;   // 🧙📜 v6.73 — kept, in Dropbox
   } catch (e) {
     delete st.dataset.busy; wizIdleLamp();
     st.textContent = '⚠ Instant answer failed (' + (e.message || 'connection') + ') — sent to the hourly check instead.';
     await askViaFlag(what, true);
   }
+}
+// 🧙📜 v6.73 — KEEP THE WIZARD. Eric: "look through the things ive asked the wizard and see if
+// there are patterns" — there was nothing to look through: a question was thrown away the moment
+// it was answered (only crew phones kept theirs, v5.09). Every instant answer now lands in
+// App Data/wizard-log.json — the question, the answer, which log records it used, which brain,
+// when — and a correction attaches to the answer it fixes. It is what the WIZARD heading on the
+// sort page shows, what the summary page will show, and what the pattern study reads. Newest
+// first, 500 kept, the last 100 mirrored on the phone for offline.
+const WIZ_LOG_PATH = () => DBX_ROOT + '/App Data/wizard-log.json';
+let _wizLog = null, _wizLogT = null;
+function wizLog() {
+  if (!_wizLog) { try { _wizLog = JSON.parse(lsGet('daylog-wizlog') || '[]'); } catch (e) { _wizLog = []; } if (!Array.isArray(_wizLog)) _wizLog = []; }
+  return _wizLog;
+}
+async function wizLogLoad() {
+  if (CREW_NAME || !dbx.refreshToken) return;
+  try {
+    const j = JSON.parse(await dbxDownload(WIZ_LOG_PATH()) || 'null');
+    if (!Array.isArray(j)) return;
+    const seen = new Set(j.map(x => x && x.at));
+    wizLog().forEach(x => { if (x && !seen.has(x.at)) j.push(x); });   // what this phone kept while offline rides in
+    j.sort((a, b) => String((b || {}).at || '').localeCompare(String((a || {}).at || '')));
+    _wizLog = j.filter(Boolean).slice(0, 500);
+    lsSet('daylog-wizlog', JSON.stringify(_wizLog.slice(0, 100)));
+  } catch (e) { /* no file yet, or a bad read — what the phone has stands */ }
+}
+function wizLogSave() {
+  lsSet('daylog-wizlog', JSON.stringify(wizLog().slice(0, 100)));
+  if (CREW_NAME || !dbx.refreshToken) return;
+  clearTimeout(_wizLogT);
+  _wizLogT = setTimeout(() => { dbxUpload(WIZ_LOG_PATH(), JSON.stringify(wizLog().slice(0, 500), null, 1)).catch(() => {}); }, 1500);
+}
+function wizKeep(q, a, ids, by) {
+  const row = { at: new Date().toISOString(), q: String(q || '').slice(0, 300), a: String(a || '').slice(0, 4000), ids: (ids || []).slice(0, 20), by: String(by || '') };
+  wizLog().unshift(row);
+  if (wizLog().length > 500) wizLog().length = 500;
+  wizLogSave();
+  return row;
+}
+function wizKeepFix(corr, at) {
+  const row = (at && wizLog().find(x => x.at === at)) || wizLog()[0];
+  if (!row) return;
+  row.fix = [...(row.fix || []), { at: new Date().toISOString(), t: String(corr || '').slice(0, 500) }];
+  wizLogSave();
+}
+// the WIZARD heading on the sort page: the last 7 days of questions, each openable again
+function revWizRows() {
+  if (CREW_NAME) return { rows: [], n: 0 };
+  const cut = Date.now() - 7 * 86400000;
+  const rows = wizLog().filter(r => r && r.at && +new Date(r.at) >= cut).slice(0, 10);
+  return { n: rows.length, rows: rows.map(r => `<div class="rev-card rev-wiz"><div class="rev-kind">🧙 ${esc(String(r.at).slice(0, 10))}${r.fix && r.fix.length ? ' · ✎ corrected' : ''}</div>
+      <div class="rev-text"><b>${esc(r.q)}</b></div>
+      <div class="rev-why" style="white-space: pre-wrap;">${esc(String(r.a).slice(0, 240))}${String(r.a).length > 240 ? '…' : ''}</div>
+      <div class="rev-row"><button class="btn-ghost" onclick="wizReopen('${esc(r.at)}')">🧙 Open the answer</button></div></div>`) };
+}
+function wizReopen(at) {
+  const r = wizLog().find(x => x.at === at);
+  if (!r) return;
+  _lastAnswer = { q: r.q, text: r.a, srcIds: r.ids || [], at: Date.now(), keep: r.at };   // ✎ Wrong? Correct it lands on THIS answer
+  closeReview();
+  showWizFull(r.q, r.a, r.ids || [], r.by, null);
+}
+// 🎒 v6.73 — THE POCKET LIST. Eric: "a super quick fire list. like when im at home depot and
+// think of something i need to do next and then i go into hd and forget … a list that is just
+// today and tomorrow … add quickly during the day as i get thoughts … end of the day the rest get
+// sent to the wizard … so that they dont get just longer and longer list i dont want to look at
+// anymore." Today and tomorrow only, eight items, ✓ Done and ➡ Tomorrow. Whatever is not done by
+// the end of its day leaves the list on the next open, as a note on the log tagged pocket — the
+// Wizard and the summary still see it, the list never grows. It rides prefs, so it syncs.
+const POCKET_MAX = 8;
+function pocket() { return Array.isArray(prefs.pocket) ? prefs.pocket : (prefs.pocket = []); }
+function pocketDay(n) { const d = new Date(); d.setDate(d.getDate() + n); return localDay(d); }
+function pocketAdd(text) {
+  const t = String(text || '').trim().slice(0, 140);
+  if (!t) return false;
+  if (pocket().length >= POCKET_MAX) { toast('🎒 Eight is the limit — finish one or push one to tomorrow', false); return false; }
+  pocket().unshift({ id: Date.now().toString(36) + Math.random().toString(16).slice(2, 6), t, day: pocketDay(0), ts: new Date().toISOString() });
+  scheduleSave(); renderPocket();
+  return true;
+}
+function pocketAddFromBox() { const b = $('pocketIn'); if (!b) return; if (pocketAdd(b.value)) { b.value = ''; try { b.focus(); } catch (e) {} } }
+function pocketDone(id) {
+  const i = pocket().findIndex(x => x.id === id); if (i < 0) return;
+  const it = pocket().splice(i, 1)[0];
+  addEntry('Note', `✓ ${it.t}`, jobs.includes(curJob) ? curJob : '—', { noSniff: true, tags: ['pocket'], pocket: 'done' });
+  scheduleSave(); renderPocket(); renderLog();
+  toast(`✓ ${it.t}`);
+}
+function pocketTomorrow(id) { const it = pocket().find(x => x.id === id); if (!it) return; it.day = pocketDay(1); scheduleSave(); renderPocket(); }
+function pocketDrop(id) { const i = pocket().findIndex(x => x.id === id); if (i < 0) return; pocket().splice(i, 1); scheduleSave(); renderPocket(); }
+function pocketSweep() {
+  const today = pocketDay(0);
+  const old = pocket().filter(x => x && x.day < today);
+  if (!old.length) return 0;
+  old.forEach(it => addEntry('Note', `🎒 Not done — ${it.t}`, '—', { noSniff: true, tags: ['pocket'], pocket: 'swept' }));
+  prefs.pocket = pocket().filter(x => !(x && x.day < today));
+  scheduleSave(); renderPocket(); renderLog();
+  toast(`🎒 ${old.length} from yesterday went to the Wizard's pile — not lost, just off the list`);
+  return old.length;
+}
+function renderPocket() {
+  const box = $('pocketList'); if (!box) return;
+  const today = pocketDay(0), tom = pocketDay(1);
+  const items = pocket();
+  const row = it => `<div class="pk-row"><span class="pk-t">${esc(it.t)}</span>
+    <button type="button" class="pk-btn" onclick="pocketDone('${esc(it.id)}')">✓ Done</button>
+    ${it.day === tom ? '' : `<button type="button" class="pk-btn pk-ghost" onclick="pocketTomorrow('${esc(it.id)}')">➡ Tomorrow</button>`}
+    <button type="button" class="pk-btn pk-ghost" onclick="pocketDrop('${esc(it.id)}')" aria-label="never mind, take it off">✕</button></div>`;
+  const now = items.filter(x => x.day <= today), later = items.filter(x => x.day === tom);
+  box.innerHTML = (now.length ? '<div class="pk-h">TODAY</div>' + now.map(row).join('') : '') +
+    (later.length ? '<div class="pk-h">TOMORROW</div>' + later.map(row).join('') : '') +
+    (!items.length ? '<div class="hint" style="margin: 4px 0 0;">Empty. Think of something at Home Depot, type it, tap +. It never grows past eight, and what is not done by tomorrow goes to the Wizard\'s pile on its own.</div>' : '');
+  const c = $('pocketCount'); if (c) c.textContent = items.length ? `${items.length} of ${POCKET_MAX}` : '';
 }
 function recentAnswers() { try { return JSON.parse(lsGet('daylog-answers') || '[]'); } catch (e) { return []; } }
 function saveRecentAnswer(q, a) {
@@ -17160,6 +17302,7 @@ function renderAll() { renderMailSenders(); renderKpis(); renderLog(); renderCha
   renderDayTube(); renderPipeSelect(); updateClockGauge(); renderPendBanner(); renderPlanBanner();
   renderTagChips(); renderCrewGauges(); renderVisChips(); renderCrewShared(); renderCrewAsks();
   renderMyRequests(); renderAskStrip(); renderAskRecent(); renderTextDigest(); renderTxtNudges(); renderMileFace();
+  renderPocket();   // 🎒 v6.73
 }
 
 // ---------- export ----------
@@ -17192,7 +17335,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.72';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.73';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -17670,6 +17813,7 @@ async function pullRemote() {
   lastSync = new Date();
   renderJobSelects(); renderJobsManager(); renderTrucksManager(); renderTruckChips(); renderCrewManager(); renderWhoSelects(); renderAll();
   window._pendReady = checkPending(); // proposals waiting for review ride along with every pull — v6.41: the sweep waits for it
+  window._pendReady.then(() => { pocketSweep(); return wizLogLoad(); }).catch(() => {});   // 🎒🧙 v6.73 — yesterday's pocket leftovers go to the log; the kept answers come in
   checkInboxTexts(); // texts the phone's Shortcuts saved into /Inbox
   checkClientAsks(); // 💬 v5.19 — client questions/remarks from the portal pages
   checkCrewLogs(); // crew punches + routed notes become 👷 review cards
