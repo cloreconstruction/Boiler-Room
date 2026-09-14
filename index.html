@@ -1374,7 +1374,7 @@
     background: var(--accent); border: 3px solid var(--accent); color: var(--accent-ink);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent), 0 2px 6px rgba(0,0,0,0.3);
     border-radius: 10px; margin-left: 8px; }
-  .win-x.req-x, .win-x.btn-ghost { font-size: 17px; padding: 4px 10px; margin-top: 0; }   /* the ✕ also wears req-x (.72rem) and btn-ghost — the plate wins */
+  .win-x.req-x, .win-x.btn-ghost { font-size: 17px; padding: 4px 10px; margin-top: 0; color: var(--accent-ink); }   /* the ghost rule later in the file was washing the ✕ out */   /* the ✕ also wears req-x (.72rem) and btn-ghost — the plate wins */
   /* 🟢🔴 v6.32 — the receipt lamp in the running log. Colour is the fast read, but it is
      never the ONLY read: each state carries its own glyph and its own spelled word, so the
      row says the same thing in bright sun, on a cracked screen, or to colour-blind eyes. */
@@ -2491,9 +2491,37 @@
   .rev-sec .rev-n { margin-left: auto; font-weight: 700; font-size: 12.5px; opacity: .9; white-space: nowrap; }
   .rev-sec-body[hidden] { display: none !important; }
   /* 📊 v6.76 — the summaries page: two tabs on the review window, sections of one-line items */
-  .rev-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0 4px; }
-  .rev-tab { min-height: 44px; border-radius: 10px; border: 1px solid var(--border); background: none; color: var(--ink-2); font: inherit; font-weight: 800; font-size: 13px; letter-spacing: .5px; cursor: pointer; }
+  .rev-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 6px 0 4px; }   /* 📋 v6.79 — three tabs; minmax so a long count never widens the row */
+  .rev-tab { min-height: 44px; border-radius: 10px; border: 1px solid var(--border); background: none; color: var(--ink-2); font: inherit; font-weight: 800; font-size: 12px; letter-spacing: .3px; padding: 0 4px; white-space: nowrap; cursor: pointer; }   /* 📋 v6.79 — three across with a count, one line each */
   .rev-tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  /* 📋 v6.79 — THE BOARD: a line = cubes · words · ✓; the cubes are brightness + count (filled brass vs an
+     outline), small, still; the row under an open line holds the edit box, sub-line, move wheel and crew plates */
+  .bd-add { display: flex; gap: 6px; margin: 8px 0 4px; }
+  .bd-add input { flex: 1 1 auto; min-width: 0; min-height: 44px; font-size: 16px; }
+  .bd-add select { flex: 0 1 34%; min-width: 0; min-height: 44px; }
+  .bd-plus { flex: 0 0 48px; min-height: 44px; border: none; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-size: 22px; font-weight: 800; cursor: pointer; }
+  .bd-hd { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 12px; padding: 8px 10px; min-height: 44px; background: var(--surface-1); border: 1.5px solid var(--border); border-radius: 10px; color: var(--ink); font: inherit; font-weight: 800; font-size: 14px; letter-spacing: .5px; cursor: pointer; text-align: left; }
+  .bd-hd.open { border-color: var(--accent); }
+  .bd-hd .rev-n { margin-left: auto; font-weight: 700; font-size: 12.5px; white-space: nowrap; }
+  .bd-body[hidden] { display: none !important; }
+  .bd-line { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--grid); }
+  .bd-line.hi .bd-t { font-weight: 800; }
+  .bd-pri { display: inline-flex; align-items: center; justify-content: center; gap: 3px; flex: 0 0 auto; min-width: 44px; min-height: 40px; padding: 0 6px; background: none; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+  .bd-pri--ro { min-width: 0; min-height: 0; padding: 2px 4px; border: none; vertical-align: middle; }
+  .bd-cube { display: inline-block; width: 9px; height: 9px; border: 1.5px solid var(--accent); border-radius: 2px; background: transparent; }
+  .bd-cube.on { background: var(--accent); }
+  .bd-t { flex: 1 1 auto; min-width: 0; font-size: 15px; line-height: 1.35; cursor: pointer; overflow-wrap: anywhere; }
+  .bd-t .bd-meta { font-size: 12px; color: var(--ink-muted); }
+  .bd-ck { flex: 0 0 44px; min-height: 44px; border: 2px solid var(--accent); border-radius: 10px; background: var(--surface-1); color: var(--ink); font: inherit; font-size: 18px; font-weight: 800; cursor: pointer; }
+  .bd-sub { display: flex; align-items: center; gap: 8px; padding: 3px 0 3px 26px; font-size: 14px; }
+  .bd-sub .bd-t { cursor: default; }
+  .bd-sub .bd-ck { flex-basis: 36px; min-height: 36px; font-size: 15px; }
+  .bd-sub.done .bd-t { text-decoration: line-through; color: var(--ink-muted); }
+  .bd-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 0 10px 26px; }
+  .bd-row .pick-chip { min-height: 40px; }
+  .bd-row .mini-sel { min-height: 40px; flex: 1 1 140px; }
+  .bd-pw { flex-basis: 100%; font-size: 11px; font-weight: 800; letter-spacing: .6px; color: var(--ink-muted); }
+  .bd-edit { flex-basis: 100%; width: 100%; min-height: 44px; font-size: 16px; margin: 2px 0 4px; }
   .sum-line { display: flex; gap: 8px; align-items: flex-start; padding: 6px 2px; border-top: 1px solid var(--grid); font-size: 13.5px; line-height: 1.4; }
   .sum-line:first-child { border-top: 0; }
   .sum-g { flex: 0 0 20px; text-align: center; }
@@ -2677,7 +2705,7 @@
         <span class="hb-med"><span class="sync-lamp sync-lamp--off" aria-hidden="true"></span><span class="hb-bolt" aria-hidden="true">⚡</span></span>
         <span class="hb-tx"><strong id="hbWizWord">HOURLY</strong></span>
       </button>
-      <button class="hdr-btn" id="summaryBtn" onclick="openReview('summary')" title="The summaries page — and the sort tab, what waits for you">
+      <button class="hdr-btn" id="summaryBtn" onclick="openReview('last')" title="The summaries page — summary, board, sort — opens where you were last">
         <span class="hb-med"><span class="hb-bars" aria-hidden="true"><i style="height: 10px;"></i><i style="height: 17px;"></i><i style="height: 13px;"></i></span></span>
         <span class="hb-tx"><strong>SUMMARY</strong></span>
       </button>
@@ -2699,7 +2727,7 @@
     <!-- 📇 v6.17 — addresses, numbers, emails, door codes. One tap, out of the way. -->
     <button type="button" class="sc-btn" onclick="openJobCards()">📇 <span>Job cards</span></button>
     <!-- 📊 v6.76 — Eric: "make a button for it up to the right of job cards at the top of main page." The summaries page: the sort tab and the summary tab; the count is what waits to be sorted. -->
-    <button type="button" class="sc-btn" onclick="openReview('summary')" title="Summary — and the sort tab, what waits for you">📊 <span>Summary<span class="sc-n" id="scSumN"></span></span></button>
+    <button type="button" class="sc-btn" onclick="openReview('last')" title="Summary, the board, and the sort tab — opens where you were last">📊 <span>Summary<span class="sc-n" id="scSumN"></span></span></button>
   </div>
 
 
@@ -3738,7 +3766,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.78 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.79 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7336,6 +7364,7 @@ function saveNoteFrom(boxId, fromPanel) {
     if (m && m.mail && /^Email from /.test(t)) {
       Object.assign(m, nExtra);
       m.details = t; m.job = noteJob;
+      brdTouch(m);   // 📋 v6.79 — an email he chose to grind is a thought on the board
       if (m.personal || nExtra.personal) { m.personal = true; delete m.vis; delete m.sendTo; delete m.ask; }
       e = m; updated = true;
       scheduleSave(); renderLog(); renderKpis();
@@ -8002,6 +8031,7 @@ function revRcptRows() {
 }
 function renderReview() {
   const box = $('revBox');
+  if (_revTab === 'board') return renderBoard();       // 📋 v6.79 — the third tab
   if (_revTab === 'summary') return renderSummary();   // 📊 v6.76 — the other tab of the same window
   const { rows: rcptRows, n: rcptN } = revRcptRows();
   const wiz = revWizRows();   // 🧙📜 v6.73 — the kept answers, under WIZARD
@@ -8166,7 +8196,9 @@ async function caAiRead(btn, rel) {
   }
 }
 function openReview(tab) {
-  _revTab = tab === 'summary' ? 'summary' : 'sort'; _sumSec = null;   // 📊 v6.76 — which tab of the summaries page
+  // 📊 v6.76 — which tab of the summaries page; 📋 v6.79 — 'last' = the one he used last (the plate and the SUMMARY button), summary until he has been on the board
+  _revTab = tab === 'summary' ? 'summary' : tab === 'board' ? 'board' : tab === 'last' ? (['summary', 'board'].includes(lsGet('daylog-revtab')) ? lsGet('daylog-revtab') : 'summary') : 'sort';
+  _sumSec = null; _brdOpen = ''; _brdSubFor = '';
   // 📨 receipt stamp #2 — the sender's card is now on Eric's screen
   let stamped = false;
   pendingQueue.forEach(p => {
@@ -9926,7 +9958,8 @@ async function publishSharedNotes() {
         tags: (e.tags && e.tags.length) ? e.tags : undefined, toAll: e.vis === 'crew' || undefined,
         heads: e.heads || undefined, // ⚠ v6.24 — the landmine flag travels with an unlocked note
         // 📨 v5.51 — crew-wide note that is ALSO aimed at this man: his card marks it direct
-        direct: (Array.isArray(e.sendTo) && e.sendTo.includes(name)) || undefined
+        direct: (Array.isArray(e.sendTo) && e.sendTo.includes(name)) || undefined,
+        ...brdShareBits(e)   // 📋 v6.79 — the cubes, the sub-lines, and who finished it
       };
       const src = e.photoPath || (e.photoPaths && e.photoPaths[0]);
       if (src && list.length < 40) {
@@ -10421,7 +10454,7 @@ function renderCrewShared() {
   if (!card) return;
   // in Eric's 👁 preview, derive the list from his own entries so he sees exactly what would land
   const all = crewPreview
-    ? entries.filter(e => e.vis && !e.sample).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ id: e.id, ts: e.ts, text: e.details, job: e.job, tags: e.tags, toAll: e.vis === 'crew', ph: e.photoPath || (e.photoPaths || [])[0] }))
+    ? entries.filter(e => e.vis && !e.sample).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ id: e.id, ts: e.ts, text: e.details, job: e.job, tags: e.tags, toAll: e.vis === 'crew', ph: e.photoPath || (e.photoPaths || [])[0], ...brdShareBits(e) }))
     : crewShared;
   card.style.display = (isCrew() && all.length) ? '' : 'none';
   if (!isCrew() || !all.length) return;
@@ -10465,10 +10498,12 @@ function renderCrewShared() {
     const d = new Date(n.ts);
     const id = escq(String(n.id == null ? '' : n.id));
     return `<div class="sum-row" style="cursor: default; font-size: 14.5px; display: block;">
-      <span>${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${(n.tags || []).length ? ' · 🏷 ' + esc(n.tags.join(', ')) : ''}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
+      <span>${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${n.board && n.board.p ? `<span class="bd-pri bd-pri--ro" aria-label="priority ${BRD_WORDS[n.board.p]}" title="priority ${BRD_WORDS[n.board.p]}">${brdCubes(n.board.p)}</span> ` : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${(n.tags || []).length ? ' · 🏷 ' + esc(n.tags.join(', ')) : ''}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
+      ${n.board && n.board.sub && n.board.sub.length ? n.board.sub.map(s => `<div class="bd-sub${s.done ? ' done' : ''}"><span class="bd-t">${s.done ? '✓' : '○'} ${esc(s.t || '')}</span></div>`).join('') : ''}
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${n.ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(n.ph)}')">📷 Open the picture</button>` : ''}
         <button type="button" class="pick-chip" onclick="crewNoteReply('${id}')">✎ Add your notes</button>
+        ${n.board ? (n.boardDone || crewBoardDoneSet().has(String(n.id)) ? `<span class="pick-chip sel" aria-disabled="true">✓ DONE${n.boardDone && n.boardDone !== CREW_NAME ? ' — ' + esc(n.boardDone) : ''}</span>` : `<button type="button" class="pick-chip" onclick="crewBoardDone('${id}')">✓ Done — tell Eric</button>`) : ''}
       </div>
       <div id="crRep-${id}"></div>
     </div>`;
@@ -10769,6 +10804,11 @@ async function checkCrewLogs() {
         if (e.type === 'Note' && e.askRef != null) {
           const src = entries.find(x => x.id === e.askRef && x.ask && !x.askDone);
           if (src) { src.askDone = new Date().toISOString(); scheduleSave(); publishSharedNotes(); renderAskStrip(); }
+        }
+        // 📋 v6.79 — a crew ✓ on a board line: done, by him; the line leaves the board and his phone shows it done
+        if (e.type === 'Note' && e.boardRef != null) {
+          const src = entries.find(x => String(x.id) === String(e.boardRef));
+          if (src && !(src.board && src.board.done)) { const b = brdTouch(src); b.done = new Date().toISOString(); b.by = name; scheduleSave(); publishSharedNotes(); if ($('revModal').classList.contains('show') && _revTab === 'board') renderReview(); }
         }
         const key = `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}`;
         if (pendDone.has(key) || pendingQueue.some(p => p.id === key)) return;
@@ -15889,10 +15929,10 @@ let _revTab = 'sort', _sumSpan = 'week', _sumSec = null;
 const SUM_SECS = [['need', '⚠ NEEDS YOU'], ['people', '👥 PEOPLE'], ['money', '💵 MONEY'], ['photos', '📷 PHOTOS'], ['wizard', '🧙 WIZARD'],
   ['sched', '📅 SCHEDULE'], ['get', '🎒 TO GET'], ['pocket', '🎒 POCKET — not done'], ['logan', '📗 SENT TO LOGAN'], ['record', '📜 THE RECORD']];
 function revTabsHtml() {
-  const n = pendingQueue.length + revRcptRows().n;
-  return `<div class="rev-tabs"><button type="button" class="rev-tab${_revTab === 'sort' ? ' on' : ''}" onclick="revTab('sort')" aria-pressed="${_revTab === 'sort'}">📥 SORT${n ? ` · ${n}` : ''}</button><button type="button" class="rev-tab${_revTab === 'summary' ? ' on' : ''}" onclick="revTab('summary')" aria-pressed="${_revTab === 'summary'}">📊 SUMMARY</button></div>`;
+  const n = pendingQueue.length + revRcptRows().n, b = boardLines().length;   // 📋 v6.79 — the third tab wears the open-line count
+  return `<div class="rev-tabs"><button type="button" class="rev-tab${_revTab === 'sort' ? ' on' : ''}" onclick="revTab('sort')" aria-pressed="${_revTab === 'sort'}">📥 SORT${n ? ` · ${n}` : ''}</button><button type="button" class="rev-tab${_revTab === 'summary' ? ' on' : ''}" onclick="revTab('summary')" aria-pressed="${_revTab === 'summary'}">📊 SUMMARY</button><button type="button" class="rev-tab${_revTab === 'board' ? ' on' : ''}" onclick="revTab('board')" aria-pressed="${_revTab === 'board'}">📋 BOARD${b ? ` · ${b}` : ''}</button></div>`;
 }
-function revTab(t) { _revTab = t === 'summary' ? 'summary' : 'sort'; renderReview(); }
+function revTab(t) { _revTab = t === 'summary' ? 'summary' : t === 'board' ? 'board' : 'sort'; lsSet('daylog-revtab', _revTab); renderReview(); }   // 📋 v6.79 — the tab he was on is the tab the plate opens next time
 function sumSpan(s) { _sumSpan = s === 'today' ? 'today' : 'week'; _sumSec = null; renderReview(); }
 function sumSecTap(k) { _sumSec = _sumSec === k ? '' : k; renderReview(); }
 // 🔒 the lock reaches the summary too: a personal entry is never on it
@@ -15992,6 +16032,194 @@ function pocketBack(id) {
   pocketOverflow(); scheduleSave(); renderPocket(); renderReview();
   toast(`🎒 "${t.slice(0, 40)}" is on tomorrow's pocket ✓`);
 }
+// ================= 📋 v6.79 — THE BOARD =================
+// Eric: "anything added to the grinder should be able to just add thoughts to the grinder as i go and the
+// summary list changes as i go and things get added under the right job or category, then i can go to the
+// summary page and it has all the categories and a super quick priority light, i really like the cube style
+// light bars weve used. maybe one with three cubes for each level of priority but keep those small and not
+// flashing. and then i can arrange or edit the notes and then there can be a check box that phil or i can
+// both touch … similar to the estimates page … each category could have a sub category … each week the
+// list will populate and get organized and i can move things and add priorities and add last minute
+// things and alert phil." — "yes to all."
+// The third tab of the summaries page. A LINE is a thought he ground in (the last two weeks, or any line
+// he has touched, until ✓), an open to-do, or a pocket leftover. Headings are the jobs, the job on the
+// clock first, GENERAL last. Nothing here is a copy — the words ARE the log entry: ✎ changes the entry,
+// ⇄ changes its job, ✓ marks it done (the entry stays on the log as the record). 👷 sends the line to that
+// man's phone (FROM ERIC, marked FOR YOU) with a ✓ he can touch; his ✓ rides back as a note with boardRef
+// and lands here (checkCrewLogs). The cubes are brightness + count, never colour alone; the word rides
+// in the label and shows when the line is open.
+let _brdFold = new Set(), _brdOpen = '', _brdSubFor = '';
+const BRD_WORDS = ['—', 'LOW', 'MED', 'HIGH'];
+function brdTouch(e) {
+  if (!e.board || typeof e.board !== 'object') e.board = { p: 0, sub: [], at: new Date().toISOString() };
+  if (!Array.isArray(e.board.sub)) e.board.sub = [];
+  return e.board;
+}
+function brdP(x) { return Math.min(3, Math.max(0, +x || 0)); }
+function brdCubes(p) { return `<i class="bd-cube${p >= 1 ? ' on' : ''}"></i><i class="bd-cube${p >= 2 ? ' on' : ''}"></i><i class="bd-cube${p >= 3 ? ' on' : ''}"></i>`; }
+// is this entry a line on the board? a thought he ground in — never a record, never a locked one
+function boardOn(e) {
+  if (!e || e.sample || e.personal || (e.tags || []).includes('Personal') || isPersonalJob(e.job)) return false;   // 🔒 the lock reaches the board
+  if (e.board && typeof e.board === 'object') return !e.board.done;                       // touched: stays until ✓
+  if (e.type !== 'Note') return false;                                                      // hours, miles, expenses, the clock: records
+  if (e.texted || /^Text from /.test(e.details || '')) return false;                       // texts sit under PEOPLE
+  if (e.mail) return false;                                                                 // an email is a line only once he grinds it (the hand-off touches it)
+  if (e.rcpt || (typeof isRcptEntry === 'function' && isRcptEntry(e))) return false;        // receipts run the money flow
+  if (e.pocket === 'done' || e.pocket === 'back') return false;                            // finished, or back on the pocket
+  if (e.todoRef != null || e.replyTo != null || e.askRef != null || e.boardRef != null) return false;   // completions, replies, answers
+  if (/^(↩ ANSWER:|✎ |✓ )/.test(e.details || '')) return false;
+  return +new Date(e.ts) >= Date.now() - 14 * 86400000;                                    // untouched lines live two weeks — the list never just grows
+}
+function brdShareBits(e) {   // what a crew phone gets to know about a line: the cubes, the sub-lines, whether it is done
+  const ever = boardOn(e) || (e.board && typeof e.board === 'object');
+  return { board: ever ? { p: brdP((e.board || {}).p), sub: ((e.board || {}).sub || []).map(s => ({ t: s.t, done: !!s.done })) } : undefined,
+    boardDone: (e.board && e.board.done) ? (e.board.by || 'Eric') : undefined };
+}
+function boardLines() {
+  const L = [];
+  entries.forEach(e => { if (boardOn(e)) L.push({ k: 'e', id: e.id, job: e.job || '—', t: String(e.details || ''), p: brdP((e.board || {}).p), ts: String(e.ts instanceof Date ? e.ts.toISOString() : e.ts || ''), sub: (e.board && e.board.sub) || [], src: e }); });
+  todos.forEach(t => { if (t && !t.done && !t.parentId) L.push({ k: 't', id: t.id, job: t.job || '—', t: String(t.text || ''), p: brdP(t.pri), ts: String(t.ts || ''), due: t.due || '', sub: [], src: t }); });
+  return L;
+}
+function brdFind(k, id) { return k === 't' ? todos.find(t => String(t.id) === String(id)) : entries.find(e => String(e.id) === String(id)); }
+function brdWords(t) { return String(t || '').replace(/^🎒 (Flushed|Overflow|Not done) — /, ''); }
+function renderBoard() {
+  const box = $('revBox');
+  const L = boardLines();
+  const order = [...(jobs.includes(curJob) && curJob !== '—' ? [curJob] : []), ...jobs.filter(j => j && j !== '—' && j !== curJob), '—'];
+  const by = {};
+  L.forEach(l => { const j = order.includes(l.job) ? l.job : '—'; (by[j] = by[j] || []).push(l); });
+  const cmp = (a, b) => (b.p - a.p) || b.ts.localeCompare(a.ts);
+  const day = ts => { const d = new Date(ts); return isNaN(d) ? '' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
+  const meta = l => {
+    const bits = [];
+    if (l.k === 't') bits.push(l.due ? `📅 due ${esc(l.due)}` : 'to-do');
+    else {
+      const e = l.src;
+      if (e.pocket === 'flushed') bits.push('🎒 flushed'); else if (e.pocket === 'over') bits.push('🎒 overflow'); else if (e.pocket === 'swept') bits.push('🎒 not done');
+      if (e.mail) bits.push('📧 email');
+      if (e.heads) bits.push('⚠ heads-up');
+      const to = Array.isArray(e.sendTo) ? e.sendTo : [];
+      if (to.length) bits.push(`👷 ${esc(to.join(', '))}`);
+    }
+    bits.push(day(l.ts));
+    return bits.filter(Boolean).join(' · ');
+  };
+  const jobName = j => j === '—' ? 'GENERAL' : esc(j);
+  const lineHtml = l => {
+    const key = l.k + ':' + l.id, open = _brdOpen === key, k = l.k, id = escq(String(l.id)), idA = esc(String(l.id));
+    const subs = (l.sub || []).map((s, i) => `<div class="bd-sub${s.done ? ' done' : ''}"><span class="bd-t">${esc(s.t || '')}</span><button type="button" class="bd-ck" onclick="brdSubDone('${id}', ${i})" aria-label="${s.done ? 'sub-line done — tap to reopen' : 'mark this sub-line done'}" title="${s.done ? 'done — tap to reopen' : 'done'}">${s.done ? '✓' : '○'}</button></div>`).join('');
+    const subIn = _brdSubFor === key ? `<div class="bd-sub"><input type="text" id="bdSubIn" class="bd-edit" placeholder="the sub-line — a step under this one" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdSubSave('${id}');}"><button type="button" class="bd-ck" onclick="brdSubSave('${id}')" aria-label="add the sub-line">➕</button></div>` : '';
+    const words = brdWords(l.t);
+    const crewBtns = k === 'e' && !CREW_NAME ? crew.filter(n => n && !(typeof isOffice === 'function' && isOffice(n))).map(n => { const on = Array.isArray(l.src.sendTo) && l.src.sendTo.includes(n); return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="brdCrew('${id}', '${escq(n)}')" aria-pressed="${on}">${on ? '✓ ' : '👷 '}${esc(n)}${on ? ' — on their board · tap to take back' : ''}</button>`; }).join('') : '';
+    return `<div class="bd-line${l.p === 3 ? ' hi' : ''}" data-key="${esc(key)}">
+        <button type="button" class="bd-pri" onclick="brdPri('${k}', '${id}')" aria-label="priority ${BRD_WORDS[l.p]} — tap to change" title="priority ${BRD_WORDS[l.p]} — tap to change">${brdCubes(l.p)}</button>
+        <span class="bd-t" onclick="brdOpen('${k}', '${id}')" role="button" tabindex="0">${esc(words)}<span class="bd-meta"> — ${meta(l)}</span></span>
+        <button type="button" class="bd-ck" onclick="brdDone('${k}', '${id}')" aria-label="done — take it off the board" title="done — off the board">✓</button>
+      </div>${subs}${subIn}${open ? `<div class="bd-row" data-for="${esc(key)}">
+        <div class="bd-pw">PRIORITY ${BRD_WORDS[l.p]}${l.p ? '' : ' — tap the cubes to set it'}</div>
+        <input type="text" class="bd-edit" id="bdEd-${k}-${idA}" value="${esc(words)}" placeholder="the words" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdEditSave('${k}','${id}');}">
+        <button type="button" class="pick-chip" onclick="brdEditSave('${k}', '${id}')">✎ Save the words</button>
+        ${k === 'e' ? `<button type="button" class="pick-chip" onclick="brdSubAdd('${id}')">➕ Add a sub-line</button>` : ''}
+        <select class="mini-sel" onchange="brdMove('${k}', '${id}', this.value)" aria-label="move it to another job"><option value="">⇄ Move to…</option>${order.map(j => `<option value="${esc(j)}"${j === l.job ? ' disabled' : ''}>${jobName(j)}</option>`).join('')}</select>
+        ${crewBtns}
+      </div>` : ''}`;
+  };
+  const heads = order.filter(j => (by[j] || []).length);
+  const n = L.length, hiAll = L.filter(l => l.p === 3).length;
+  box.innerHTML = `<h3>📋 Board${winX('closeReview()', 'close')}</h3>${revTabsHtml()}
+    <div class="rev-sub">${n ? `<b>${n} open</b>${hiAll ? ` · ${hiAll} high` : ''}` : '<b>nothing open</b>'} · a thought ground in lands here under its job · cubes = priority · tap the words to edit, move or send · ✓ = done</div>
+    <div class="bd-add"><input type="text" id="bdIn" placeholder="add a thing…" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdAdd();}"><select id="bdJob" class="mini-sel" aria-label="which job">${order.map(j => `<option value="${esc(j)}"${j === (jobs.includes(curJob) && curJob !== '—' ? curJob : '—') ? ' selected' : ''}>${jobName(j)}</option>`).join('')}</select><button type="button" class="bd-plus" onclick="brdAdd()" aria-label="add it to the board">+</button></div>` +
+    (heads.length ? heads.map(j => { const rows = (by[j] || []).slice().sort(cmp), folded = _brdFold.has(j), hi = rows.filter(r => r.p === 3).length;
+      return `<button type="button" class="bd-hd${folded ? '' : ' open'}" data-job="${esc(j)}" onclick="brdFold('${escq(j)}')" aria-expanded="${!folded}">${folded ? '▸' : '▾'} ${j === '—' ? '📂 GENERAL' : '🏗 ' + esc(j)}<span class="rev-n">${rows.length}${hi ? ` · ${hi} high` : ''}${folded ? ' · folded' : ''}</span></button>
+        <div class="bd-body" data-job="${esc(j)}"${folded ? ' hidden' : ''}>${rows.map(lineHtml).join('')}</div>`; }).join('')
+      : `<div class="hint" style="margin: 10px 2px;">Nothing on the board yet. Grind a thought, or add one above.</div>`) +
+    `<div class="rev-row" style="margin-top: 12px;"><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close</button></div>`;
+}
+function brdFold(j) { _brdFold.has(j) ? _brdFold.delete(j) : _brdFold.add(j); renderReview(); }
+function brdOpen(k, id) { const key = k + ':' + id; _brdOpen = _brdOpen === key ? '' : key; _brdSubFor = ''; renderReview(); }
+function brdPri(k, id) {
+  const x = brdFind(k, id); if (!x) return;
+  if (k === 't') x.pri = (brdP(x.pri) + 1) % 4;
+  else { const b = brdTouch(x); b.p = (brdP(b.p) + 1) % 4; if (x.vis) publishSharedNotes(); }
+  scheduleSave(); renderReview();
+}
+function brdDone(k, id) {
+  const x = brdFind(k, id); if (!x) return;
+  if (k === 't') { toggleTodo(x.id, null, true); renderTodos(); renderKpis(); }
+  else { const b = brdTouch(x); b.done = new Date().toISOString(); b.by = 'Eric'; if (x.vis) publishSharedNotes(); }
+  scheduleSave(); renderReview();
+  const words = brdWords(k === 't' ? x.text : x.details).slice(0, 40);
+  toastUndo(`✓ Off the board — ${words}`, () => {
+    if (k === 't') { toggleTodo(x.id, null, true); renderTodos(); renderKpis(); } else { x.board.done = ''; delete x.board.by; if (x.vis) publishSharedNotes(); }
+    scheduleSave(); renderReview();
+  });
+}
+function brdEditSave(k, id) {
+  const x = brdFind(k, id); const i = $(`bdEd-${k}-${id}`); if (!x || !i) return;
+  const t = String(i.value || '').trim().slice(0, 500);
+  if (!t) { toast('The words are empty — ✓ takes a line off instead', false); return; }
+  if (k === 't') x.text = t;
+  else { brdTouch(x); const stamp = (String(x.details || '').match(/^🎒 (Flushed|Overflow|Not done) — /) || [''])[0]; x.details = stamp + t; if (x.vis) publishSharedNotes(); }
+  _brdOpen = ''; scheduleSave(); if (k === 'e') renderLog();
+  renderReview(); toast('✎ Saved ✓');
+}
+function brdSubAdd(id) { _brdSubFor = 'e:' + id; renderReview(); const i = $('bdSubIn'); if (i) try { i.focus(); } catch (e) {} }
+function brdSubSave(id) {
+  const x = brdFind('e', id); const i = $('bdSubIn'); if (!x || !i) return;
+  const t = String(i.value || '').trim().slice(0, 200); if (!t) { toast('Type the sub-line first', false); return; }
+  brdTouch(x).sub.push({ t, done: '' }); _brdSubFor = ''; scheduleSave(); if (x.vis) publishSharedNotes(); renderReview();
+}
+function brdSubDone(id, i) {
+  const x = brdFind('e', id); if (!x || !x.board || !Array.isArray(x.board.sub) || !x.board.sub[i]) return;
+  const s = x.board.sub[i]; s.done = s.done ? '' : new Date().toISOString();
+  scheduleSave(); if (x.vis) publishSharedNotes(); renderReview();
+}
+function brdMove(k, id, job) {
+  if (!job) return; const x = brdFind(k, id); if (!x) return;
+  x.job = job === '—' ? '—' : job; if (k === 'e') { brdTouch(x); if (x.vis) publishSharedNotes(); }
+  _brdOpen = ''; scheduleSave(); if (k === 'e') renderLog();
+  renderReview(); toast(`⇄ Moved to ${job === '—' ? 'GENERAL' : job} ✓`);
+}
+function brdAdd() {
+  const i = $('bdIn'), s = $('bdJob'); if (!i) return;
+  const t = String(i.value || '').trim().slice(0, 500); if (!t) { toast('Type the thing first', false); return; }
+  const job = s && s.value && s.value !== '—' && jobs.includes(s.value) ? s.value : '—';
+  addEntry('Note', t, job, { noSniff: true, board: { p: 0, sub: [], at: new Date().toISOString() } });   // a real grinder note — on the log, and here
+  i.value = ''; renderReview(); toast('📋 On the board — and on the log ✓');
+}
+// 👷 the line goes to that man's phone (FROM ERIC, marked FOR YOU) with a ✓ he can touch; his ✓ rides back.
+// Tap again to take it back off his board.
+function brdCrew(id, name) {
+  const x = brdFind('e', id); if (!x || !name) return;
+  if (isLocked(x)) { toast('🔒 Locked — a personal note never leaves this phone', false); return; }
+  brdTouch(x);
+  const to = Array.isArray(x.sendTo) ? x.sendTo.slice() : [];
+  if (to.includes(name)) {
+    x.sendTo = to.filter(n => n !== name); if (!x.sendTo.length) delete x.sendTo;
+    if (Array.isArray(x.vis)) { x.vis = x.vis.filter(n => n !== name); if (!x.vis.length) delete x.vis; } else if (x.vis === name) delete x.vis;
+    scheduleSave(); publishSharedNotes(); renderLog(); renderReview(); toast(`↩ Off ${name}'s board`); return;
+  }
+  x.sendTo = [...to, name];
+  if (x.vis !== 'crew') { const v = Array.isArray(x.vis) ? x.vis.slice() : x.vis ? [x.vis] : []; if (!v.includes(name)) v.push(name); x.vis = v.length === 1 ? v[0] : v; }
+  scheduleSave(); publishSharedNotes(); renderLog(); renderReview();
+  // generic words on the lock screen — no names, no dollars (standing rule)
+  if (prefs.pushSecret) fetch('/.netlify/functions/notify', { method: 'POST', headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
+    body: JSON.stringify({ title: '📋 Board', body: 'Something new is on your board — open FROM ERIC', tag: 'board' }) }).catch(() => {});
+  toast(`👷 On ${name}'s board — lands on the next sync ✓`);
+}
+// 👷 on a crew phone: ✓ on a board line Eric sent. Rides back to Eric as a note with boardRef; his phone
+// marks the line done by this man and it leaves the board (checkCrewLogs).
+function crewBoardDoneSet() { try { return new Set(JSON.parse(lsGet('daylog-board-done') || '[]')); } catch (e) { return new Set(); } }
+function crewBoardDone(id) {
+  if (crewPreview) { toast('👁 Preview — on a crew phone this sends the ✓ straight to Eric'); return; }
+  const src = (crewShared || []).find(n => String(n.id) === String(id)) || {};
+  const orig = String(src.text || '').replace(/\s+/g, ' ').slice(0, 90);
+  addEntry('Note', `✓ DONE: ${orig}`, src.job || curJob, { noSniff: true, vis: 'Eric', boardRef: id });
+  const done = crewBoardDoneSet(); done.add(String(id)); lsSet('daylog-board-done', JSON.stringify([...done].slice(-100)));
+  renderCrewShared(); toast('✓ Sent to Eric — it comes off his board ✓');
+}
+// ================= /BOARD =================
 function recentAnswers() { try { return JSON.parse(lsGet('daylog-answers') || '[]'); } catch (e) { return []; } }
 function saveRecentAnswer(q, a) {
   const arr = [{ q, a, ts: new Date().toISOString() }, ...recentAnswers()].slice(0, 10);
@@ -17594,7 +17822,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.78';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.79';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

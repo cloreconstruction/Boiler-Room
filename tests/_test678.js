@@ -61,7 +61,8 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     closePanels(); openReview('summary');
     const x = $('revBox').querySelector('.win-x'); const cs = getComputedStyle(x);
     const brass = getComputedStyle(document.querySelector('.qn-div-label')).backgroundColor;
-    const r = !!x && parseFloat(cs.borderTopWidth) >= 3 && cs.backgroundColor === brass && parseFloat(cs.fontSize) >= 17 && x.getBoundingClientRect().height >= 44 && cs.boxShadow !== 'none';
+    const r = !!x && parseFloat(cs.borderTopWidth) >= 3 && cs.backgroundColor === brass && parseFloat(cs.fontSize) >= 17 && x.getBoundingClientRect().height >= 44 && cs.boxShadow !== 'none' &&
+      cs.color === getComputedStyle(document.querySelector('.rev-tab.on')).color;   // dark words on the brass plate, like the lit tab — not the ghost grey
     closeReview(); return r;
   }));
 

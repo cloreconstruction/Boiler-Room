@@ -50,20 +50,20 @@ const { chromium } = require('playwright');
   ok('a 📊 Summary plate sits to the right of Job cards at the top of the main page, wearing the waiting count', await page.evaluate(() => {
     const plates = [...document.querySelectorAll('#scRow .sc-btn')].map(b => b.textContent.replace(/\s+/g, ' ').trim());
     const sum = document.querySelector('#scRow .sc-btn:last-child');
-    return plates.length === 4 && /Job cards/.test(plates[2]) && /Summary/.test(plates[3]) && /openReview\('summary'\)/.test(sum.getAttribute('onclick')) && $('scSumN').textContent === '1' &&
+    return plates.length === 4 && /Job cards/.test(plates[2]) && /Summary/.test(plates[3]) && /openReview\('(summary|last)'\)/.test(sum.getAttribute('onclick')) && $('scSumN').textContent === '1' &&
       getComputedStyle(document.querySelector('#scRow')).gridTemplateColumns.split(' ').length === 4;
   }));
 
   ok('the SUMMARY header button opens the same page; the Review banner under the clock and the 📧 card are off the main page but still render their words', await page.evaluate(() => {
-    const hb = /openReview\('summary'\)/.test($('summaryBtn').getAttribute('onclick'));
+    const hb = /openReview\('(summary|last)'\)/.test($('summaryBtn').getAttribute('onclick'));
     renderMailAsk();
     return hb && getComputedStyle($('pendBanner')).display === 'none' && /1 item waiting/.test($('pendBanner').textContent) && getComputedStyle($('mailAskCard')).display === 'none' && /EMAIL — this week/.test($('mailAskCard').textContent);
   }));
 
-  ok('open it: two tabs, SORT with the count and SUMMARY; the summary opens on THIS WEEK', await page.evaluate(() => {
+  ok('open it: three tabs (v6.79), SORT with the count and SUMMARY; the summary opens on THIS WEEK', await page.evaluate(() => {
     openReview('summary');
     const tabs = [...document.querySelectorAll('.rev-tab')].map(b => b.textContent.trim());
-    return $('revModal').classList.contains('show') && tabs.length === 2 && /SORT · 1/.test(tabs[0]) && /SUMMARY/.test(tabs[1]) && document.querySelector('.rev-tab.on').textContent.includes('SUMMARY') && /THIS WEEK/.test(document.querySelector('.pick-chip.sel').textContent);
+    return $('revModal').classList.contains('show') && tabs.length === 3 && /SORT · 1/.test(tabs[0]) && /SUMMARY/.test(tabs[1]) && document.querySelector('.rev-tab.on').textContent.includes('SUMMARY') && /THIS WEEK/.test(document.querySelector('.pick-chip.sel').textContent);
   }));
 
   console.log('— 📊 v6.76 the nine headings, our categories —');
