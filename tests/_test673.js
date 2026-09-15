@@ -102,12 +102,13 @@ const { chromium } = require('playwright');
     return it.day === pocketDay(1) && /TOMORROW/.test($('pocketList').textContent) && tomRow && !/➡ Tomorrow/.test(tomRow.textContent);
   }));
 
-  ok('✓ Done takes it off and leaves a small note on the log, tagged pocket, on the job the wheel is set to', await page.evaluate(() => {
+  // 📌 v6.81 — Eric: "I'm still getting the Hertz job tagged on stuff" — a pocket item has no job of its own; the ✓ note files under none
+  ok('✓ Done takes it off and leaves a small note on the log, tagged pocket, under no job (v6.81)', await page.evaluate(() => {
     const it = pocket().find(x => x.t === 'screws for Hertz');
     const n = entries.length;
     pocketDone(it.id);
     const e = entries[0];
-    return pocket().length === 1 && entries.length === n + 1 && e.details === '✓ screws for Hertz' && (e.tags || []).includes('pocket') && e.pocket === 'done' && e.job === 'Mery';
+    return pocket().length === 1 && entries.length === n + 1 && e.details === '✓ screws for Hertz' && (e.tags || []).includes('pocket') && e.pocket === 'done' && e.job === '—';
   }));
 
   ok('✕ takes a mistake off with no note', await page.evaluate(() => {

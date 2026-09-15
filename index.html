@@ -973,6 +973,9 @@
   }
   .btn-ghost.sm { padding: 4px 9px; font-size: 12px; border-radius: 7px; }
   .vault-search { width: 100%; margin-bottom: 12px; }
+  .vault-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 12px; }   /* 💳 v6.81 — logins | cards */
+  .vault-tab { min-height: 44px; border-radius: 10px; border: 1px solid var(--border); background: none; color: var(--ink-2); font: inherit; font-weight: 800; font-size: 13px; letter-spacing: .5px; cursor: pointer; }
+  .vault-tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .vault-row {
     display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
     padding: 12px 4px; border-bottom: 1px solid var(--grid);
@@ -1374,7 +1377,17 @@
     background: var(--accent); border: 3px solid var(--accent); color: #111;   /* ✕ v6.80 — Eric: "make the X black and then it's perfect" — black in every skin */
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent), 0 2px 6px rgba(0,0,0,0.3);
     border-radius: 10px; margin-left: 8px; }
-  .win-x.req-x, .win-x.btn-ghost { font-size: 17px; padding: 4px 10px; margin-top: 0; color: #111; }   /* the ghost rule later in the file was washing the ✕ out */   /* the ✕ also wears req-x (.72rem) and btn-ghost — the plate wins */
+  .win-x.req-x, .win-x.btn-ghost { font-size: 17px; padding: 4px 10px; margin-top: 0; color: #111; }
+  /* ✕ v6.81 — Eric: "there are still some X's that need to be black for closing windows." One plate for every
+     window closer that is not a winX — the lightbox, the summary viewer, the answer strip, the estimates board,
+     the plan rack, the materials board, the ✕ Cancel plates: gold, a 3px edge, the glow ring, the ✕ BLACK. */
+  .x-plate, .x-plate.btn-ghost, .x-plate.req-x, .x-plate.sv-close, .x-plate.lb-close, .x-plate.ask-inline__x {
+    background: var(--accent); border: 3px solid var(--accent); color: #111; font-family: inherit; font-weight: 800; font-size: 16px;
+    min-height: 44px; border-radius: 10px; cursor: pointer; padding: 8px 14px;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent), 0 2px 6px rgba(0,0,0,0.3); }
+  .x-plate.x-small, .x-plate.x-small.req-x, .x-plate.x-small.ask-inline__x { min-height: 36px; font-size: 15px; padding: 4px 10px; }
+  .cp-x { color: #111; border: 3px solid var(--accent); }   /* the client preview's ✕ CLOSE pill — black too */
+  #photoLb .lb-close.x-plate { background: var(--accent); color: #111; border: 3px solid var(--accent); }   /* the photo viewer's own id rule outranks a class — say it again with the id */   /* the ghost rule later in the file was washing the ✕ out */   /* the ✕ also wears req-x (.72rem) and btn-ghost — the plate wins */
   /* 🟢🔴 v6.32 — the receipt lamp in the running log. Colour is the fast read, but it is
      never the ONLY read: each state carries its own glyph and its own spelled word, so the
      row says the same thing in bright sun, on a cracked screen, or to colour-blind eyes. */
@@ -2633,7 +2646,7 @@
     <button class="btn-ghost" style="background: var(--surface-1); display: none;" id="lbPrev" onclick="event.stopPropagation(); lbNav(-1)">‹ Prev</button>
     <span id="lbCount" style="color: #fff; font-size: 13px; font-weight: 600;"></span>
     <button class="btn-ghost" style="background: var(--surface-1); display: none;" id="lbNext" onclick="event.stopPropagation(); lbNav(1)">Next ›</button>
-    <button class="btn-ghost" style="background: var(--surface-1);" onclick="closeLightbox()">✕ Close</button>
+    <button class="btn-ghost x-plate" onclick="closeLightbox()">✕ Close</button>
     <button class="btn-ghost" style="background: var(--surface-1);" id="lbOrig" onclick="event.stopPropagation()">Open original</button>
     <button class="btn-ghost" style="background: var(--surface-1);" id="lbShare" onclick="event.stopPropagation(); sharePhotoOut()">📤 Send it on</button>
   </div>
@@ -2684,7 +2697,7 @@
 <div id="sumViewer">
   <div class="sv-head">
     <div class="sv-title" id="svTitle">Summary</div>
-    <button class="sv-close" onclick="closeSumViewer()">✕ Close</button>
+    <button class="sv-close x-plate" onclick="closeSumViewer()">✕ Close</button>
   </div>
   <iframe id="svFrame" title="Summary"></iframe>
 </div>
@@ -2869,7 +2882,7 @@
       <span id="askStatus" class="hint" style="margin-top: 0;">⚙ grinds it into the log · 🧙 answers from it.</span>
     </div>
     <div class="ask-inline" id="askInline" style="display: none;">
-      <div class="ask-inline__head">🧙 <span id="aiQ"></span><button type="button" class="ask-inline__x" onclick="hideInlineAnswer()" aria-label="Close answer">✕</button></div>
+      <div class="ask-inline__head">🧙 <span id="aiQ"></span><button type="button" class="ask-inline__x x-plate x-small" onclick="hideInlineAnswer()" aria-label="Close answer">✕</button></div>
       <div class="ask-inline__body" id="aiBody"></div>
       <div class="ask-inline__foot"><a href="javascript:void(0)" onclick="openAnswerFull()">Open full screen →</a></div>
     </div>
@@ -3352,10 +3365,17 @@
         <div><b>Unlocked — remembered on this phone</b><span class="sub">Only visible here; the copy in Dropbox is encrypted gibberish without your passphrase.</span></div>
       </div>
 
-      <input type="text" id="vaultSearch" class="vault-search todo-big" placeholder="Search by site or username…" oninput="renderVaultList()">
+      <input type="text" id="vaultSearch" class="vault-search todo-big" placeholder="Search by site, username, card or name…" oninput="renderVaultList()">
+      <!-- 💳 v6.81 — Eric: "In the vault, I'd like to store credit card information too. Make a section or a tab for that.
+           Same thing: be able to copy and paste." Two tabs, one encrypted file. A card shows its last four only until
+           he taps 👁; every part has its own 📋; the number is never in the page's HTML (copy looks it up by id). -->
+      <div class="vault-tabs" id="vaultTabs">
+        <button type="button" class="vault-tab on" onclick="vaultShowTab('login')" aria-pressed="true">🔑 LOGINS</button>
+        <button type="button" class="vault-tab" onclick="vaultShowTab('card')" aria-pressed="false">💳 CARDS</button>
+      </div>
 
       <div class="frow" style="margin-bottom: 14px;">
-        <button class="btn-primary" onclick="vaultEditNew()">＋ Add login</button>
+        <button class="btn-primary" id="vaultAddBtn" onclick="vaultAddTap()">＋ Add login</button>
         <button class="btn-ghost" onclick="vaultLockNow()">🔒 Lock now</button>
         <button class="btn-ghost" onclick="vaultShowForm2(true)">Change passphrase</button>
       </div>
@@ -3380,6 +3400,26 @@
         <div class="frow" style="margin-top:12px;">
           <button class="btn-primary" onclick="vaultSaveEntry()">Save</button>
           <button class="btn-ghost" onclick="vaultShowForm(false)">Cancel</button>
+        </div>
+      </div>
+
+      <div id="vaultCardForm" style="display:none;" class="set-section fc-sec">
+        <h4 id="vaultCardTitle">Add card</h4>
+        <div class="field"><label>Which card (what you call it)</label><input type="text" id="vaultCName" class="wide" placeholder="Home Depot Visa · Fuel card · AmEx"></div>
+        <div class="frow" style="margin-top:10px;">
+          <div class="field" style="flex:2; min-width:200px;"><label>Card number</label><input type="text" id="vaultCNum" class="wide" inputmode="numeric" autocomplete="off" placeholder="digits only, spaces are fine"></div>
+          <div class="field" style="flex:1; min-width:110px;"><label>Expires (MM/YY)</label><input type="text" id="vaultCExp" class="wide" inputmode="numeric" autocomplete="off" placeholder="09/28"></div>
+        </div>
+        <div class="frow" style="margin-top:10px;">
+          <div class="field" style="flex:1; min-width:120px;"><label>CVV (the 3 or 4 on the back)</label>
+            <div style="display:flex; gap:6px;"><input type="password" id="vaultCCvv" class="wide" inputmode="numeric" autocomplete="off" style="flex:1;"><button type="button" class="btn-ghost sm" onclick="const f=$('vaultCCvv'); f.type = f.type==='password'?'text':'password';">👁</button></div></div>
+          <div class="field" style="flex:2; min-width:160px;"><label>Name on the card</label><input type="text" id="vaultCHolder" class="wide" autocomplete="off"></div>
+          <div class="field" style="flex:1; min-width:100px;"><label>Billing zip</label><input type="text" id="vaultCZip" class="wide" inputmode="numeric" autocomplete="off"></div>
+        </div>
+        <div class="field" style="margin-top:10px;"><label>Notes (optional — PIN, the phone number on the back, limit…)</label><textarea id="vaultCNotes" class="grow" rows="2" oninput="fitTa(this)"></textarea></div>
+        <div class="frow" style="margin-top:12px;">
+          <button class="btn-primary" onclick="vaultSaveCard()">Save card</button>
+          <button class="btn-ghost" onclick="vaultShowCardForm(false)">Cancel</button>
         </div>
       </div>
 
@@ -3770,11 +3810,11 @@
 
   <div class="brand-emblem"><img src="logo-badge.webp" alt="Clore Construction" onclick="lbShow('logo-badge.webp')"></div>
 
-  <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close" onclick="lbHide()">✕ Close</button></div>
+  <div id="photoLb" onclick="lbHide()"><img id="plbImg" alt=""><button class="lb-close x-plate" onclick="lbHide()">✕ Close</button></div>
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.80 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.81 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5235,7 +5275,7 @@ function setCoCat(c) { coCats.has(c) ? coCats.delete(c) : coCats.add(c); renderC
 function renderCoJobs() {
   const el = $('coJobChips');
   if (!el) return;
-  el.innerHTML = [...jobs].sort((a, b) => a.localeCompare(b)).map(n =>
+  el.innerHTML = personalFirst([...jobs].sort((a, b) => a.localeCompare(b))).map(n =>
     `<button class="pick-chip grid-chip${n === coJob ? ' sel' : ''}" onclick="setCoJob('${escq(n)}')" aria-pressed="${n === coJob}"><span>${n === coJob ? '✓&nbsp;' : ''}${esc(n)}</span></button>`).join('');
 }
 function renderCoCats() {
@@ -5834,10 +5874,15 @@ function renderSkinChips() {
     if (el) el.classList.toggle('sel', cur === k);
   });
 }
+// 🔒 v6.81 — Eric: "Whenever there's a drop-down list and personal is on it (such as picking the job), I want the
+// personal to always be on top." Every job wheel and job grid goes through personalFirst(). The grinder's ① wheel
+// is the one exception: Eric asked it OUT of there — the 🔒 Personal chip in ③ is the same lock (isLocked: the flag,
+// the tag or the Personal job — v6.53's one test), so the wheel carries only real jobs.
+function personalFirst(list) { return [...list.filter(j => isPersonalJob(j)), ...list.filter(j => !isPersonalJob(j))]; }
 function recentJobsOrdered() {
   const rec = (prefs.jobRecent || []).filter(j => jobs.includes(j));
   const rest = jobs.filter(j => !rec.includes(j)).sort((a, b) => a.localeCompare(b));
-  return [...new Set([...rec, ...rest])];
+  return personalFirst([...new Set([...rec, ...rest])]);
 }
 function setCurJob(n) {
   curJob = n; prefs.lastJob = n;
@@ -5876,8 +5921,11 @@ function qnJobTap(j) {
 }
 function renderAllJobChips() {
   const ordered = recentJobsOrdered();
-  if (!jobs.includes(curJob)) { curJob = prefs.lastJob && jobs.includes(prefs.lastJob) ? prefs.lastJob : ordered[0]; }
-  const chipJobs = [...new Set([curJob, ...ordered])].slice(0, 6);
+  // 📌 v6.81 — Eric: "I'm still getting the Hertz job tagged on stuff … I don't know if it's tagged or if it's always the
+  // default." It was the default: with nothing set this fell back to LAST WEEK'S job, then to the FIRST job on the list.
+  // No job is set until he taps one — the hours plates light none, and nothing files under a job he did not pick.
+  if (!jobs.includes(curJob)) curJob = '';
+  const chipJobs = [...new Set([curJob, ...ordered].filter(Boolean))].slice(0, 6);
   const picker =
     chipJobs.map(n => `<button class="pick-chip${n === curJob ? ' sel' : ''}" onclick="setCurJob('${escq(n)}')" aria-pressed="${n === curJob}">${n === curJob ? '✓&nbsp;' : ''}${esc(n)}</button>`).join('') +
     (jobs.length > chipJobs.length
@@ -5886,7 +5934,7 @@ function renderAllJobChips() {
   ['nJobChips'].forEach(id => { $(id).innerHTML = picker; }); // v5.25 — mileage has its own even grid now
   // hours panel: every job as a same-size grid button, ALPHABETICAL — same spot every time you open it
   const hj = $('hJobChips');
-  if (hj) hj.innerHTML = [...jobs].sort((a, b) => a.localeCompare(b)).map(n =>
+  if (hj) hj.innerHTML = personalFirst([...jobs].sort((a, b) => a.localeCompare(b))).map(n =>
     `<button class="pick-chip grid-chip${n === curJob ? ' sel' : ''}" onclick="setCurJob('${escq(n)}')" aria-pressed="${n === curJob}"><span>${n === curJob ? '✓&nbsp;' : ''}${esc(n)}</span></button>`).join('');
   // quick-note card: one clean pull-down, recent jobs first (v4.54 — Eric wanted it uncrowded)
   // v4.66 — the pick is per-note: it rides on that one note, then the wheel snaps back
@@ -5894,7 +5942,7 @@ function renderAllJobChips() {
   // v4.91 — the wheel STARTS BLANK every time: pick a job, or leave it and the note files
   // as unfiled instead of silently landing on whatever job happened to be current.
   if (qn) qn.innerHTML = `<option value=""${qnJobPick ? '' : ' selected'}>📋 CHOOSE JOB</option>` +   /* v6.65 — Eric: "take out (optional)" */
-    [...new Set(jobs)].sort((a, b) => a.localeCompare(b)).map(j => `<option${j === qnJobPick ? ' selected' : ''}>${esc(j)}</option>`).join('');
+    [...new Set(jobs)].filter(j => !isPersonalJob(j)).sort((a, b) => a.localeCompare(b)).map(j => `<option${j === qnJobPick ? ' selected' : ''}>${esc(j)}</option>`).join('');   // 🔒 v6.81 — Personal is the ③ lock, not a job on this wheel
   renderFcJobSel();
 }
 function renderTruckChips() {
@@ -6046,7 +6094,7 @@ function tagToggle(n) { qnSel.has(n) ? qnSel.delete(n) : qnSel.add(n); renderTag
 function toBookkeeper() {
   const t = ($('askText') && $('askText').value.trim()) || '';
   if (!t && !notePhotos.length) { toast('Type the note or add the receipt photo first, then 📗', false); return; }
-  const jobWord = (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : curJob || '—';
+  const jobWord = (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : '—';   // 📌 v6.81 — the wheel's pick or none, never the app's leftover job
   const body = `${t || 'Receipt'} — ${jobWord}`;
   if (navigator.share) {
     try {
@@ -6290,7 +6338,7 @@ function renderMileBody() {
 function renderMileJobs() {
   const el = $('mJobGrid');
   if (!el) return;
-  el.innerHTML = [...jobs].sort((a, b) => a.localeCompare(b)).map(n =>
+  el.innerHTML = personalFirst([...jobs].sort((a, b) => a.localeCompare(b))).map(n =>
     `<button class="pick-chip grid-chip${mJobSel.has(n) ? ' sel' : ''}" onclick="togTripJob('${escq(n)}')" aria-pressed="${mJobSel.has(n)}"><span>${mJobSel.has(n) ? '✓&nbsp;' : ''}${esc(n)}</span></button>`).join('');
 }
 function togTripJob(n) { mJobSel.has(n) ? mJobSel.delete(n) : mJobSel.add(n); renderMileJobs(); }
@@ -6840,7 +6888,9 @@ function billMaybeSuggest(f, meta) {
     if (pendDone.has(id) || pendingQueue.some(p => p.id === id)) return;
     const money = n => '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     pendingQueue.push({ id, kind: 'bill', payload: {
-      who, amt: amt != null && isFinite(+amt) ? Math.round(+amt * 100) / 100 : null, due, overdue, job: curJob, fname: String((f && f.name) || ''),
+      who, amt: amt != null && isFinite(+amt) ? Math.round(+amt * 100) / 100 : null, due, overdue,
+      // 📌 v6.81 — the job at photo time is the grinder wheel's pick, else the entry the photo landed on, else none — never the app's leftover job
+      job: (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : ((billEntryOf({ fname: String((f && f.name) || '') }) || {}).job || ''), fname: String((f && f.name) || ''),
       what: String(meta.ai || '').replace(/\s+/g, ' ').trim().slice(0, 240),
       text: `${overdue ? '⚠ OVERDUE — ' : ''}Pay ${who}${amt != null && isFinite(+amt) ? ` — ${money(amt)}` : ''}`,
       pri: overdue ? 3 : 2,
@@ -7224,6 +7274,7 @@ function hFmtHM(t) {
 function saveHours() {
   const hours = parseFloat($('hHours').value);
   if (!hours) { toast('Set the start and stop times first — the total figures itself', false); return; }
+  if (!jobs.includes(curJob)) { toast('▲ Pick the job first — tap it on the list above', false); return; }   // 📌 v6.81 — no silent default
   const i = $('hIn').value, o = $('hOut').value, br = parseInt($('hBreak').value || '0', 10);
   const extra = { hours };
   let details = $('hDesc').value.trim();
@@ -9566,7 +9617,9 @@ function openPortalWin() {
   if (!w || !box) return;
   box.innerHTML = `${winX('closePortalWin()')}<h3>🏠 Project portal</h3>
     <div class="hint" style="margin: 0 0 8px;">One live page per job, at an unguessable address. Tap a job to unfold its buttons; text the link once and it updates as the books do. 🔄 rotate kills the old link instantly.</div>
-    <div id="portalList"><button class="btn-ghost" onclick="renderPortalList()">🔄 Load the projects</button> <span class="hint">Tap if the list doesn't fill itself in.</span></div>`;
+    <div id="portalList"><button class="btn-ghost" onclick="renderPortalList()">🔄 Load the projects</button> <span class="hint">Tap if the list doesn't fill itself in.</span></div>
+    <!-- ← v6.81 — Eric: "At the bottom of the project portal, I need a back button. I keep pushing 'Build the page.'" Under the list, in every state. -->
+    <button type="button" class="btn-ghost x-plate" style="width: 100%; margin-top: 14px;" onclick="closePortalWin()">← Back to the main page</button>`;
   w.classList.add('show');
   document.body.classList.add('modal-open');
   w.scrollTop = 0;
@@ -10098,7 +10151,7 @@ async function jcCopyPicked() {
 }
 function openJobCards() { openJobCard(_cardJob || lsGet('daylog-cardjob') || ''); }   // 📇 v6.65 — never the first name by default. v6.77 — never the app's job either (that wheel rides the running shift, which is why the card "always opened on hertz"): the last card opened on THIS phone, else the wheel waits on ▲ Choose the job
 function cardJobList() {
-  if (!CREW_NAME) return jobs.filter(j => j && j !== '—');
+  if (!CREW_NAME) return personalFirst(jobs.filter(j => j && j !== '—'));   // 🔒 v6.81 — Personal on top
   const seen = [];
   Object.values(crewCards || {}).forEach(c => { if (c && c.job && !seen.includes(c.job)) seen.push(c.job); });
   return seen.sort((a, b) => a.localeCompare(b));
@@ -11114,7 +11167,8 @@ async function renderPortalList() {
       <input type="checkbox" id="npMoney"> 💵 Show them money — invoiced, paid, what's open
     </label>
     <button class="btn-primary" style="width: 100%;" onclick="portalNew()">➕ Build the page</button>
-    <div class="hint" id="npMsg" style="margin-top: 6px;">The page starts empty and fills itself: the nightly QuickBooks run puts the money in, the journal and Build List are yours to fill. The link is unguessable — nobody sees it until you text it.</div></div>`;
+    <div class="hint" id="npMsg" style="margin-top: 6px;">The page starts empty and fills itself: the nightly QuickBooks run puts the money in, the journal and Build List are yours to fill. The link is unguessable — nobody sees it until you text it.</div></div>
+`;
 }
 // which job's buttons are unfolded — one at a time, and it remembers within the session
 let _portalOpen = -1;
@@ -11257,7 +11311,7 @@ function renderPlanRack() {
       <button class="btn-ghost" onclick="pkAddSlot()">➕ slot</button>
     </div>
     <div class="rev-row" style="margin-top: 12px;">
-      <button class="btn-ghost" style="flex: 1; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800; font-size: 14.5px;" onclick="closePlanRack()">✕ Close</button>
+      <button class="btn-ghost x-plate" style="flex: 1;" onclick="closePlanRack()">✕ Close</button>
     </div>`;
 }
 function pkPick(key, files) {
@@ -12089,7 +12143,7 @@ function renderEstimates() {
       <button class="btn-ghost" onclick="estAddCat()">➕ category</button>
     </div>
     <div class="rev-row" style="margin-top: 12px;">
-      <button class="btn-ghost" style="flex: 1; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800; font-size: 14.5px;" onclick="closeEstimates()">✕ Close</button>
+      <button class="btn-ghost x-plate" style="flex: 1;" onclick="closeEstimates()">✕ Close</button>
     </div>
     </div>`;   // 🕯 v6.66 — the closing paragraph moved up into "? How this works"
 }
@@ -13758,7 +13812,7 @@ function renderMatMgr() {
   box.innerHTML = `<h3>📋 ${esc(c.job)} — Build List <span id="matSaveWord" class="hint" style="margin: 0; font-size: 11px;">${_matDirty ? '⏳ saving…' : '✓ saved'}</span>
     <span style="float: right; display: inline-flex; gap: 6px; align-items: center;">
       <button type="button" class="btn-ghost req-x" style="font-size: 11px;" onclick="_matHistShow = !_matHistShow; renderMatMgr()" aria-expanded="${_matHistShow}">${_matHistShow ? '▾' : '▸'} 🕘 history</button>
-      <button type="button" class="btn-ghost req-x" style="font-size: 15px; font-weight: 800; min-width: 40px; min-height: 36px; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink);" onclick="matClose()" aria-label="close the board" title="close the board">✕</button>
+      <button type="button" class="btn-ghost req-x x-plate x-small" style="min-width: 44px;" onclick="matClose()" aria-label="close the board" title="close the board">✕</button>
     </span></h3>
     ${_matHistShow ? matHistHtml() : ''}
     <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client. Tap a lamp to advance it; ✎ opens the works; HOLD a step or a name to edit it in place.` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
@@ -13804,7 +13858,7 @@ function renderMatMgr() {
     <div class="rev-row" style="margin-top: 12px; flex-wrap: wrap;">
       <button class="btn-primary" style="flex: 2; background: var(--accent); color: #fff; border: 2px solid var(--accent); font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,.35);" onclick="matSave()">📤 Send 🏠 client portion to the client's page${_matPubDirty ? ' — <b>changes waiting</b>' : ''}</button>
       ${!_matD.rooms.length ? `<button class="btn-ghost" style="flex: 2; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800;" onclick="matFromMaster()">🧱 Start from the master list</button>` : ''}
-      <button class="btn-ghost" style="flex: 1; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800; font-size: 14.5px; box-shadow: 0 2px 8px rgba(0,0,0,.25);" onclick="matClose()">✕ Close</button>
+      <button class="btn-ghost x-plate" style="flex: 1;" onclick="matClose()">✕ Close</button>
     </div>
     <div class="hint" style="margin-top: 8px;">Everything here saves ITSELF as you work — 📤 is only for showing the client. Per-client setup: 🧱 start from the master, ✕ what this job doesn't need, ➕ what's special.</div>`;
 }
@@ -15539,6 +15593,10 @@ function buildAskContext(question) {
     const sd = resolveDayWords(e.details, e.ts);
     if (sd) o.saidDay = sd;
     if (e.heads) o.headsUp = true;
+    // 🎒📋 v6.81 — Eric: "as I make a checklist and check them off, the wizard knows that those items are done." The
+    // pocket stamp and the board state ride on the row in words, not glyphs.
+    if (e.pocket) o.pocket = e.pocket === 'done' ? 'DONE — he checked it off his pocket list' : e.pocket === 'back' ? 'back on the pocket list for tomorrow' : 'NOT DONE — left the pocket list unfinished';
+    if (e.board && typeof e.board === 'object') o.board = { p: brdP(e.board.p), done: e.board.done ? 'DONE' + (e.board.by ? ' by ' + e.board.by : '') : 'open', sub: (e.board.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) };
     if (e.photoPath || (e.photoPaths && e.photoPaths.length)) o.hasPhoto = true;
     if (e.amount != null) o.amt = e.amount;
     if (e.hours != null) o.hrs = e.hours;
@@ -15616,7 +15674,13 @@ function buildAskContext(question) {
     if (dref.kind === 'future') drefLine = `\nTHE QUESTION POINTS AT A COMING DAY: "${dref.word}" = ${fmtDayWd(dref.day)} (${localDay(dref.day)})${dref.span ? ` through ${localDay(dayShift(dref.day, dref.span - 1))}` : ''}. Nothing is logged in the future — answer from OPEN TO-DOS due that day and from notes whose saidDay translation lands on that date. A note's own "tomorrow" means the day after THAT note was written, never after today.`;
     else if (dref.kind === 'either') drefLine = `\nTHE QUESTION NAMES A WEEKDAY: "${dref.word}" — most recent past ${dref.word} was ${localDay(dref.past)}, the coming one is ${localDay(dref.next)}. Decide from the wording which he means (past tense → the past date, planning → the coming one) and say the exact date in your answer. Match entries by their DATE, not by where the word "${dref.word}" appears in old notes.`;
   }
-  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
+  // 🎒📋 v6.81 — the pocket's finished and unfinished items, and the board, in their own blocks
+  const cut14 = Date.now() - 14 * 86400000;
+  const pocketDoneCtx = live.filter(e => e.pocket === 'done' && +new Date(e.ts) >= cut14).slice(0, 40).map(e => ({ t: String(e.details || '').replace(/^✓ /, ''), day: localDay(e.ts) }));
+  const pocketLeftCtx = live.filter(e => ['flushed', 'over', 'swept'].includes(e.pocket) && +new Date(e.ts) >= cut14 && !(e.board && e.board.done)).slice(0, 40).map(e => ({ t: brdWords(e.details), day: localDay(e.ts) }));
+  const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
+  const boardDoneCtx = live.filter(e => e.board && e.board.done && +new Date(e.board.done) >= Date.now() - 7 * 86400000).slice(0, 40).map(e => ({ job: e.job, t: brdWords(e.details), by: e.board.by || 'Eric', day: localDay(new Date(e.board.done)) }));
+  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
 }
 // 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
 // offers their photos, a follow-up within 15 minutes remembers the exchange, and
@@ -15649,7 +15713,7 @@ function applyCorrection(corr) {
       if (e) { e.ai = (((e.ai ? e.ai + '\n' : '') + 'ERIC CORRECTED: ' + corr)).slice(0, 2000); touched++; }
     });
   }
-  addEntry('Note', `✎ Correction${_lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, curJob, { noSniff: true });
+  addEntry('Note', `✎ Correction${_lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, '—', { noSniff: true });   // 📌 v6.81 — a correction has no job of its own
   wizKeepFix(corr, _lastAnswer && _lastAnswer.keep);   // 🧙📜 v6.73 — and onto the kept answer it fixes
   scheduleSave();
   return touched;
@@ -15894,7 +15958,7 @@ function pocketAddFromBox() { const b = $('pocketIn'); if (!b) return; if (pocke
 function pocketDone(id) {
   const i = pocket().findIndex(x => x.id === id); if (i < 0) return;
   const it = pocket().splice(i, 1)[0];
-  addEntry('Note', `✓ ${it.t}`, jobs.includes(curJob) ? curJob : '—', { noSniff: true, tags: ['pocket'], pocket: 'done' });
+  addEntry('Note', `✓ ${it.t}`, '—', { noSniff: true, tags: ['pocket'], pocket: 'done' });   // 📌 v6.81 — a pocket item has no job; it never borrows the app's
   scheduleSave(); renderPocket(); renderLog();
   toast(`✓ ${it.t}`);
 }
@@ -16115,7 +16179,7 @@ function brdCmp(a, b) {
 }
 function brdOrder() {   // the headings in order, and each heading's lines as shown
   const L = boardLines();
-  const order = [...(jobs.includes(curJob) && curJob !== '—' ? [curJob] : []), ...jobs.filter(j => j && j !== '—' && j !== curJob), '—'];
+  const order = [...(jobs.includes(curJob) && curJob !== '—' ? [curJob] : []), ...personalFirst(jobs.filter(j => j && j !== '—' && j !== curJob)), '—'];   // 🔒 v6.81 — Personal on top of the move wheel
   const by = {};
   L.forEach(l => { const j = order.includes(l.job) ? l.job : '—'; (by[j] = by[j] || []).push(l); });
   Object.keys(by).forEach(j => by[j].sort(brdCmp));
@@ -16174,7 +16238,7 @@ function renderBoard() {
   const n = L.length, hiAll = L.filter(l => l.p === 3).length;
   box.innerHTML = `<h3>📋 Board${winX('closeReview()', 'close')}</h3>${revTabsHtml()}
     <div class="rev-sub">${n ? `<b>${n} open</b>${hiAll ? ` · ${hiAll} high` : ''}` : '<b>nothing open</b>'} · a thought ground in lands here under its job · cubes = priority · 👷 crew sees it · 🏠 on their page · tap the words to edit, move or send · ✓ = done</div>
-    <div class="bd-add"><input type="text" id="brdIn" placeholder="add a thing…" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdAdd();}"><select id="brdJob" class="mini-sel" aria-label="which job">${order.map(j => `<option value="${esc(j)}"${j === (jobs.includes(curJob) && curJob !== '—' ? curJob : '—') ? ' selected' : ''}>${jobName(j)}</option>`).join('')}</select><button type="button" class="bd-plus" onclick="brdAdd()" aria-label="add it to the board">+</button></div>` +
+    <div class="bd-add"><input type="text" id="brdIn" placeholder="add a thing…" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdAdd();}"><select id="brdJob" class="mini-sel" aria-label="which job">${order.map(j => `<option value="${esc(j)}"${j === '—' ? ' selected' : ''}>${jobName(j)}</option>`).join('')}</select><button type="button" class="bd-plus" onclick="brdAdd()" aria-label="add it to the board">+</button></div>` +
     (heads.length ? heads.map(j => { const rows = by[j] || [], folded = _brdFold.has(j), hi = rows.filter(r => r.p === 3).length;
       return `<button type="button" class="bd-hd${folded ? '' : ' open'}" data-job="${esc(j)}" onclick="brdFold('${escq(j)}')" aria-expanded="${!folded}">${folded ? '▸' : '▾'} ${j === '—' ? '📂 GENERAL' : '🏗 ' + esc(j)}<span class="rev-n">${rows.length}${hi ? ` · ${hi} high` : ''}${folded ? ' · folded' : ''}</span></button>
         <div class="bd-body" data-job="${esc(j)}"${folded ? ' hidden' : ''}>${rows.map((l, i) => lineHtml(l, i, rows)).join('')}</div>`; }).join('')
@@ -17880,7 +17944,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.80';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.81';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -18118,7 +18182,76 @@ function vaultShowView(name) {
 }
 function vaultShowForm(on) {
   $('vaultForm').style.display = on ? '' : 'none';
-  if (on) { $('vaultForm2').style.display = 'none'; setTimeout(() => $('vaultFSite').focus(), 60); }
+  if (on) { $('vaultForm2').style.display = 'none'; const c = $('vaultCardForm'); if (c) c.style.display = 'none'; setTimeout(() => $('vaultFSite').focus(), 60); }
+}
+// 💳 v6.81 — the cards tab: the same vault, the same file, a second kind of record ({ kind: 'card' })
+let vaultTab = 'login';
+function vaultShowTab(t) {
+  vaultTab = t === 'card' ? 'card' : 'login';
+  document.querySelectorAll('#vaultTabs .vault-tab').forEach((b, i) => { const on = (i === 1) === (vaultTab === 'card'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  const add = $('vaultAddBtn'); if (add) add.textContent = vaultTab === 'card' ? '＋ Add card' : '＋ Add login';
+  vaultShowForm(false); vaultShowCardForm(false);
+  renderVaultList();
+}
+function vaultAddTap() { if (vaultTab === 'card') vaultEditNewCard(); else vaultEditNew(); }
+function vaultShowCardForm(on) {
+  const f = $('vaultCardForm'); if (!f) return;
+  f.style.display = on ? '' : 'none';
+  if (on) { $('vaultForm').style.display = 'none'; $('vaultForm2').style.display = 'none'; setTimeout(() => $('vaultCName').focus(), 60); }
+}
+function vaultEditNewCard() {
+  vaultEditId = null;
+  $('vaultCardTitle').textContent = 'Add card';
+  ['vaultCName', 'vaultCNum', 'vaultCExp', 'vaultCCvv', 'vaultCHolder', 'vaultCZip', 'vaultCNotes'].forEach(id => { $(id).value = ''; });
+  $('vaultCCvv').type = 'password';
+  vaultShowCardForm(true);
+}
+function vaultEditCard(id) {
+  const e = vaultData.find(x => x.id === id && x.kind === 'card'); if (!e) return;
+  vaultEditId = id;
+  $('vaultCardTitle').textContent = 'Edit card';
+  $('vaultCName').value = e.site || ''; $('vaultCNum').value = vaultCardFmt(e.num); $('vaultCExp').value = e.exp || ''; $('vaultCCvv').value = e.cvv || '';
+  $('vaultCHolder').value = e.name || ''; $('vaultCZip').value = e.zip || ''; $('vaultCNotes').value = e.notes || '';
+  $('vaultCCvv').type = 'password';
+  vaultShowCardForm(true); fitTa($('vaultCNotes'));
+}
+function vaultCardFmt(num) { return String(num || '').replace(/(.{4})/g, '$1 ').trim(); }
+async function vaultSaveCard() {
+  const site = $('vaultCName').value.trim();
+  const num = $('vaultCNum').value.replace(/[^0-9]/g, '');
+  if (!site) { toast('Give the card a name first — the one you call it', false); return; }
+  if (num.length < 8) { toast('Type the card number — digits only, spaces are fine', false); return; }
+  const rec = { id: vaultEditId || Date.now(), kind: 'card', site, num, exp: $('vaultCExp').value.trim(), cvv: $('vaultCCvv').value.trim(), name: $('vaultCHolder').value.trim(), zip: $('vaultCZip').value.trim(), notes: $('vaultCNotes').value.trim() };
+  if (vaultEditId) { const i = vaultData.findIndex(x => x.id === vaultEditId); if (i >= 0) vaultData[i] = rec; else vaultData.push(rec); }
+  else vaultData.push(rec);
+  await vaultPush();
+  vaultShowCardForm(false); renderVaultList();
+  toast('Card saved to your vault 🔒✓');
+}
+// the row: last four only until 👁, every part its own 📋 — the number never sits in the HTML
+function vaultCardRow(e) {
+  const shown = vaultRevealed.has(e.id), id = e.id;
+  const numDisp = shown ? esc(vaultCardFmt(e.num)) : '•••• •••• •••• ' + esc(String(e.num || '').slice(-4));
+  return `
+    <div class="vault-row">
+      <div class="vault-row-main">
+        <div class="vault-site">💳 ${esc(e.site)}</div>
+        <div class="vault-pass">
+          <span class="vault-mask">${numDisp}</span>
+          <button class="btn-ghost sm" onclick="vaultToggleReveal(${id})">${shown ? '🙈 Hide' : '👁 Show'}</button>
+          <button class="btn-ghost sm" onclick="vaultCopyField(${id},'num')">📋 Number</button>
+        </div>
+        <div class="vault-user"><span>exp ${esc(e.exp || '—')}</span><button class="btn-ghost sm" onclick="vaultCopyField(${id},'exp')">📋 Exp</button>
+          <span>CVV ${shown ? esc(e.cvv || '—') : '•••'}</span><button class="btn-ghost sm" onclick="vaultCopyField(${id},'cvv')">📋 CVV</button></div>
+        <div class="vault-user"><span>${esc(e.name || '(no name on it)')}</span><button class="btn-ghost sm" onclick="vaultCopyField(${id},'name')">📋 Name</button>
+          ${e.zip ? `<span>zip ${esc(e.zip)}</span><button class="btn-ghost sm" onclick="vaultCopyField(${id},'zip')">📋 Zip</button>` : ''}</div>
+        ${e.notes ? `<div class="vault-notes">${esc(e.notes)}</div>` : ''}
+      </div>
+      <div class="vault-row-actions">
+        <button class="btn-ghost sm" onclick="vaultEditCard(${id})">✏ Edit</button>
+        <button class="btn-ghost sm" onclick="vaultDeleteRow(${id})">🗑 Delete</button>
+      </div>
+    </div>`;
 }
 function vaultShowForm2(on) {
   $('vaultForm2').style.display = on ? '' : 'none';
@@ -18236,7 +18369,7 @@ async function vaultSaveEntry() {
 }
 function vaultDeleteRow(id) {
   const e = vaultData.find(x => x.id === id); if (!e) return;
-  if (!confirm(`Delete the saved login for "${e.site}"?`)) return;
+  if (!confirm(`Delete the saved ${e.kind === 'card' ? 'card' : 'login for'} "${e.site}"?`)) return;
   vaultData = vaultData.filter(x => x.id !== id);
   vaultPush(); renderVaultList();
   toast('Deleted from vault');
@@ -18253,19 +18386,22 @@ async function vaultCopy(text, label) {
 // plaintext secret in an onclick attribute (view-source / inspect-element safe, even while masked)
 function vaultCopyField(id, field) {
   const e = vaultData.find(x => x.id === id); if (!e) return;
-  vaultCopy(e[field] || '', field === 'pass' ? 'Password' : 'Username');
+  const label = { pass: 'Password', user: 'Username', num: 'Card number', exp: 'Expiry', cvv: 'CVV', name: 'Name on the card', zip: 'Zip' }[field] || field;
+  vaultCopy(field === 'num' ? String(e.num || '').replace(/[^0-9]/g, '') : (e[field] || ''), label);   // 💳 v6.81 — the number copies as digits only
 }
 function renderVaultList() {
   const wrap = $('vaultList'); if (!wrap) return;
   const q = ($('vaultSearch') && $('vaultSearch').value || '').toLowerCase();
   const rows = vaultData
-    .filter(e => !q || e.site.toLowerCase().includes(q) || (e.user || '').toLowerCase().includes(q))
+    .filter(e => (vaultTab === 'card') === (e.kind === 'card'))   // 💳 v6.81 — the tab picks the kind
+    .filter(e => !q || e.site.toLowerCase().includes(q) || (e.user || '').toLowerCase().includes(q) || (e.name || '').toLowerCase().includes(q) || String(e.num || '').slice(-4).includes(q))
     .sort((a, b) => a.site.localeCompare(b.site));
   if (!rows.length) {
-    wrap.innerHTML = `<div class="hint">${vaultData.length ? 'No matches.' : 'Nothing saved yet — tap ＋ Add login to save your first one.'}</div>`;
+    wrap.innerHTML = `<div class="hint">${q ? 'No matches.' : vaultTab === 'card' ? 'No cards saved yet — tap ＋ Add card to save the first one.' : 'Nothing saved yet — tap ＋ Add login to save your first one.'}</div>`;
     return;
   }
   wrap.innerHTML = rows.map(e => {
+    if (e.kind === 'card') return vaultCardRow(e);   // 💳 v6.81
     const shown = vaultRevealed.has(e.id);
     const passDisp = shown ? esc(e.pass || '(none)') : '••••••••';
     return `

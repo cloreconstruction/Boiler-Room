@@ -163,7 +163,7 @@ const { chromium } = require('playwright');
   }));
 
   ok('an INVOICE with a due date becomes a 💳 card: the vendor, the amount to the cent, the date, what the read saw', await page.evaluate(async () => {
-    pendingQueue = []; window._notify = []; curJob = 'Mery';
+    pendingQueue = []; window._notify = []; curJob = 'Hertz'; qnJobPick = 'Mery';   // 📌 v6.81 — "the wheel" is the grinder's pick, never the app's leftover job
     billMaybeSuggest({ name: 'IMG_0002.jpg' }, { ai: '📅 2026-09-10\n🏪 Peninsula Overhead Doors\n💵 $3,290\n🗓 DUE 2026-10-10', ocr: 'INVOICE 8812 ... Balance due $3,290.00 ... Due 10/10/2026', aiTotal: 3290, aiDue: '2026-10-10' });
     const p = pendingQueue[0];
     renderReview();
