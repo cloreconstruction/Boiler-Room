@@ -3814,7 +3814,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.81 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.82 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15678,7 +15678,7 @@ function buildAskContext(question) {
   const cut14 = Date.now() - 14 * 86400000;
   const pocketDoneCtx = live.filter(e => e.pocket === 'done' && +new Date(e.ts) >= cut14).slice(0, 40).map(e => ({ t: String(e.details || '').replace(/^✓ /, ''), day: localDay(e.ts) }));
   const pocketLeftCtx = live.filter(e => ['flushed', 'over', 'swept'].includes(e.pocket) && +new Date(e.ts) >= cut14 && !(e.board && e.board.done)).slice(0, 40).map(e => ({ t: brdWords(e.details), day: localDay(e.ts) }));
-  const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
+  const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).filter(l => l.k !== 'p').slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
   const boardDoneCtx = live.filter(e => e.board && e.board.done && +new Date(e.board.done) >= Date.now() - 7 * 86400000).slice(0, 40).map(e => ({ job: e.job, t: brdWords(e.details), by: e.board.by || 'Eric', day: localDay(new Date(e.board.done)) }));
   return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
 }
@@ -16166,9 +16166,14 @@ function boardLines() {
   const L = [];
   entries.forEach(e => { if (boardOn(e)) L.push({ k: 'e', id: e.id, job: e.job || '—', t: String(e.details || ''), p: brdP((e.board || {}).p), ord: (e.board && e.board.ord != null) ? +e.board.ord : null, ts: String(e.ts instanceof Date ? e.ts.toISOString() : e.ts || ''), sub: (e.board && e.board.sub) || [], src: e }); });
   todos.forEach(t => { if (t && !t.done && !t.parentId) L.push({ k: 't', id: t.id, job: t.job || '—', t: String(t.text || ''), p: brdP(t.pri), ord: t.bOrd != null ? +t.bOrd : null, ts: String(t.ts || ''), due: t.due || '', sub: [], src: t }); });
+  // 🎒 v6.82 — Eric: "if I'm adding things to the grinder or to the pocket list, I need it all to end up in the same
+  // place." An OPEN pocket item is a line here too (under GENERAL — a pocket item has no job), the same ✓ as the
+  // pocket's own; ⇄ onto a job turns it into a grinder note. The pocket list on the main page and the board are two
+  // views of the same items. Once ✓, it is a note on the log (the record) and off both.
+  pocket().forEach(it => { if (it && it.t) L.push({ k: 'p', id: it.id, job: '—', t: String(it.t), p: brdP(it.p), ord: it.bOrd != null ? +it.bOrd : null, ts: String(it.ts || ''), due: it.day || '', sub: [], src: it }); });
   return L;
 }
-function brdFind(k, id) { return k === 't' ? todos.find(t => String(t.id) === String(id)) : entries.find(e => String(e.id) === String(id)); }
+function brdFind(k, id) { return k === 't' ? todos.find(t => String(t.id) === String(id)) : k === 'p' ? pocket().find(x => String(x.id) === String(id)) : entries.find(e => String(e.id) === String(id)); }
 function brdWords(t) { return String(t || '').replace(/^🎒 (Flushed|Overflow|Not done) — /, ''); }
 // the order inside a heading: lines he has not placed first (priority, then newest), then the ones he arranged
 function brdCmp(a, b) {
@@ -16189,8 +16194,10 @@ function renderBoard() {
   const box = $('revBox');
   const { L, order, by } = brdOrder();
   const day = ts => { const d = new Date(ts); return isNaN(d) ? '' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
+  const todayD = localDay(new Date());
   const meta = l => {
     const bits = [];
+    if (l.k === 'p') { bits.push(`🎒 pocket · ${l.due === todayD ? 'today' : l.due > todayD ? 'tomorrow' : esc(l.due)}`); return bits.join(' · '); }
     if (l.k === 't') bits.push(l.due ? `📅 due ${esc(l.due)}` : 'to-do');
     else {
       const e = l.src;
@@ -16230,7 +16237,7 @@ function renderBoard() {
         <button type="button" class="pick-chip" onclick="brdShift('${k}', '${id}', -1)"${i === 0 ? ' disabled' : ''} aria-label="move it up one">⬆ Up</button>
         <button type="button" class="pick-chip" onclick="brdShift('${k}', '${id}', 1)"${i >= rows.length - 1 ? ' disabled' : ''} aria-label="move it down one">⬇ Down</button>
         ${k === 'e' ? `<button type="button" class="pick-chip" onclick="brdSubAdd('${id}')">➕ Add a sub-line</button>` : ''}
-        <select class="mini-sel" onchange="brdMove('${k}', '${id}', this.value)" aria-label="move it to another job"><option value="">⇄ Move to…</option>${order.map(j => `<option value="${esc(j)}"${j === l.job ? ' disabled' : ''}>${jobName(j)}</option>`).join('')}</select>
+        <select class="mini-sel" onchange="brdMove('${k}', '${id}', this.value)" aria-label="${k === 'p' ? 'put it on a job' : 'move it to another job'}"><option value="">${k === 'p' ? '⇄ Put it on a job…' : '⇄ Move to…'}</option>${(k === 'p' ? order.filter(j => j !== '—') : order).map(j => `<option value="${esc(j)}"${j === l.job ? ' disabled' : ''}>${jobName(j)}</option>`).join('')}</select>
         ${crewBtns}
       </div>` : ''}`;
   };
@@ -16249,6 +16256,7 @@ function brdFold(j) { _brdFold.has(j) ? _brdFold.delete(j) : _brdFold.add(j); re
 function brdOpen(k, id) { const key = k + ':' + id; _brdOpen = _brdOpen === key ? '' : key; _brdSubFor = ''; renderReview(); }
 function brdPri(k, id) {
   const x = brdFind(k, id); if (!x) return;
+  if (k === 'p') { x.p = (brdP(x.p) + 1) % 4; scheduleSave(); renderPocket(); renderReview(); return; }   // 🎒 v6.82 — it rides on the pocket item (prefs, synced)
   if (k === 't') x.pri = (brdP(x.pri) + 1) % 4;
   else { const b = brdTouch(x); b.p = (brdP(b.p) + 1) % 4; if (x.vis) publishSharedNotes(); }
   scheduleSave(); renderReview();
@@ -16262,11 +16270,20 @@ function brdShift(k, id, d) {
   const rows = by[j], i = rows.findIndex(l => l.k + ':' + l.id === key), ni = i + d;
   if (i < 0 || ni < 0 || ni >= rows.length) return;
   [rows[i], rows[ni]] = [rows[ni], rows[i]];
-  rows.forEach((l, n) => { if (l.k === 't') l.src.bOrd = n + 1; else brdTouch(l.src).ord = n + 1; });
+  rows.forEach((l, n) => { if (l.k === 't' || l.k === 'p') l.src.bOrd = n + 1; else brdTouch(l.src).ord = n + 1; });   // 🎒 v6.82 — pocket items take a place too
   scheduleSave(); renderReview();
 }
 function brdDone(k, id) {
   const x = brdFind(k, id); if (!x) return;
+  if (k === 'p') {   // 🎒 v6.82 — the same ✓ as the pocket's own: a ✓ note on the log, off the list, off the board
+    const item = { ...x };
+    pocketDone(x.id); renderReview();
+    toastUndo(`✓ Off the pocket — ${brdWords(item.t).slice(0, 40)}`, () => {
+      const i = entries.findIndex(e => e.pocket === 'done' && e.details === '✓ ' + item.t); if (i >= 0) entries.splice(i, 1);
+      pocket().unshift(item); scheduleSave(); renderPocket(); renderLog(); renderReview();
+    });
+    return;
+  }
   if (k === 't') { toggleTodo(x.id, null, true); renderTodos(); renderKpis(); }
   else { const b = brdTouch(x); b.done = new Date().toISOString(); b.by = 'Eric'; if (x.vis) publishSharedNotes(); }
   scheduleSave(); renderReview();
@@ -16281,6 +16298,7 @@ function brdEditSave(k, id) {
   const t = String(i.value || '').trim().slice(0, 500);
   if (!t) { toast('The words are empty — ✓ takes a line off instead', false); return; }
   if (k === 't') x.text = t;
+  else if (k === 'p') { x.t = t.slice(0, 140); renderPocket(); }   // 🎒 v6.82 — the pocket item itself
   else { brdTouch(x); const stamp = (String(x.details || '').match(/^🎒 (Flushed|Overflow|Not done) — /) || [''])[0]; x.details = stamp + t; if (x.vis) publishSharedNotes(); }
   _brdOpen = ''; scheduleSave(); if (k === 'e') renderLog();
   renderReview(); toast('✎ Saved ✓');
@@ -16298,6 +16316,13 @@ function brdSubDone(id, i) {
 }
 function brdMove(k, id, job) {
   if (!job) return; const x = brdFind(k, id); if (!x) return;
+  if (k === 'p') {   // 🎒 v6.82 — a pocket item put on a job becomes a grinder note there: on the log, on the board, off the pocket
+    if (!jobs.includes(job) || job === '—') return;
+    const arr = pocket(), i = arr.indexOf(x); if (i >= 0) arr.splice(i, 1);
+    addEntry('Note', x.t, job, { noSniff: true, board: { p: brdP(x.p), sub: [], at: new Date().toISOString() } });
+    _brdOpen = ''; scheduleSave(); renderPocket(); renderReview(); toast(`⇄ On the board under ${job} — off the pocket list ✓`);
+    return;
+  }
   x.job = job === '—' ? '—' : job;
   if (k === 't') delete x.bOrd; else { const b = brdTouch(x); delete b.ord; if (x.vis) publishSharedNotes(); }   // a new heading: it lands at the top, unplaced
   _brdOpen = ''; scheduleSave(); if (k === 'e') renderLog();
@@ -17944,7 +17969,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.81';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.82';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
