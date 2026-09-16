@@ -735,6 +735,13 @@
     position: sticky; top: 0; z-index: 40;
     background: var(--page); padding: 8px 0;
   }
+  /* 🖥 v6.83 — Eric: "on the pc version id like the mileage and vault 4 buttons to be on the very bottom, theyre
+     fine on the phone." The same fixed bar the phone has, centred to the page's width. */
+  @media (min-width: 701px) {
+    body { padding-bottom: 108px; }
+    .capture { position: fixed; top: auto; bottom: 0; left: 50%; transform: translateX(-50%); width: min(100%, 1060px); margin: 0;
+      padding: 8px 12px 12px; background: var(--surface-1); border-top: 1px solid var(--border); box-shadow: 0 -4px 14px rgba(0,0,0,0.25); z-index: 40; }
+  }
   @media (max-width: 700px) {
     /* clears the fixed bar (one row, ~67px in the steam skin) plus the home-indicator strip */
     body { padding-bottom: calc(86px + env(safe-area-inset-bottom)); padding-left: 12px; padding-right: 12px; }
@@ -976,9 +983,19 @@
   .vault-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 12px; }   /* 💳 v6.81 — logins | cards */
   .vault-tab { min-height: 44px; border-radius: 10px; border: 1px solid var(--border); background: none; color: var(--ink-2); font: inherit; font-weight: 800; font-size: 13px; letter-spacing: .5px; cursor: pointer; }
   .vault-tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  /* ✎ v6.83 — the Wizard's answer, one locked line at a time, each with its own ✎ (Eric: "the words are in the text
+     box maybe greyed out a little and not editable but i can click anywhere around it and add more text so that i
+     can correct each line or item or bullet point") */
+  .wl-line { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; }
+  .wl-t { flex: 1 1 auto; min-width: 0; opacity: .82; }
+  .wl-t p, .wl-t ul, .wl-t ol { margin: 0; }
+  .wl-x { flex: 0 0 36px; min-height: 32px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer; }
+  .wl-fix { margin: 2px 0 6px 12px; padding: 4px 8px; border-left: 3px solid var(--accent); font-size: 13.5px; }
+  .wl-lock { margin: 6px 0 4px; padding: 6px 8px; background: var(--surface-1); border-radius: 8px; opacity: .8; font-style: italic; }
+  .rev-wizfix .rev-text { font-size: 13.5px; margin-top: 4px; }
   .vault-row {
     display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
-    padding: 12px 4px; border-bottom: 1px solid var(--grid);
+    padding: 18px 4px; border-bottom: 3px solid color-mix(in srgb, var(--accent) 45%, var(--border));   /* 🔒 v6.83 — Eric: "bigger lines between the different entries" */
   }
   .vault-row:last-child { border-bottom: none; }
   .vault-row-main { flex: 1; min-width: 0; }
@@ -3814,7 +3831,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.82 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.83 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15680,7 +15697,7 @@ function buildAskContext(question) {
   const pocketLeftCtx = live.filter(e => ['flushed', 'over', 'swept'].includes(e.pocket) && +new Date(e.ts) >= cut14 && !(e.board && e.board.done)).slice(0, 40).map(e => ({ t: brdWords(e.details), day: localDay(e.ts) }));
   const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).filter(l => l.k !== 'p').slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
   const boardDoneCtx = live.filter(e => e.board && e.board.done && +new Date(e.board.done) >= Date.now() - 7 * 86400000).slice(0, 40).map(e => ({ job: e.job, t: brdWords(e.details), by: e.board.by || 'Eric', day: localDay(new Date(e.board.done)) }));
-  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
+  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
 }
 // 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
 // offers their photos, a follow-up within 15 minutes remembers the exchange, and
@@ -15705,16 +15722,20 @@ function wizCorrectStart() {
   const t = $('wizCorrText');
   if (t) { t.focus(); fitTa(t); }
 }
-function applyCorrection(corr) {
+function applyCorrection(corr, line) {
   let touched = 0;
+  const tag = line ? `ERIC CORRECTED (re "${line}"): ${corr}` : 'ERIC CORRECTED: ' + corr;
   if (_lastAnswer && (_lastAnswer.srcIds || []).length) {
     _lastAnswer.srcIds.forEach(id => {
       const e = entries.find(x => x.id === id);
-      if (e) { e.ai = (((e.ai ? e.ai + '\n' : '') + 'ERIC CORRECTED: ' + corr)).slice(0, 2000); touched++; }
+      if (e) { e.ai = (((e.ai ? e.ai + '\n' : '') + tag)).slice(0, 2000); touched++; }
     });
   }
-  addEntry('Note', `✎ Correction${_lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, '—', { noSniff: true });   // 📌 v6.81 — a correction has no job of its own
-  wizKeepFix(corr, _lastAnswer && _lastAnswer.keep);   // 🧙📜 v6.73 — and onto the kept answer it fixes
+  addEntry('Note', `✎ Correction${line ? ` — re "${String(line).slice(0, 80)}"` : _lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, '—', { noSniff: true });   // 📌 v6.81 — a correction has no job of its own
+  wizKeepFix(corr, _lastAnswer && _lastAnswer.keep, line);   // 🧙📜 v6.73 — and onto the kept answer it fixes
+  // ✎ v6.83 — the durable list the Wizard reads on every question: the note on the record's ai field was getting
+  // cut off past 300 characters, so a fix did not always reach the next answer. This list always does.
+  prefs.wizFixes = [{ at: new Date().toISOString(), q: _lastAnswer ? String(_lastAnswer.q).slice(0, 160) : '', line: line ? String(line).slice(0, 300) : '', t: String(corr).slice(0, 500) }, ...(prefs.wizFixes || [])].slice(0, 50);
   scheduleSave();
   return touched;
 }
@@ -15726,6 +15747,43 @@ function saveCorrectionInline() {
   const box = $('wizCorrBox');
   if (box) box.innerHTML = `<div class="hint">✓ Correction saved${touched ? ' onto the record it came from' : ''} — every future answer uses it.</div>`;
   toast('✎ Correction on the books ✓');
+}
+// ✎ v6.83 — LINE BY LINE. Eric (2026-09-13): "id like it so the words are in the text box maybe greyed out a little
+// and not editable but i can click anywhere around it and add more text so that i can correct each line or item or
+// bullet point and then you will read those corrections and update the wizard" — "yes to the line by line"
+// (2026-09-15). The answer is drawn one locked line at a time, each with its own ✎. A fix lands on the records the
+// answer came from, on the kept answer (with the line it fixes), on the log, and on prefs.wizFixes — the list the
+// Wizard reads on every question. Then it asks the same question again, straight away, with the fix in.
+function wizLines(md) { return String(md || '').split('\n').map(l => l.trim()).filter(Boolean); }
+function wizFixesFor(keepAt) { const row = keepAt && wizLog().find(x => x.at === keepAt); return row && Array.isArray(row.fix) ? row.fix.filter(f => f && f.line) : []; }
+function wizLinesHtml(md) {
+  const lines = wizLines(md);
+  if (_lastAnswer) _lastAnswer.lines = lines;
+  const fixes = wizFixesFor(_lastAnswer && _lastAnswer.keep);
+  return `<div class="wl-list">` + lines.map((l, i) => {
+    const fx = fixes.filter(f => f.line === l);
+    return `<div class="wl-line" data-i="${i}"><div class="wl-t">${mdToHtml(l)}</div><button type="button" class="wl-x" onclick="wizLineFix(${i})" aria-label="correct this line" title="correct this line">✎</button></div>` +
+      fx.map(f => `<div class="wl-fix">✎ Eric: ${esc(f.t)}</div>`).join('') + `<div class="wl-box" id="wlBox-${i}"></div>`;
+  }).join('') + `</div>`;
+}
+function wizLineFix(i) {
+  const box = $('wlBox-' + i); if (!box) return;
+  document.querySelectorAll('.wl-box').forEach(b => { if (b !== box) b.innerHTML = ''; });
+  if (box.innerHTML) { box.innerHTML = ''; return; }
+  const line = ((_lastAnswer && _lastAnswer.lines) || [])[i] || '';
+  box.innerHTML = `<div class="wl-lock hint">${esc(line)}</div>
+    <textarea id="wlText-${i}" class="grow" rows="2" placeholder="what this line should say"></textarea>
+    <div class="rev-row" style="margin-top: 6px;"><button class="btn-primary" onclick="wizLineSave(${i})">✓ Fix this line — and ask again</button><button class="btn-ghost" onclick="$('wlBox-${i}').innerHTML = ''">✕ Never mind</button></div>`;
+  const t = $('wlText-' + i); if (t) { try { t.focus(); } catch (e) {} fitTa(t); }
+}
+function wizLineSave(i) {
+  const t = $('wlText-' + i); const fix = (t && t.value.trim()) || '';
+  if (!fix) { toast('Say what the line should say first', false); return; }
+  const line = ((_lastAnswer && _lastAnswer.lines) || [])[i] || '';
+  applyCorrection(fix.slice(0, 500), line.slice(0, 300));
+  const box = $('wlBox-' + i); if (box) box.innerHTML = `<div class="wl-fix">✎ Eric: ${esc(fix)} — saved ✓</div>`;
+  toast('✎ Fixed — asking again with it in');
+  if (_lastAnswer && _lastAnswer.q && typeof aiKey === 'function' && aiKey()) { closeWizFull(); askInstant(_lastAnswer.q); }
 }
 async function askInstant(what) {
   const st = $('askStatus');
@@ -15886,10 +15944,10 @@ function wizKeep(q, a, ids, by) {
   wizLogSave();
   return row;
 }
-function wizKeepFix(corr, at) {
+function wizKeepFix(corr, at, line) {
   const row = (at && wizLog().find(x => x.at === at)) || wizLog()[0];
   if (!row) return;
-  row.fix = [...(row.fix || []), { at: new Date().toISOString(), t: String(corr || '').slice(0, 500) }];
+  row.fix = [...(row.fix || []), { at: new Date().toISOString(), t: String(corr || '').slice(0, 500), ...(line ? { line: String(line).slice(0, 300) } : {}) }];   // ✎ v6.83 — with the line it fixes
   wizLogSave();
 }
 // the WIZARD heading on the sort page: the last 7 days of questions, each openable again
@@ -15897,10 +15955,13 @@ function revWizRows() {
   if (CREW_NAME) return { rows: [], n: 0 };
   const cut = Date.now() - 7 * 86400000;
   const rows = wizLog().filter(r => r && r.at && +new Date(r.at) >= cut).slice(0, 10);
-  return { n: rows.length, rows: rows.map(r => `<div class="rev-card rev-wiz"><div class="rev-kind">🧙 ${esc(String(r.at).slice(0, 10))}${r.fix && r.fix.length ? ' · ✎ corrected' : ''}</div>
+  // ✎ v6.83 — a short list of what he fixed lately, first under the heading (not counted as waiting)
+  const fixes = (prefs.wizFixes || []).slice(0, 5);
+  const fixCard = fixes.length ? [`<div class="rev-card rev-wizfix"><div class="rev-kind">✎ LAST FIXES — what you corrected lately</div>${fixes.map(f => `<div class="rev-text"><b>${esc(f.t)}</b><span class="hint" style="margin: 0;"> — re "${esc(f.line || f.q || '')}" · ${esc(String(f.at).slice(0, 10))}</span></div>`).join('')}</div>`] : [];
+  return { n: rows.length, rows: [...fixCard, ...rows.map(r => `<div class="rev-card rev-wiz"><div class="rev-kind">🧙 ${esc(String(r.at).slice(0, 10))}${r.fix && r.fix.length ? ' · ✎ corrected' : ''}</div>
       <div class="rev-text"><b>${esc(r.q)}</b></div>
       <div class="rev-why" style="white-space: pre-wrap;">${esc(String(r.a).slice(0, 240))}${String(r.a).length > 240 ? '…' : ''}</div>
-      <div class="rev-row"><button class="btn-ghost" onclick="wizReopen('${esc(r.at)}')">🧙 Open the answer</button></div></div>`) };
+      <div class="rev-row"><button class="btn-ghost" onclick="wizReopen('${esc(r.at)}')">🧙 Open the answer</button></div></div>`)] };
 }
 function wizReopen(at) {
   const r = wizLog().find(x => x.at === at);
@@ -16598,7 +16659,7 @@ async function wizCopyPath(p) {
 function showWizFull(q, md, srcIds, brain, files) {
   const srcs = (srcIds || []).map(id => entries.find(e => e.id === id)).filter(Boolean);
   const phSrcs = srcs.filter(e => e.photoPath || (e.photoPaths && e.photoPaths.length));
-  $('wizFullBody').innerHTML = `<div class="wf-q">🧙 ${esc(q)}</div>` + mdToHtml(md) +
+  $('wizFullBody').innerHTML = `<div class="wf-q">🧙 ${esc(q)}</div>` + wizLinesHtml(md) +   // ✎ v6.83 — one locked line at a time
     wizFilesHtml(files) +
     (brain ? `<div class="wf-brain hint" style="margin-top: 12px;">Answered by the ${esc(brain)}</div>` : '') +
     `<div class="rev-row" style="margin-top: 16px; flex-wrap: wrap;">` +
@@ -16628,7 +16689,7 @@ function showInstantAnswer(q, md, srcIds) {
       (!isCrew() ? `<button class="btn-ghost" onclick="jrnStamp(${e.id})">📖 Stamp for journal${phSrcs.length > 1 ? ' ' + (i + 1) : ''}</button>` : '')).join('') +
     `<button class="btn-ghost" onclick="wizCorrectStart()">✎ Wrong? Correct it</button>` +
     `</div><div class="hint" style="margin-top: 6px;">Follow-up? Just ask — I hold this exchange for 15 minutes.</div>`;
-  $('aiBody').innerHTML = mdToHtml(md) + tools;
+  $('aiBody').innerHTML = wizLinesHtml(md) + tools;   // ✎ v6.83
   $('askInline').style.display = '';
   const card = document.querySelector('.ask-card');
   if (card && card.scrollIntoView) card.scrollIntoView({ block: 'nearest' });
@@ -17969,7 +18030,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.82';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.83';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
