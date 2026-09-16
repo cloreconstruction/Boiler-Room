@@ -213,15 +213,17 @@ const { chromium } = require('playwright');
 
   console.log('— 🪜 v6.25 the five steps —');
 
-  ok('the grinder card is five numbered plates, in order', await page.evaluate(() => {
+  ok('the grinder card is six numbered plates, in order (v6.86: the photo is ③)', await page.evaluate(() => {
     const steps = Array.from(document.querySelectorAll('#qnCard .g-step')).map(el => +el.dataset.step);
     // 🔀 v6.30 — the job and the words swapped places (Eric: "pick the job… important first")
-    return JSON.stringify(steps) === '[1,2,3,4,5]' &&
+    // 📷 v6.86 — Eric: "take the photo/file select button and make it step 3 and move tag it to step 4"
+    return JSON.stringify(steps) === '[1,2,3,4,5,6]' &&
       $('qnJob').closest('.g-step').dataset.step === '1' &&
       $('askText').closest('.g-step').dataset.step === '2' &&
-      $('qnTagChips').closest('.g-step').dataset.step === '3' &&
-      $('qnVisChips').closest('.g-step').dataset.step === '4' &&
-      document.querySelector('.plate-row').closest('.g-step').dataset.step === '5';
+      $('qnPhotoInfo').closest('.g-step').dataset.step === '3' &&
+      $('qnTagChips').closest('.g-step').dataset.step === '4' &&
+      $('qnVisChips').closest('.g-step').dataset.step === '5' &&
+      document.querySelector('.plate-row').closest('.g-step').dataset.step === '6';
   }));
 
   ok('empty box → step ① wears ▸ NEXT', await page.evaluate(() => {
@@ -237,10 +239,10 @@ const { chromium } = require('playwright');
   }));
 
   // 🔀 v6.30 — with BOTH the job and the words in, the eye jumps to the lever
-  ok('job and words in → the eye goes straight to ⑤ SEND IT (tags and unlock stay optional)', await page.evaluate(() => {
+  ok('job and words in → the eye goes straight to ⑥ SEND IT (tags and unlock stay optional)', await page.evaluate(() => {
     qnJobPick = 'Mery'; $('askText').value = 'ran conduit under the slab'; updateStepFlow();
-    const s2 = document.querySelector('.g-step[data-step="2"]'), s5 = document.querySelector('.g-step[data-step="5"]');
-    const s3 = document.querySelector('.g-step[data-step="3"]');
+    const s2 = document.querySelector('.g-step[data-step="2"]'), s5 = document.querySelector('.g-step[data-step="6"]');
+    const s3 = document.querySelector('.g-step[data-step="4"]');   // v6.86 — ③ is the photo now; tags are ④, send is ⑥
     return s2.classList.contains('done') && s5.classList.contains('next') && !s3.classList.contains('next');
   }));
 

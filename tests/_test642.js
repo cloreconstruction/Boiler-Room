@@ -80,7 +80,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('5. with words and no job the rail points at the LEVER, and step ① says a blank job is allowed', await page.evaluate(() => {
     openPanel('note'); closePanels();
     $('askText').value = 'poured the garage slab'; qnJobPick = ''; updateStepFlow();
-    const one = document.querySelector('.g-step[data-step="1"]'), five = document.querySelector('.g-step[data-step="5"]');
+    const one = document.querySelector('.g-step[data-step="1"]'), five = document.querySelector('.g-step[data-step="6"]');   // v6.86 — the lever is ⑥
     return five.classList.contains('next') && !one.classList.contains('next') && one.classList.contains('blank') &&
       /BLANK — files as unfiled/.test(one.textContent);
   }));
@@ -192,7 +192,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('11. TAG IT and UNLOCK IT fold to one line each, and say what is in them', await page.evaluate(() => {
     window._gOpen = {}; qnSel = new Set(); qnVis = ''; qnVisNames = new Set(); qnHeads = false;
     $('askText').value = 'a note'; updateStepFlow();
-    const three = document.querySelector('.g-step[data-step="3"]'), four = document.querySelector('.g-step[data-step="4"]');
+    const three = document.querySelector('.g-step[data-step="4"]'), four = document.querySelector('.g-step[data-step="5"]');   // v6.86 — tags are ④, unlock ⑤
     const chips = $('qnTagChips');
     return three.classList.contains('fold') && four.classList.contains('fold') &&
       getComputedStyle(chips).display === 'none' &&
@@ -200,10 +200,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
 
   ok('11b. tapping the line opens that band, and anything picked keeps it open and names it', await page.evaluate(() => {
-    gFold(3);
-    const three = document.querySelector('.g-step[data-step="3"]');
+    gFold(4);
+    const three = document.querySelector('.g-step[data-step="4"]');
     const opened = !three.classList.contains('fold') && getComputedStyle($('qnTagChips')).display !== 'none';
-    gFold(3);
+    gFold(4);
     const shutAgain = three.classList.contains('fold');
     qnSel = new Set(['Receipt']); updateStepFlow();
     const stays = !three.classList.contains('fold');

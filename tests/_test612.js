@@ -51,9 +51,9 @@ const { chromium } = require('playwright');
     return !!w && !!w.closest('.ask-row') && !!w.closest('.ask-side');
   }));
 
-  ok('it sits shoulder to shoulder with the photo button, not stacked far away', await page.evaluate(() => {
-    const w = $('wizSideBtn'), c = document.querySelector('.ask-side .cam-btn--tall');
-    return !!c && Math.abs(w.getBoundingClientRect().left - c.getBoundingClientRect().left) < 4;
+  ok('it sits beside the writing box; the photo plate is step ③ right under (v6.86 — Eric: "make it step 3")', await page.evaluate(() => {
+    const w = $('wizSideBtn').getBoundingClientRect(), t = $('askText').getBoundingClientRect(), cam = document.querySelector('.g-step[data-step="3"] .cam-btn--wide');
+    return !!cam && w.left >= t.right - 4 && cam.getBoundingClientRect().top >= t.bottom - 4 && !document.querySelector('.ask-side .cam-btn');
   }));
 
   ok('no scrolling to reach it — it is level with the text box', await page.evaluate(() => {
@@ -84,7 +84,7 @@ const { chromium } = require('playwright');
     let opened = 0;
     const inp = $('qnPhoto'); const orig = inp.click.bind(inp);
     inp.click = () => { opened++; };
-    document.querySelector('.ask-side .cam-btn--tall').click();
+    document.querySelector('.g-step[data-step="3"] .cam-btn--wide').click();   // v6.86 — the camera plate is step ③ now
     inp.click = orig;
     return opened === 1;
   }));

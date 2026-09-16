@@ -27,9 +27,9 @@ const { chromium } = require('playwright');
   ok('the job plate is physically ABOVE the writing box on the page', await page.evaluate(() =>
     $('qnJob').getBoundingClientRect().top < $('askText').getBoundingClientRect().top));
 
-  ok('the plates still run 1,2,3,4,5 in order down the card', await page.evaluate(() => {
+  ok('the plates still run 1,2,3,4,5,6 in order down the card (v6.86: six, the photo is ③)', await page.evaluate(() => {
     const steps = Array.from(document.querySelectorAll('#qnCard .g-step')).map(el => +el.dataset.step);
-    return JSON.stringify(steps) === '[1,2,3,4,5]';
+    return JSON.stringify(steps) === '[1,2,3,4,5,6]';
   }));
 
   ok('the labels swapped too — ① says PICK THE JOB, ② says SAY IT', await page.evaluate(() => {
@@ -48,10 +48,10 @@ const { chromium } = require('playwright');
     return s1.classList.contains('done') && !s1.classList.contains('next') && s2.classList.contains('next');
   }));
 
-  ok('words in → the eye goes to ⑤ SEND IT, tags and unlock stay optional', await page.evaluate(() => {
+  ok('words in → the eye goes to ⑥ SEND IT, tags and unlock stay optional', await page.evaluate(() => {
     $('askText').value = 'ran conduit under the slab'; updateStepFlow();
-    const s2 = document.querySelector('.g-step[data-step="2"]'), s5 = document.querySelector('.g-step[data-step="5"]');
-    const s3 = document.querySelector('.g-step[data-step="3"]');
+    const s2 = document.querySelector('.g-step[data-step="2"]'), s5 = document.querySelector('.g-step[data-step="6"]');
+    const s3 = document.querySelector('.g-step[data-step="4"]');   // v6.86 — ③ is the photo now; tags are ④, send is ⑥
     return s2.classList.contains('done') && s5.classList.contains('next') && !s3.classList.contains('next');
   }));
 
@@ -63,7 +63,7 @@ const { chromium } = require('playwright');
   ok('words WITHOUT a job point at the LEVER, and ① says a blank job is allowed (v6.42)', await page.evaluate(() => {
     qnJobPick = ''; $('askText').value = 'some words'; updateStepFlow();
     const one = document.querySelector('.g-step[data-step="1"]');
-    return document.querySelector('.g-step[data-step="5"]').classList.contains('next') &&
+    return document.querySelector('.g-step[data-step="6"]').classList.contains('next') &&   // v6.86 — the lever is ⑥
       !one.classList.contains('next') && one.classList.contains('blank') &&
       /BLANK — files as unfiled/.test(one.textContent);
   }));

@@ -116,9 +116,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     pendingQueue = []; renderPendBanner();
     return on && hn.textContent === '' && getComputedStyle(hn).display === 'none';
   }));
-  ok('the phone keeps its four plates under the clock, Summary last', await page.evaluate(() => {
+  ok('the phone shows three plates under the clock — since v6.86 the header SUMMARY is the one summary button there too', await page.evaluate(() => {
     const vis = [...document.querySelectorAll('#scRow .sc-btn')].filter(b => getComputedStyle(b).display !== 'none');
-    return vis.length === 4 && /Summary/.test(vis[3].textContent);
+    return vis.length === 3 && !vis.some(b => /Summary/.test(b.textContent)) && getComputedStyle($('summaryBtn')).display !== 'none';
   }));
 
   const ctx2 = await browser.newContext({ viewport: { width: 1200, height: 900 } });

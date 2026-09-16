@@ -426,6 +426,10 @@
   /* v4.87 — the camera stands beside the note box, full height, one thumb away */
   .cam-btn--tall { align-self: stretch; height: auto; display: flex; align-items: center; justify-content: center; flex: none; padding: 6px 10px; }
   .cam-btn--tall .cam-ic { height: 52px; }
+  /* 📷 v6.86 — the camera plate as step ③: full width, the picture and the words side by side */
+  .cam-btn--wide { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; margin-top: 6px; padding: 6px 12px; }
+  .cam-btn--wide .cam-ic { height: 40px; }
+  .cam-btn--wide .cam-tx { font-weight: 800; letter-spacing: .6px; font-size: 14px; }
   /* v4.66 — tags stay out of the way: very small chips */
   #qnTagChips .pick-chip, #nTagChips .pick-chip { font-size: 10.5px; padding: 2px 8px; min-height: 0; font-weight: 600; }
   .ask-row { display: flex; gap: 10px; align-items: stretch; }
@@ -662,11 +666,6 @@
     body { padding-bottom: 108px; }
     .capture { position: fixed; top: auto; bottom: 0; left: 50%; transform: translateX(-50%); width: min(100%, 1060px); margin: 0;
       padding: 8px 12px 12px; background: var(--surface-1); border-top: 1px solid var(--border); box-shadow: 0 -4px 14px rgba(0,0,0,0.25); z-index: 40; }
-    /* 📊 v6.85 — Eric: "Looks like we have two summary buttons at the top. Let's keep the one at the very top between
-       the Instant and the Setup buttons, at least on the PC version." On a PC the plate under the clock goes and its
-       waiting count rides the header SUMMARY button (#hbSumN); the phone keeps both. */
-    body:not(.crew-mode) #scRow .sc-btn:nth-child(4) { display: none; }
-    body:not(.crew-mode) #scRow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
   @media (max-width: 700px) {
     /* clears the fixed bar (one row, ~67px in the steam skin) plus the home-indicator strip */
@@ -946,6 +945,7 @@
   .pb-track { height: 14px; border: 1.5px solid var(--border); border-radius: 8px; overflow: hidden; margin: 6px 0; background: var(--chip-gray-bg); }
   .pb-fill { height: 100%; background: var(--accent); }
   :root[data-skin="steam"] .cap-btn[data-panel="budget"] .ic { background-image: none; }
+  .cap-btn[data-panel="budget"] .lb-long, .cap-btn[data-panel="budget"] .lb-short { font-style: italic; }   /* 💰 v6.86 — Eric: "visually separate it from the business things" — the word PERSONAL, and a slant */
   /* ✎ v6.83 — the Wizard's answer, one locked line at a time, each with its own ✎ (Eric: "the words are in the text
      box maybe greyed out a little and not editable but i can click anywhere around it and add more text so that i
      can correct each line or item or bullet point") */
@@ -2476,6 +2476,7 @@
   .rev-modal.mat-full .rev-box { max-width: 100%; width: 100%; height: auto; min-height: 100%; max-height: none; border-radius: 0; margin: 0; }
   /* 🏠 v6.65 — the portal window sits under the review window (80) and the client preview (120) */
   #portalWin { z-index: 70; }
+  #rlWin { z-index: 70; }   /* 🔍 v6.86 — the search window, under the summaries page like the portal */
   .rev-sub { font-size: 12.5px; color: var(--ink-muted); margin-bottom: 6px; }
   /* 🧹 v6.45 — SORT THE PILE. Eric, at 97 waiting: "help me sort it and get it to zero then i
      can take over." One plate at the top of Review, one row per kind, one button per row that
@@ -2558,6 +2559,11 @@
   body:not(.crew-mode) #scRow .sc-btn { font-size: 12px; letter-spacing: 0.2px; padding: 12px 4px; gap: 4px; }
   #scRow .sc-btn { position: relative; }
   body.crew-mode #scRow .sc-btn:nth-child(4) { display: none; }
+  /* 📊 v6.85 (PC) → v6.86 (everywhere) — Eric: "the phone version still has 2 summary buttons at the top." ONE summary
+     button: the header SUMMARY, which wears the waiting count (#hbSumN). The plate under the clock is gone for Eric on
+     every screen size; a crew phone never had it. */
+  body:not(.crew-mode) #scRow .sc-btn:nth-child(4) { display: none; }
+  body:not(.crew-mode) #scRow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .sc-btn .sc-n { position: absolute; top: -7px; right: -5px; min-width: 18px; padding: 0 5px; border-radius: 999px; box-sizing: border-box;
     background: #141414; color: #ffffff; border: 2px solid rgba(255,255,255,0.85); font-size: 11px; font-weight: 800; line-height: 18px; letter-spacing: 0;
     box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
@@ -2659,6 +2665,18 @@
      of it, and closing them lands Eric back here. -->
 <div class="rev-modal mat-full" id="portalWin" role="dialog" aria-label="Project portal">
   <div class="rev-box" id="portalBox"></div>
+</div>
+<!-- 🔍 v6.86 — Eric: "when i click on it and it opens the search boxes it pushes the search tags down and i have to
+     adjust to what im looking at, it should either come up in a window or be easily separated out". The searches open
+     in their OWN window: the boxes, the kind plates and the results move into it (the same nodes — the log renders
+     wherever #askRecent lives) and move back when it closes. Nothing on the main page shifts. -->
+<div class="rev-modal mat-full" id="rlWin" role="dialog" aria-label="Search the log">
+  <div class="rev-box" id="rlWinBox">
+    <div class="rev-row" style="justify-content: space-between; align-items: center;"><h3 style="margin: 0;">🔍 SEARCH THE LOG</h3><button type="button" class="btn-ghost req-x win-x" onclick="rlSearchShow(false)" aria-label="Close the search" title="Close the search">✕</button></div>
+    <div class="hint" style="margin: 4px 0 8px;">Type, pick a wheel, or tap a plate — the log below follows. ✕ keeps what you picked; Clear filters ✕ shows everything again.</div>
+    <div id="rlWinBody"></div>
+    <button type="button" class="btn-ghost x-plate" style="width: 100%; margin-top: 14px;" onclick="rlSearchShow(false)">← Back to the main page</button>
+  </div>
 </div>
 <!-- 🧾 v6.25 — Eric: "when I click receipt a window might open to pick the category — it's
      super confusing with so many tags right there." The category pick is its OWN window now:
@@ -2795,7 +2813,7 @@
     </div>
     </div>
     <div class="g-step" data-step="2">
-    <div class="g-step-label"><span class="g-step-num">2</span> SAY IT <span class="g-step-opt">· write it, speak it, or add a photo</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div class="g-step-label"><span class="g-step-num">2</span> SAY IT <span class="g-step-opt">· write it or speak it</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
     <div class="ask-row">
       <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this); updateStepFlow()" placeholder="Write a note, or ask a question.&#10;&#10;⚙ To the grinder — below — files it.&#10;🧙 ASK — right here — answers it."></textarea>
       <input type="file" id="qnPhoto" accept="image/*,.pdf,application/pdf" multiple onchange="noteAddPhotos(this)" style="display: none;">
@@ -2805,7 +2823,6 @@
            row, and making him scroll past all three to reach the lever was backwards. The
            grinder plate stays at the bottom, where filing belongs. -->
       <div class="ask-side">
-        <button type="button" class="btn-ghost cam-btn cam-btn--tall" onclick="$('qnPhoto').click()" aria-label="Add photos or files — or drag them onto this card" title="Add photos or files — or drag them onto this card"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"></button>
         <button type="button" class="btn-ghost wiz-side" id="wizSideBtn" onclick="askClaude()" aria-label="Ask the Wizard" title="Ask the Wizard — answers from your log, files nothing">
           <img class="cam-ic" src="steam/btn-wizard.webp" alt="" onerror="this.outerHTML='🧙'">
           <span class="wiz-side-tx">ASK</span>
@@ -2816,15 +2833,22 @@
          'who sees it' and the running log" (and on Phil's phone: "below all of the tags").
          The two plates + the bookkeeper button now ride at the BOTTOM of this card, after
          every tag, who-sees-it and send-to section. Write → file → THEN pull the lever. -->
+    </div>
+    <!-- 📷 v6.86 — Eric: "take the photo/file select button and make it step 3 and move tag it to step 4." The camera
+         plate leaves the side of the writing box and is a step of its own, so a receipt or a plan is a thing he does
+         on purpose, in order: job → words → photo → tags → unlock → send. -->
+    <div class="g-step" data-step="3">
+    <div class="g-step-label"><span class="g-step-num">3</span> ADD A PHOTO OR FILE <span class="g-step-sum"></span><span class="g-step-opt">· optional — a receipt, a plan, a picture of the work</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <button type="button" class="btn-ghost cam-btn cam-btn--wide" onclick="$('qnPhoto').click()" aria-label="Add photos or files — or drag them onto this card" title="Add photos or files — or drag them onto this card"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"><span class="cam-tx">ADD PHOTOS OR FILES</span></button>
     <div id="qnPhotoInfo" class="frow" style="gap: 6px; flex-wrap: wrap; margin-top: 6px;"></div>
     </div>
-    <div class="g-step" data-step="3">
-    <div class="g-step-label" onclick="gFold(3)"><span class="g-step-num">3</span> TAG IT <span class="g-step-sum"></span><span class="g-step-opt">· optional — files it, never sends it</span><span class="g-step-tap">▸ tap to open</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div class="g-step" data-step="4">
+    <div class="g-step-label" onclick="gFold(4)"><span class="g-step-num">4</span> TAG IT <span class="g-step-sum"></span><span class="g-step-opt">· optional — files it, never sends it</span><span class="g-step-tap">▸ tap to open</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
     <div class="chips-row" id="qnTagChips"></div>
     <div class="hint" id="tagExplain" style="margin-top: 4px; font-size: 11px; line-height: 1.5;">🏷 Tags FILE it so it's findable later — they never send it anywhere. A <b>Personal</b> tag locks this note to this phone.</div>
     </div>
-    <div class="g-step" data-step="4">
-    <div class="g-step-label" onclick="gFold(4)"><span class="g-step-num">4</span> UNLOCK IT <span class="g-step-sum"></span><span class="g-step-opt">· optional — locked to you till you say</span><span class="g-step-tap">▸ tap to open</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div class="g-step" data-step="5">
+    <div class="g-step-label" onclick="gFold(5)"><span class="g-step-num">5</span> UNLOCK IT <span class="g-step-sum"></span><span class="g-step-opt">· optional — locked to you till you say</span><span class="g-step-tap">▸ tap to open</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
     <!-- v4.71 — the lock: private by default; unlock for all crew or hand it to one person -->
     <div id="qnVisRow">
       <div class="field" style="margin: 8px 0 4px;"><label>🔓 Unlock it for… <span style="font-weight: 400; opacity: .8;">(locked to you until you say)</span></label></div>
@@ -2853,8 +2877,8 @@
          are now equal halves of one row — same width, same height, one reach. 📗 v5.55: it
          grinds the note + photos like normal AND pops the phone's send sheet for the books. -->
     </div>
-    <div class="g-step" data-step="5">
-    <div class="g-step-label"><span class="g-step-num">5</span> SEND IT<span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div class="g-step" data-step="6">
+    <div class="g-step-label"><span class="g-step-num">6</span> SEND IT<span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
     <div class="plate-row">
       <button type="button" class="plate-btn plate-btn--grind" onclick="saveQuickNote()" aria-label="To the grinder — save as a note" title="Save as a note — job + tags stamp on">
         <img src="steam/btn-grinder.webp" alt="" draggable="false" onerror="this.closest('button').classList.add('noimg')">
@@ -3131,7 +3155,7 @@
     <!-- 💰 v6.84 — Eric: "send the file cabinet button and pages to the boiler room museum. dont throw it away but its no
          longer needed for now. replace that buttons place with 'personal budget'." The plate above is hidden by
          body.parked-630 (the panel and every filing road stay); this one takes its spot. -->
-    <button class="cap-btn" data-panel="budget" aria-label="Personal budget"><span class="ic">💰</span><span class="lb-long">Budget</span><span class="lb-short">Budget</span></button>
+    <button class="cap-btn" data-panel="budget" aria-label="Personal budget"><span class="ic">💰</span><span class="lb-long">Personal Budget</span><span class="lb-short">Personal</span></button>
     <button class="cap-btn" data-panel="hours" aria-label="Hours"><span class="ic">⏱</span><span class="lb-long">Hours</span><span class="lb-short">Hours</span></button>
     <button class="cap-btn" data-panel="note" aria-label="Note"><span class="ic">📝</span><span class="lb-long">Note</span><span class="lb-short">Note</span></button>
     <button class="cap-btn" data-panel="todo" aria-label="To-Do"><span class="ic">✅</span><span class="lb-long">To-Do</span><span class="lb-short">To-Do</span></button>
@@ -3153,7 +3177,7 @@
 
   <!-- 💰 v6.84 — THE PERSONAL BUDGET (see renderBudget) -->
   <div class="panel" id="panel-budget">
-    <h3>💰 Personal budget</h3>
+    <h3>💰 PERSONAL BUDGET <span class="hint" style="font-weight: 400; font-size: 13px;">— yours, not the business</span></h3>
     <div id="pbBody"></div>
     <div class="panel-foot"><button class="panel-back" onclick="closePanels()">← Back to dashboard</button></div>
   </div>
@@ -3754,6 +3778,9 @@
     </div>
     <div class="set-section" id="setMail">
       <h4>📧 Email senders</h4>
+      <!-- 📥 v6.86 — the Inbox sweep, on demand and in words -->
+      <div class="rev-row" style="gap: 6px; margin: 0 0 6px; flex-wrap: wrap;"><button type="button" class="btn-ghost" onclick="sweepNow()">📥 Sweep the Inbox now</button></div>
+      <div id="sweepStatusSet" style="margin: 0 0 8px;"></div>
       <div class="hint" style="margin: 0 0 8px;">Who the app keeps and who it skips. ✓ ALWAYS files their emails onto your log, locked to you. 🚫 NEVER drops them into the Robots folder, nothing logged. A name that starts with @ means everyone at that company.</div>
       <label class="hint" style="display: flex; gap: 8px; align-items: center; margin: 0 0 8px; cursor: pointer;">
         <input type="checkbox" id="sMailSort" onchange="prefs.mailSort = this.checked; scheduleSave(); renderMailSenders();">
@@ -3816,7 +3843,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.85 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.86 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6025,25 +6052,28 @@ function catModalClose() { $('catModal').classList.remove('show'); renderTagChip
 function gFold(n) { window._gOpen = window._gOpen || {}; _gOpen[n] = !_gOpen[n]; updateStepFlow(); }
 function updateStepFlow() {
   const card = $('qnCard'); if (!card) return;
-  const hasWords = !!(($('askText') || {}).value || '').trim() || (typeof notePhotos !== 'undefined' && notePhotos.length > 0);
+  const words = !!(($('askText') || {}).value || '').trim(), photos = typeof notePhotos !== 'undefined' && notePhotos.length > 0;
+  const hasWords = words || photos;   // 📷 v6.86 — a photo alone is still something to send
   const jobPicked = !!(qnJobPick && jobs.includes(qnJobPick));
   // 🔀 v6.30 — the job is step ① now and the words are ②, so the eye goes: pick the job →
   // say it → send it. Tags and unlock stay optional and are never the NEXT thing.
   // ▸ v6.42 — Eric: "the step guide points back up the page." Once the words are in, the NEXT
   // thing is always the lever, job or no job — an unfiled note is allowed and step ① says so.
-  const next = hasWords ? 5 : (jobPicked ? 2 : 1);
-  const done = { 1: jobPicked, 2: hasWords, 3: !!(qnSel.size || qnHeads || qnRcpt), 4: !!(qnVis || qnVisNames.size), 5: false };
+  // 📷 v6.86 — Eric: "take the photo/file select button and make it step 3 and move tag it to step 4." ③ photo, ④ tags, ⑤ unlock, ⑥ send.
+  const next = hasWords ? 6 : (jobPicked ? 2 : 1);
+  const done = { 1: jobPicked, 2: words, 3: photos, 4: !!(qnSel.size || qnHeads || qnRcpt), 5: !!(qnVis || qnVisNames.size), 6: false };
   renderQnJobChips();
   card.querySelectorAll('.g-step').forEach(el => {
     const n = +el.dataset.step;
     el.classList.toggle('next', n === next);
     el.classList.toggle('done', !!done[n] && n !== next);
     if (n === 1) el.classList.toggle('blank', hasWords && !jobPicked);
-    if (n === 3 || n === 4) {
+    if (n === 3) { const sum = el.querySelector('.g-step-sum'); if (sum) sum.textContent = photos ? `· 📷 ${notePhotos.length} attached` : ''; }
+    if (n === 4 || n === 5) {
       window._gOpen = window._gOpen || {};
       el.classList.toggle('fold', !done[n] && !_gOpen[n]);
       const sum = el.querySelector('.g-step-sum');
-      if (sum) sum.textContent = n === 3
+      if (sum) sum.textContent = n === 4
         ? (qnSel.size ? '· 🏷 ' + [...qnSel].join(', ') : '· none picked')
         : (qnVis === 'crew' ? '· 🔓 all crew' : qnVisNames.size ? '· 📨 ' + [...qnVisNames].join(', ') : '· 🔒 just you');
     }
@@ -8940,6 +8970,7 @@ function mailIgnRow(i) { const ring = mailIgnored(); const row = ring[i]; if (!r
 function mailListOf(which) { return which === true ? mailOk() : which === false ? mailNo() : which === 'loud' ? mailLoud() : which === 'hush' ? mailHush() : mailPersonal(); }
 // 📧 v6.40 → v6.41 — the sender lists on one Setup card: ALWAYS, NEVER, and now LOUD, HUSH, PERSONAL
 function renderMailSenders() {
+  const ss = $('sweepStatusSet'); if (ss) ss.innerHTML = sweepStatusHtml();   // 📥 v6.86
   const box = $('mailListsBox'); if (!box) return;
   const arg = w => typeof w === 'string' ? `'${w}'` : String(w);
   const sec = (title, which, glyph) => { const list = mailListOf(which);
@@ -9131,8 +9162,32 @@ function textAlreadyLogged(from, body, srcTs) {
 // File format (written by the Shortcut): line 1 "FROM: Phil", rest = the message.
 const _notText = new Set(); // .txt files in the Inbox that aren't texts — read once, then left alone
 const _txtCache = new Map(); // what we already downloaded this pass, so nothing is fetched twice
+// 📥 v6.86 — Eric: "the text counter at the bottom i dont think is working it says 0 texts today." Fifty-nine texts and
+// forty-five emails sat in the Inbox for two days and the sweep's catch said nothing. The sweep now writes down how it
+// went — when, how many files it saw, how many texts and emails it filed, what still waits, and the error if it failed —
+// and the line under the text meter (and Setup → 📧 Email senders) says it in words, with a "Sweep now" tap.
+function sweepNote(patch) {
+  window._sweepLast = { ...(window._sweepLast || {}), ...patch }; lsSet('daylog-sweep-last', JSON.stringify(window._sweepLast));
+  const ss = $('sweepStatusSet'); if (ss) ss.innerHTML = sweepStatusHtml();   // the Setup line follows at once; the digest line follows on its next render
+}
+function sweepStatusHtml() {
+  let s = window._sweepLast; if (!s) { try { s = JSON.parse(lsGet('daylog-sweep-last') || 'null'); } catch (e) { s = null; } }
+  const tap = '<a href="javascript:void(0)" onclick="sweepNow()">Sweep now</a>';
+  if (!s || !s.at) return `<div class="hint sweep-line" style="margin-top: 6px;">📥 Inbox sweep: has not run yet on this phone — it runs with every sync · ${tap}</div>`;
+  const ago = Math.round((Date.now() - +new Date(s.at)) / 60000);
+  const when = ago < 1 ? 'just now' : ago < 60 ? `${ago} min ago` : ago < 1440 ? `${Math.round(ago / 60)} h ago` : new Date(s.at).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  if (s.err) return `<div class="hint sweep-line" style="margin-top: 6px;">⚠ Inbox sweep FAILED ${when}: ${esc(String(s.err).slice(0, 140))} · ${tap}</div>`;
+  return `<div class="hint sweep-line" style="margin-top: 6px;">📥 Inbox sweep ${when}: ${s.seen || 0} in the Inbox · ${s.texts || 0} text${s.texts === 1 ? '' : 's'} and ${s.mails || 0} email${s.mails === 1 ? '' : 's'} filed${s.left ? ` · ${s.left} still waiting for the next sweep` : ''} · ${tap}</div>`;
+}
+async function sweepNow() {
+  toast('📥 Sweeping the Inbox…');
+  await checkInboxTexts();
+  const s = window._sweepLast || {};
+  toast(s.err ? `⚠ The sweep failed: ${String(s.err).slice(0, 90)}` : `📥 ${s.texts || 0} texts and ${s.mails || 0} emails filed · ${s.left || 0} still waiting`, !s.err);
+  renderTextDigest(); const ss = $('sweepStatusSet'); if (ss) ss.innerHTML = sweepStatusHtml();
+}
 async function checkInboxTexts() {
-  if (!dbx.refreshToken) return;
+  if (!dbx.refreshToken) { sweepNote({ at: new Date().toISOString(), err: 'no Dropbox connection on this phone (⚙ Setup → Dropbox)' }); return; }
   // 📥 v6.41 — wait for the review pile to land first: a card pushed a breath before
   // checkPending() replaced the queue from the file used to vanish (hot texts had this too).
   try { await (window._pendReady || Promise.resolve()); } catch (e) {}
@@ -9146,9 +9201,11 @@ async function checkInboxTexts() {
   // uploads once a session and only when something actually changed.
   publishMailRules();
   mailLockPersonalOnce();
+  const n0 = { t: entries.filter(e => e.texted).length, m: entries.filter(e => e.mail).length };   // 📥 v6.86 — what this sweep files, for the status line
   try {
     const r = await dbxRpc('files/list_folder', { path: DBX_ROOT + '/Inbox', recursive: false });
-    const all = (r.entries || []).filter(f => f['.tag'] === 'file');
+    if (!r || !Array.isArray(r.entries)) throw new Error('Inbox listing: ' + String((r && r.error_summary) || 'no answer from Dropbox'));   // 📥 v6.86 — a refused listing used to read as an empty Inbox
+    const all = r.entries.filter(f => f['.tag'] === 'file');
     const named = all.filter(f => /^text\b.*\.txt$/i.test(f.name));
     // 📨 v5.98 — a text from someone the Shortcut can't name doesn't always land as
     // "Text - …". ANY .txt in the Inbox whose first line is FROM: is a text too, whatever
@@ -9251,8 +9308,12 @@ async function checkInboxTexts() {
       autoLogText(oFrom, '', [await claim(im)], isPersonalSender(oFrom) || undefined, im.server_modified);
       pendMarkDone(id); // v5.98 — written down, same as the worded ones
     }
+    sweepNote({ at: new Date().toISOString(), seen: all.length, texts: entries.filter(e => e.texted).length - n0.t, mails: entries.filter(e => e.mail).length - n0.m, left: Math.max(0, files.length - 20), err: '' });   // 📥 v6.86
     renderPendBanner(); renderTextDigest(); renderTxtNudges(); renderMailAsk();
-  } catch (e) { /* no Inbox or offline — quiet */ }
+  } catch (e) {
+    // 📥 v6.86 — never quiet again: the status line under the meter says what went wrong
+    sweepNote({ at: new Date().toISOString(), err: (e && e.message) || String(e) }); console.error('inbox sweep', e); renderTextDigest();
+  }
 }
 // 📚 v5.19 — a text reads itself in: logged + tagged under the sender (Wizard-searchable),
 // question texts join the nudge list so "read it and forgot" gets a second chance at 6pm.
@@ -9539,7 +9600,7 @@ function renderTextDigest() {
   const meter = textMeterHtml();
   // quiet morning: no texts yet, but the meter still stands there waiting to fill
   if (!tx.length) {
-    box.innerHTML = meter ? `<div class="card" style="padding: 6px 14px 10px; margin-bottom: 14px;">${meter}</div>` : '';
+    box.innerHTML = `<div class="card" style="padding: 6px 14px 10px; margin-bottom: 14px;">${meter}${sweepStatusHtml()}</div>`;   // 📥 v6.86 — the sweep's status rides under the meter, even on a quiet morning
     return;
   }
   const needs = tx.filter(e => !e.personal && NEEDS_ANSWER.test((e.details || '').replace(/^Text from [^:]*: /, '')));
@@ -9559,7 +9620,7 @@ function renderTextDigest() {
     <b>📬 ${tx.length} text${tx.length > 1 ? 's' : ''} today</b>${needs.length
       ? ` — <b>${needs.length} look${needs.length === 1 ? 's' : ''} like a question</b>`
       : ' — all piled'} <span class="hint" style="margin: 0;">· tap to ${_tdOpen ? 'fold' : 'open'}</span>
-    ${meter}
+    ${meter}${sweepStatusHtml()}
     ${_tdOpen ? `
     <div class="chips-row" style="margin-top: 8px;" onclick="event.stopPropagation()">
       <button class="pick-chip${_tdSender ? '' : ' sel'}" onclick="tdPick('', event)">${_tdSender ? '' : '✓ '}All (${tx.length})</button>
@@ -11593,7 +11654,7 @@ function laborRecapTake(m, ts) {
   if (!r.week || !r.jobs.length) return false;
   laborWeeks()[r.week] = r;
   const e = autoLogMail(m, ts, { labor: r.week });
-  if (e) { e.job = jobs.find(j => /^shop/i.test(j)) || e.job || '—'; e.category = 'Office/Admin'; }
+  if (e) { e.job = jobs.find(j => /^(shop|internal)/i.test(j)) || e.job || '—'; e.category = 'Office/Admin'; }   // ✎ v6.86 — Shop / Admin became Internal / Admin
   return true;
 }
 // what has already gone to their page for this job+week, and what the books have since taken in
@@ -16776,14 +16837,27 @@ function rlSet(f) {
 function rlWho(v) { prefs.rlWho = v || ''; window._rlN = 12; scheduleSave(); renderAskRecent(); }
 // 🔍 v5.78 — Eric: "when I click on it have the searches." The old full-log search bar and
 // filter row fold open right under the RUNNING LOG divider. Same searches, same ids, one log.
+// 🔍 v6.86 — the searches live in their own window (#rlWin). Opening moves the search boxes, the plates and the results
+// INTO it; closing moves them back, keeping whatever he picked (the Search plate then reads ✓ ON until Clear filters).
 function rlSearchShow(open) {
-  const w = $('rlSearchWrap'); if (!w) return;
-  const show = open === undefined ? w.style.display === 'none' : !!open;
-  w.style.display = show ? '' : 'none';
-  const b = $('rlSearchBtn');
-  if (b) { b.classList.toggle('sel', show); b.textContent = show ? '✕ Close search' : '🔍 Search'; }
-  if (show) { logOpenInit(); const s = $('logSearch'); if (s) setTimeout(() => s.focus(), 150); }
+  const w = $('rlSearchWrap'), win = $('rlWin'), body = $('rlWinBody'), card = $('runLogCard'); if (!w || !win || !body || !card) return;
+  const show = open === undefined ? !win.classList.contains('show') : !!open;
+  const parts = [w, $('askRecent'), $('logDbxHits')].filter(Boolean);
+  if (show) {
+    parts.forEach(el => body.appendChild(el));
+    w.style.display = '';
+    if (!$('rlWinNote')) card.insertAdjacentHTML('beforeend', '<div class="hint" id="rlWinNote" style="margin: 8px 0;">🔍 The log is open in the search window.</div>');
+    win.classList.add('show'); document.body.classList.add('modal-open'); win.scrollTop = 0;
+    logOpenInit(); const s = $('logSearch'); if (s) setTimeout(() => s.focus(), 150);
+  } else {
+    const note = $('rlWinNote'); if (note) note.remove();
+    parts.forEach(el => card.appendChild(el));
+    w.style.display = 'none';
+    win.classList.remove('show'); modalOpenSync();
+  }
   renderAskRecent();
+  const b = $('rlSearchBtn');
+  if (b) { const on = show || !!window._rlFiltersOn; b.classList.toggle('sel', on); b.textContent = show ? '✕ Close search' : on ? '🔍 Search ✓ ON' : '🔍 Search'; }
 }
 function rlSearchToggle() { rlSearchShow(); }
 // tap a book entry in the feed → it unfolds into the full detailed row (✏️ edit, 📷, tags, ✓✓)
@@ -16831,7 +16905,7 @@ function renderAskRecent() {
     return true;
   };
   const hardFiltersOn = fJob !== 'All' || fType !== 'All' || fWho !== 'All' || fCat !== 'All' || fTag !== 'All' || !!fFrom || !!fTo;
-  const filtersOn = !!q || hardFiltersOn;
+  const filtersOn = !!q || hardFiltersOn; window._rlFiltersOn = filtersOn;   // 🔍 v6.86 — the Search plate says ✓ ON while a search holds with the window shut
   // the whole day's traffic, typed: kind decides the glyph AND what the filters catch
   // 📜 v5.59 — Eric: "I want to see EVERYTHING that flows through this app go through that
   // running log." So besides his own entries and the Wizard, the feed now carries the review
@@ -16933,13 +17007,14 @@ function renderAskRecent() {
       title="${only ? 'tap again: 🚫 hide these' : off ? 'hidden — tap: let them back in' : 'tap: only these · tap tap: hide these'}"
       onclick="rlSet('${v}')">${only ? '✓ ' : off ? '🚫 ' : ''}${w}</button>`;
   };
-  box.innerHTML = `<div class="rl-filters">
+  // 🧾 v6.86 — with Receipts ON the kind plates fold into ONE line that says so (Eric: "currently still has other things in there like a wizard and photo and grinder")
+  box.innerHTML = (window._logRcptOnly ? `<div class="rl-filters"><button type="button" class="pick-chip sel rl-wide" onclick="rlRcptToggle()" title="tap: every kind of entry again">🧾 ✓ RECEIPTS ONLY — every other filter is off · tap to show everything</button></div>` : `<div class="rl-filters">
       <button type="button" class="pick-chip${!f && !who && !hide.length ? ' sel' : ''}" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; prefs.rlHide = []; window._rlN = 12; scheduleSave(); renderAskRecent();">${!f && !who && !hide.length ? '✓ ' : ''}✳ All</button>
       ${chip('grind', '⚙ Grinder')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('mail', '📧 Emails')}${chip('photo', '📷 Pictures')}${chip('crew', '👷 Crew')}${chip('client', '🏠 Client')}${chip('fb', '💬 Feedback')}
       <button type="button" class="pick-chip rl-wide" onclick="openFeedback()" title="Say what works and what doesn't — it lands right here in the log">➕ 💬 Say something</button>
       ${people.length ? `<select class="mini-sel" style="font-size: 11px; padding: 2px 6px;" onchange="rlWho(this.value)" title="Just one person's traffic">
         <option value="">👤 person…</option>${people.map(pn => `<option${who === pn ? ' selected' : ''}>${esc(pn)}</option>`).join('')}</select>` : ''}
-    </div>` +
+    </div>`) +
     (page.length ? page.map(it => {
       // an unfolded book entry wears the full detailed row — ✏️ edit, 📷, tags, ✓ FIELD / ✓ QB
       if (it.e && _rlOpen.has(it.e.id)) {
@@ -17087,10 +17162,44 @@ function deleteJob(i) {
   scheduleSave();
   toast(`Job removed — ${name}. Old entries keep its name.`);
 }
+// ✎ v6.86 — Eric: "on the pick the job, make shop/admin to say internal/admin or something that would say anything not
+// for a job or rental property." A job can be RENAMED — everything filed under the old name follows it: the log, the
+// to-dos, the wheels' memory, the learned categories, the job card, the recap bridge, the card he had open.
+function renameJob(from, to) {
+  to = String(to || '').trim(); if (!from || !to || from === to) return false;
+  if (jobs.includes(to)) { toast(`There is already a job called ${to}`, false); return false; }
+  const i = jobs.indexOf(from); if (i < 0) return false;
+  jobs[i] = to;
+  entries.forEach(e => { if (e.job === from) e.job = to; });
+  todos.forEach(t => { if (t.job === from) t.job = to; });
+  if (curJob === from) curJob = to;
+  if (typeof qnJobPick !== 'undefined' && qnJobPick === from) qnJobPick = to;
+  if (prefs.lastJob === from) prefs.lastJob = to;
+  prefs.jobRecent = (prefs.jobRecent || []).map(j => j === from ? to : j);
+  if (prefs.jobCats && prefs.jobCats[jobCatKey(from)] && !prefs.jobCats[jobCatKey(to)]) { prefs.jobCats[jobCatKey(to)] = prefs.jobCats[jobCatKey(from)]; delete prefs.jobCats[jobCatKey(from)]; }
+  if (prefs.cards && prefs.cards[cardKey(from)] && !prefs.cards[cardKey(to)]) { const c = prefs.cards[cardKey(from)]; c.job = to; prefs.cards[cardKey(to)] = c; delete prefs.cards[cardKey(from)]; }
+  if (prefs.recapJobs) Object.keys(prefs.recapJobs).forEach(k => { if (prefs.recapJobs[k] === from) prefs.recapJobs[k] = to; });
+  if (typeof todoFilter !== 'undefined' && todoFilter === from) todoFilter = to;
+  if (lsGet('daylog-cardjob') === from) lsSet('daylog-cardjob', to);
+  if (typeof _cardJob !== 'undefined' && _cardJob === from) _cardJob = to;
+  renderJobSelects(); renderJobsManager(); renderTodos(); renderAll();
+  scheduleSave();
+  return true;
+}
+let _jobRen = -1;
+function jobRenameStart(i) { _jobRen = i; renderJobsManager(); const b = $('jobRenBox'); if (b) { b.focus(); b.select(); } }
+function jobRenameDone(i, val) {
+  if (_jobRen !== i) return;
+  _jobRen = -1;
+  const from = jobs[i], to = String(val || '').trim();
+  if (to && to !== from && renameJob(from, to)) toast(`✎ ${from} is now ${to} ✓ — everything filed under it followed`);
+  else renderJobsManager();
+}
 function renderJobsManager() {
   const sorted = jobs.map((j, i) => ({ j, i })).sort((a, b) => a.j.localeCompare(b.j));
-  $('jobList').innerHTML = sorted.map(({ j, i }) =>
-    `<span class="job-pill">${esc(j)}<button class="jm-del" title="Remove ${esc(j)}" onclick="deleteJob(${i})"${jobs.length <= 1 ? ' disabled' : ''}>✕</button></span>`
+  $('jobList').innerHTML = sorted.map(({ j, i }) => i === _jobRen
+    ? `<span class="job-pill"><input type="text" id="jobRenBox" value="${esc(j)}" aria-label="new name for ${esc(j)}" style="min-width: 170px;" onkeydown="if(event.key==='Enter'){event.preventDefault();jobRenameDone(${i}, this.value);} if(event.key==='Escape'){_jobRen=-1;renderJobsManager();}"><button class="jm-del" title="Save the new name" aria-label="save the new name" onclick="jobRenameDone(${i}, $('jobRenBox').value)">✓</button><button class="jm-del" title="Never mind" aria-label="never mind" onclick="_jobRen=-1;renderJobsManager()">✕</button></span>`
+    : `<span class="job-pill">${esc(j)}<button class="jm-del" title="Rename ${esc(j)}" aria-label="rename ${esc(j)}" onclick="jobRenameStart(${i})">✎</button><button class="jm-del" title="Remove ${esc(j)}" onclick="deleteJob(${i})"${jobs.length <= 1 ? ' disabled' : ''}>✕</button></span>`
   ).join('');
 }
 function addTruckSettings() {
@@ -18201,6 +18310,7 @@ function rlRcptToggle() {
   // drops the search words, every wheel, the dates and the heads-up view, so the list is every
   // receipt in the book and nothing narrower. Narrow it again AFTER, if he wants one job.
   if (window._logRcptOnly) {
+    prefs.rlFilter = ''; prefs.rlWho = ''; prefs.rlHide = [];   // 🧾 v6.86 — Eric: "when i click on receipts it should close all other tags" — the kind plates too
     logQuery = '';
     window._logHeadsOnly = '';
     if ($('logSearch')) $('logSearch').value = '';
@@ -18222,6 +18332,7 @@ function clearLogFilters() {
   $('logSearch').value = '';
   ['lfJob', 'lfType', 'lfWho', 'lfCat', 'lfTag'].forEach(id => { if ($(id)) $(id).value = 'All'; });
   $('lfFrom').value = ''; $('lfTo').value = '';
+  const sb = $('rlSearchBtn'); if (sb && !($('rlWin') && $('rlWin').classList.contains('show'))) { sb.classList.remove('sel'); sb.textContent = '🔍 Search'; }   // 🔍 v6.86
   renderLog();
 }
 function logOpenInit() {
@@ -18347,7 +18458,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.85';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.86';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -18881,6 +18992,9 @@ async function pullRemote() {
     if (j.prefs) { prefs = j.prefs; applySkin(prefs.skin || ''); }
     entries = (j.entries || []).map(e => ({ ...e, ts: new Date(e.ts), synced: true }));
     todos = (j.todos || []).map(t => ({ ...t }));
+    // ✎ v6.86 — Eric: "make shop/admin to say internal/admin" — once, on the phone that holds the book (never a crew
+    // phone: their list comes from crew.json). The ✎ in Setup → Jobs changes it again if he wants other words.
+    if (!prefs.jobRen686 && !CREW_NAME && jobs.includes('Shop / Admin') && !jobs.includes('Internal / Admin')) { prefs.jobRen686 = true; renameJob('Shop / Admin', 'Internal / Admin'); }
     if (!prefs.pri4) {  // one-time migration to the 4-level priority scale (Normal→Med, High→High, Urgent→Urgent)
       todos.forEach(t => t.pri = Math.min((t.pri || 0) + 1, 3));
       prefs.pri4 = true;
