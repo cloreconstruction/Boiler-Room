@@ -65,78 +65,9 @@
     --panel-shadow: rgba(0,0,0,0.55);
   }
   /* ---------- skins ---------- */
-  :root[data-skin="command"] {
-    color-scheme: dark;
-    --surface-1: #0f150f; --page: #080c08;
-    --ink-1: #d6e8cf; --ink-2: #9fbf98; --ink-muted: #6d8a68;
-    --grid: #1c2a1c; --baseline: #2c3f2c; --border: rgba(150,220,140,0.16);
-    --good: #52e06a; --good-text: #52e06a;
-    --chip-blue-bg: #12251a; --chip-orange-bg: #2a2410; --chip-aqua-bg: #10281e; --chip-violet-bg: #1a2415; --chip-gray-bg: #182018;
-    --btn-bg: #ffb000; --btn-ink: #1a1400;
-    --accent: #ffb000; --accent-ink: #1a1400;
-    --chart-bar: #ffb000; --err: #ff5c5c;
-    --panel-glow: rgba(255,176,0,0.22); --panel-shadow: rgba(0,0,0,0.7);
-  }
-  :root[data-skin="steel"] {
-    color-scheme: dark;
-    --surface-1: #151c26; --page: #0c1117;
-    --ink-1: #e3ebf5; --ink-2: #b6c4d4; --ink-muted: #7d8b9c;
-    --grid: #232d3a; --baseline: #33404f; --border: rgba(160,190,230,0.15);
-    --good: #35c26a; --good-text: #35c26a;
-    --chip-blue-bg: #1a2a40; --chip-orange-bg: #33251a; --chip-aqua-bg: #14303a; --chip-violet-bg: #242440; --chip-gray-bg: #202834;
-    --btn-bg: #e3ebf5; --btn-ink: #0c1117;
-    --accent: #3987e5; --accent-ink: #ffffff;
-    --chart-bar: #3987e5; --err: #e66767;
-    --panel-glow: rgba(57,135,229,0.25); --panel-shadow: rgba(0,0,0,0.65);
-  }
-  :root[data-skin="hiviz"] {
-    color-scheme: dark;
-    --surface-1: #151515; --page: #0b0b0b;
-    --ink-1: #f2f2f2; --ink-2: #c9c9c9; --ink-muted: #8b8b8b;
-    --grid: #242424; --baseline: #3a3a3a; --border: rgba(255,255,255,0.15);
-    --good: #59e065; --good-text: #59e065;
-    --chip-blue-bg: #16233a; --chip-orange-bg: #331f10; --chip-aqua-bg: #10302a; --chip-violet-bg: #241f3a; --chip-gray-bg: #222222;
-    --btn-bg: #ff7a00; --btn-ink: #140900;
-    --accent: #ff7a00; --accent-ink: #140900;
-    --chart-bar: #ff9d33; --err: #ff5c5c;
-    --panel-glow: rgba(255,122,0,0.32); --panel-shadow: rgba(0,0,0,0.75);
-  }
-  :root[data-skin="blueprint"] {
-    color-scheme: dark;
-    --surface-1: #14324f; --page: #0c1f33;
-    --ink-1: #eaf4ff; --ink-2: #bcd6ec; --ink-muted: #7f9ec0;
-    --grid: #1d4266; --baseline: #2a5580; --border: rgba(160,210,255,0.20);
-    --good: #63e6a4; --good-text: #63e6a4;
-    --chip-blue-bg: #1a3c60; --chip-orange-bg: #3a2c1a; --chip-aqua-bg: #143c42; --chip-violet-bg: #2a2c55; --chip-gray-bg: #1a3550;
-    --btn-bg: #eaf4ff; --btn-ink: #0c1f33;
-    --accent: #6fc3ff; --accent-ink: #06263f;
-    --chart-bar: #6fc3ff; --err: #ff7d7d;
-    --panel-glow: rgba(111,195,255,0.30); --panel-shadow: rgba(0,0,0,0.6);
-  }
-  :root[data-skin="winter"] {
-    color-scheme: dark;
-    --surface-1: #101a30; --page: #070d1c;
-    --ink-1: #e8eefc; --ink-2: #b9c6e2; --ink-muted: #7c89a8;
-    --grid: #1b2740; --baseline: #2c3b5c; --border: rgba(170,195,255,0.15);
-    --good: #6ff2b0; --good-text: #6ff2b0;
-    --chip-blue-bg: #16274a; --chip-orange-bg: #332617; --chip-aqua-bg: #123a38; --chip-violet-bg: #262a52; --chip-gray-bg: #1a2338;
-    --btn-bg: #e8eefc; --btn-ink: #0a1428;
-    --accent: #b7e3ff; --accent-ink: #0a1428;
-    --chart-bar: #86b6ef; --err: #ff8585;
-    --panel-glow: rgba(183,227,255,0.28); --panel-shadow: rgba(0,0,0,0.65);
-  }
-  :root[data-skin="daylight"] {
-    color-scheme: light;
-    --surface-1: #ffffff; --page: #f2f4f6;
-    --ink-1: #101418; --ink-2: #3c4650; --ink-muted: #6c7680;
-    --grid: #dde2e8; --baseline: #b8c0c9; --border: rgba(16,20,24,0.16);
-    --good: #0ca30c; --good-text: #006300;
-    --chip-blue-bg: #e3eefb; --chip-orange-bg: #fdeae2; --chip-aqua-bg: #e0f5ec; --chip-violet-bg: #eae7f8; --chip-gray-bg: #eceef1;
-    --btn-bg: #101418; --btn-ink: #ffffff;
-    --accent: #0b62c4; --accent-ink: #ffffff;
-    --chart-bar: #2a78d6; --err: #d03b3b;
-    --panel-glow: rgba(11,98,196,0.22); --panel-shadow: rgba(16,20,24,0.2);
-  }
+  /* 🏛 v6.85 — Clore Gold (the base tokens above stay as the fallbacks), Command Center, Steel, High-Vis, Blueprint,
+     Winter Night and Daylight went to the museum. Eric: "get rid of everything but Steamworks and Calm Brass." A phone
+     still holding one of those names lands on Calm Brass (skinKey). */
   /* 🕯 v6.66 — CALM BRASS. Eric: "something still easy on the eyes in the dark but also easy to
      read … the boxes and windows and chips and buttons and all the things are easy to read and
      important things draw my eye." Built from the 2026-09-11 research (WCAG 2.2 / APCA, Material
@@ -156,12 +87,23 @@
     --accent: #f2c66d; --accent-ink: #1c1506;
     --chart-bar: #f2c66d; --err: #ff8a70; --warn: #ffa657;
     --panel-glow: rgba(242,198,109,0.22); --panel-shadow: rgba(0,0,0,0.6);
+    --raised: #2a2419; --field: #1a1611;   /* 🎨 v6.85 — the chip plate and the writing box follow the tone */
   }
+  /* 🎨 v6.85 — THE CALM TONES. Eric: "use the calm brass THEME as its the best, but make a few different color
+     schemes with different background colors. Make them very neutral and easy on the eyes." The same Calm Brass —
+     brass, green, orange and coral untouched, every calm rule below still applies — on a different neutral canvas:
+     only the page, the surfaces and the three text levels change (data-tone on the root, set by applySkin from the
+     'calm-<tone>' pick). Every tone is checked in _test685: text 7:1+, dim text and brass 4.5:1+, a near-grey canvas. */
+  :root[data-skin="calm"][data-tone="slate"]    { --page: #131619; --surface-1: #1c2024; --raised: #262b31; --field: #171a1e; --ink-1: #eef1f4; --ink-2: #bcc3cb; --ink-muted: #8b939d; --grid: #2f353c; --baseline: #5f6975; --border: #3d444c; --chip-gray-bg: #262b31; }
+  :root[data-skin="calm"][data-tone="graphite"] { --page: #161616; --surface-1: #202020; --raised: #2b2b2b; --field: #1a1a1a; --ink-1: #f1f1f1; --ink-2: #c4c4c4; --ink-muted: #909090; --grid: #343434; --baseline: #656565; --border: #404040; --chip-gray-bg: #2b2b2b; }
+  :root[data-skin="calm"][data-tone="moss"]     { --page: #121614; --surface-1: #1b201d; --raised: #262c28; --field: #161a18; --ink-1: #eef2ee; --ink-2: #bfc8c1; --ink-muted: #8b958e; --grid: #313833; --baseline: #5f6c64; --border: #3b443e; --chip-gray-bg: #262c28; }
+  :root[data-skin="calm"][data-tone="stone"]    { --page: #26231f; --surface-1: #332e28; --raised: #3f3a32; --field: #2b2723; --ink-1: #f6f1e6; --ink-2: #d4cbba; --ink-muted: #b3a98f; --grid: #4b453c; --baseline: #7e7461; --border: #5b5448; --chip-gray-bg: #3f3a32; }
+  .skin-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.45); margin-right: 6px; vertical-align: -1px; }
   :root[data-skin="calm"] body { font-size: 16px; }
   :root[data-skin="calm"] .hint { font-size: 13px; color: var(--ink-2); line-height: 1.45; }
   /* a chip is a quiet raised plate; the picked one is the only brass on its row */
   :root[data-skin="calm"] .pick-chip {
-    background: #2a2419; border: 1px solid var(--baseline); color: var(--ink-1);
+    background: var(--raised); border: 1px solid var(--baseline); color: var(--ink-1);
     border-radius: 10px; font-weight: 600; font-size: 13px; min-height: 40px; padding: 8px 12px;
   }
   :root[data-skin="calm"] .pick-chip.sel {
@@ -173,7 +115,7 @@
   :root[data-skin="calm"] .set-section { border-color: var(--grid); }
   :root[data-skin="calm"] .fc-sec { background: var(--surface-1); }
   :root[data-skin="calm"] select, :root[data-skin="calm"] input, :root[data-skin="calm"] textarea {
-    background-color: #1a1611; color: var(--ink-1); border-color: var(--baseline); border-radius: 8px;
+    background-color: var(--field); color: var(--ink-1); border-color: var(--baseline); border-radius: 8px;
   }
   :root[data-skin="steam"] {
     color-scheme: dark;
@@ -395,27 +337,6 @@
     transform: translateY(1px);
     box-shadow: 0 1px 0 rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.06);
   }
-  /* command-center flavor: bezeled cards, uppercase readouts, amber glow numerals */
-  :root[data-skin="command"] .card,
-  :root[data-skin="command"] .clock-card,
-  :root[data-skin="command"] .kpi {
-    border: 1px solid #223522;
-    box-shadow: inset 0 1px 0 rgba(150,220,140,0.07), 0 3px 12px rgba(0,0,0,0.55);
-  }
-  :root[data-skin="command"] .kpi .label,
-  :root[data-skin="command"] .card h2,
-  :root[data-skin="command"] .set-section h4 { letter-spacing: 1.4px; text-transform: uppercase; }
-  :root[data-skin="command"] .kpi .value,
-  :root[data-skin="command"] .clock-time {
-    font-variant-numeric: tabular-nums;
-    color: #ffd75e;
-    text-shadow: 0 0 14px rgba(255,176,0,0.35);
-  }
-  :root[data-skin="steel"] .card, :root[data-skin="steel"] .clock-card, :root[data-skin="steel"] .kpi {
-    border: 1px solid #26313f;
-    box-shadow: inset 0 1px 0 rgba(180,205,235,0.06), 0 3px 12px rgba(0,0,0,0.45);
-  }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
   /* 🌙 v6.33 — the root canvas too: with no html background, any gap the browser paints
      before a fixed panel lands — overscroll, a modal opening, a re-layout — shows the
@@ -741,6 +662,11 @@
     body { padding-bottom: 108px; }
     .capture { position: fixed; top: auto; bottom: 0; left: 50%; transform: translateX(-50%); width: min(100%, 1060px); margin: 0;
       padding: 8px 12px 12px; background: var(--surface-1); border-top: 1px solid var(--border); box-shadow: 0 -4px 14px rgba(0,0,0,0.25); z-index: 40; }
+    /* 📊 v6.85 — Eric: "Looks like we have two summary buttons at the top. Let's keep the one at the very top between
+       the Instant and the Setup buttons, at least on the PC version." On a PC the plate under the clock goes and its
+       waiting count rides the header SUMMARY button (#hbSumN); the phone keeps both. */
+    body:not(.crew-mode) #scRow .sc-btn:nth-child(4) { display: none; }
+    body:not(.crew-mode) #scRow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
   @media (max-width: 700px) {
     /* clears the fixed bar (one row, ~67px in the steam skin) plus the home-indicator strip */
@@ -1441,7 +1367,16 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent), 0 2px 6px rgba(0,0,0,0.3); }
   .x-plate.x-small, .x-plate.x-small.req-x, .x-plate.x-small.ask-inline__x { min-height: 36px; font-size: 15px; padding: 4px 10px; }
   .cp-x { color: #111; border: 3px solid var(--accent); }   /* the client preview's ✕ CLOSE pill — black too */
-  #photoLb .lb-close.x-plate { background: var(--accent); color: #111; border: 3px solid var(--accent); }   /* the photo viewer's own id rule outranks a class — say it again with the id */   /* the ghost rule later in the file was washing the ✕ out */   /* the ✕ also wears req-x (.72rem) and btn-ghost — the plate wins */
+  #photoLb .lb-close.x-plate { background: var(--accent); color: #111; border: 3px solid var(--accent); }   /* the photo viewer's own id rule outranks a class — say it again with the id */
+  /* ✕ v6.85 — black on gold in EVERY skin. The Calm ghost rule (its colour and 14px) and the Steamworks ghost rule
+     (its dark background) outranked the plate — in Calm Brass the ✕ read light, in Steamworks the plate was not gold
+     at all. Calm Brass is now the default, so this is the one Eric sees. */
+  :root[data-skin="calm"] .win-x, :root[data-skin="calm"] .x-plate, :root[data-skin="steam"] .win-x, :root[data-skin="steam"] .x-plate {
+    background-color: var(--accent); background-image: none; border: 3px solid var(--accent); color: #111; border-radius: 10px;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent), 0 2px 6px rgba(0,0,0,0.3); }
+  :root[data-skin="calm"] .win-x, :root[data-skin="steam"] .win-x { font-size: 17px; }
+  :root[data-skin="calm"] .x-plate, :root[data-skin="steam"] .x-plate { font-size: 16px; }
+  :root[data-skin="calm"] .x-plate.x-small, :root[data-skin="steam"] .x-plate.x-small { font-size: 15px; }   /* the ghost rule later in the file was washing the ✕ out */   /* the ✕ also wears req-x (.72rem) and btn-ghost — the plate wins */
   /* 🟢🔴 v6.32 — the receipt lamp in the running log. Colour is the fast read, but it is
      never the ONLY read: each state carries its own glyph and its own spelled word, so the
      row says the same thing in bright sun, on a cracked screen, or to colour-blind eyes. */
@@ -2082,6 +2017,9 @@
   .hb-tx { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; text-align: left; min-width: 0; }
   .hb-tx strong { font-size: 13.5px; font-weight: 800; letter-spacing: 1.4px; color: #e2c179; text-transform: uppercase; white-space: nowrap; }
   .hb-tx span { font-size: 9.5px; color: #a8895a; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  /* 📊 v6.85 — the waiting count on the header SUMMARY button (on a PC it is the only summary button) */
+  .hb-tx strong .hb-n { display: inline-block; margin-left: 6px; min-width: 18px; padding: 0 5px; border-radius: 999px; background: #e2c179; color: #16110b; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; letter-spacing: 0; vertical-align: 2px; overflow: visible; max-width: none; }
+  .hb-tx strong .hb-n:empty { display: none; }
   #syncChip[data-state="ok"] .hb-tx strong { color: #7ede6e; }
   #syncChip[data-state="error"] .hb-tx strong, #syncChip[data-state="off"] .hb-tx strong { color: #ff9d88; }
   .hb-med {
@@ -2257,9 +2195,7 @@
   body.crew-mode #setBoards, body.crew-mode #setMail, body.crew-mode #setDayGoal, body.crew-mode #setPipes, body.crew-mode #setJobs,
   body.crew-mode #setTrucks, body.crew-mode #setCrew, body.crew-mode #setBackups, body.crew-mode #setPrivacy,
   body.crew-mode #qbSec, body.crew-mode #waguesSec { display: none !important; }
-  body.crew-mode #setAppear .pick-chip { display: none; }
-  body.crew-mode #setAppear #skin-default, body.crew-mode #setAppear #skin-daylight,
-  body.crew-mode #setAppear #skin-winter { display: inline-block; }
+  /* 🎨 v6.85 — the crew picks from the same six themes (their three simple ones went to the museum) */
   body.crew-mode #setWiz .field:has(#sAiPhotos), body.crew-mode #setWiz label:has(#sAiPhotos) { display: none !important; }
   /* v5.08 — 🧙 full-screen answer + the running-log divider */
   #wizFull { position: fixed; inset: 0; z-index: 320; background: var(--card, #17140d); display: none; flex-direction: column; }
@@ -2469,6 +2405,9 @@
   .cat-grid .pick-chip { width: 100%; min-height: 56px; border-radius: 12px; padding: 8px 6px;
     font-size: 12.5px; line-height: 1.25; white-space: normal; text-align: center;
     display: flex; align-items: center; justify-content: center; overflow-wrap: anywhere; }
+  /* 🎨 v6.85 — Calm Brass is the default now, and its chip rule (40px, 8px 12px, 13px) outranked the plate above, so
+     a long name made its plate taller than the rest. Same-size plates in Calm too. */
+  :root[data-skin="calm"] .cat-grid .pick-chip { min-height: 56px; padding: 8px 6px; font-size: 12.5px; border-radius: 12px; }
   /* ✨ v5.31 — the gold plate IS the standard chip on every skin; picked = BRIGHT + banded.
      v5.32 — smaller letters so a Scritchfield-length word fits a plate in one piece. */
   .pick-chip {
@@ -2784,7 +2723,7 @@
       </button>
       <button class="hdr-btn" id="summaryBtn" onclick="openReview('last')" title="The summaries page — summary, board, sort — opens where you were last">
         <span class="hb-med"><span class="hb-bars" aria-hidden="true"><i style="height: 10px;"></i><i style="height: 17px;"></i><i style="height: 13px;"></i></span></span>
-        <span class="hb-tx"><strong>SUMMARY</strong></span>
+        <span class="hb-tx"><strong>SUMMARY<span class="hb-n" id="hbSumN"></span></strong></span>
       </button>
       <button class="hdr-btn" id="setupBtn">
         <span class="hb-med"><span class="hb-gear" aria-hidden="true">⚙</span></span>
@@ -3605,21 +3544,18 @@
          and openPortalWin(). -->
     <div class="set-section" id="setAppear">
       <h4>Appearance</h4>
-      <div class="chips-row">
-        <button class="pick-chip" id="skin-default" onclick="setSkin('')">Clore Gold</button>
-        <button class="pick-chip" id="skin-command" onclick="setSkin('command')">🎖 Command Center</button>
-        <button class="pick-chip" id="skin-steel" onclick="setSkin('steel')">🔩 Steel</button>
-        <button class="pick-chip" id="skin-hiviz" onclick="setSkin('hiviz')">🦺 High-Vis</button>
-        <button class="pick-chip" id="skin-blueprint" onclick="setSkin('blueprint')">📐 Blueprint</button>
-        <button class="pick-chip" id="skin-winter" onclick="setSkin('winter')">❄ Winter Night</button>
-        <button class="pick-chip" id="skin-daylight" onclick="setSkin('daylight')">☀ Daylight</button>
-        <button class="pick-chip" id="skin-steam" onclick="setSkin('steam')">⚙ Steamworks</button>
-        <button class="pick-chip" id="skin-calm" onclick="setSkin('calm')">🕯 Calm Brass</button>
+      <!-- 🎨 v6.85 — Eric: "get rid of everything but Steamworks and Calm Brass. Then use the calm brass THEME as its
+           the best, but make a few different color schemes with different background colors." The dot on each chip is
+           that tone's page colour; the words carry the pick. -->
+      <div class="chips-row" id="skinChips">
+        <button class="pick-chip" id="skin-calm" onclick="setSkin('calm')"><i class="skin-dot" style="background: #14110d;"></i>🕯 Calm Brass</button>
+        <button class="pick-chip" id="skin-calm-slate" onclick="setSkin('calm-slate')"><i class="skin-dot" style="background: #131619;"></i>🌫 Calm Slate</button>
+        <button class="pick-chip" id="skin-calm-graphite" onclick="setSkin('calm-graphite')"><i class="skin-dot" style="background: #161616;"></i>⬛ Calm Graphite</button>
+        <button class="pick-chip" id="skin-calm-moss" onclick="setSkin('calm-moss')"><i class="skin-dot" style="background: #121614;"></i>🌲 Calm Moss</button>
+        <button class="pick-chip" id="skin-calm-stone" onclick="setSkin('calm-stone')"><i class="skin-dot" style="background: #26231f;"></i>🪨 Calm Stone</button>
+        <button class="pick-chip" id="skin-steam" onclick="setSkin('steam')"><i class="skin-dot" style="background: #1c1610;"></i>⚙ Steamworks</button>
       </div>
-      <div class="chips-row" style="margin-top: 10px;">
-        <button class="pick-chip" id="lightDarkBtn" onclick="toggleLightDark()">◐ Light / dark</button>
-      </div>
-      <div class="hint" style="margin-top: 8px;">Command Center, Steel and Calm Brass are always dark. Clore Gold follows the ◐ Light / dark toggle. Your pick syncs to all your devices.</div>
+      <div class="hint" style="margin-top: 8px;">All dark, all easy on the eyes. The Calm ones are the same brass on a different background — warm, cool grey, plain grey, green-grey, lighter warm grey. Your pick syncs to all your devices.</div>
     </div>
     <div class="set-section" id="setDayGoal">
       <h4>Day goal</h4>
@@ -3880,7 +3816,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.84 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.85 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5920,24 +5856,38 @@ function winX(fn, label = 'close') {
 function chipsHtml(list, selected, fn) {
   return list.map(n => `<button class="pick-chip${n === selected ? ' sel' : ''}" onclick="${fn}('${escq(n)}')" aria-pressed="${n === selected}">${n === selected ? '✓&nbsp;' : ''}${esc(n)}</button>`).join('');
 }
+// 🎨 v6.85 — Eric: "get rid of everything but Steamworks and Calm Brass. Then use the calm brass THEME as its the
+// best, but make a few different color schemes with different background colors. Make them very neutral and easy on
+// the eyes." Six picks: Calm Brass on five neutral canvases (data-skin="calm" + data-tone) and Steamworks. Clore Gold,
+// Command Center, Steel, High-Vis, Blueprint, Winter Night and Daylight are in the museum — a phone still holding one
+// of those names (or nothing at all) lands on Calm Brass.
+const SKIN_NAMES = { calm: 'Calm Brass', 'calm-slate': 'Calm Slate', 'calm-graphite': 'Calm Graphite', 'calm-moss': 'Calm Moss', 'calm-stone': 'Calm Stone', steam: 'Steamworks' };
+const SKIN_DEFAULT = 'calm';
+function skinKey(s) { return SKIN_NAMES[s] ? s : SKIN_DEFAULT; }
+function skinPaint(k) {   // the two attributes the CSS reads
+  const [base, tone] = skinKey(k).split('-');
+  document.documentElement.dataset.skin = base;
+  if (tone) document.documentElement.dataset.tone = tone; else delete document.documentElement.dataset.tone;
+}
+function curSkin() { const d = document.documentElement.dataset; return skinKey((d.skin || '') + (d.tone ? '-' + d.tone : '')); }
 function applySkin(s) {
-  if (s) document.documentElement.dataset.skin = s;
-  else delete document.documentElement.dataset.skin;
-  lsSet('daylog-skin', s || '');
+  const k = skinKey(s);
+  skinPaint(k);
+  lsSet('daylog-skin', k);
   renderSkinChips();
   renderChart();
 }
-const SKIN_NAMES = { '': 'Clore Gold', command: 'Command Center', steel: 'Steel', hiviz: 'High-Vis', blueprint: 'Blueprint', winter: 'Winter Night', daylight: 'Daylight', steam: 'Steamworks', calm: 'Calm Brass' };   // 🕯 v6.66
 function setSkin(s) {
-  prefs.skin = s;
-  applySkin(s);
+  const k = skinKey(s);
+  prefs.skin = k;
+  applySkin(k);
   scheduleSave();
-  toast(`Theme applied — ${SKIN_NAMES[s] || 'Clore Gold'} ✓`);
+  toast(`Theme applied — ${SKIN_NAMES[k]} ✓`);
 }
 function renderSkinChips() {
-  const cur = document.documentElement.dataset.skin || '';
+  const cur = curSkin();
   Object.keys(SKIN_NAMES).forEach(k => {
-    const el = $(`skin-${k || 'default'}`);
+    const el = $(`skin-${k}`);
     if (el) el.classList.toggle('sel', cur === k);
   });
 }
@@ -7924,6 +7874,7 @@ function renderPendBanner() {
   const mailN = pendingQueue.filter(p => p.kind === 'mail').length;   // 📧 v6.41
   b.style.display = n ? '' : 'none';
   const sn = $('scSumN'); if (sn) sn.textContent = n ? String(n) : '';   // 📊 v6.76 — the count rides the Summary plate now
+  const hn = $('hbSumN'); if (hn) hn.textContent = n ? String(n) : '';   // 📊 v6.85 — and the header SUMMARY button (the PC's only one)
   if (n) b.innerHTML = `📥 <b>${n} item${n === 1 ? '' : 's'} waiting for review</b>${hotN ? ` · <b>🔥 ${hotN} HOT</b>` : ''}${mailN ? ` · <b>📧 ${mailN} IMPORTANT email${mailN === 1 ? '' : 's'}</b>` : ''} — tap to go through ${n === 1 ? 'it' : 'them'}<span class="ab-go">›</span>`;
   renderHotCards();
 }
@@ -18396,7 +18347,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.84';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.85';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -19139,8 +19090,7 @@ document.querySelectorAll('.panel').forEach(p => p.insertAdjacentHTML('beforeend
   '<div class="panel-foot"><button class="panel-back" onclick="closePanels()">← Back to dashboard</button></div>'));
 $('todayLine').textContent = new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
-const bootSkin = lsGet('daylog-skin');
-if (bootSkin) document.documentElement.dataset.skin = bootSkin;
+skinPaint(lsGet('daylog-skin') || '');   // 🎨 v6.85 — always one of the six; an old name or nothing = Calm Brass
 renderSkinChips();
 loadCreds();
 if (!dbx.appKey) dbx.appKey = lsGet('daylog-appkey') || '';
