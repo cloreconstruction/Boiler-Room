@@ -110,7 +110,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const c = document.querySelector('.capture'); const cs = getComputedStyle(c), r = c.getBoundingClientRect();
     return cs.position === 'fixed' && Math.abs(r.bottom - innerHeight) < 2 && r.width <= 1062 && Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 3 && parseFloat(getComputedStyle(document.body).paddingBottom) >= 90;
   }));
-  ok('…and the PC keeps its four plates — Mileage, File Cabinet, Hours, Vault (Setup lives in the header there)', await p2.evaluate(() => [...document.querySelectorAll('.capture .cap-btn')].filter(b => getComputedStyle(b).display !== 'none').map(b => b.dataset.panel).join(',') === 'mileage,file,hours,vault'));
+  ok('…and the PC keeps its four plates — Mileage, Budget, Hours, Vault (Setup lives in the header there; the File Cabinet is in the museum, v6.84)', await p2.evaluate(() => [...document.querySelectorAll('.capture .cap-btn')].filter(b => getComputedStyle(b).display !== 'none').map(b => b.dataset.panel).join(',') === 'mileage,budget,hours,vault'));
   await ctx2.close();
   ok('on the phone the bar is still the fixed bottom bar it was', await page.evaluate(() => { const cs = getComputedStyle(document.querySelector('.capture')); return cs.position === 'fixed' && Math.abs(document.querySelector('.capture').getBoundingClientRect().bottom - innerHeight) < 2; }));
 

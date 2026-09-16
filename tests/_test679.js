@@ -20,7 +20,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   await page.evaluate(() => {
     jobs = ['Shop / Admin', 'Mery', 'Hertz']; curJob = 'Mery'; crew = ['Phil']; entries = []; todos = []; nextId = 1; pendingQueue = []; prefs.pocket = []; prefs.pushSecret = '';
     window.scheduleSave = () => {}; window.savePendingSoon = () => {}; window.publishSharedNotes = () => { window._pubN = (window._pubN || 0) + 1; };
-    lsSet('daylog-revtab', ''); _brdFold = new Set(); _brdOpen = ''; _brdSubFor = '';
+    lsSet('daylog-revtab', ''); _brdShow = ''; _brdOpen = ''; _brdSubFor = '';
     renderJobSelects(); closePanels(); renderAll();
     const ago = d => { const x = new Date(); x.setDate(x.getDate() - d); x.setHours(9, 0, 0, 0); return x; };
     const add = (type, details, job, extra) => addEntry(type, details, job, { noSniff: true, ...extra });
@@ -77,7 +77,11 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   console.log('— 📋 v6.79 the cubes —');
 
+  ok('every heading opens CLOSED with its count (v6.84); a tap opens one', await page.evaluate(() =>
+    [...document.querySelectorAll('.bd-body')].every(b => b.hidden) && [...document.querySelectorAll('.bd-hd')].every(h => /tap to open/.test(h.textContent) && h.getAttribute('aria-expanded') === 'false')));
+
   ok('the to-do at priority 2 shows two lit cubes; a fresh thought shows none; the cubes are small and still', await page.evaluate(() => {
+    brdFold('Mery');   // open the one heading under test
     const c = document.querySelector('.bd-line[data-key="t:900"] .bd-cube'), cs = getComputedStyle(c);
     return document.querySelectorAll('.bd-line[data-key="t:900"] .bd-cube.on').length === 2 && document.querySelectorAll(`.bd-line[data-key="e:${_e.thought.id}"] .bd-cube.on`).length === 0 &&
       document.querySelectorAll('.bd-line[data-key="t:900"] .bd-cube').length === 3 && parseFloat(cs.width) <= 12 && cs.animationName === 'none' && /priority MED/.test(document.querySelector('.bd-line[data-key="t:900"] .bd-pri').getAttribute('aria-label'));
@@ -147,11 +151,13 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return e.details === 'buy shims' && e.job === 'Hertz' && e.type === 'Note' && !!e.board && $('brdIn').value === '' && document.querySelector(`.bd-line[data-key="e:${e.id}"]`).closest('.bd-body').dataset.job === 'Hertz';
   }));
 
-  ok('a heading folds and unfolds, and says so', await page.evaluate(() => {
+  ok('one heading open at a time: opening Hertz closes Mery; tapping Hertz again closes it', await page.evaluate(() => {
     brdFold('Hertz');
-    const folded = document.querySelector('.bd-body[data-job="Hertz"]').hidden && /folded/.test(document.querySelector('.bd-hd[data-job="Hertz"]').textContent);
+    const one = !document.querySelector('.bd-body[data-job="Hertz"]').hidden && document.querySelector('.bd-body[data-job="Mery"]').hidden && document.querySelector('.bd-hd[data-job="Hertz"]').getAttribute('aria-expanded') === 'true';
     brdFold('Hertz');
-    return folded && !document.querySelector('.bd-body[data-job="Hertz"]').hidden;
+    const closed = document.querySelector('.bd-body[data-job="Hertz"]').hidden && /tap to open/.test(document.querySelector('.bd-hd[data-job="Hertz"]').textContent);
+    brdFold('Mery');
+    return one && closed;
   }));
 
   console.log('— 👷 v6.79 Phil: alert him, and his ✓ comes back —');

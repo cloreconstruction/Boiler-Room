@@ -18,7 +18,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   await page.evaluate(() => {
     jobs = ['Shop / Admin', 'Mery', 'Hertz']; curJob = 'Mery'; crew = ['Phil']; entries = []; todos = []; nextId = 1; pendingQueue = []; prefs.pocket = []; prefs.pushSecret = '';
     window.scheduleSave = () => {}; window.savePendingSoon = () => {}; window.publishSharedNotes = () => {};
-    lsSet('daylog-revtab', ''); _brdFold = new Set(); _brdOpen = ''; _brdSubFor = '';
+    lsSet('daylog-revtab', ''); _brdShow = ''; _brdOpen = ''; _brdSubFor = '';
     renderJobSelects(); closePanels(); renderAll();
     const ago = d => { const x = new Date(); x.setDate(x.getDate() - d); x.setHours(9, 0, 0, 0); return x; };
     const add = (type, details, job, extra) => addEntry(type, details, job, { noSniff: true, ...extra });
@@ -44,7 +44,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— 📋 v6.80 the words edit in the line —');
 
   ok('a closed line wears a ✎ hint; tapping the words turns them into a box right in the line, Enter saves', await page.evaluate(() => {
-    openReview('board');
+    openReview('board'); brdFold('Mery');   // v6.84 — headings open closed; open the one under test
     const id = _e.thought.id, line = () => document.querySelector(`.bd-line[data-key="e:${id}"]`);
     const hint = !!line().querySelector('.bd-hint');
     brdOpen('e', id);

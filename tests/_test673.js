@@ -87,19 +87,19 @@ const { chromium } = require('playwright');
       $('pocketCount').textContent === '0/8' && !!document.querySelector('.pk-flush') && document.querySelectorAll('.pk-cap .pk-tiny').length === 2;
   }));
 
-  ok('type it, tap + (or Enter): it lands under TODAY with ✓ Done and ➡ Tomorrow; the count says 2 of 8', await page.evaluate(() => {
+  ok('type it, tap + (or Enter): it lands under TODAY with ✓ Done, ✎ and ⤵ Flush (v6.84 — the ✕ and ➡ plates are gone); the count says 2 of 8', await page.evaluate(() => {
     $('pocketIn').value = 'screws for Hertz'; pocketAddFromBox();
     $('pocketIn').value = 'call the inspector'; $('pocketIn').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const t = $('pocketList').textContent;
-    return pocket().length === 2 && $('pocketIn').value === '' && /TODAY/.test(t) && /call the inspector/.test(t) && /screws for Hertz/.test(t) && /✓ Done/.test(t) && /➡ Tomorrow/.test(t) && $('pocketCount').textContent === '2/8';
+    return pocket().length === 2 && $('pocketIn').value === '' && /TODAY/.test(t) && /call the inspector/.test(t) && /screws for Hertz/.test(t) && /✓ Done/.test(t) && /⤵ Flush/.test(t) && /✎/.test(t) && !/➡ Tomorrow/.test(t) && !/✕/.test(t) && $('pocketCount').textContent === '2/8';
   }));
 
-  ok('➡ Tomorrow moves it under TOMORROW, where the ➡ button is gone', await page.evaluate(() => {
+  ok('pocketTomorrow (the summary\'s ↩ uses it) moves an item under TOMORROW', await page.evaluate(() => {
     const it = pocket().find(x => x.t === 'call the inspector');
     pocketTomorrow(it.id);
     const rows = [...document.querySelectorAll('.pk-row')];
     const tomRow = rows.find(r => /call the inspector/.test(r.textContent));
-    return it.day === pocketDay(1) && /TOMORROW/.test($('pocketList').textContent) && tomRow && !/➡ Tomorrow/.test(tomRow.textContent);
+    return it.day === pocketDay(1) && /TOMORROW/.test($('pocketList').textContent) && !!tomRow;
   }));
 
   // 📌 v6.81 — Eric: "I'm still getting the Hertz job tagged on stuff" — a pocket item has no job of its own; the ✓ note files under none
@@ -111,10 +111,19 @@ const { chromium } = require('playwright');
     return pocket().length === 1 && entries.length === n + 1 && e.details === '✓ screws for Hertz' && (e.tags || []).includes('pocket') && e.pocket === 'done' && e.job === '—';
   }));
 
-  ok('✕ takes a mistake off with no note', await page.evaluate(() => {
+  ok('pocketDrop still takes a mistake off with no note (the ✕ plate itself is gone in v6.84)', await page.evaluate(() => {
     pocketAdd('oops'); const n = entries.length;
     pocketDrop(pocket().find(x => x.t === 'oops').id);
     return !pocket().some(x => x.t === 'oops') && entries.length === n;
+  }));
+
+  ok('✎ edits the words in place; ⤵ Flush sends that one item to the log as a flushed note, off the list (v6.84)', await page.evaluate(() => {
+    pocketAdd('gravel'); const it = pocket().find(x => x.t === 'gravel');
+    pocketEditStart(it.id); const inp = document.querySelector('.pk-row input.pk-edit'); if (!inp) return false;
+    inp.value = 'gravel for the drive'; inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const edited = it.t === 'gravel for the drive' && /gravel for the drive/.test($('pocketList').textContent) && !document.querySelector('.pk-row input');
+    const n = entries.length; pocketFlushOne(it.id);
+    return edited && !pocket().some(x => x.id === it.id) && entries.length === n + 1 && entries[0].pocket === 'flushed' && /🎒 Flushed — gravel for the drive/.test(entries[0].details) && entries[0].job === '—';
   }));
 
   ok('over the cap the OLDEST goes to the grinder\'s pile as a pocket note — the newest stay in sight (v6.75)', await page.evaluate(() => {

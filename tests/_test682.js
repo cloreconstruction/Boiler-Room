@@ -18,7 +18,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   await page.evaluate(() => {
     jobs = ['Shop / Admin', 'Mery', 'Hertz']; curJob = ''; crew = ['Phil']; entries = []; todos = []; nextId = 1; pendingQueue = []; prefs.pocket = []; prefs.pocketMax = 8;
     window.scheduleSave = () => {}; window.savePendingSoon = () => {}; window.publishSharedNotes = () => {};
-    lsSet('daylog-revtab', ''); _brdFold = new Set(); _brdOpen = ''; _brdSubFor = '';
+    lsSet('daylog-revtab', ''); _brdShow = ''; _brdOpen = ''; _brdSubFor = '';
     renderJobSelects(); closePanels(); renderAll();
     addEntry('Note', 'frame the deck by Friday', 'Mery', { noSniff: true });
     pocketAdd('gravel for the drive'); pocketAdd('screws for Hertz');

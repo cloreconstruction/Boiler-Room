@@ -983,6 +983,43 @@
   .vault-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 12px; }   /* 💳 v6.81 — logins | cards */
   .vault-tab { min-height: 44px; border-radius: 10px; border: 1px solid var(--border); background: none; color: var(--ink-2); font: inherit; font-weight: 800; font-size: 13px; letter-spacing: .5px; cursor: pointer; }
   .vault-tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  /* 💰 v6.84 — the personal budget: cards, big number tiles, labelled SVG bars, progress tracks */
+  .pb-card { border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; margin: 0 0 12px; background: var(--surface-1); }
+  .pb-h { font-size: 15px; font-weight: 800; letter-spacing: .6px; margin: 0 0 8px; }
+  .pb-h .pb-sub { font-size: 12px; font-weight: 600; color: var(--ink-muted); margin-left: 8px; letter-spacing: 0; }
+  .pb-h2 { font-size: 12px; font-weight: 800; letter-spacing: .8px; color: var(--ink-muted); margin: 12px 0 6px; }
+  .pb-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 6px 0 10px; }
+  .pb-tile { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+  .pb-tile span { display: block; font-size: 11px; font-weight: 800; letter-spacing: .7px; color: var(--ink-muted); }
+  .pb-tile b { display: block; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .pb-tile i { display: block; font-style: normal; font-size: 12px; color: var(--ink-2); }
+  .pb-tile.pb-good { border-color: var(--good-text, #2e7d32); border-width: 2px; }
+  .pb-tile.pb-bad { border-color: var(--err, #c0392b); border-width: 2px; }
+  .pb-bars { display: block; margin: 4px 0 6px; overflow: visible; }
+  .pb-bars .pb-lbl { font-size: 12px; font-weight: 700; fill: currentColor; }
+  .pb-bars .pb-num { font-size: 12px; font-weight: 800; fill: currentColor; }
+  .pb-bars .pb-bar { fill: var(--accent); opacity: .9; }
+  .pb-bars .pb-bar.in { fill: var(--good-text, #2e7d32); }
+  .pb-bars .pb-bar.over { fill: var(--err, #c0392b); }
+  .pb-bars .pb-cap { stroke: currentColor; stroke-width: 2; stroke-dasharray: 3 2; }
+  .pb-paste { width: 100%; min-height: 96px; font-size: 15px; }
+  .pb-add { display: grid; grid-template-columns: 76px minmax(0, 1fr) minmax(0, 1fr) 48px; gap: 6px; margin: 0 0 8px; }
+  .pb-add input, .pb-add select { min-width: 0; min-height: 44px; }
+  .pb-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--grid); }
+  .pb-rn { flex: 1 1 auto; min-width: 0; font-size: 14.5px; overflow-wrap: anywhere; }
+  .pb-meta { font-size: 12px; color: var(--ink-muted); }
+  .pb-row > b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pb-x { flex: 0 0 40px; min-height: 40px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer; }
+  .pb-form .frow { gap: 6px; }
+  .pb-form .field { flex: 1 1 130px; min-width: 0; margin: 0; }
+  .pb-form .field input, .pb-form .field select { min-width: 0; width: 100%; }
+  .pb-plan-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+  .pb-plan-row input { width: 110px; min-height: 40px; min-width: 0; }
+  .pb-lbl2 { font-size: 13px; color: var(--ink-2); }
+  .pb-goal { padding: 8px 0; border-top: 1px solid var(--grid); }
+  .pb-track { height: 14px; border: 1.5px solid var(--border); border-radius: 8px; overflow: hidden; margin: 6px 0; background: var(--chip-gray-bg); }
+  .pb-fill { height: 100%; background: var(--accent); }
+  :root[data-skin="steam"] .cap-btn[data-panel="budget"] .ic { background-image: none; }
   /* ✎ v6.83 — the Wizard's answer, one locked line at a time, each with its own ✎ (Eric: "the words are in the text
      box maybe greyed out a little and not editable but i can click anywhere around it and add more text so that i
      can correct each line or item or bullet point") */
@@ -1467,6 +1504,7 @@
      someday." The grinder has been the note since v6.22; the plate is parked the same way To-Do
      and New Job were in v6.30 — the panel and its code stay, openPanel('note') still works. */
   body.parked-630 .capture .cap-btn[data-panel="note"],
+  body.parked-630 .capture .cap-btn[data-panel="file"],   /* 🗄 v6.84 — the File Cabinet to the museum (Eric); openPanel('file') still works */
   body.parked-630 #setPipes,
   body.parked-630 #hotStrip,
   body.parked-630 #todoCard,
@@ -2189,7 +2227,7 @@
   body.crew-mode #dayTubeCard,
   body.crew-mode .ask-foot, body.crew-mode .kpis,
   body.crew-mode .cap-btn[data-panel="file"],
-  body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"],
+  body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"], body.crew-mode .cap-btn[data-panel="budget"],
   body.crew-mode #coBillRow { display: none !important; }
   /* v4.95 — 🔥 hot card: thick frame + spelled words + slow breathing, never color alone */
   .hot-card { border: 3px solid var(--err, #b3452f); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px;
@@ -2598,12 +2636,13 @@
   .pk-tiny { min-width: 30px; min-height: 30px; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; line-height: 1; }
   .pk-flush { font-size: 11px; font-weight: 700; letter-spacing: .3px; }
   .pk-in { display: flex; gap: 6px; margin-top: 6px; }
-  .pk-in input { flex: 1; min-width: 0; min-height: 40px; font-size: 16px; }
-  .pk-add { flex: 0 0 48px; min-height: 40px; border: none; border-radius: 10px; background: var(--btn-bg); color: var(--btn-ink); font-size: 22px; font-weight: 800; cursor: pointer; }
+  .pk-in input { flex: 1; min-width: 0; min-height: 38px; font-size: 16px; }
+  .pk-add { flex: 0 0 44px; min-height: 38px; border: none; border-radius: 10px; background: var(--btn-bg); color: var(--btn-ink); font-size: 22px; font-weight: 800; cursor: pointer; }
   .pk-h { font-size: 11px; font-weight: 800; letter-spacing: .8px; color: var(--ink-muted); margin: 8px 0 2px; }
-  .pk-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--grid); flex-wrap: wrap; }
-  .pk-t { flex: 1 1 140px; min-width: 0; font-size: 15px; line-height: 1.3; }
-  .pk-btn { flex: 0 0 auto; min-height: 40px; padding: 6px 10px; border-radius: 10px; border: none; background: var(--btn-bg); color: var(--btn-ink); font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+  .pk-row { display: flex; align-items: center; gap: 5px; padding: 4px 0; border-top: 1px solid var(--grid); flex-wrap: wrap; }   /* 🎒 v6.84 — a touch smaller (Eric) */
+  .pk-t { flex: 1 1 140px; min-width: 0; font-size: 14px; line-height: 1.3; cursor: pointer; }
+  .pk-edit { flex: 1 1 140px; min-width: 0; min-height: 34px; font-size: 16px; }
+  .pk-btn { flex: 0 0 auto; min-height: 34px; padding: 4px 8px; border-radius: 8px; border: none; background: var(--btn-bg); color: var(--btn-ink); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
   .pk-btn.pk-ghost { background: none; border: 1px solid var(--border); color: var(--ink-2); font-weight: 600; }
   .rev-kind { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--ink-muted); text-transform: uppercase; }
   .rev-text { font-size: 15px; font-weight: 650; margin-top: 5px; line-height: 1.45; }
@@ -3150,6 +3189,10 @@
   <div class="capture">
     <button class="cap-btn" data-panel="mileage" aria-label="Mileage"><span class="ic">🚚</span><span class="lb-long">Mileage</span><span class="lb-short">Miles</span></button>
     <button class="cap-btn" data-panel="file" aria-label="File Cabinet"><span class="ic">🗄</span><span class="lb-long">File Cabinet</span><span class="lb-short">Files</span></button>
+    <!-- 💰 v6.84 — Eric: "send the file cabinet button and pages to the boiler room museum. dont throw it away but its no
+         longer needed for now. replace that buttons place with 'personal budget'." The plate above is hidden by
+         body.parked-630 (the panel and every filing road stay); this one takes its spot. -->
+    <button class="cap-btn" data-panel="budget" aria-label="Personal budget"><span class="ic">💰</span><span class="lb-long">Budget</span><span class="lb-short">Budget</span></button>
     <button class="cap-btn" data-panel="hours" aria-label="Hours"><span class="ic">⏱</span><span class="lb-long">Hours</span><span class="lb-short">Hours</span></button>
     <button class="cap-btn" data-panel="note" aria-label="Note"><span class="ic">📝</span><span class="lb-long">Note</span><span class="lb-short">Note</span></button>
     <button class="cap-btn" data-panel="todo" aria-label="To-Do"><span class="ic">✅</span><span class="lb-long">To-Do</span><span class="lb-short">To-Do</span></button>
@@ -3169,6 +3212,12 @@
     <div id="mBody"></div>
   </div>
 
+  <!-- 💰 v6.84 — THE PERSONAL BUDGET (see renderBudget) -->
+  <div class="panel" id="panel-budget">
+    <h3>💰 Personal budget</h3>
+    <div id="pbBody"></div>
+    <div class="panel-foot"><button class="panel-back" onclick="closePanels()">← Back to dashboard</button></div>
+  </div>
   <div class="panel" id="panel-file">
     <h3>File Cabinet</h3>
     <button class="btn-ghost" id="fcSameAsLast" style="display: none; margin-bottom: 10px;" onclick="fcApplyLast()">↻ Same as last</button>
@@ -3831,7 +3880,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.83 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.84 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5823,6 +5872,7 @@ function openPanel(name) {
     if (name === 'mileage') mOpenInit();
     if (name === 'hours') hOpenInit();
     if (name === 'myhours') { _lockArm = ''; renderMyHours(); }
+    if (name === 'budget') { if (isCrew()) { closePanels(); return; } renderBudget(); }   // 💰 v6.84 — Eric's page only
     if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', ');
       if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
       if ($('unlockWho')) $('unlockWho').innerHTML = crew.map(c => `<option>${esc(c)}</option>`).join('');
@@ -8274,7 +8324,7 @@ async function caAiRead(btn, rel) {
 function openReview(tab) {
   // 📊 v6.76 — which tab of the summaries page; 📋 v6.79 — 'last' = the one he used last (the plate and the SUMMARY button), summary until he has been on the board
   _revTab = tab === 'summary' ? 'summary' : tab === 'board' ? 'board' : tab === 'last' ? (['summary', 'board'].includes(lsGet('daylog-revtab')) ? lsGet('daylog-revtab') : 'summary') : 'sort';
-  _sumSec = null; _brdOpen = ''; _brdSubFor = '';
+  _sumSec = null; _brdOpen = ''; _brdSubFor = ''; _brdShow = '';   // 📋 v6.84 — the board opens with every heading closed
   // 📨 receipt stamp #2 — the sender's card is now on Eric's screen
   let stamped = false;
   pendingQueue.forEach(p => {
@@ -16024,6 +16074,29 @@ function pocketDone(id) {
   toast(`✓ ${it.t}`);
 }
 function pocketTomorrow(id) { const it = pocket().find(x => x.id === id); if (!it) return; it.day = pocketDay(1); scheduleSave(); renderPocket(); }
+// 🎒 v6.84 — one item: edit the words in place, or flush just that one to the grinder
+function pocketEditStart(id) {
+  const row = document.querySelector('.pk-row[data-id="' + CSS.escape(String(id)) + '"]'), it = pocket().find(x => x.id === id);
+  if (!row || !it) return;
+  const t = row.querySelector('.pk-t'); if (!t || row.querySelector('input.pk-edit')) return;
+  const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'pk-edit'; inp.value = it.t; inp.setAttribute('aria-label', 'the words');
+  inp.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); pocketEditSave(id, inp.value); } else if (ev.key === 'Escape') renderPocket(); };
+  inp.onblur = () => pocketEditSave(id, inp.value);
+  t.replaceWith(inp); try { inp.focus(); inp.select(); } catch (e) {}
+}
+function pocketEditSave(id, v) {
+  const it = pocket().find(x => x.id === id); if (!it) return;
+  const t = String(v || '').trim().slice(0, 140);
+  if (t && t !== it.t) { it.t = t; scheduleSave(); if ($('revModal') && $('revModal').classList.contains('show')) renderReview(); }
+  renderPocket();
+}
+function pocketFlushOne(id) {
+  const i = pocket().findIndex(x => x.id === id); if (i < 0) return;
+  const it = pocket().splice(i, 1)[0];
+  addEntry('Note', `🎒 Flushed — ${it.t}`, '—', { noSniff: true, tags: ['pocket'], pocket: 'flushed' });
+  scheduleSave(); renderPocket(); renderLog(); if ($('revModal') && $('revModal').classList.contains('show')) renderReview();
+  toast(`⤵ Flushed — it is on the board and the summary now ✓`);
+}
 function pocketDrop(id) { const i = pocket().findIndex(x => x.id === id); if (i < 0) return; pocket().splice(i, 1); scheduleSave(); renderPocket(); }
 function pocketSweep() {
   const today = pocketDay(0);
@@ -16039,10 +16112,15 @@ function renderPocket() {
   const box = $('pocketList'); if (!box) return;
   const today = pocketDay(0), tom = pocketDay(1);
   const items = pocket();
-  const row = it => `<div class="pk-row"><span class="pk-t">${esc(it.t)}</span>
-    <button type="button" class="pk-btn" onclick="pocketDone('${esc(it.id)}')">✓ Done</button>
-    ${it.day === tom ? '' : `<button type="button" class="pk-btn pk-ghost" onclick="pocketTomorrow('${esc(it.id)}')">➡ Tomorrow</button>`}
-    <button type="button" class="pk-btn pk-ghost" onclick="pocketDrop('${esc(it.id)}')" aria-label="never mind, take it off">✕</button></div>`;
+  // 🎒 v6.84 — Eric: "I'd like to keep the size very small, as it is, maybe even slightly smaller. I do want an edit button
+  // and a flush button, and maybe instead of the X we just have a flush button for each individual thing. So that if it's
+  // not done and I don't want to do it till tomorrow, or it's becoming a very small, insignificant task, I can just push
+  // flush. It'll go to the grinder and be added to the bigger list in summary." A row is ✓ · ✎ · ⤵. The ✕ and ➡ plates
+  // are gone (pocketDrop / pocketTomorrow stay as functions — the summary's ↩ still uses tomorrow).
+  const row = it => `<div class="pk-row" data-id="${esc(it.id)}"><span class="pk-t" onclick="pocketEditStart('${esc(it.id)}')" title="tap to edit">${esc(it.t)}</span>
+    <button type="button" class="pk-btn" onclick="pocketDone('${esc(it.id)}')" aria-label="done">✓ Done</button>
+    <button type="button" class="pk-btn pk-ghost" onclick="pocketEditStart('${esc(it.id)}')" aria-label="edit the words" title="edit">✎</button>
+    <button type="button" class="pk-btn pk-ghost" onclick="pocketFlushOne('${esc(it.id)}')" aria-label="flush it to the grinder — it lands on the board and the summary" title="flush to the grinder">⤵ Flush</button></div>`;
   const now = items.filter(x => x.day <= today), later = items.filter(x => x.day === tom);
   box.innerHTML = (now.length ? '<div class="pk-h">TODAY</div>' + now.map(row).join('') : '') +
     (later.length ? '<div class="pk-h">TOMORROW</div>' + later.map(row).join('') : '') +
@@ -16165,6 +16243,292 @@ function pocketBack(id) {
   pocketOverflow(); scheduleSave(); renderPocket(); renderReview();
   toast(`🎒 "${t.slice(0, 40)}" is on tomorrow's pocket ✓`);
 }
+// ================= 💰 v6.84 — THE PERSONAL BUDGET =================
+// Eric: "send the file cabinet button and pages to the boiler room museum. dont throw it away but its no longer
+// needed for now. replace that buttons place with 'personal budget' and we are going to work on a budget page for
+// tracking personal expenses and finding ways to save money and plan for debt pay offs … eric loves graphs and
+// charts and numbers, make something simple but informative for the budget page."
+// A starter he can grow: what comes in, the bills, what he spends (quick add, by category, against a CAP per
+// category — the "ways to save"), the debts with a pay-off plan (snowball or avalanche — months to debt-free,
+// interest paid, what an extra $100 a month would do), and the savings goals. Everything lives in prefs.pb — his
+// own Dropbox, never the crew's files, never a client page, never the Wizard's context (it is personal), and never
+// in this file (the site is public — his numbers go in through the forms or the paste box, not the code). Every
+// chart is a labelled bar: the number is on it, colour is never the only signal.
+const PB_CATS = ['Groceries', 'Gas', 'Eating out', 'Amazon', 'Shopping', 'Home', 'Kids', 'Medical', 'Fun', 'Clothes', 'Subscriptions', 'Phone / Internet', 'Other'];
+const PB_PERS = [['month', 'a month'], ['2wk', 'every 2 weeks'], ['week', 'a week'], ['year', 'a year']];
+const PB_BILL_CATS = ['Housing', 'Child support', 'Utilities', 'Vehicle', 'Insurance', 'Phone / Internet', 'Subscriptions', 'Investing', 'Other'];
+function pb() {
+  if (!prefs.pb || typeof prefs.pb !== 'object') prefs.pb = {};
+  const p = prefs.pb;
+  ['inc', 'bills', 'debts', 'goals', 'spend'].forEach(k => { if (!Array.isArray(p[k])) p[k] = []; });
+  if (!p.caps || typeof p.caps !== 'object') p.caps = {};
+  if (p.extra == null) p.extra = 0;
+  if (p.method !== 'avalanche') p.method = 'snowball';
+  return p;
+}
+const pbMoney = n => (+n < 0 ? '−' : '') + '$' + Math.round(Math.abs(+n || 0)).toLocaleString();
+const pbId = () => Date.now().toString(36) + Math.random().toString(16).slice(2, 6);
+const pbNum = v => { const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : 0; };
+function pbMonthly(amt, per) { const a = +amt || 0; return per === 'week' ? a * 52 / 12 : per === '2wk' ? a * 26 / 12 : per === 'year' ? a / 12 : a; }
+function pbPerWord(per) { return (PB_PERS.find(x => x[0] === per) || PB_PERS[0])[1]; }
+function pbOrd(d) { const n = +d; if (!n) return ''; const r = n % 100; const s = (r >= 11 && r <= 13) ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'; return n + s; }
+function pbMonthKey(d) { const x = d ? new Date(d) : new Date(); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); }
+function pbMonthName(offset) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + offset); return d.toLocaleDateString([], { month: 'short', year: 'numeric' }); }
+function pbSpendThisMonth() { const mk = pbMonthKey(); return pb().spend.filter(s => pbMonthKey(s.ts) === mk); }
+function pbCatList() { const p = pb(); return [...new Set([...PB_CATS, ...Object.keys(p.caps), ...p.spend.map(s => s.cat).filter(Boolean)])]; }
+function pbCatMatch(name) {   // "dining" → Eating out, "fuel" → Gas, otherwise his own word
+  const n = String(name || '').trim(); if (!n) return 'Other';
+  const low = n.toLowerCase();
+  const hit = pbCatList().find(c => c.toLowerCase() === low); if (hit) return hit;
+  if (/dining|restaurant|coffee|eating/.test(low)) return 'Eating out';
+  if (/fuel|gas\b/.test(low)) return 'Gas';
+  if (/grocer|food/.test(low)) return 'Groceries';
+  if (/subscri/.test(low)) return 'Subscriptions';
+  if (/phone|internet|cell/.test(low)) return 'Phone / Internet';
+  return n.slice(0, 30);
+}
+// THE PAY-OFF PLAN: pay every minimum, put the extra — and every payment a finished debt frees up — on the focus
+// debt: smallest balance first (snowball) or highest rate first (avalanche). Month by month, interest first.
+function pbPlan(debts, extra, method) {
+  const list = (debts || []).filter(d => (+d.bal || 0) > 0).map(d => ({ n: d.n, bal: +d.bal, apr: Math.max(0, +d.apr || 0), min: Math.max(+d.min || 0, 0) }));
+  if (!list.length) return { months: 0, interest: 0, paid: 0, order: [], ok: true };
+  list.sort((a, b) => method === 'avalanche' ? (b.apr - a.apr) || (a.bal - b.bal) : (a.bal - b.bal) || (b.apr - a.apr));
+  let months = 0, interest = 0, paid = 0, freed = 0; const order = [];
+  while (list.some(d => d.bal > 0) && months < 600) {
+    months++;
+    let pool = Math.max(0, +extra || 0) + freed;
+    list.forEach(d => { if (d.bal <= 0) return; const i = d.bal * d.apr / 1200; interest += i; d.bal += i; });
+    list.forEach(d => { if (d.bal <= 0) return; const p = Math.min(d.min, d.bal); d.bal -= p; paid += p; });
+    for (const d of list) { if (d.bal <= 0 || pool <= 0) continue; const p = Math.min(pool, d.bal); d.bal -= p; paid += p; pool -= p; }
+    list.forEach(d => { if (d.bal <= 0.005 && !d.done) { d.done = true; d.bal = 0; freed += d.min; order.push({ n: d.n, month: months }); } });
+  }
+  return { months, interest: Math.round(interest), paid: Math.round(paid), order, ok: months < 600 };
+}
+// a labelled bar chart in SVG — the number sits on every bar
+function pbBars(rows, label) {
+  const max = Math.max(1, ...rows.map(r => Math.max(+r.v || 0, +r.cap || 0))); const w = 320, lh = 26, lw = 96, room = w - lw - 96;
+  const h = rows.length * lh + 4;
+  return `<svg class="pb-bars" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="${esc(label || 'bars')}">` + rows.map((r, i) => {
+    const bw = Math.max(2, Math.round(room * (+r.v || 0) / max)), y = i * lh + 2;
+    const capX = r.cap ? lw + Math.round(room * (+r.cap) / max) : null;
+    return `<text x="0" y="${y + 17}" class="pb-lbl">${esc(String(r.n).slice(0, 15))}</text><rect x="${lw}" y="${y + 4}" width="${bw}" height="18" rx="4" class="pb-bar${r.cls ? ' ' + r.cls : ''}"></rect>` +
+      (capX != null ? `<line x1="${capX}" y1="${y + 1}" x2="${capX}" y2="${y + 25}" class="pb-cap"></line>` : '') +
+      `<text x="${Math.max(lw + bw, capX || 0) + 6}" y="${y + 17}" class="pb-num">${esc(r.t || pbMoney(r.v))}</text>`;
+  }).join('') + `</svg>`;
+}
+const pbRowBtns = (kind, id) => `<button type="button" class="pb-x" onclick="pbEdit('${kind}','${esc(id)}')" aria-label="edit" title="edit">✎</button><button type="button" class="pb-x" onclick="pbDel('${kind}','${esc(id)}')" aria-label="take it off" title="take it off">✕</button>`;
+const pbPasteBtn = kind => `<button type="button" class="btn-ghost" style="margin-top: 8px;" onclick="pbPasteOpen('${kind}')">📋 Paste lines</button>`;
+function renderBudget() {
+  const box = $('pbBody'); if (!box) return;
+  if (isCrew()) { box.innerHTML = '<div class="hint">This page is Eric\'s.</div>'; return; }
+  const p = pb();
+  const incM = p.inc.reduce((s, i) => s + pbMonthly(i.amt, i.per), 0);
+  const billsM = p.bills.reduce((s, b) => s + (+b.amt || 0), 0);
+  const sp = pbSpendThisMonth(), spentM = sp.reduce((s, x) => s + (+x.amt || 0), 0);
+  const incR = Math.round(incM), billsR = Math.round(billsM), spentR = Math.round(spentM);
+  const left = incR - billsR - spentR;   // from the rounded tiles, so the four numbers on the page add up
+  const byCat = {}; sp.forEach(x => { const c = x.cat || 'Other'; byCat[c] = (byCat[c] || 0) + (+x.amt || 0); });
+  Object.keys(p.caps).forEach(c => { if (byCat[c] == null) byCat[c] = 0; });
+  const catRows = Object.entries(byCat).sort((a, b) => (b[1] - a[1]) || ((+p.caps[b[0]] || 0) - (+p.caps[a[0]] || 0))).slice(0, 10).map(([n, v]) => {
+    const cap = +p.caps[n] || 0;
+    return { n, v, cap, cls: cap && v > cap ? 'over' : '', t: cap ? `${pbMoney(v)} of ${pbMoney(cap)} · ${v > cap ? '⚠ over by ' + pbMoney(v - cap) : '✓ ' + pbMoney(cap - v) + ' left'}` : `${pbMoney(v)} · ${spentM ? Math.round(v / spentM * 100) : 0}%` };
+  });
+  const capTotal = Object.values(p.caps).reduce((s, v) => s + (+v || 0), 0);
+  const plan = pbPlan(p.debts, p.extra, p.method), plan100 = pbPlan(p.debts, (+p.extra || 0) + 100, p.method);
+  const debtTotal = p.debts.reduce((s, d) => s + (+d.bal || 0), 0), minTotal = p.debts.reduce((s, d) => s + (+d.min || 0), 0);
+  const monthWord = new Date().toLocaleDateString([], { month: 'long', year: 'numeric' });
+  const planned = incR - billsR - Math.round(capTotal);
+  box.innerHTML = `
+  <div class="pb-card">
+    <div class="pb-h">📅 ${esc(monthWord)} <span class="pb-sub">what came in, what went out</span></div>
+    <div class="pb-tiles">
+      <div class="pb-tile"><span>IN</span> <b>${pbMoney(incM)}</b> <i>a month</i></div>
+      <div class="pb-tile"><span>BILLS</span> <b>${pbMoney(billsM)}</b> <i>a month</i></div>
+      <div class="pb-tile"><span>SPENT</span> <b>${pbMoney(spentM)}</b> <i>so far this month</i></div>
+      <div class="pb-tile ${left >= 0 ? 'pb-good' : 'pb-bad'}"><span>${left >= 0 ? '✓ LEFT' : '⚠ SHORT'}</span> <b>${pbMoney(left)}</b> <i>in − bills − spent</i></div>
+    </div>
+    ${pbBars([{ n: 'In', v: incM, cls: 'in' }, { n: 'Bills', v: billsM }, { n: 'Spent', v: spentM }], 'in, bills and spent this month')}
+    ${catRows.length ? `<div class="pb-h2">WHERE IT WENT${capTotal ? ' — against the caps' : ''}</div>${pbBars(catRows, 'spending by category this month, against each cap')}` : '<div class="hint">Nothing spent yet this month — add the first one below.</div>'}
+    ${capTotal ? `<div class="hint" style="margin-top: 4px;">If every cap holds: ${pbMoney(incM)} in − ${pbMoney(billsM)} bills − ${pbMoney(capTotal)} caps = <b>${planned >= 0 ? '✓ ' + pbMoney(planned) + ' left' : '⚠ ' + pbMoney(planned) + ' short'}</b> a month.</div>` : ''}
+  </div>
+  <div class="pb-card">
+    <div class="pb-h">🧾 SPEND <span class="pb-sub">quick add — amount, what for, done</span></div>
+    <div class="pb-add"><input type="text" id="pbAmt" inputmode="decimal" placeholder="$" aria-label="amount"><select id="pbCat" class="mini-sel" aria-label="what for">${pbCatList().map(c => `<option>${esc(c)}</option>`).join('')}</select><input type="text" id="pbNote" placeholder="note (optional)" aria-label="note" onkeydown="if(event.key==='Enter'){event.preventDefault();pbSpendAdd();}"><button type="button" class="bd-plus" onclick="pbSpendAdd()" aria-label="add it">+</button></div>
+    ${sp.slice().sort((a, b) => String(b.ts).localeCompare(String(a.ts))).slice(0, 40).map(x => `<div class="pb-row"><span class="pb-rn">${esc(x.cat || 'Other')}${x.note ? ' — ' + esc(x.note) : ''}<span class="pb-meta"> · ${esc(String(x.ts).slice(5, 10))}</span></span> <b>${pbMoney(x.amt)}</b><button type="button" class="pb-x" onclick="pbSpendDel('${esc(x.id)}')" aria-label="take it off" title="take it off">✕</button></div>`).join('')}
+  </div>
+  <div class="pb-card">
+    <div class="pb-h">🎯 SPENDING CAPS <span class="pb-sub">${capTotal ? pbMoney(capTotal) + ' a month if they all hold' : 'the ways to save — a ceiling per category'}</span></div>
+    ${Object.entries(p.caps).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<div class="pb-row"><span class="pb-rn">${esc(c)}<span class="pb-meta"> · ${byCat[c] ? pbMoney(byCat[c]) + ' spent so far' : 'nothing spent yet'}</span></span> <b>${pbMoney(v)}</b><button type="button" class="pb-x" onclick="pbEdit('caps','${esc(c)}')" aria-label="edit" title="edit">✎</button><button type="button" class="pb-x" onclick="pbCapDel('${esc(c)}')" aria-label="take it off" title="take it off">✕</button></div>`).join('') || '<div class="hint">No caps yet — Groceries 950, Eating out 250, Amazon 250…</div>'}
+    <div class="pb-form" id="pbForm-caps"></div>
+    <div class="rev-row" style="gap: 6px;"><button type="button" class="btn-ghost" style="margin-top: 8px;" onclick="pbEdit('caps','')">➕ Add a cap</button>${pbPasteBtn('caps')}</div>
+  </div>
+  <div class="pb-card">
+    <div class="pb-h">🏠 BILLS <span class="pb-sub">${pbMoney(billsM)} a month</span></div>
+    ${p.bills.slice().sort((a, b) => (+a.day || 32) - (+b.day || 32)).map(b => `<div class="pb-row"><span class="pb-rn">${esc(b.n)}<span class="pb-meta"> · due the ${b.day ? pbOrd(b.day) : '—'}${b.auto ? ' · 🔁 autopay' : ''}${b.cat ? ' · ' + esc(b.cat) : ''}</span></span> <b>${pbMoney(b.amt)}</b>${pbRowBtns('bills', b.id)}</div>`).join('') || '<div class="hint">No bills listed yet.</div>'}
+    <div class="pb-form" id="pbForm-bills"></div>
+    <div class="rev-row" style="gap: 6px;"><button type="button" class="btn-ghost" style="margin-top: 8px;" onclick="pbEdit('bills','')">➕ Add a bill</button>${pbPasteBtn('bills')}</div>
+  </div>
+  <div class="pb-card">
+    <div class="pb-h">💳 DEBTS <span class="pb-sub">${pbMoney(debtTotal)} owed · ${pbMoney(minTotal)} a month in minimums</span></div>
+    ${p.debts.map(d => `<div class="pb-row"><span class="pb-rn">${esc(d.n)}<span class="pb-meta"> · ${esc(String(+d.apr || 0))}% · min ${pbMoney(d.min)}</span></span> <b>${pbMoney(d.bal)}</b>${pbRowBtns('debts', d.id)}</div>`).join('') || '<div class="hint">No debts listed — lucky man.</div>'}
+    <div class="pb-form" id="pbForm-debts"></div>
+    <div class="rev-row" style="gap: 6px;"><button type="button" class="btn-ghost" style="margin-top: 8px;" onclick="pbEdit('debts','')">➕ Add a debt</button>${pbPasteBtn('debts')}</div>
+    ${p.debts.length ? `
+    <div class="pb-h2">THE PAY-OFF PLAN</div>
+    <div class="pb-plan-row"><label class="pb-lbl2" for="pbExtra">Extra toward debt each month</label><input type="text" id="pbExtra" inputmode="decimal" value="${esc(String(p.extra || 0))}" onchange="pbExtraSet(this.value)"></div>
+    <div class="chips-row" style="display: flex; gap: 6px; margin: 6px 0; flex-wrap: wrap;">
+      <button type="button" class="pick-chip${p.method === 'snowball' ? ' sel' : ''}" onclick="pbMethod('snowball')" aria-pressed="${p.method === 'snowball'}">${p.method === 'snowball' ? '✓ ' : ''}SNOWBALL — smallest first</button>
+      <button type="button" class="pick-chip${p.method === 'avalanche' ? ' sel' : ''}" onclick="pbMethod('avalanche')" aria-pressed="${p.method === 'avalanche'}">${p.method === 'avalanche' ? '✓ ' : ''}AVALANCHE — highest rate first</button>
+    </div>
+    <div class="pb-tiles">
+      <div class="pb-tile"><span>DEBT-FREE IN</span> <b>${plan.ok ? plan.months + ' mo' : '50+ yrs'}</b> <i>${plan.ok ? pbMonthName(plan.months) : 'the minimums do not cover the interest'}</i></div>
+      <div class="pb-tile"><span>INTEREST PAID</span> <b>${pbMoney(plan.interest)}</b> <i>on the way there</i></div>
+      <div class="pb-tile pb-good"><span>+$100 A MONTH</span> <b>${plan100.ok ? plan100.months + ' mo' : '—'}</b> <i>${plan100.ok ? 'saves ' + pbMoney(plan.interest - plan100.interest) + ' in interest' : ''}</i></div>
+      <div class="pb-tile"><span>PAID IN ALL</span> <b>${pbMoney(plan.paid)}</b> <i>${pbMoney(debtTotal)} owed + interest</i></div>
+    </div>
+    ${plan.order.length ? pbBars(plan.order.map(o => ({ n: o.n, v: o.month, t: `paid off ${pbMonthName(o.month)} (${o.month} mo)` })), 'months to pay off each debt') : ''}` : ''}
+  </div>
+  <div class="pb-card">
+    <div class="pb-h">🐷 SAVINGS GOALS</div>
+    ${p.goals.map(g => { const pct = +g.target > 0 ? Math.min(100, Math.round((+g.saved || 0) / +g.target * 100)) : 0; const togo = Math.max(0, (+g.target || 0) - (+g.saved || 0)); const mo = +g.per > 0 && togo > 0 ? Math.ceil(togo / +g.per) : 0;
+      return `<div class="pb-goal"><div class="pb-rn"><b>${esc(g.n)}</b> — ${pbMoney(g.saved)} of ${pbMoney(g.target)} · ${pct}%<span class="pb-meta">${togo <= 0 ? ' · ✓ THERE' : mo ? ` · at ${pbMoney(g.per)} a month, there by ${pbMonthName(mo)}` : ''}</span></div><div class="pb-track" role="img" aria-label="${pct} percent saved"><div class="pb-fill" style="width: ${pct}%;"></div></div><div class="rev-row" style="gap: 6px; margin-top: 4px;">${pbRowBtns('goals', g.id)}</div></div>`; }).join('') || '<div class="hint">No goals yet — a truck fund, a trip, a cushion.</div>'}
+    <div class="pb-form" id="pbForm-goals"></div>
+    <div class="rev-row" style="gap: 6px;"><button type="button" class="btn-ghost" style="margin-top: 8px;" onclick="pbEdit('goals','')">➕ Add a goal</button>${pbPasteBtn('goals')}</div>
+  </div>
+  <div class="pb-card">
+    <div class="pb-h">💵 INCOME <span class="pb-sub">${pbMoney(incM)} a month</span></div>
+    ${p.inc.map(i => `<div class="pb-row"><span class="pb-rn">${esc(i.n)}<span class="pb-meta"> · ${pbMoney(i.amt)} ${esc(pbPerWord(i.per))}</span></span> <b>${pbMoney(pbMonthly(i.amt, i.per))}/mo</b>${pbRowBtns('inc', i.id)}</div>`).join('') || '<div class="hint">No income listed yet.</div>'}
+    <div class="pb-form" id="pbForm-inc"></div>
+    <div class="rev-row" style="gap: 6px;"><button type="button" class="btn-ghost" style="margin-top: 8px;" onclick="pbEdit('inc','')">➕ Add income</button>${pbPasteBtn('inc')}</div>
+  </div>
+  <div class="hint" style="margin: 10px 0 4px;">🔒 This page is yours only — never the crew's, never a client's, never the Wizard's.</div>`;
+}
+// the little forms — one per list, drawn under the list; ✎ on a row fills it in
+function pbEdit(kind, id) {
+  const p = pb();
+  const box = $('pbForm-' + kind); if (!box) return;
+  const e = kind === 'caps' ? (id ? { n: id, amt: p.caps[id] } : {}) : ((p[kind] || []).find(x => x.id === id) || {});
+  const f = (id2, label, val, extra) => `<div class="field"><label>${label}</label><input type="text" id="${id2}" value="${esc(val == null ? '' : String(val))}" ${extra || ''}></div>`;
+  const money = 'inputmode="decimal"';
+  let inner = '';
+  if (kind === 'inc') inner = `<div class="frow">${f('pbF-n', 'From', e.n, 'placeholder="Payroll"')}${f('pbF-amt', 'Amount', e.amt, money)}<div class="field"><label>How often</label><select id="pbF-per" class="mini-sel">${PB_PERS.map(x => `<option value="${x[0]}"${(e.per || 'month') === x[0] ? ' selected' : ''}>${x[1]}</option>`).join('')}</select></div></div>`;
+  else if (kind === 'bills') inner = `<div class="frow">${f('pbF-n', 'Bill', e.n, 'placeholder="Mortgage · Enstar · truck payment"')}${f('pbF-amt', 'Amount a month', e.amt, money)}${f('pbF-day', 'Due day (1–31)', e.day, 'inputmode="numeric"')}<div class="field"><label>What for</label><select id="pbF-cat" class="mini-sel">${PB_BILL_CATS.map(c => `<option${(e.cat || '') === c ? ' selected' : ''}>${c}</option>`).join('')}</select></div></div>
+    <label class="hint" style="display: flex; gap: 8px; align-items: center; margin: 6px 0;"><input type="checkbox" id="pbF-auto"${e.auto ? ' checked' : ''}> 🔁 On autopay</label>`;
+  else if (kind === 'debts') inner = `<div class="frow">${f('pbF-n', 'Debt', e.n, 'placeholder="Visa · credit line · Home Depot card"')}${f('pbF-bal', 'Balance', e.bal, money)}${f('pbF-apr', 'Rate (APR %)', e.apr, money)}${f('pbF-min', 'Minimum a month', e.min, money)}</div>`;
+  else if (kind === 'goals') inner = `<div class="frow">${f('pbF-n', 'Goal', e.n, 'placeholder="Truck fund · Hawaii · 3-month cushion"')}${f('pbF-target', 'Target', e.target, money)}${f('pbF-saved', 'Saved so far', e.saved, money)}${f('pbF-per', 'Putting in a month', e.per, money)}</div>`;
+  else if (kind === 'caps') inner = `<div class="frow"><div class="field"><label>Category</label><input type="text" id="pbF-n" list="pbCatDl" value="${esc(e.n || '')}" placeholder="Groceries · Amazon · Eating out"><datalist id="pbCatDl">${pbCatList().map(c => `<option value="${esc(c)}">`).join('')}</datalist></div>${f('pbF-amt', 'Cap a month', e.amt, money)}</div>`;
+  else return;
+  box.innerHTML = `<div class="set-section fc-sec" style="margin-top: 6px;"><input type="hidden" id="pbF-id" value="${esc(id || '')}">${inner}
+    <div class="rev-row" style="margin-top: 8px;"><button type="button" class="btn-primary" onclick="pbSave('${kind}')">✓ Save</button><button type="button" class="btn-ghost" onclick="$('pbForm-${kind}').innerHTML = ''">✕ Never mind</button></div></div>`;
+  const first = $('pbF-n'); if (first) try { first.focus(); } catch (er) {}
+}
+function pbSave(kind) {
+  const p = pb();
+  const v = id => { const el = $(id); return el ? String(el.value || '').trim() : ''; };
+  const n = v('pbF-n'); if (!n) { toast('Give it a name first', false); return; }
+  if (kind === 'caps') {
+    const old = v('pbF-id'), cat = pbCatMatch(n), amt = pbNum(v('pbF-amt'));
+    if (old && old !== cat) delete p.caps[old];
+    if (amt > 0) p.caps[cat] = amt; else delete p.caps[cat];
+    scheduleSave(); renderBudget(); toast(`🎯 ${cat} capped at ${pbMoney(amt)} a month ✓`); return;
+  }
+  const list = p[kind]; if (!list) return;
+  const id = v('pbF-id') || pbId();
+  let rec;
+  if (kind === 'inc') rec = { id, n, amt: pbNum(v('pbF-amt')), per: v('pbF-per') || 'month' };
+  else if (kind === 'bills') rec = { id, n, amt: pbNum(v('pbF-amt')), day: Math.min(31, Math.max(0, Math.round(pbNum(v('pbF-day'))))), cat: v('pbF-cat'), auto: !!($('pbF-auto') && $('pbF-auto').checked) };
+  else if (kind === 'debts') rec = { id, n, bal: pbNum(v('pbF-bal')), apr: pbNum(v('pbF-apr')), min: pbNum(v('pbF-min')) };
+  else if (kind === 'goals') rec = { id, n, target: pbNum(v('pbF-target')), saved: pbNum(v('pbF-saved')), per: pbNum(v('pbF-per')) };
+  else return;
+  const i = list.findIndex(x => x.id === id); if (i >= 0) list[i] = rec; else list.push(rec);
+  scheduleSave(); renderBudget(); toast('💰 Saved ✓');
+}
+function pbDel(kind, id) {
+  const p = pb(), list = p[kind]; if (!list) return;
+  const i = list.findIndex(x => x.id === id); if (i < 0) return;
+  const gone = list.splice(i, 1)[0];
+  scheduleSave(); renderBudget();
+  toastUndo(`✕ ${gone.n} taken off`, () => { list.splice(Math.min(i, list.length), 0, gone); scheduleSave(); renderBudget(); });
+}
+function pbCapDel(cat) { const p = pb(), v = p.caps[cat]; if (v == null) return; delete p.caps[cat]; scheduleSave(); renderBudget(); toastUndo(`✕ ${cat} cap taken off`, () => { p.caps[cat] = v; scheduleSave(); renderBudget(); }); }
+function pbSpendAdd() {
+  const amt = pbNum($('pbAmt') && $('pbAmt').value); if (!(amt > 0)) { toast('Type the amount first', false); return; }
+  pb().spend.unshift({ id: pbId(), ts: new Date().toISOString(), amt, cat: ($('pbCat') && $('pbCat').value) || 'Other', note: (($('pbNote') && $('pbNote').value) || '').trim().slice(0, 120) });
+  scheduleSave(); renderBudget(); toast(`💰 ${pbMoney(amt)} noted ✓`);
+  const a = $('pbAmt'); if (a) try { a.focus(); } catch (e) {}
+}
+function pbSpendDel(id) {
+  const p = pb(), i = p.spend.findIndex(x => x.id === id); if (i < 0) return;
+  const gone = p.spend.splice(i, 1)[0];
+  scheduleSave(); renderBudget();
+  toastUndo(`✕ ${pbMoney(gone.amt)} taken off`, () => { p.spend.splice(Math.min(i, p.spend.length), 0, gone); scheduleSave(); renderBudget(); });
+}
+function pbExtraSet(v) { pb().extra = Math.max(0, pbNum(v)); scheduleSave(); renderBudget(); }
+function pbMethod(m) { pb().method = m === 'avalanche' ? 'avalanche' : 'snowball'; scheduleSave(); renderBudget(); }
+// 📋 THE PASTE BOX — one item per line, plain words, the numbers where they fall:
+//   income  "Payroll $900 weekly"            bills  "Mortgage 1650 due 1 autopay"
+//   debts   "Visa 3000 24% min 90"                goals  "Truck fund 10000 saved 2500 500 a month"
+//   caps    "Groceries 950"
+// The name is everything before the first number. Nothing here is guessed from a bank file — he types or pastes it.
+function pbParseLine(kind, line) {
+  const s = String(line || '').replace(/\s+/g, ' ').trim(); if (!s) return null;
+  const nums = [...s.matchAll(/\$?(\d[\d,]*(?:\.\d+)?)\s*(%|\/mo|\/wk|\/yr)?/g)].map(m => ({ v: pbNum(m[1]), unit: m[2] || '', i: m.index }));
+  const first = nums[0];
+  const name = (first ? s.slice(0, first.i) : s).replace(/[—–\-:•·,]+\s*$/, '').trim();
+  if (!name) return null;
+  const low = s.toLowerCase();
+  const after = re => { const m = low.match(re); return m ? pbNum(m[1]) : null; };
+  const pct = nums.find(x => x.unit === '%');
+  if (kind === 'inc') {
+    if (!first) return null;
+    const per = /2 ?weeks|bi-?weekly|every 2|every other|2wk|fortnight/.test(low) ? '2wk' : /week/.test(low) ? 'week' : /year|annual|yr/.test(low) ? 'year' : 'month';
+    return { id: pbId(), n: name, amt: first.v, per };
+  }
+  if (kind === 'bills') {
+    if (!first) return null;
+    const day = after(/(?:due|day)(?: the| on)?\s*(\d{1,2})(?:st|nd|rd|th)?/) || 0;
+    const cat = /mortgage|rent|hoa/.test(low) ? 'Housing' : /child support|csed/.test(low) ? 'Child support' : /electric|gas|water|sewer|utilit|hea\b|enstar/.test(low) ? 'Utilities' : /truck|car|auto loan|vehicle/.test(low) ? 'Vehicle' : /insur/.test(low) ? 'Insurance' : /phone|internet|cell/.test(low) ? 'Phone / Internet' : /subscri|netflix|spotify/.test(low) ? 'Subscriptions' : /invest|edward jones|stash|ally|savings/.test(low) ? 'Investing' : 'Other';
+    return { id: pbId(), n: name, amt: first.v, day: Math.min(31, Math.max(0, Math.round(day))), cat, auto: /autopay|auto-pay|\bauto\b/.test(low) };
+  }
+  if (kind === 'debts') {
+    const bal = nums.find(x => x.unit !== '%'); if (!bal) return null;
+    const apr = pct ? pct.v : (after(/(?:apr|rate)\s*\$?(\d[\d,]*(?:\.\d+)?)/) || 0);
+    const min = after(/min(?:imum)?(?: payment)?\s*\$?(\d[\d,]*(?:\.\d+)?)/) || 0;
+    return { id: pbId(), n: name, bal: bal.v, apr, min };
+  }
+  if (kind === 'goals') {
+    if (!first) return null;
+    const saved = after(/saved\s*\$?(\d[\d,]*(?:\.\d+)?)/) || 0;
+    const per = (nums.find(x => x.unit === '/mo') || {}).v || after(/(?:putting in|put in|per month|a month|monthly|at)\s*\$?(\d[\d,]*(?:\.\d+)?)/) || after(/\$?(\d[\d,]*(?:\.\d+)?)\s*(?:a month|per month|\/mo|monthly)/) || 0;
+    return { id: pbId(), n: name, target: first.v, saved, per };
+  }
+  if (kind === 'caps') { if (!first) return null; return { n: pbCatMatch(name), amt: first.v }; }
+  return null;
+}
+function pbPasteOpen(kind) {
+  const box = $('pbForm-' + kind); if (!box) return;
+  const hint = { inc: 'Payroll $900 weekly', bills: 'Mortgage 1650 due 1 autopay', debts: 'Visa 3000 24% min 90', goals: 'Truck fund 10000 saved 2500 500 a month', caps: 'Groceries 950' }[kind] || '';
+  box.innerHTML = `<div class="set-section fc-sec" style="margin-top: 6px;"><div class="hint" style="margin: 0 0 6px;">One per line — the name, then the numbers. Like: <b>${esc(hint)}</b></div>
+    <textarea id="pbPaste-${kind}" class="grow pb-paste" rows="4" placeholder="${esc(hint)}"></textarea>
+    <div class="rev-row" style="margin-top: 8px;"><button type="button" class="btn-primary" onclick="pbPasteSave('${kind}')">✓ Add them</button><button type="button" class="btn-ghost" onclick="$('pbForm-${kind}').innerHTML = ''">✕ Never mind</button></div></div>`;
+  const t = $('pbPaste-' + kind); if (t) try { t.focus(); } catch (e) {}
+}
+function pbPasteSave(kind) {
+  const t = $('pbPaste-' + kind); if (!t) return;
+  const p = pb(); let n = 0, bad = [];
+  String(t.value || '').split('\n').forEach(line => {
+    if (!line.trim()) return;
+    const rec = pbParseLine(kind, line);
+    if (!rec) { bad.push(line.trim()); return; }
+    if (kind === 'caps') { if (rec.amt > 0) { p.caps[rec.n] = rec.amt; n++; } else bad.push(line.trim()); return; }
+    const list = p[kind]; const i = list.findIndex(x => x.n.toLowerCase() === rec.n.toLowerCase());
+    if (i >= 0) list[i] = { ...rec, id: list[i].id }; else list.push(rec);
+    n++;
+  });
+  scheduleSave(); renderBudget();
+  toast(n ? `📋 ${n} added ✓${bad.length ? ` · ${bad.length} skipped (no number): ${bad[0].slice(0, 30)}` : ''}` : 'Nothing to add — each line needs a name and a number', !!n);
+}
+// ================= /PERSONAL BUDGET =================
 // ================= 📋 v6.79 — THE BOARD =================
 // Eric: "anything added to the grinder should be able to just add thoughts to the grinder as i go and the
 // summary list changes as i go and things get added under the right job or category, then i can go to the
@@ -16188,7 +16552,9 @@ function pocketBack(id) {
 // he places them); two small lamps after the cubes: 👷 lit when a crew phone can see the line, 🏠 lit when
 // it went onto the client page (a released journal week, or a receipt sent) — the words spell it out in
 // the open row.
-let _brdFold = new Set(), _brdOpen = '', _brdSubFor = '';
+// 📋 v6.84 — Eric: "when I open it with all the drop-downs open, there is just tons and tons of information in front of
+// me. I can't get to anything quickly." Every heading opens CLOSED — the counts show; one heading open at a time.
+let _brdShow = '', _brdOpen = '', _brdSubFor = '';
 const BRD_WORDS = ['—', 'LOW', 'MED', 'HIGH'];
 function brdTouch(e) {
   if (!e.board || typeof e.board !== 'object') e.board = { p: 0, sub: [], at: new Date().toISOString() };
@@ -16305,15 +16671,15 @@ function renderBoard() {
   const heads = order.filter(j => (by[j] || []).length);
   const n = L.length, hiAll = L.filter(l => l.p === 3).length;
   box.innerHTML = `<h3>📋 Board${winX('closeReview()', 'close')}</h3>${revTabsHtml()}
-    <div class="rev-sub">${n ? `<b>${n} open</b>${hiAll ? ` · ${hiAll} high` : ''}` : '<b>nothing open</b>'} · a thought ground in lands here under its job · cubes = priority · 👷 crew sees it · 🏠 on their page · tap the words to edit, move or send · ✓ = done</div>
+    <div class="rev-sub">${n ? `<b>${n} open</b>${hiAll ? ` · ${hiAll} high` : ''}` : '<b>nothing open</b>'} · tap a heading to open it · cubes = priority · 👷 crew sees it · 🏠 on their page · tap the words to edit, move or send · ✓ = done</div>
     <div class="bd-add"><input type="text" id="brdIn" placeholder="add a thing…" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();brdAdd();}"><select id="brdJob" class="mini-sel" aria-label="which job">${order.map(j => `<option value="${esc(j)}"${j === '—' ? ' selected' : ''}>${jobName(j)}</option>`).join('')}</select><button type="button" class="bd-plus" onclick="brdAdd()" aria-label="add it to the board">+</button></div>` +
-    (heads.length ? heads.map(j => { const rows = by[j] || [], folded = _brdFold.has(j), hi = rows.filter(r => r.p === 3).length;
-      return `<button type="button" class="bd-hd${folded ? '' : ' open'}" data-job="${esc(j)}" onclick="brdFold('${escq(j)}')" aria-expanded="${!folded}">${folded ? '▸' : '▾'} ${j === '—' ? '📂 GENERAL' : '🏗 ' + esc(j)}<span class="rev-n">${rows.length}${hi ? ` · ${hi} high` : ''}${folded ? ' · folded' : ''}</span></button>
+    (heads.length ? heads.map(j => { const rows = by[j] || [], folded = _brdShow !== j, hi = rows.filter(r => r.p === 3).length;
+      return `<button type="button" class="bd-hd${folded ? '' : ' open'}" data-job="${esc(j)}" onclick="brdFold('${escq(j)}')" aria-expanded="${!folded}">${folded ? '▸' : '▾'} ${j === '—' ? '📂 GENERAL' : '🏗 ' + esc(j)}<span class="rev-n">${rows.length}${hi ? ` · ${hi} high` : ''}${folded ? ' · tap to open' : ''}</span></button>
         <div class="bd-body" data-job="${esc(j)}"${folded ? ' hidden' : ''}>${rows.map((l, i) => lineHtml(l, i, rows)).join('')}</div>`; }).join('')
       : `<div class="hint" style="margin: 10px 2px;">Nothing on the board yet. Grind a thought, or add one above.</div>`) +
     `<div class="rev-row" style="margin-top: 12px;"><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close</button></div>`;
 }
-function brdFold(j) { _brdFold.has(j) ? _brdFold.delete(j) : _brdFold.add(j); renderReview(); }
+function brdFold(j) { _brdShow = _brdShow === j ? '' : j; renderReview(); }   // 📋 v6.84 — one heading open at a time; tap again to close it
 function brdOpen(k, id) { const key = k + ':' + id; _brdOpen = _brdOpen === key ? '' : key; _brdSubFor = ''; renderReview(); }
 function brdPri(k, id) {
   const x = brdFind(k, id); if (!x) return;
@@ -18030,7 +18396,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.83';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.84';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

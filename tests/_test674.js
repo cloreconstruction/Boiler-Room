@@ -18,7 +18,7 @@ const { chromium } = require('playwright');
   ok('the bar shows five plates — Mileage, File Cabinet, Hours, Vault, Setup — and no Note', await page.evaluate(() => {
     const shown = [...document.querySelectorAll('.capture .cap-btn')].filter(b => b.offsetParent !== null);
     const panels = shown.map(b => b.dataset.panel);
-    return document.body.classList.contains('parked-630') && shown.length === 5 && panels.join(',') === 'mileage,file,hours,vault,settings' && !panels.includes('note');
+    return document.body.classList.contains('parked-630') && shown.length === 5 && panels.join(',') === 'mileage,budget,hours,vault,settings' && !panels.includes('note');
   }));
 
   ok('each of the five is still a thumb-sized plate', await page.evaluate(() =>
