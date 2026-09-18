@@ -117,10 +117,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return keys.indexOf('pocket') === keys.indexOf('get') + 1 && /POCKET — not done/.test(head) && /3/.test(head) &&
       /call the gravel guy/.test(pk) && /pick up the saw/.test(pk) && /inspector callback/.test(pk) && /flushed/.test(pk) && /overflow/.test(pk) && /not done/.test(pk) &&
       !/screws for Hertz/.test(pk) && /screws for Hertz/.test(get) && !/gravel guy/.test(get) &&
-      document.querySelectorAll('.rev-sec-body[data-sec="pocket"] button').length === 3;
+      document.querySelectorAll('.rev-sec-body[data-sec="pocket"] .pk-acts').length === 3;   // v6.87 — four plates a row now, plus the clear-all bar
   }));
-  ok('↩ Pocket it for tomorrow puts it back on tomorrow\'s pocket and off the heading', await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('.rev-sec-body[data-sec="pocket"] button')].find(b => /gravel guy/.test(b.closest('.sum-line').textContent));
+  ok('➡ Tomorrow (v6.87 — it was "↩ Pocket it for tomorrow") puts it back on tomorrow\'s pocket and off the heading', await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('.rev-sec-body[data-sec="pocket"] .pk-acts button')].find(b => /Tomorrow/.test(b.textContent) && /gravel guy/.test(b.closest('.sum-line').textContent));
     btn.click();
     const it = pocket()[0];
     const pk = document.querySelector('.rev-sec-body[data-sec="pocket"]').textContent.replace(/\s+/g, ' ');

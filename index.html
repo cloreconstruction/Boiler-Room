@@ -2543,6 +2543,12 @@
   .sum-g { flex: 0 0 20px; text-align: center; }
   .sum-m { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .sum-s { display: block; font-size: 12px; color: var(--ink-muted); margin-top: 1px; }
+  /* 🧹 v6.87 — the four plates under a pocket leftover (two across on a phone, four on a PC) and the clear-all bar */
+  .pk-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .pk-acts .btn-ghost { flex: 1 1 120px; min-height: 40px; font-size: 13px; padding: 6px 8px; margin: 0; color: var(--ink-1); }
+  .pk-bulk { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 2px 8px; }
+  .pk-bulk .btn-ghost { flex: 1 1 130px; min-height: 40px; font-size: 13px; margin: 0; color: var(--ink-1); }
+  .pk-bulk .btn-ghost.armed { border-color: var(--warn, #ffa657); border-width: 2px; font-weight: 800; }
   .sum-day { padding: 6px 0 2px; border-top: 1px solid var(--baseline); margin-top: 6px; }
   .sum-dh { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 13px; }
   .sum-dh span { font-size: 12px; color: var(--ink-muted); text-align: right; }
@@ -3843,7 +3849,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.86 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.87 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15674,7 +15680,7 @@ function buildAskContext(question) {
     if (e.heads) o.headsUp = true;
     // 🎒📋 v6.81 — Eric: "as I make a checklist and check them off, the wizard knows that those items are done." The
     // pocket stamp and the board state ride on the row in words, not glyphs.
-    if (e.pocket) o.pocket = e.pocket === 'done' ? 'DONE — he checked it off his pocket list' : e.pocket === 'back' ? 'back on the pocket list for tomorrow' : 'NOT DONE — left the pocket list unfinished';
+    if (e.pocket) o.pocket = e.pocket === 'done' ? 'DONE — he checked it off his pocket list' : e.pocket === 'back' ? 'back on the pocket list for tomorrow' : e.pocket === 'dropped' ? 'DROPPED — he said it is no longer needed' : 'NOT DONE — left the pocket list unfinished';
     if (e.board && typeof e.board === 'object') o.board = { p: brdP(e.board.p), done: e.board.done ? 'DONE' + (e.board.by ? ' by ' + e.board.by : '') : 'open', sub: (e.board.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) };
     if (e.photoPath || (e.photoPaths && e.photoPaths.length)) o.hasPhoto = true;
     if (e.amount != null) o.amt = e.amount;
@@ -16214,8 +16220,15 @@ function renderSummary() {
   // category for the pocket list flushes so if i don't get to the item itll go to the summary page and i can then
   // put it in the right category for the next day." ↩ puts it on tomorrow's pocket; moving it to another heading
   // is the board's job (parked, 2026-09-14).
-  S.pocket = es.filter(e => ['flushed', 'over', 'swept'].includes(e.pocket)).sort((a, b) => +new Date(b.ts) - +new Date(a.ts)).map(e =>
-    line('🎒', `<b>${esc(pocketWords(e))}</b>`, `${e.pocket === 'flushed' ? 'flushed' : e.pocket === 'over' ? 'overflow' : 'not done'} · ${when(e)} <button type="button" class="btn-ghost req-x" onclick="pocketBack(${e.id})">↩ Pocket it for tomorrow</button>`));
+  // 🧹 v6.87 — Eric, looking at 18 of these: "i need a way to clear these: add them back onto todays list, tomorrows, or
+  // check them as done or no longer relevant." Four plates on every row, and ✓ All done / ✕ None needed on top (two taps).
+  // The list no longer follows TODAY / THIS WEEK: a leftover stays here until HE clears it (or it is 14 days old).
+  S.pocket = pocketLeftList().sort((a, b) => +new Date(b.ts) - +new Date(a.ts)).map(e =>
+    line('🎒', `<b>${esc(pocketWords(e))}</b>`, `${e.pocket === 'flushed' ? 'flushed' : e.pocket === 'over' ? 'overflow' : 'not done'} · ${when(e)}<span class="pk-acts">
+      <button type="button" class="btn-ghost req-x" onclick="pocketBack(${e.id}, 0)" title="back onto today's pocket list">↩ Today</button>
+      <button type="button" class="btn-ghost req-x" onclick="pocketBack(${e.id}, 1)" title="back onto tomorrow's pocket list">➡ Tomorrow</button>
+      <button type="button" class="btn-ghost req-x" onclick="pocketLeftDone(${e.id})" title="it got done — check it off">✓ Done</button>
+      <button type="button" class="btn-ghost req-x" onclick="pocketLeftDrop(${e.id})" title="no longer relevant — clear it">✕ Not needed</button></span>`));
   // 📗 SENT TO LOGAN — the bookkeeper tag, shared notes, receipts sent onto a client page
   S.logan = es.filter(e => (e.tags || []).includes('Bookkeeper') || e.shared || e.budg === 'sent').map(e =>
     line(e.budg === 'sent' ? '🏠' : '📗', `<b>${esc(e.job || '—')}</b> — ${words(e)}`, `${e.budg === 'sent' ? 'on their page' : 'to Logan'} · ${when(e)}`));
@@ -16238,22 +16251,69 @@ function renderSummary() {
       <button type="button" class="pick-chip${_sumSpan === 'today' ? ' sel' : ''}" onclick="sumSpan('today')" aria-pressed="${_sumSpan === 'today'}">${_sumSpan === 'today' ? '✓ ' : ''}TODAY</button>
       <button type="button" class="pick-chip${_sumSpan === 'week' ? ' sel' : ''}" onclick="sumSpan('week')" aria-pressed="${_sumSpan === 'week'}">${_sumSpan === 'week' ? '✓ ' : ''}THIS WEEK</button>
     </div>
-    <div class="rev-sub">${es.length} on the log ${_sumSpan === 'today' ? 'today' : 'this week'} · the sort tab is where the taps are; here only 🎒 POCKET has one</div>` +
+    <div class="rev-sub">${es.length} on the log ${_sumSpan === 'today' ? 'today' : 'this week'} · the sort tab is where the taps are; here only 🎒 POCKET has them — back on the list, done, or not needed</div>` +
     secs.map(s => { const open = _sumSec === s.key, n = s.items.length;
       return `<button type="button" class="rev-sec${open ? ' open' : ''}${n ? '' : ' empty'}" data-sec="${s.key}" onclick="sumSecTap('${s.key}')" aria-expanded="${open}">${open ? '▾' : '▸'} ${s.label} <span class="rev-n">${n ? n : '○ nothing'}</span></button>
-        <div class="rev-sec-body" data-sec="${s.key}"${open ? '' : ' hidden'}>${n ? s.items.join('') : `<div class="hint" style="margin: 6px 2px 8px;">Nothing here ${_sumSpan === 'today' ? 'today' : 'this week'}.</div>`}</div>`; }).join('') +
+        <div class="rev-sec-body" data-sec="${s.key}"${open ? '' : ' hidden'}>${n ? (s.key === 'pocket' && n > 1 ? pocketBulkHtml(n) : '') + s.items.join('') : `<div class="hint" style="margin: 6px 2px 8px;">Nothing here ${_sumSpan === 'today' ? 'today' : 'this week'}.</div>`}</div>`; }).join('') +
     `<div class="rev-row" style="margin-top: 12px;"><button class="btn-ghost" style="flex: 1;" onclick="openPanel('summary')">📄 Older summary pages</button><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close</button></div>`;
 }
 
 // 🎒 v6.78 — the words of a pocket note without its stamp, and the way back onto tomorrow's pocket
 function pocketWords(e) { return String(e.details || '').replace(/^🎒 (Flushed|Overflow|Not done) — /, '').trim(); }
-function pocketBack(id) {
+// 🧹 v6.87 — days: 0 = today's list, anything else = tomorrow's. A FULL pocket refuses in words: the old way let the
+// overflow push the oldest item out as a new leftover, which landed right back under this heading.
+function pocketBack(id, days) {
   const e = entries.find(x => x.id === id); if (!e || !e.pocket) return;
   const t = pocketWords(e); if (!t) return;
-  pocket().unshift({ id: Date.now().toString(36) + Math.random().toString(16).slice(2, 6), t, day: pocketDay(1), ts: new Date().toISOString() });
-  e.pocket = 'back';   // off the POCKET heading; the note itself stays on the log as the record
-  pocketOverflow(); scheduleSave(); renderPocket(); renderReview();
-  toast(`🎒 "${t.slice(0, 40)}" is on tomorrow's pocket ✓`);
+  const d = days === 0 ? 0 : 1;
+  if (pocket().length >= pocketCap()) { toast(`🎒 The pocket is full (${pocket().length}/${pocketCap()}) — finish one or make it bigger with +, then try again`, false); return; }
+  pocket().unshift({ id: Date.now().toString(36) + Math.random().toString(16).slice(2, 6), t, day: pocketDay(d), ts: new Date().toISOString(), ...(e.board && e.board.p ? { p: e.board.p } : {}) });   // the priority cubes ride along
+  e.pocket = 'back';   // off the POCKET heading and the board; the note itself stays on the log as the record
+  scheduleSave(); renderPocket(); renderReview();
+  toast(`🎒 "${t.slice(0, 40)}" is on ${d ? "tomorrow's" : "today's"} pocket ✓`);
+}
+// the leftovers still waiting on him: flushed, overflow or swept, not personal, not ✓'d on the board, 14 days at most
+function pocketLeftList() {
+  const cut = Date.now() - 14 * 86400000;
+  return entries.filter(e => e && !sumHidden(e) && ['flushed', 'over', 'swept'].includes(e.pocket) && !(e.board && e.board.done) && +new Date(e.ts) >= cut);
+}
+function pocketLeftSet(e, to) {   // 'done' = it got done · 'dropped' = no longer relevant; hands back what to restore
+  const was = { pocket: e.pocket, details: e.details };
+  e.pocket = to; e.pocketAt = new Date().toISOString();
+  if (to === 'done') e.details = '✓ ' + pocketWords(e);   // reads on the log like any pocket ✓
+  return was;
+}
+function pocketLeftUndo(list) { list.forEach(w => { w.e.pocket = w.was.pocket; w.e.details = w.was.details; delete w.e.pocketAt; }); scheduleSave(); renderReview(); renderLog(); }
+function pocketLeftDone(id) {
+  const e = pocketLeftList().find(x => x.id === id); if (!e) return;
+  const t = pocketWords(e), was = pocketLeftSet(e, 'done');
+  scheduleSave(); renderReview(); renderLog();
+  toastUndo(`✓ "${t.slice(0, 40)}" checked off`, () => pocketLeftUndo([{ e, was }]));
+}
+function pocketLeftDrop(id) {
+  const e = pocketLeftList().find(x => x.id === id); if (!e) return;
+  const t = pocketWords(e), was = pocketLeftSet(e, 'dropped');
+  scheduleSave(); renderReview(); renderLog();
+  toastUndo(`✕ "${t.slice(0, 40)}" cleared — not needed`, () => pocketLeftUndo([{ e, was }]));
+}
+// the whole heading at once — two taps: the first arms (⚠ SURE?, 4 seconds), the second does it; one Undo brings them all back
+let _pkLeftArm = '', _pkLeftArmT = null;
+function pocketBulkHtml(n) {
+  const b = (to, idle) => `<button type="button" class="btn-ghost req-x${_pkLeftArm === to ? ' armed' : ''}" onclick="pocketLeftBulk('${to}')">${_pkLeftArm === to ? `⚠ SURE? tap again — all ${n}` : idle}</button>`;
+  return `<div class="pk-bulk"><span class="hint" style="margin: 0;">🧹 All ${n} at once:</span>${b('done', '✓ All done')}${b('dropped', '✕ None needed')}</div>`;
+}
+function pocketLeftBulk(to) {
+  const list = pocketLeftList(); if (!list.length) return;
+  clearTimeout(_pkLeftArmT);
+  if (_pkLeftArm !== to) {
+    _pkLeftArm = to;
+    _pkLeftArmT = setTimeout(() => { _pkLeftArm = ''; if (_revTab === 'summary' && $('revModal').classList.contains('show')) renderReview(); }, 4000);
+    renderReview(); return;
+  }
+  _pkLeftArm = '';
+  const undo = list.map(e => ({ e, was: pocketLeftSet(e, to) }));
+  scheduleSave(); renderReview(); renderLog();
+  toastUndo(`${to === 'done' ? '✓' : '✕'} ${undo.length} pocket leftovers ${to === 'done' ? 'checked off' : 'cleared — not needed'}`, () => pocketLeftUndo(undo));
 }
 // ================= 💰 v6.84 — THE PERSONAL BUDGET =================
 // Eric: "send the file cabinet button and pages to the boiler room museum. dont throw it away but its no longer
@@ -16578,6 +16638,7 @@ function brdCubes(p) { return `<i class="bd-cube${p >= 1 ? ' on' : ''}"></i><i c
 // is this entry a line on the board? a thought he ground in — never a record, never a locked one
 function boardOn(e) {
   if (!e || e.sample || e.personal || (e.tags || []).includes('Personal') || isPersonalJob(e.job)) return false;   // 🔒 the lock reaches the board
+  if (['done', 'back', 'dropped'].includes(e.pocket)) return false;                        // 🧹 v6.87 — cleared on the summary (or back on the pocket) = off the board, touched or not
   if (e.board && typeof e.board === 'object') return !e.board.done;                       // touched: stays until ✓
   if (e.type !== 'Note') return false;                                                      // hours, miles, expenses, the clock: records
   if (e.texted || /^Text from /.test(e.details || '')) return false;                       // texts sit under PEOPLE
@@ -18458,7 +18519,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.86';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.87';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
