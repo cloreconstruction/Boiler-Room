@@ -2900,7 +2900,7 @@
     <div class="frow" id="qnJobRow" style="align-items: center; flex-wrap: wrap; gap: 5px;">
       <div class="chips-row" id="qnJobChips" style="display: contents;"></div>
       <!-- v5.26 — Eric kept hunting for this wheel: bigger, bolder, brass-rimmed -->
-      <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value; renderCatRow(); updateStepFlow()" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0; font-size: 16.5px; font-weight: 800; padding: 12px 10px; border: 2px solid var(--accent); border-radius: 10px;"></select>
+      <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value; qnBLJobChanged(); renderCatRow(); updateStepFlow()" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0; font-size: 16.5px; font-weight: 800; padding: 12px 10px; border: 2px solid var(--accent); border-radius: 10px;"></select>
     </div>
     </div>
     <div class="g-step" data-step="2">
@@ -3934,7 +3934,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.96 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.97 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6135,7 +6135,137 @@ function catModalOpen() {
     </div>`;
   $('catModal').classList.add('show');
 }
-function catModalClose() { $('catModal').classList.remove('show'); renderTagChips(); }
+function catModalClose() { $('catModal').classList.remove('show'); if (qnBL && !qnBLRoom) { qnBL = false; _qnBLJob = ''; } renderTagChips(); }   // v6.97 — the same window also asks where on the Build List; shut without a pick = off
+// ================= 📋 v6.97 — THE GRINDER → THE BUILD LIST =================
+// Eric: "how can i put something into the grinder and have it land on the build list?" There was no door — a Build List
+// row came only from the board itself or 📋 Paste a list. Offered, and he said "go": a 📋 Build List chip in ④ TAG IT beside
+// ⚠ Heads-up and 🧾 Receipt. Tap it (the job in ① first) and a window asks WHERE — that job's own categories, or a new one.
+// SEND files the note in his log as always AND puts it on that job's Build List as a ✅ checklist item (⇄ on the row makes
+// it something to buy): the first line is the row's name, the rest is its note. The row and the log entry carry each
+// other's id. A 🔒 personal note never goes (it never leaves the phone); a crew phone has no chip (the boards live in
+// Eric's Dropbox). Rows go onto the board ONE AT A TIME (`_blLine`) — each is a read-modify-write of the office file, and
+// two in the same breath would write over each other.
+let qnBL = false, qnBLRoom = '', _qnBLJob = '', _qnBLRooms = [], _blLine = Promise.resolve();
+function blClientIdx(job) {
+  const cl = (_portalIdx && Array.isArray(_portalIdx.clients)) ? _portalIdx.clients : [];
+  return job && job !== '—' ? cl.findIndex(c => portalAppJob(c) === job) : -1;
+}
+function qnBLChipHtml() {
+  if (CREW_NAME) return '';
+  return `<button type="button" class="pick-chip lockchip${qnBL ? ' sel is-down' : ''}" id="qnBLChip" onclick="qnBLToggle()" aria-pressed="${qnBL}"
+      title="Files the note in your log as always AND puts it on this job's Build List as a checklist item">${qnBL ? (qnBLRoom ? '📋 ' + esc(qnBLRoom) + ' — tap to change' : '📋 BUILD LIST — tap to pick where') : '📋 Build List'}</button>`;
+}
+function qnBLOff(quiet) { qnBL = false; qnBLRoom = ''; _qnBLJob = ''; $('catModal').classList.remove('show'); renderTagChips(); if (!quiet) toast('📋 Off — this one is just a note'); }
+// the job on the wheel changed under a pick: the categories belong to the OTHER job, so the pick lets go
+function qnBLJobChanged() { if (qnBL && _qnBLJob && _qnBLJob !== qnJobPick) { qnBL = false; qnBLRoom = ''; _qnBLJob = ''; renderTagChips(); toast('📋 The Build List pick was for another job — tap 📋 again for this one', false); } }
+async function qnBLToggle() {
+  if (CREW_NAME) return;
+  const job = (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : '';
+  if (!job) { toast('▲ Pick the job first — a Build List belongs to a job', false); const s = $('qnJob'); if (s) s.focus(); return; }
+  if (typeof personalTagOn === 'function' && personalTagOn()) { toast('🔒 A personal note stays on this phone — it cannot go on a Build List', false); return; }
+  if (!dbx.refreshToken) { toast('Connect Dropbox first (⚙ Setup) — the Build Lists live there', false); return; }
+  busyShow('📋 OPENING THE BUILD LIST…');
+  try {
+    if (!_portalIdx || !Array.isArray(_portalIdx.clients)) { try { _portalIdx = JSON.parse((await dbxDownload(portalRoot() + '/index.json')) || 'null'); } catch (e) {} }
+    const i = blClientIdx(job);
+    if (i < 0) { busyDone('📋 NO CLIENT PAGE FOR THIS JOB'); toast(`${job} has no client page yet — 🏠 Project portal builds one, and its Build List comes with it`, false); return; }
+    const D = await matBoardRead(_portalIdx.clients[i]);
+    _qnBLRooms = (D.rooms || []).map(r => ({ name: String(r.name || ''), n: (r.items || []).length })).filter(r => r.name);
+    _qnBLJob = job; qnBL = true;
+    busyDone('📋 ✓ BUILD LIST');
+    renderTagChips(); blModalOpen();
+  } catch (e) { busyDone('⚠ COULD NOT OPEN THE BUILD LIST'); toast('Could not read the Build List — check the connection and try again', false); }
+}
+function blModalOpen() {
+  const rooms = _qnBLRooms || [];
+  const chip = r => { const on = qnBLRoom.toLowerCase() === r.name.toLowerCase();
+    return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="qnBLPick('${escq(r.name)}')" aria-pressed="${on}">${on ? '✓' : '📋'} ${esc(r.name)} <span style="display: block; font-weight: 400; opacity: .8; font-size: 11px;">${r.n} row${r.n === 1 ? '' : 's'}</span></button>`; };
+  $('catBox').innerHTML = `<h3>📋 Where on the Build List?
+    ${winX('blModalClose()', 'close')}</h3>
+    <div class="hint" style="margin: 0 0 8px;">The <b>${esc(_qnBLJob)}</b> Build List. SEND files the note in your log as always <b>and</b> puts it here as a ✅ checklist item — ⇄ on the row turns it into something to buy. The first line is the row's name; the rest is its note.</div>
+    ${rooms.length ? `<div class="chips-row cat-grid" id="blRoomGrid" style="max-height: 46vh; overflow-y: auto; align-content: flex-start; margin-bottom: 10px;">${rooms.map(chip).join('')}</div>` : `<div class="hint" style="margin: 0 0 8px;">This Build List has no categories yet — name the first one.</div>`}
+    <div class="frow" style="gap: 6px; align-items: center;">
+      <input type="text" id="blNewRoom" placeholder="➕ a new category — Garage, Punch list, Exterior…" style="flex: 1; min-width: 0;" onkeydown="if(event.key==='Enter'){event.preventDefault();qnBLPick(this.value);}">
+      <button type="button" class="btn-ghost" onclick="qnBLPick($('blNewRoom').value)">➕ Use it</button></div>
+    <div class="frow" style="gap: 8px; margin-top: 12px;">
+      <button type="button" class="btn-ghost" style="flex: 1; color: var(--err, #c0392b);" onclick="qnBLOff()">✕ Not for the Build List</button></div>`;
+  $('catModal').classList.add('show');
+}
+function blModalClose() { $('catModal').classList.remove('show'); if (qnBL && !qnBLRoom) { qnBL = false; _qnBLJob = ''; } renderTagChips(); }
+function qnBLPick(name) {
+  name = String(name || '').trim().slice(0, 40);
+  if (!name) { const b = $('blNewRoom'); if (b) b.focus(); return; }
+  const known = (_qnBLRooms || []).find(r => r.name.toLowerCase() === name.toLowerCase());
+  qnBLRoom = known ? known.name : name; qnBL = true;
+  $('catModal').classList.remove('show'); renderTagChips();
+  toast(`📋 ${qnBLRoom} — SEND puts it on the ${_qnBLJob} Build List ✓`);
+}
+// the row itself. `D` is a board (the open one, or one just read); the id is minted the way matNextId mints it.
+function blPutRow(D, room, e) {
+  const words = String(e.details || '').trim(), lines = words.split('\n').map(s => s.trim()).filter(Boolean);
+  const name = (lines[0] || words).slice(0, 80);
+  let note = lines.slice(1).join(' · ').slice(0, 300);
+  if (!note && (lines[0] || '').length > 80) note = lines[0].slice(0, 300);   // one long thought: the name is its start, the whole of it is the note
+  let mx = D.seq || 0; (D.rooms || []).forEach(r => (r.items || []).forEach(x => { const n = parseInt(String(x.id).replace(/\D/g, '')) || 0; if (n > mx) mx = n; })); D.seq = mx + 1;
+  let r = (D.rooms = D.rooms || []).find(x => String(x.name || '').toLowerCase() === room.toLowerCase());
+  if (!r) { r = { name: room, items: [] }; D.rooms.push(r); }
+  r.items = r.items || [];
+  const it = { id: 'm' + D.seq, n: name, t: 'Misc', s: 'todo', eid: e.id, src: 'grinder', gat: new Date().toISOString() };
+  if (note) it.sel = note;
+  r.items.push(it);
+  D.hist = D.hist || []; D.hist.push({ ts: new Date().toISOString(), who: 'Eric', txt: `⚙ from the grinder → ${r.name}: ${name}`.slice(0, 160) }); if (D.hist.length > 400) D.hist = D.hist.slice(-400);
+  return { it, room: r.name };
+}
+const blBoardOpen = i => !!(_matD && _matIdx === i && $('revModal').classList.contains('show') && $('revModal').classList.contains('mat-full'));
+function grindToBuildList(e, job, room) {
+  const job1 = _blLine.then(() => grindToBuildListNow(e, job, room));
+  _blLine = job1.catch(() => {});
+  return job1;
+}
+async function grindToBuildListNow(e, job, room) {
+  if (!e || e.personal || CREW_NAME) return false;
+  const i = blClientIdx(job); if (i < 0) return false;
+  const c = _portalIdx.clients[i];
+  busyShow('📋 PUTTING IT ON THE BUILD LIST…');
+  try {
+    let put;
+    if (blBoardOpen(i)) { put = blPutRow(_matD, room, e); _matDirty = true; renderMatMgr(); }   // that board is open on this screen: the row lands in it and it saves itself
+    else {
+      const D = await matBoardRead(c); delete D._log;
+      put = blPutRow(D, room, e); D.updated = localDay(new Date());
+      await dbxUpload(portalRoot() + '/materials-office-' + c.code + '.json', JSON.stringify({ full: true, updated: D.updated, seq: D.seq, rooms: D.rooms, hist: D.hist || [] }));
+    }
+    e.matRef = { code: c.code, id: put.it.id, room: put.room }; scheduleSave(); renderLog();
+    busyDone(`📋 ✓ ON THE BUILD LIST — ${put.room}`);
+    return true;
+  } catch (err) {
+    busyDone('⚠ NOT ON THE BUILD LIST');
+    toast(`⚠ The note is saved, but it did not reach the ${job} Build List — check the connection, then add it on the board`, false);
+    return false;
+  }
+}
+// ↩ the note was taken back: its row comes off the board too (after the put has landed, never around it)
+function grindBuildListUndo(e, job) {
+  const job1 = _blLine.then(async () => {
+    if (!e || !e.matRef) return;
+    const i = blClientIdx(job); if (i < 0) return; const c = _portalIdx.clients[i], id = e.matRef.id;
+    const strip = D => (D.rooms || []).forEach(r => { r.items = (r.items || []).filter(x => !(x.id === id && x.eid === e.id)); });
+    if (blBoardOpen(i)) { strip(_matD); _matDirty = true; renderMatMgr(); return; }
+    const D = await matBoardRead(c); delete D._log; strip(D); D.updated = localDay(new Date());
+    await dbxUpload(portalRoot() + '/materials-office-' + c.code + '.json', JSON.stringify({ full: true, updated: D.updated, seq: D.seq, rooms: D.rooms, hist: D.hist || [] }));
+  });
+  _blLine = job1.catch(() => {});
+  return job1;
+}
+// from the log's 📋 chip: open that job's board
+async function openBuildListOf(code, ev) {
+  if (ev) ev.stopPropagation();
+  if (!_portalIdx || !Array.isArray(_portalIdx.clients)) { try { _portalIdx = JSON.parse((await dbxDownload(portalRoot() + '/index.json')) || 'null'); } catch (e) {} }
+  const i = ((_portalIdx && _portalIdx.clients) || []).findIndex(c => c.code === code);
+  if (i < 0) { toast('That client page is not on the list any more', false); return; }
+  openMaterials(i);
+}
+// ================= /THE GRINDER → THE BUILD LIST =================
 // 🪜 v6.25 — which step the eye should land on next. 1 until there are words or a photo,
 // 2 until the job's picked, then straight to 5 — tags and unlock are optional stops.
 // 📁 v6.42 — which optional bands he has opened by hand this session; a band with something
@@ -6152,7 +6282,7 @@ function updateStepFlow() {
   // thing is always the lever, job or no job — an unfiled note is allowed and step ① says so.
   // 📷 v6.86 — Eric: "take the photo/file select button and make it step 3 and move tag it to step 4." ③ photo, ④ tags, ⑤ unlock, ⑥ send.
   const next = hasWords ? 6 : (jobPicked ? 2 : 1);
-  const done = { 1: jobPicked, 2: words, 3: photos, 4: !!(qnSel.size || qnHeads || qnRcpt), 5: !!(qnVis || qnVisNames.size), 6: false };
+  const done = { 1: jobPicked, 2: words, 3: photos, 4: !!(qnSel.size || qnHeads || qnRcpt || qnBL), 5: !!(qnVis || qnVisNames.size), 6: false };
   renderQnJobChips();
   card.querySelectorAll('.g-step').forEach(el => {
     const n = +el.dataset.step;
@@ -6165,7 +6295,7 @@ function updateStepFlow() {
       el.classList.toggle('fold', !done[n] && !_gOpen[n]);
       const sum = el.querySelector('.g-step-sum');
       if (sum) sum.textContent = n === 4
-        ? (qnSel.size ? '· 🏷 ' + [...qnSel].join(', ') : '· none picked')
+        ? ((qnSel.size ? '· 🏷 ' + [...qnSel].join(', ') : '· none picked') + (qnBL && qnBLRoom ? ' · 📋 Build List → ' + qnBLRoom : ''))
         : (qnVis === 'crew' ? '· 🔓 all crew' : qnVisNames.size ? '· 📨 ' + [...qnVisNames].join(', ') : '· 🔒 just you');
     }
   });
@@ -6367,7 +6497,7 @@ function renderTagChips() {
       title="Marks this note as something that bites later work — the Wizard surfaces it first and the job card counts it">${qnHeads ? '⚠ HEADS-UP — ON THE JOB CARD' : '⚠ Heads-up'}</button>`;
   const rcptChip = `<button type="button" class="pick-chip lockchip${qnRcpt ? ' sel is-down' : ''}" onclick="qnRcptToggle()" aria-pressed="${qnRcpt}"
       title="A typed or dictated purchase — opens the category window and files it toward the job's budget pile">${qnRcpt ? (qnCat ? '🧾 ' + esc(qnCat) + ' — tap to change' : '🧾 RECEIPT — tap to pick category') : '🧾 Receipt'}</button>`;
-  const html = headsChip + rcptChip + shown.map(t => {
+  const html = headsChip + rcptChip + qnBLChipHtml() + shown.map(t => {   // 📋 v6.97 — the Build List chip
     if (_tagArm === t) return `<button type="button" class="pick-chip" style="border-color: var(--err, #c0392b); color: var(--err, #c0392b); font-weight: 800;" onclick="tagDelete('${escq(t)}')">✕ delete ${esc(t)}?</button>`;
     const on = qnSel.has(t);
     const pers = isPersonalTagName(t);
@@ -7471,6 +7601,8 @@ function saveQuickNote() { saveNoteFrom('askText', false); }
 function saveNoteFrom(boxId, fromPanel) {
   const t = $(boxId).value.trim();
   if (!t) { toast('Type the note first', false); return; }
+  // 📋 v6.97 — the Build List chip is lit but nothing was picked, or the job moved under the pick: ask before anything is saved
+  if (!fromPanel && qnBL && (!qnBLRoom || _qnBLJob !== qnJobPick)) { if (_qnBLJob !== qnJobPick) { qnBLJobChanged(); } else { toast('📋 Pick where on the Build List first — or tap the chip off', false); blModalOpen(); } return; }
   const _undoText = $(boxId).value, _undoJob = qnJobPick;   // ↩ v6.42 — kept for the Undo below
   const photos = notePhotos.slice();
   const nExtra = {};
@@ -7569,6 +7701,9 @@ function saveNoteFrom(boxId, fromPanel) {
     _grindMail = null;
   }
   if (!e) e = addEntry('Note', t, noteJob, nExtra);
+  // 📋 v6.97 — where on the Build List this one goes (never a personal note, never from a crew phone, never the old Note panel)
+  const _bl = (!fromPanel && qnBL && qnBLRoom && _qnBLJob === noteJob && !e.personal && !isCrew()) ? { job: noteJob, room: qnBLRoom } : null;
+  qnBL = false; qnBLRoom = ''; _qnBLJob = '';
   aiRegisterLate(photos, 'entry', e.id);
   ['nText', 'askText'].forEach(id => { if ($(id)) { $(id).value = ''; fitTa(id); } });
   if (fromPanel) closePanels();
@@ -7605,7 +7740,8 @@ function saveNoteFrom(boxId, fromPanel) {
   // times a day and the one a fat thumb loses half of. Nothing was published, so taking it back
   // is honest: the entry goes, and his words and job come back to the box exactly as typed.
   if (updated) toast(`📧 Filed · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`);   // 📥 v6.71 — an undo here would delete the email itself
-  else if (!routed && !wasAsk && !vis) toastUndo(`Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`, () => {
+  else if (!routed && !wasAsk && !vis) toastUndo(`Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''}${_bl ? ' · 📋 Build List → ' + _bl.room : ''} ✓`, () => {
+    if (_bl) grindBuildListUndo(e, _bl.job);   // 📋 v6.97 — the row comes off the board with the note
     const i = entries.findIndex(x => x.id === e.id);
     if (i >= 0) entries.splice(i, 1);
     const box = $(boxId); if (box) { box.value = _undoText; if (typeof fitTa === 'function') fitTa(box); }
@@ -7615,6 +7751,7 @@ function saveNoteFrom(boxId, fromPanel) {
     toast('↩ Took it back — your words are in the box again');
   });
   if (photos.length) attachEntryPhotos(e, photos, `Job Notes/${cleanName(noteJob)}`);
+  if (_bl) grindToBuildList(e, _bl.job, _bl.room);   // 📋 v6.97
 }
 // 🗂 v6.03 — Eric: "the whole job is piled in the job note folder, maybe could have receipts,
 // invoices, photos." Inside a job's folder each paper now goes in its own drawer, decided by
@@ -14473,24 +14610,22 @@ function matWord(s, hm) {
   const chain = hm === false ? TASK_STATES : MAT_STATES;
   return (MAT_STATES.find(x => x[0] === s) || TASK_STATES.find(x => x[0] === s) || chain[0])[1];
 }
-async function openMaterials(i) {
-  if (portalGuard()) return;
-  if (CREW_NAME) { toast('📋 The board is coming to office phones next — it lives in Eric\'s Dropbox and needs its own copy out here first', false); return; }
-  _matIdx = i; _matEdit = ''; _matWhoFor = ''; _matRmTools = -1; _matHelp = false; _matDirty = false; _matArm = ''; _matTagF = ''; _matStageF = ''; _matPaste = false; _matPasteRows = null; _matPasteText = '';
-  const c = _portalIdx.clients[i];
-  toast('⏳ Loading the board…');
-  matTplLoad();
-  try { _matD = JSON.parse(await dbxDownload(portalRoot() + '/materials-' + c.code + '.json') || 'null'); } catch (e) { _matD = null; }
-  if (!_matD || !Array.isArray(_matD.rooms)) _matD = { updated: '', rooms: [] };
+// 📋 v6.97 — THE BOARD'S READ, lifted out of openMaterials word for word so the grinder can put a row on a Build List
+// without the board being open (see grindToBuildList). The same two files, the same merge, the same stamps; what the read
+// learned from the homeowner's page rides back as `_log` for whoever wants it in the history.
+async function matBoardRead(c) {
+  let D = null; const said = [];
+  try { D = JSON.parse(await dbxDownload(portalRoot() + '/materials-' + c.code + '.json') || 'null'); } catch (e) { D = null; }
+  if (!D || !Array.isArray(D.rooms)) D = { updated: '', rooms: [] };
   // 🏢 v5.60 — the client file holds only what the homeowner may see; everything Eric marked
   // on it before v5.60 WAS homeowner-facing, so stamp those. Office tasks live in their own
   // file the client page never asks for. Merge the two by room name for one board on screen.
-  _matD.rooms.forEach(r => (r.items || []).forEach(x => { if (!x.hm) x.hm = true; }));
+  D.rooms.forEach(r => (r.items || []).forEach(x => { if (!x.hm) x.hm = true; }));
   try {
     const off = JSON.parse(await dbxDownload(portalRoot() + '/materials-office-' + c.code + '.json') || 'null');
     // 💾 v5.69 — a full-board office file IS the truth; the client file is just the last publish
     if (off && off.full && Array.isArray(off.rooms)) {
-      _matD = { updated: off.updated, seq: off.seq, rooms: off.rooms, hist: off.hist || [] };
+      D = { updated: off.updated, seq: off.seq, rooms: off.rooms, hist: off.hist || [] };
       // 💬 v5.74 — the CLIENT writes into her published file (picks, remarks). Since the
       // office file became the working truth (v5.69), those answers have to be merged BACK
       // in here, or Eric's board never hears her. Pick + state + remarks, by item id.
@@ -14498,10 +14633,10 @@ async function openMaterials(i) {
         const cli = JSON.parse(await dbxDownload(portalRoot() + '/materials-' + c.code + '.json') || 'null');
         const map = {};
         if (cli && Array.isArray(cli.rooms)) cli.rooms.forEach(cr => (cr.items || []).forEach(x => map[x.id] = x));
-        _matD.rooms.forEach(r => (r.items || []).forEach(x => {
+        D.rooms.forEach(r => (r.items || []).forEach(x => {
           const c2 = map[x.id];
           if (!c2) return;
-          if (c2.pick && !x.pick) { x.pick = c2.pick; if (x.s === 'pick' && c2.s === 'picked') x.s = 'picked'; matLog(`👤 client picked "${c2.pick}" (${x.n})`); }
+          if (c2.pick && !x.pick) { x.pick = c2.pick; if (x.s === 'pick' && c2.s === 'picked') x.s = 'picked'; said.push(`👤 client picked "${c2.pick}" (${x.n})`); }
           if (c2.cph && !x.cph) x.cph = c2.cph; // her picture's path
           (c2.remarks || []).forEach(rm => {
             x.remarks = x.remarks || [];
@@ -14509,15 +14644,28 @@ async function openMaterials(i) {
           });
         }));
       } catch (e) { /* nothing published yet */ }
-      renderMatMgr(); $('revModal').classList.add('show', 'mat-full'); document.body.classList.add('modal-open'); return; }
-    if (off && Array.isArray(off.rooms)) off.rooms.forEach(orm => {
-      const mine = _matD.rooms.find(r => r.name.toLowerCase() === orm.name.toLowerCase());
-      if (mine) mine.items = [...(mine.items || []), ...(orm.items || [])];
-      else _matD.rooms.push(orm);
-    });
-    // 📁 v5.67 — hand each 🏠 item its pocket back from the office file
-    if (off && off.pkts) _matD.rooms.forEach(r => (r.items || []).forEach(x => { if (off.pkts[x.id]) x.pkt = off.pkts[x.id]; }));
+    } else {
+      if (off && Array.isArray(off.rooms)) off.rooms.forEach(orm => {
+        const mine = D.rooms.find(r => r.name.toLowerCase() === orm.name.toLowerCase());
+        if (mine) mine.items = [...(mine.items || []), ...(orm.items || [])];
+        else D.rooms.push(orm);
+      });
+      // 📁 v5.67 — hand each 🏠 item its pocket back from the office file
+      if (off && off.pkts) D.rooms.forEach(r => (r.items || []).forEach(x => { if (off.pkts[x.id]) x.pkt = off.pkts[x.id]; }));
+    }
   } catch (e) { /* no office sheet yet */ }
+  if (said.length) D._log = said;
+  return D;
+}
+async function openMaterials(i) {
+  if (portalGuard()) return;
+  if (CREW_NAME) { toast('📋 The board is coming to office phones next — it lives in Eric\'s Dropbox and needs its own copy out here first', false); return; }
+  _matIdx = i; _matEdit = ''; _matWhoFor = ''; _matRmTools = -1; _matHelp = false; _matDirty = false; _matArm = ''; _matTagF = ''; _matStageF = ''; _matPaste = false; _matPasteRows = null; _matPasteText = '';
+  const c = _portalIdx.clients[i];
+  toast('⏳ Loading the board…');
+  matTplLoad();
+  _matD = await matBoardRead(c);
+  if (_matD._log) { const said = _matD._log; delete _matD._log; said.forEach(t => matLog(t)); }   // 📋 v6.97 — what the read learned from their page goes in the history, and the board saves itself
   renderMatMgr();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -14626,7 +14774,7 @@ function matMgrItem(ri, it) {
           onchange="matSet('${escq(it.id)}', 'n', this.value)"
           onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></span>` :
       `<span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap to ${open ? 'fold' : 'open'} · hold for the works">${open ? '▾' : '▸'} <b>${esc(it.n)}</b>
-        <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${matIsBuy(it) && matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
+        <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${matIsBuy(it) && matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${it.src === 'grinder' ? ' · ⚙ from the grinder' : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
     </div>
     <div class="mat-line2">${matStripHtml(it)}${matRowBtnsHtml(it)}<span class="mat-sel">${[esc(it.sel || it.pick || ''), matIsBuy(it) && it.schd ? '📅 install ' + esc(it.schd) : '', matCostBits(it), it.ec ? '💰 ' + esc(it.ec) : ''].filter(Boolean).join(' · ')}</span></div>
     ${_matWhoFor === it.id && !matIsBuy(it) ? matWhoPickHtml(it) : ''}
@@ -15497,7 +15645,7 @@ async function matSave() {
         .map(x => {
           if (!hm) return x;
           // 🏠 v5.71 — the client sees ONLY the steps flagged 🏠, scrubbed to name/ok/note
-          const { pkt, sel, est, act, ec, first, ...rest } = x;   // 📋 v6.89 — his selection notes (suppliers), raw costs and the estimate line NEVER ride to their file · v6.91: nor his ⚠ FIRST flag
+          const { pkt, sel, est, act, ec, first, eid, src, gat, ...rest } = x;   // 📋 v6.89 — his selection notes (suppliers), raw costs and the estimate line NEVER ride to their file · v6.91: nor his ⚠ FIRST flag
           const cvKids = (x.kids || []).filter(k => k.cv).map(k => ({ n: k.n, ok: k.ok || undefined, note: k.note }));
           if (cvKids.length) rest.kids = cvKids; else delete rest.kids;
           return rest;
@@ -18975,7 +19123,7 @@ function logRowHtml(e) {
     return `<div class="log-row" onclick="this.classList.toggle('x')">
       <div class="log-body">
         <div class="log-main">${esc(e.details)}${e.photoPath ? ` <span style="cursor: pointer; white-space: nowrap;" title="Tap to view the photo${e.photoPaths && e.photoPaths.length > 1 ? 's' : ''}" onclick="openEntryPhoto(${e.id}, event)">📷${e.photoPaths && e.photoPaths.length > 1 ? '×' + e.photoPaths.length : ''}</span>` : ''}${qty ? ` <strong>· ${qty}</strong>` : ''}</div>
-        <div class="log-meta"><span class="mini-chip ${chipClass[e.type]}" title="${e.type}">${chipIcon[e.type]}</span><span>${when}</span><span>·</span><span>${esc(e.job)}</span>${truckBit}${whoBit}${headsBit}${tagBit}${thrBit}${visBit}<span>·</span><span>→ ${esc(e.filedTo)}</span>${sharedBit}${ocrBit}${aiBit}${rcLamp}${budgBit}${nbBit}${vvBit}</div>
+        <div class="log-meta"><span class="mini-chip ${chipClass[e.type]}" title="${e.type}">${chipIcon[e.type]}</span><span>${when}</span><span>·</span><span>${esc(e.job)}</span>${truckBit}${whoBit}${headsBit}${e.matRef ? `<span>·</span><span style="cursor: pointer; font-weight: 700;" title="It is on this job's Build List under ${esc(e.matRef.room || '')} — tap to open the board" onclick="openBuildListOf('${escq(e.matRef.code)}', event)">📋 Build List → ${esc(e.matRef.room || '')}</span>` : ''}${tagBit}${thrBit}${visBit}<span>·</span><span>→ ${esc(e.filedTo)}</span>${sharedBit}${ocrBit}${aiBit}${rcLamp}${budgBit}${nbBit}${vvBit}</div>
       </div>
       <div class="log-savedcell"><button class="log-edit" title="Edit this entry" onclick="openLogEdit(${e.id}, event)">✏️</button>${sync}</div>
     </div>`;
@@ -19269,7 +19417,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.96';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.97';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
