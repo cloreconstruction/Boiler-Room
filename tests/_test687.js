@@ -43,7 +43,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
   ok('each row wears four plates in words — ↩ Today · ➡ Tomorrow · ✓ Done · ✕ Not needed — a finger tall, and nothing runs off the phone', await page.evaluate(() => {
     const rows = [...document.querySelectorAll('.rev-sec-body[data-sec="pocket"] .pk-acts')];
-    const words = rows.map(r => [...r.querySelectorAll('button')].map(b => b.textContent.trim()).join('|'));
+    const words = rows.map(r => [...r.querySelectorAll('button')].map(b => b.textContent.replace(/\s+/g, ' ').trim().replace(/^(\S)\s*(?=\S)/, '$1 ')).join('|'));   // v6.91 — an icon over its word now: "↩" + "Today"
     const tall = [...rows[0].querySelectorAll('button')].every(b => b.getBoundingClientRect().height >= 40);
     const box = $('revBox');
     return rows.length === 5 && words.every(w => w === '↩ Today|➡ Tomorrow|✓ Done|✕ Not needed') && tall && box.scrollWidth <= box.clientWidth + 1;

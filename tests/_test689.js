@@ -88,18 +88,19 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— ☒ v6.89 the row: what was picked, five boxes, the money —');
 
   ok('every 🛒 row wears a five-box strip — a glyph AND a letter AND a spelled label, a finger wide — with the selection beside it', await page.evaluate(() => {
+    _matHelp = true; renderMatMgr(); const legend = ($('matHelpBox') || {}).textContent || ''; _matHelp = false; renderMatMgr();   // v6.91 — the legend lives behind ? how this works
     const row = [...document.querySelectorAll('.mat-item')].find(r => /Baseboard throughout/.test(r.textContent));
-    const boxes = [...row.querySelectorAll('.mat-box')];
-    return boxes.length === 5 && boxes.map(b => b.textContent).join(' ') === '☒P ☐O ☐R ☐S ☐I' && boxes[0].getAttribute('aria-label') === 'Picked — yes' && boxes[4].getAttribute('aria-label') === 'Installed — not yet' &&
-      boxes.every(b => b.getBoundingClientRect().width >= 34 && b.getBoundingClientRect().height >= 34) && /Stained wood; Acme Lumber/.test(row.querySelector('.mat-sel').textContent) && /P<\/b> picked/.test($('revBox').querySelector('.mat-legend').innerHTML);
+    const boxes = [...row.querySelectorAll('.mat-strip:not(.mat-rowbtns) .mat-box')];   // v6.91 — the ⚠ 1st and ⇄ plates sit beside the lights, in their own group
+    return boxes.length === 5 && boxes.map(b => (b.getAttribute('aria-pressed') === 'true' ? '☒' : '☐') + b.querySelector('b').textContent).join(' ') === '☒P ☐O ☐R ☐S ☐I' && !!boxes[0].querySelector('.mb-ck') && !boxes[1].querySelector('.mb-ck') && boxes.every(b => !!b.querySelector('.mb-i').textContent) && boxes[0].getAttribute('aria-label') === 'Picked — yes' && boxes[4].getAttribute('aria-label') === 'Installed — not yet' &&
+      boxes.every(b => b.getBoundingClientRect().width >= 34 && b.getBoundingClientRect().height >= 34) && /Stained wood; Acme Lumber/.test(row.querySelector('.mat-sel').textContent) && /👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed/.test(legend);
   }));
   ok('tap O and it is ordered (with the date), tap P and the row walks back to nothing, tap I and it is received AND installed — the row reads installed and done; S is its own tick', await page.evaluate(() => {
-    const it = _matD.rooms[0].items.find(x => x.n === 'Baseboard throughout'), tap = k => { const row = [...document.querySelectorAll('.mat-item')].find(r => /Baseboard throughout/.test(r.textContent)); [...row.querySelectorAll('.mat-box')].find(b => b.textContent.endsWith(k)).click(); };
+    const it = _matD.rooms[0].items.find(x => x.n === 'Baseboard throughout'), tap = k => { const row = [...document.querySelectorAll('.mat-item')].find(r => /Baseboard throughout/.test(r.textContent)); [...row.querySelectorAll('.mat-strip:not(.mat-rowbtns) .mat-box')].find(b => b.querySelector('b').textContent === k).click(); };
     tap('O'); const a = it.s === 'ordered' && !!it.odate;
     tap('P'); const b = it.s === 'pick' && !it.ins;
     tap('S'); const c = it.sch === true; tap('S'); const c2 = !it.sch;
     tap('I'); const row = [...document.querySelectorAll('.mat-item')].find(r => /Baseboard throughout/.test(r.textContent));
-    const d = it.s === 'arrived' && !!it.ins && row.classList.contains('mi-done') && /installed/.test(row.textContent) && [...row.querySelectorAll('.mat-box')].map(x => x.textContent[0]).join('') === '☒☒☒☐☒';
+    const d = it.s === 'arrived' && !!it.ins && row.classList.contains('mi-done') && /installed/.test(row.textContent) && [...row.querySelectorAll('.mat-strip:not(.mat-rowbtns) .mat-box')].map(x => x.getAttribute('aria-pressed') === 'true' ? '☒' : '☐').join('') === '☒☒☒☐☒';
     tap('R'); const e = it.s === 'ordered' && !it.ins;
     return a && b && c && c2 && d && e;
   }));
@@ -125,16 +126,16 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const k = [...document.querySelectorAll('#revBox .set-section')].find(s => /KITCHEN/.test(s.querySelector('h4').textContent)).querySelector('.mat-counts').textContent;
     return it.est === 1250 && it.act === 1310 && /est \$1,250 · paid \$1,310 · ⚠ over by \$60/.test(row) && /from the plumbing house/.test(row) && /est \$1,250 · paid \$1,310/.test(k) && /whole house: est \$2,500 · paid \$2,620/.test($('revBox').querySelector('.mat-legend').textContent);
   }));
-  ok('an office row is 🛒 something to buy or 🔨 work to do — one tap flips it and the lamp maps across; work rows wear no strip', await page.evaluate(() => {
+  ok('an office row is 🛒 something to buy or a ✅ checklist item — one tap flips it and the lamp maps across; a checklist row wears its own three lights (v6.91), never "pick needed"', await page.evaluate(() => {
     const it = _matD.rooms[0].items.find(x => x.n === 'Reinstall window screens');
     matBuyToggle(it.id); const a = !it.buy && it.s === 'todo';
     const row = [...document.querySelectorAll('.mat-item')].find(r => /Reinstall window screens/.test(r.textContent));
-    const b = !row.querySelector('.mat-strip') && /to do/.test(row.textContent);
+    const b = [...row.querySelectorAll('.mat-strip:not(.mat-rowbtns) .mat-box')].map(x => x.querySelector('b').textContent).join('') === 'ASD' && /to do/.test(row.textContent) && !/pick needed/.test(row.textContent);
     matCycle(it.id); matCycle(it.id); const c = it.s === 'done';
     matBuyToggle(it.id); const d = it.buy === true && it.s === 'arrived' && !!it.ins;
     matBuyToggle(it.id); const e = !it.buy && it.s === 'done';
     const wh = [...document.querySelectorAll('#revBox .set-section')].find(s => /WHOLE HOUSE/.test(s.querySelector('h4').textContent)).querySelector('.mat-counts').textContent;
-    return a && b && c && d && e && /🔨 1\/1 done/.test(wh);
+    return a && b && c && d && e && /✅ 1\/1 done/.test(wh);
   }));
 
   console.log('— 🧱 v6.89 the wall —');
