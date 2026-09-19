@@ -118,8 +118,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
 
   // ── the texts ──
-  ok('📚 PILE ALL texts: each is on the log under its sender, and its file leaves the Inbox', await page.evaluate(() => {
+  ok('📚 PILE ALL texts: each is on the log under its sender, and its file leaves the Inbox', await page.evaluate(async () => {
     revBulk('text'); revBulk('text');
+    await arcDrain();   // 📦 v6.92 — the moves go one at a time through a line now; wait for it to clear before counting them
     const notes = entries.filter(e => /^Text from \+1/.test(e.details || ''));
     // a bare phone number is a junky tag by the app's own rule (tagLooksJunky), so the sender
     // rides in the WORDS — "Text from +1208…" — exactly as one tap of 📚 Pile it does today

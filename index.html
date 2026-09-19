@@ -3930,7 +3930,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.91 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.92 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8721,14 +8721,28 @@ function reviewAct(id, accept) {
   renderReview();
   savePendingSoon();
 }
-async function archiveText(path, robot) {
+// 📦 v6.92 — ONE MOVE AT A TIME. The first real catch-up (2026-09-18, 21:10) logged its texts and then stalled: a sweep
+// fired its twenty archive moves at once, and Dropbox refuses writes that pile into one folder together
+// ("too_many_write_operations") — 13 of the first 40 moved, the rest sat in the Inbox marked done, and the pushback
+// stopped the chain. A sweep of two or three files never showed it. Moves now go through one line (`_arcLine`), each
+// waits for the one before it, dbxRpc itself waits and asks again when Dropbox says slow down, and the catch-up waits for
+// the line to clear (`arcDrain`) before it lists the Inbox again. An error object is a failed move (dbxRpc does not throw
+// on one) — except "not found", which means another device already moved it.
+let _arcLine = Promise.resolve();
+function archiveText(path, robot) {
+  const job = _arcLine.then(() => archiveTextNow(path, robot));
+  _arcLine = job.catch(() => {});
+  return job;
+}
+const arcDrain = () => _arcLine;
+async function archiveTextNow(path, robot) {
   try {
-    await dbxRpc('files/move_v2', {
+    const r = await dbxRpc('files/move_v2', {
       from_path: path,
       to_path: DBX_ROOT + '/Texts/' + (robot === true ? 'Robots/' : (typeof robot === 'string' && robot) ? robot + '/' : '') + path.split('/').pop(),   // v6.41 — a subfolder by name too (Mail Ignored)
       autorename: true
     });
-    return true;
+    return !(r && r.error_summary) || /not_found/.test(String(r.error_summary));
   } catch (e) { return false; } // v5.98 — a failed move retries itself on the next sync
 }
 // 📧 v6.12 — EMAIL. A Zap drops each message into /Inbox as a .txt whose first lines are
@@ -9356,7 +9370,7 @@ async function sweepLeaseOther() {
   try { const j = JSON.parse((await dbxDownload(SWEEP_LEASE())) || 'null'); return !!(j && j.dev && j.dev !== sweepDevice() && +new Date(j.until) > Date.now()); } catch (e) { return false; }
 }
 async function sweepLeaseSet(ms) { try { await dbxUpload(SWEEP_LEASE(), JSON.stringify({ dev: sweepDevice(), until: new Date(Date.now() + ms).toISOString() })); } catch (e) {} }
-async function checkInboxTexts(round) {
+async function checkInboxTexts(round, tries) {
   round = +round || 0;
   if (_sweepBusy) return;
   _sweepBusy = true; clearTimeout(_sweepNext); _sweepNext = 0;
@@ -9368,12 +9382,20 @@ async function checkInboxTexts(round) {
     }
     if (round > 0) await sweepLeaseSet(90000);
     await inboxSweepOnce();
+    // 📦 v6.92 — the moves go one at a time now: let the line clear (a minute at most) before the Inbox is listed again
+    await Promise.race([arcDrain(), new Promise(z => setTimeout(z, 60000))]);
     const s = window._sweepLast || {};
-    if (!s.err && s.left > 0 && s.did > 0 && round < 40 && !window._sweepChainOff) {
+    const pushback = !!s.err && /too_many|429|rate|slow/i.test(String(s.err));
+    if (pushback && (tries | 0) < 3 && !window._sweepChainOff) {
+      // 🐢 Dropbox said slow down in the middle of a catch-up: that is not a reason to stop — breathe and do the round again
+      if (!CREW_NAME) await sweepLeaseSet(90000);
+      busyShow('📥 DROPBOX SAID SLOW DOWN — trying again in a moment…');
+      _sweepNext = setTimeout(() => { _sweepNext = 0; checkInboxTexts(round, (tries | 0) + 1); }, window._sweepRetryGap || 10000);
+    } else if (!s.err && s.left > 0 && s.did > 0 && round < 40 && !window._sweepChainOff) {
       if (!round && !CREW_NAME) await sweepLeaseSet(90000);
       busyShow(`📥 CATCHING UP ON THE INBOX — ${s.left} LEFT…`);
-      _sweepNext = setTimeout(() => { _sweepNext = 0; checkInboxTexts(round + 1); }, window._sweepGap || 1500);
-    } else if (round > 0) {
+      _sweepNext = setTimeout(() => { _sweepNext = 0; checkInboxTexts(round + 1); }, window._sweepGap || 2500);
+    } else if (round > 0 || (tries | 0) > 0) {
       await sweepLeaseSet(0);   // hand it back: the next device sweeps at once
       busyDone(s.err ? '⚠ THE INBOX SWEEP STOPPED' : s.left > 0 ? `📥 ${s.left} STILL WAITING — the next sync goes on` : '📥 ✓ INBOX CAUGHT UP');
     }
@@ -19132,7 +19154,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.91';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.92';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -19268,14 +19290,28 @@ async function getToken() {
   saveCreds();
   return dbx.accessToken;
 }
+// 🐢 v6.92 — WHEN DROPBOX SAYS SLOW DOWN. A 429 (too_many_requests / too_many_write_operations) comes with how long to
+// wait; none of the three calls below ever listened — a listing came back as an error object, a download as null, an
+// upload threw — and a big job (the Inbox catch-up) fell over at the first pushback. Each call now waits what it was told
+// (Retry-After, else retry_after in the answer, else 2 s · 4 s · 6 s; never more than 15 s) and asks again, three times.
+async function dbxSlowDown(r, i) {
+  let s = 0;
+  try { s = +(r.headers && r.headers.get && r.headers.get('Retry-After')) || 0; } catch (e) {}
+  if (!s) { try { const j = await r.clone().json(); s = +(j && j.error && j.error.retry_after) || 0; } catch (e) {} }
+  const ms = window._dbxBackoffMs != null ? window._dbxBackoffMs : Math.min(15000, Math.max(1000, s * 1000 || (i + 1) * 2000));
+  await new Promise(z => setTimeout(z, ms));
+}
 async function dbxRpc(path, arg) {
-  const t = await getToken();
-  const r = await fetch('https://api.dropboxapi.com/2/' + path, {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
-    body: JSON.stringify(arg)
-  });
-  return r.json();
+  for (let i = 0; ; i++) {
+    const t = await getToken();
+    const r = await fetch('https://api.dropboxapi.com/2/' + path, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+      body: JSON.stringify(arg)
+    });
+    if (r.status === 429 && i < 3) { await dbxSlowDown(r, i); continue; }
+    return r.json();
+  }
 }
 // 📄 v6.90 — A FOLDER LISTING COMES IN PAGES. Eric, 2026-09-18, a picture of the line under the text meter: "Inbox sweep
 // just now: 0 in the Inbox · 0 texts and 0 emails filed" — with 336 files sitting in that folder, the oldest from 09-14.
@@ -19315,8 +19351,10 @@ async function dbxPathExists(path) {
 // Dropbox-API-Arg is an HTTP header: non-ASCII characters (em-dashes, accents) must be \u-escaped
 const hsafe = o => JSON.stringify(o).replace(/[\u007f-\uffff]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 async function dbxUpload(path, data, keepBoth) {
+  let r;
+  for (let i = 0; ; i++) {   // 🐢 v6.92 — a 429 waits and asks again (see dbxSlowDown)
   const t = await getToken();
-  const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
+  r = await fetch('https://content.dropboxapi.com/2/files/upload', {
     method: 'POST',
     headers: {
       Authorization: 'Bearer ' + t,
@@ -19325,6 +19363,9 @@ async function dbxUpload(path, data, keepBoth) {
     },
     body: data
   });
+  if (r.status === 429 && i < 3) { await dbxSlowDown(r, i); continue; }
+  break;
+  }
   // 🗣 v6.52 — say WHY. This threw a bare "upload failed" for years, so the QuickBooks drop
   // could only ever report "0 of 1 made it" with no reason. Dropbox always sends an
   // error_summary; carry it, and the HTTP status, up to whoever is showing the message.
@@ -19341,13 +19382,16 @@ async function dbxUpload(path, data, keepBoth) {
   return r.json();
 }
 async function dbxDownload(path) {
-  const t = await getToken();
-  const r = await fetch('https://content.dropboxapi.com/2/files/download', {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + t, 'Dropbox-API-Arg': hsafe({ path }) }
-  });
-  if (!r.ok) return null;
-  return r.text();
+  for (let i = 0; ; i++) {   // 🐢 v6.92 — a 429 waits and asks again (see dbxSlowDown)
+    const t = await getToken();
+    const r = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + t, 'Dropbox-API-Arg': hsafe({ path }) }
+    });
+    if (r.status === 429 && i < 3) { await dbxSlowDown(r, i); continue; }
+    if (!r.ok) return null;
+    return r.text();
+  }
 }
 // ================= VAULT =================
 // Client-side-encrypted password store. AES-256-GCM, key from PBKDF2(passphrase, salt).
