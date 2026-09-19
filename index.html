@@ -3849,7 +3849,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.87 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.88 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7795,14 +7795,78 @@ const MONEY_PAGES = {
   ticker: { path: () => DBX_ROOT + '/App Data/profit-ticker.html', name: 'Profit Ticker' },
   tracker: { path: () => DBX_ROOT + '/App Data/project-tracker.html', name: 'Project Tracker' }
 };
+// 📊 v6.88 — Eric: "Check and see why the project tracker isn't updating." The weekly books run rewrites the ledger, the
+// client pages, the profit ticker and the cost list — never THIS page: it was built once, on July 28, and sat on July
+// numbers while everything else moved. So the app refreshes the page's money block itself, every time it opens, from the
+// one file every run does rewrite (App Data/qb-ledger.json): invoiced, paid, open, last billed and the invoice history,
+// per the QuickBooks customer NAMED ON THE PAGE (an exact name, never a guess). A job with a client page but no place on
+// the tracker joins only when the receipt's lifetime figure ties to exactly one customer, to the cent. The PHASE BARS are
+// the July sort and cannot be rebuilt here: what was billed since rides as one line, so the page still adds up, and the
+// banner says so. A page NEWER than the ledger (the run rebuilt it) is left exactly as it is.
+const TRK_SINCE = 'Billed since the phase sort — not in the phase bars yet';
+function trackerJobsBlock(h) {
+  const tag = 'const JOBS = '; const a = h.indexOf(tag); if (a < 0) return null;
+  let i = a + tag.length; const start = i; let depth = 0;
+  for (; i < h.length; i++) {
+    const ch = h[i];
+    if (ch === '"') { i++; while (i < h.length && h[i] !== '"') { if (h[i] === '\\') i++; i++; } }
+    else if (ch === '{' || ch === '[') depth++;
+    else if (ch === '}' || ch === ']') { depth--; if (!depth) { i++; break; } }
+  }
+  try { return { start, end: i, jobs: JSON.parse(h.slice(start, i)) }; } catch (e) { return null; }
+}
+async function trackerFresh(html) {
+  try {
+    const blk = trackerJobsBlock(html); if (!blk) return html;
+    const led = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/qb-ledger.json') || 'null');
+    if (!led || !Array.isArray(led.rows) || !led.asOf) return html;
+    const was = (html.match(/imported ([A-Z][a-z]+ \d{1,2}, \d{4})/) || [])[1];
+    const pageDay = was && !isNaN(new Date(was)) ? localDay(new Date(was)) : '';
+    if (pageDay && pageDay >= led.asOf) return html;                       // the run rebuilt the page — it is the newer truth
+    const cents = n => Math.round((+n || 0) * 100), top = n => String(n || '').split(':')[0].trim();
+    const J = blk.jobs;
+    const fill = (j, first) => {
+      const rows = led.rows.filter(r => top(r.n) === j.customer); if (!rows.length) return false;
+      const known = {}; (j.invoices || []).forEach(v => { known[String(v.num)] = v.date; });
+      const inv = rows.map(r => ({ date: r.d || known[String(r.num)] || led.asOf, num: String(r.num), amount: +r.a || 0, open: +r.o || 0 }))
+        .sort((x, y) => String(x.date).localeCompare(String(y.date)) || (+x.num - +y.num));
+      const a = rows.reduce((s, r) => s + cents(r.a), 0), o = rows.reduce((s, r) => s + cents(r.o), 0);
+      const sorted = (j.phases || []).reduce((s, p) => s + cents(p.total), 0) + Object.values(j.draws || {}).reduce((s, v) => s + cents(v), 0) +
+        Object.values(j.tosort || {}).reduce((s, v) => s + cents(v), 0) + cents(j.gap);
+      if (!first && sorted === cents(j.invoiced) && a !== cents(j.invoiced)) j.tosort = { ...(j.tosort || {}), [TRK_SINCE]: (a - cents(j.invoiced)) / 100 };
+      j.invoiced = a / 100; j.open = o / 100; j.paid = (a - o) / 100; j.invoices = inv; j.lastDate = inv[inv.length - 1].date;
+      if (first) j.tosort = { 'Not sorted into phases yet': a / 100 };
+      return true;
+    };
+    Object.values(J).forEach(j => { if (j && j.customer) fill(j, false); });
+    // a client page with money and no place on the tracker: the receipt's lifetime figure must tie to ONE customer, to the cent
+    try {
+      const rec = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/qb-refresh.json') || 'null');
+      const tot = {}; led.rows.forEach(r => { const k = top(r.n); tot[k] = (tot[k] || 0) + cents(r.a); });
+      const taken = new Set(Object.values(J).map(j => j && j.customer));
+      ((rec && rec.clients) || []).forEach(c => {
+        const key = String(c.code || '').split('-')[0]; if (!key || J[key] || !(+c.invoiced > 0)) return;
+        const hit = Object.keys(tot).filter(k => tot[k] === cents(c.invoiced) && !taken.has(k)); if (hit.length !== 1) return;
+        const j = { name: c.job || key, customer: hit[0], gap: 0, invoiced: 0, paid: 0, open: 0, lastDate: '', stage: '—', phases: [], draws: {}, tosort: {}, invoices: [] };
+        if (fill(j, true)) { J[key] = j; taken.add(hit[0]); }
+      });
+    } catch (e) { /* no receipt — the jobs already on the page are refreshed all the same */ }
+    const words = new Date(led.asOf + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    let out = html.slice(0, blk.start) + JSON.stringify(J).replace(/<\//g, '<\\/') + html.slice(blk.end);
+    out = out.split(`imported ${was} — every dollar ties to the books.`).join(`the money figures and invoice history are as of ${words} and tie to the books. The phase bars are still the ${was} sort — billing since then shows as "not in the phase bars yet".`);
+    out = out.split(`'Updated ${was} · Figures come straight from QuickBooks'`).join(`'Money as of ${words} · Figures come straight from QuickBooks'`);
+    return out;
+  } catch (e) { return html; }   // anything odd: show the page exactly as the run left it
+}
 async function openMoneyPage(which) {
   const pg = MONEY_PAGES[which];
   if (!pg) return;
   if (!dbx.refreshToken) { toast('Connect Dropbox first (⚙ Setup) — the money pages live in your Dropbox', false); return; }
   try {
     toast('Loading…');
-    const txt = await dbxDownload(pg.path().toLowerCase());
+    let txt = await dbxDownload(pg.path().toLowerCase());
     if (txt == null) throw new Error('missing');
+    if (which === 'tracker') txt = await trackerFresh(txt);   // 📊 v6.88 — money from the ledger, every open
     $('svTitle').textContent = pg.name;
     const frame = $('svFrame');
     if (svBlobUrl) { URL.revokeObjectURL(svBlobUrl); svBlobUrl = null; }
@@ -18519,7 +18583,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.87';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.88';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
