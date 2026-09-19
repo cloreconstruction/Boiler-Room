@@ -776,6 +776,10 @@
     background: var(--surface-1); color: var(--ink-1); border: 1px solid var(--border);
     border-radius: 8px; font-size: 13px; padding: 7px 8px; font-family: inherit;
   }
+  /* 💡 v6.95 — a wheel or a box that is HOLDING a filter is lit: the brass edge, a tinted plate, heavy words — and ✓ ONLY / ✓ ON
+     rides with it in words, so it is never colour alone */
+  select.sel-on, input.sel-on, .mini-sel.sel-on { border: 2.5px solid var(--accent) !important; background: color-mix(in srgb, var(--accent) 26%, var(--surface-1)) !important; font-weight: 800;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
 
   /* ---------- entry form panel ---------- */
   .panel { display: none; }
@@ -3930,7 +3934,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.94 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.95 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9958,7 +9962,53 @@ function closePortalWin() {
 // closer just dropped the class and the next scroll went to the main page behind the portal.
 function modalOpenSync() {
   document.body.classList.toggle('modal-open', !!(document.querySelector('.panel.open') || document.querySelector('.rev-modal.show')));
+  if (window.foldPadReset) foldPadReset();   // 🧷 v6.95 — a window opened or closed: the fold's blank room (see foldAnchor) goes
 }
+// 🧷 v6.95 — THE FOLD STAYS UNDER HIS MOUSE. Eric: "whenever i click on a drop down menu make sure when the card opens it
+// doesnt change in relation to where my mouse is. it makes it jump and i have to move my mouse to get to the drop down
+// again." Most folds are one-open-at-a-time: opening the fourth heading shuts the second, everything between collapses,
+// and the heading he clicked slides out from under the pointer. ONE listener for the whole app: on a click it notes where
+// the fold's heading sits on the screen; when the handlers have redrawn, it finds the same heading again (the same node,
+// else its id, else its own onclick words) and scrolls the window it lives in by exactly the difference. When the window
+// cannot scroll that far (he is near its top), the rest is made up with blank room at the top of the card, which melts away
+// unseen the moment he scrolls down and is cleared whenever a window opens or closes. Nothing else in the app changes.
+(function foldAnchor() {
+  const FOLD = '[aria-expanded], [onclick^="gFold("], [onclick^="brdOpen("]';
+  const pads = new Map();   // the padded element -> { base, px }
+  const root = () => document.scrollingElement || document.documentElement;
+  const scrollerOf = el => { for (let p = el && el.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p).overflowY; if ((o === 'auto' || o === 'scroll') && p.clientHeight > 0) return p; } return root(); };
+  const padElOf = sc => sc === root() ? document.body : (sc.firstElementChild || sc);
+  const padOf = el => (pads.get(el) || { px: 0 }).px;
+  const setPad = (el, px) => {
+    let r = pads.get(el); if (!r) { r = { base: parseFloat(getComputedStyle(el).paddingTop) || 0, px: 0 }; pads.set(el, r); }
+    r.px = Math.max(0, Math.round(px)); el.style.paddingTop = r.px ? (r.base + r.px) + 'px' : ''; if (!r.px) pads.delete(el);
+  };
+  window.foldPadReset = () => { [...pads.keys()].forEach(el => setPad(el, 0)); };
+  // the blank room melts as he scrolls down: the content and the scroll move together, so nothing on the screen shifts
+  document.addEventListener('scroll', ev => {
+    if (!pads.size) return;
+    const sc = ev.target === document ? root() : ev.target; if (!sc || sc.nodeType !== 1) return;
+    const el = padElOf(sc), px = padOf(el), take = Math.min(px, Math.floor(sc.scrollTop));
+    if (take > 0) { setPad(el, px - take); sc.scrollTop -= take; }
+  }, true);
+  document.addEventListener('click', ev => {
+    const h = ev.target && ev.target.closest ? ev.target.closest(FOLD) : null;
+    if (!h) return;
+    const sig = h.getAttribute('onclick') || '', id = h.id || '', tag = h.tagName, top0 = h.getBoundingClientRect().top;
+    const same = () => sig ? [...document.querySelectorAll(tag + '[onclick]')].filter(x => x.getAttribute('onclick') === sig) : [];
+    const nth = same().indexOf(h);
+    const fix = () => {
+      let n = document.contains(h) ? h : (id && document.getElementById(id)) || null;
+      if (!n) { const all = same(); n = all[nth] || all[0] || null; }
+      if (!n || n.offsetParent === null) return;
+      let d = Math.round(n.getBoundingClientRect().top - top0); if (Math.abs(d) < 2) return;
+      const sc = scrollerOf(n), el = padElOf(sc);
+      if (d > 0) { const px = padOf(el), take = Math.min(px, d); if (take) { setPad(el, px - take); d -= take; } if (d) sc.scrollTop += d; }
+      else { const can = Math.min(Math.floor(sc.scrollTop), -d); if (can) sc.scrollTop -= can; const short = -d - can; if (short > 0) setPad(el, padOf(el) + short); }
+    };
+    setTimeout(fix, 0); setTimeout(fix, 120);   // the redraw happens inside the click; the second look catches a late one
+  }, true);
+})();
 // 🔗 v5.39 — a shortcut lands ON the section, already unfolded, everything else folded shut.
 // 🏠 v5.44 — Eric: "Phil needs access to the client portal. Put it at the top of the main
 // page like it is on mine." The 🏠 plate and the portal section come on for crew. The 👷 crew
@@ -17660,6 +17710,13 @@ function renderAskRecent() {
   };
   const hardFiltersOn = fJob !== 'All' || fType !== 'All' || fWho !== 'All' || fCat !== 'All' || fTag !== 'All' || !!fFrom || !!fTo;
   const filtersOn = !!q || hardFiltersOn; window._rlFiltersOn = filtersOn;   // 🔍 v6.86 — the Search plate says ✓ ON while a search holds with the window shut
+  // 💡 v6.95 — Eric: "on the running log where i can select a person in a drop down list, when someone is selected make sure its
+  // highlighted to show that filter is on." Every wheel and box that is HOLDING a filter wears the lit plate and its label
+  // says ✓ ON (the person wheel under the kind plates is lit where it is drawn, below) — brightness, a glyph and a word.
+  [['lfJob', fJob !== 'All'], ['lfType', fType !== 'All'], ['lfWho', fWho !== 'All'], ['lfCat', fCat !== 'All'], ['lfTag', fTag !== 'All'], ['lfFrom', !!fFrom], ['lfTo', !!fTo], ['logSearch', !!q]].forEach(([id, on]) => {
+    const el = $(id); if (!el) return; el.classList.toggle('sel-on', on);
+    const fld = el.closest('.field'), lab = fld && fld.querySelector('label'); if (lab) lab.textContent = lab.textContent.replace(' ✓ ON', '') + (on ? ' ✓ ON' : '');
+  });
   // the whole day's traffic, typed: kind decides the glyph AND what the filters catch
   // 📜 v5.59 — Eric: "I want to see EVERYTHING that flows through this app go through that
   // running log." So besides his own entries and the Wizard, the feed now carries the review
@@ -17766,8 +17823,8 @@ function renderAskRecent() {
       <button type="button" class="pick-chip${!f && !who && !hide.length ? ' sel' : ''}" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; prefs.rlHide = []; window._rlN = 12; scheduleSave(); renderAskRecent();">${!f && !who && !hide.length ? '✓ ' : ''}✳ All</button>
       ${chip('grind', '⚙ Grinder')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('mail', '📧 Emails')}${chip('photo', '📷 Pictures')}${chip('crew', '👷 Crew')}${chip('client', '🏠 Client')}${chip('fb', '💬 Feedback')}
       <button type="button" class="pick-chip rl-wide" onclick="openFeedback()" title="Say what works and what doesn't — it lands right here in the log">➕ 💬 Say something</button>
-      ${people.length ? `<select class="mini-sel" style="font-size: 11px; padding: 2px 6px;" onchange="rlWho(this.value)" title="Just one person's traffic">
-        <option value="">👤 person…</option>${people.map(pn => `<option${who === pn ? ' selected' : ''}>${esc(pn)}</option>`).join('')}</select>` : ''}
+      ${people.length ? `<select class="mini-sel${who ? ' sel-on' : ''}" id="rlWhoSel" style="font-size: 11px; padding: 2px 6px;" onchange="rlWho(this.value)" title="${who ? 'showing ONLY ' + esc(who) + ' — pick the first line to show everyone again' : 'Just one person\'s traffic'}" aria-label="${who ? 'person filter ON — only ' + esc(who) : 'show just one person'}">
+        <option value="">${who ? '✕ everyone — clear this filter' : '👤 person…'}</option>${people.map(pn => `<option value="${esc(pn)}"${who === pn ? ' selected' : ''}>${who === pn ? '✓ ONLY ' : ''}${esc(pn)}</option>`).join('')}</select>` : ''}
     </div>`) +
     (page.length ? page.map(it => {
       // an unfolded book entry wears the full detailed row — ✏️ edit, 📷, tags, ✓ FIELD / ✓ QB
@@ -19212,7 +19269,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.94';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.95';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
