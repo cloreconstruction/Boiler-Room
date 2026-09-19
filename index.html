@@ -2143,6 +2143,16 @@
   .mat-item { position: relative; padding: 7px 0 4px 15px; }
   .mat-item::before { content: ''; position: absolute; left: 0; top: 19px; width: 10px; height: 2.5px; background: var(--accent); }
   .mat-item.mi-done::before { background: var(--good-text, #2e7d32); }
+  /* 📋 v6.89 — the Build List row's second line: the five-box strip, what was picked, the money. A box is a glyph AND a
+     letter (☒P / ☐P) with the word in its label — the fill is extra. */
+  .mat-line2 { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin: 3px 0 0 40px; }
+  .mat-strip { display: inline-flex; gap: 3px; flex: none; }
+  .mat-box { min-width: 34px; min-height: 34px; padding: 0 3px; border: 1.5px solid var(--baseline, #8a8177); border-radius: 7px; background: transparent; color: var(--ink-2);
+    font: inherit; font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; gap: 1px; cursor: pointer; margin: 0; }
+  .mat-box b { font-size: 10.5px; font-weight: 800; letter-spacing: 0; }
+  .mat-box.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink, #111); }
+  .mat-sel { flex: 1 1 150px; min-width: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.35; overflow-wrap: anywhere; }
+  .mat-legend { font-size: 11.5px; color: var(--ink-muted); margin: 0 0 8px; line-height: 1.5; }
   .mat-steps { position: relative; margin: 4px 0 0 14px; }
   .mat-steps > .mt-trunk2 { position: absolute; left: 0; top: -2px; bottom: 8px; width: 1.5px; background: color-mix(in srgb, var(--accent) 65%, transparent); }
   .mat-steps > .mt-trunk2 > i { position: absolute; left: 0; top: 0; width: 100%; display: block; background: var(--good-text, #2e7d32); }
@@ -3849,7 +3859,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.88 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.89 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -11862,6 +11872,8 @@ async function openEstimates(i) {
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
   try { _estPage = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (e) { _estPage = null; }
   if (!_estD || !Array.isArray(_estD.cats)) _estD = { updated: '', cats: [] };
+  // 📋 v6.89 — the build list, rolled up under each estimate line (office file only; a job with no board just has no roll-up)
+  try { _estMatRoll = estMatRoll(JSON.parse(await dbxDownload(portalRoot() + '/materials-office-' + c.code + '.json') || 'null')); } catch (e) { _estMatRoll = {}; }
   // 💹 v5.90 — Eric: "click Markup, set the markup... every number the homeowner ever sees
   // always has to include the markup but not show it. Default always on." Board-level %,
   // rides on every bid unless a line says the number already includes it.
@@ -12190,7 +12202,8 @@ function renderEstimates() {
       const pendUp = estPendUp(x);
       // an EMPTY row — no bid, no bill, no books money, not on their page — folds away under its
       // phase unless he asked to see them, or has this one open
-      const empty = !x.appr && !tot && !nb && !u && !pendUp;
+      const mrBit = estMatRollBit(x.n);   // 📋 v6.89 — what the build list holds under this line
+      const empty = !x.appr && !tot && !nb && !u && !pendUp && !mrBit;
       const hid = empty && !open && !_estShowEmpty.has(ph);
       // the number column: the estimate if there is one, else what is on the way, else what the books show
       const numTxt = tot ? money0(tot) : pendUp ? money0(pendUp) : u ? money0(u) : '—';
@@ -12202,6 +12215,7 @@ function renderEstimates() {
         pendUp ? `📥 ${money0(pendUp)} on the way` : '',
         over ? `<b style="color: var(--err, #b3452f);">over ${money0(over)}</b>` : '',
         x.appr && nOpt >= 2 ? `<b>🏠 ${theirPick != null ? `${pgB.lk ? '🔒 LOCKED IN' : 'they picked'} "${esc(pgB.opts[theirPick].t)}"` : nOpt + ' choices out — waiting on their pick'}</b>` : '',
+        mrBit,
       ].filter(Boolean).join(' · ');
       return `<div class="set-section fc-sec est-row${open ? ' est-open' : ''}${x.appr ? ' est-lit' : ''}"${hid ? ' hidden' : ''} data-ci="${ci}" style="margin-top: 6px; padding: 8px 12px;">
       <div class="est-line">
@@ -13894,6 +13908,280 @@ function matItTagAdd(id) {
   matItTagToggle(id, v);
   const nb = $('matNewTag-' + id); if (nb) nb.focus();
 }
+// ================= 📋 v6.89 — THE BUILD LIST, ERIC'S FINISH-OUT TRACKER =================
+// Eric walked the Josten/Weiser house talking into his phone and built a Word tracker by hand: rooms, an item a row, what
+// was picked written ON the row, and a strip of boxes that fills in — Picked, Ordered, Received. "It should probably have
+// 'installed' or 'scheduled' or something on there too, probably a couple more checkboxes for the total cost of each item.
+// This is what I'm trying to accomplish on the build list. I think the build list and the estimate sheets could eventually
+// be combined." Then: "Yes, build it all." So: (1) the selection rides on the row, a five-box strip P O R S I on every
+// thing to buy, counts on every room; (2) an estimate and an actual cost per item, with room and whole-house totals;
+// (3) 📋 paste a list (or drop the Word file) and it lands as rooms and items; (4) an item can name its estimate line, and
+// the estimates board rolls the build list up under that line. `sel`, `est`, `act` and `ec` are OFFICE-SIDE: they never
+// ride to the homeowner's file (matSave strips them) — his notes name suppliers, and a cost on their page must be the
+// marked-up number, which this is not. Every state is a glyph AND a letter AND a spelled word, never colour alone.
+const matIsBuy = it => !!(it && (it.hm || it.buy));   // a thing to BUY (the 🏠 items always were); anything else is WORK: to do → in work → done
+const MAT_BUY_CHAIN = ['pick', 'picked', 'ordered', 'arrived'], MAT_TASK_CHAIN = ['todo', 'work', 'done'];
+const matChain = it => matIsBuy(it) ? MAT_BUY_CHAIN : MAT_TASK_CHAIN;
+const matItemDone = it => matIsBuy(it) ? !!it.ins : it.s === 'done';   // a thing to buy is done when it is INSTALLED, not when it lands
+const matMoney = n => '$' + Math.round(+n || 0).toLocaleString('en-US');
+const matNum = v => { const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, '')); return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; };
+const MAT_BOXES = [['P', 'Picked'], ['O', 'Ordered'], ['R', 'Received'], ['S', 'Scheduled'], ['I', 'Installed']];
+function matBoxOn(it, k) {
+  const i = MAT_BUY_CHAIN.indexOf(it.s || 'pick');
+  return k === 'P' ? i >= 1 : k === 'O' ? i >= 2 : k === 'R' ? i >= 3 : k === 'S' ? !!it.sch : !!it.ins;
+}
+// tap a box: P O R walk the one state the homeowner's page also reads (un-ticking one un-ticks what follows it);
+// S and I are their own ticks. Installed means it is here, so it pulls Received along.
+function matBoxTap(id, k) {
+  const it = matFindItem(id); if (!it || !matIsBuy(it)) return;
+  const on = matBoxOn(it, k), word = (MAT_BOXES.find(b => b[0] === k) || [])[1] || k;
+  if (k === 'S') { if (on) { delete it.sch; delete it.schd; } else it.sch = true; }
+  else if (k === 'I') { if (on) delete it.ins; else { it.ins = localDay(new Date()); it.s = 'arrived'; } }
+  else {
+    const at = { P: 1, O: 2, R: 3 }[k];
+    it.s = MAT_BUY_CHAIN[on ? at - 1 : at];
+    if (on) delete it.ins;
+    if (it.s === 'ordered' && !it.odate) it.odate = localDay(new Date());
+  }
+  matLog(`${on ? '☐' : '☒'} ${word} — ${it.n}`);
+  _matDirty = true; if (it.hm) _matPubDirty = true;
+  renderMatMgr();
+}
+function matStripHtml(it) {
+  return `<span class="mat-strip" role="group" aria-label="progress of ${esc(it.n)}">${MAT_BOXES.map(([k, w]) => { const on = matBoxOn(it, k);
+    return `<button type="button" class="mat-box${on ? ' on' : ''}" onclick="event.stopPropagation(); matBoxTap('${escq(it.id)}', '${k}')" aria-pressed="${on}" aria-label="${w} — ${on ? 'yes' : 'not yet'}" title="${w} — ${on ? 'yes' : 'not yet'}">${on ? '☒' : '☐'}<b>${k}</b></button>`; }).join('')}</span>`;
+}
+function matCostBits(it) {
+  const e = +it.est || 0, a = +it.act || 0; if (!e && !a) return '';
+  const bits = []; if (e) bits.push('est ' + matMoney(e)); if (a) bits.push('paid ' + matMoney(a));
+  if (e && a) bits.push(a > e ? `<b style="color: var(--err, #b3452f);">⚠ over by ${matMoney(a - e)}</b>` : a < e ? `✓ under by ${matMoney(e - a)}` : '✓ on the number');
+  return bits.join(' · ');
+}
+function matTotals(items) { return (items || []).reduce((t, x) => { t.est += +x.est || 0; t.act += +x.act || 0; return t; }, { est: 0, act: 0 }); }
+function matRoomCounts(its) {
+  const buy = its.filter(matIsBuy), work = its.filter(x => !matIsBuy(x)), t = matTotals(its), bits = [];
+  if (buy.length) bits.push(`🛒 ${buy.filter(x => matBoxOn(x, 'P')).length}/${buy.length} picked · ${buy.filter(x => matBoxOn(x, 'O')).length} ordered · ${buy.filter(x => matBoxOn(x, 'R')).length} received · ${buy.filter(x => x.ins).length} installed`);
+  if (work.length) bits.push(`🔨 ${work.filter(x => x.s === 'done').length}/${work.length} done`);
+  if (t.est || t.act) bits.push(`${t.est ? 'est ' + matMoney(t.est) : ''}${t.est && t.act ? ' · ' : ''}${t.act ? 'paid ' + matMoney(t.act) : ''}`);
+  return bits.length ? '· ' + bits.join(' · ') : '';
+}
+// the four lists he works from: what still needs picking, ordering, receiving, installing
+let _matStageF = '';
+const MAT_STAGE_F = [
+  ['topick', '○ to pick', it => matIsBuy(it) && (it.s || 'pick') === 'pick'],
+  ['toorder', '🛒 picked, not ordered', it => matIsBuy(it) && it.s === 'picked'],
+  ['torecv', '📦 ordered, not here', it => matIsBuy(it) && it.s === 'ordered'],
+  ['toinst', '🔧 here, not installed', it => matIsBuy(it) && it.s === 'arrived' && !it.ins]];
+function matStageOk(it) { const f = MAT_STAGE_F.find(x => x[0] === _matStageF); return !f || f[2](it); }
+function matTopBarHtml() {
+  const all = _matD.rooms.flatMap(r => r.items || []), t = matTotals(all), anyBuy = all.some(matIsBuy);
+  if (_matStageF && !all.some(matStageOk)) _matStageF = '';
+  const chips = MAT_STAGE_F.map(([k, w, fn]) => { const n = all.filter(fn).length; if (!n) return '';
+    return `<button type="button" class="pick-chip${_matStageF === k ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 30px;" onclick="_matStageF = _matStageF === '${k}' ? '' : '${k}'; renderMatMgr()" aria-pressed="${_matStageF === k}">${_matStageF === k ? '✓ ' : ''}${w} (${n})</button>`; }).join('');
+  const money = t.est || t.act ? ` · whole house: ${t.est ? 'est ' + matMoney(t.est) : ''}${t.est && t.act ? ' · ' : ''}${t.act ? 'paid ' + matMoney(t.act) : ''}${t.est && t.act ? (t.act > t.est ? ` · <b>⚠ over by ${matMoney(t.act - t.est)}</b>` : ` · ✓ under by ${matMoney(t.est - t.act)}`) : ''}` : '';
+  return matPasteHtml() +
+    (anyBuy ? `<div class="mat-legend">☒ yes · ☐ not yet — <b>P</b> picked · <b>O</b> ordered · <b>R</b> received · <b>S</b> scheduled · <b>I</b> installed — tap a box${money}</div>` : '') +
+    (chips ? `<div class="chips-row" id="matStageChips" style="display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px;">${chips}</div>` : '');
+}
+// 🛒 ↔ 🔨 — an office row is either something to buy or work to do; the lamp maps across the way the 🏠 flip always has
+function matBuyToggle(id) {
+  const it = matFindItem(id); if (!it || it.hm) return;
+  if (it.buy) { delete it.buy; it.s = it.ins ? 'done' : ['picked', 'ordered', 'arrived'].includes(it.s) ? 'work' : 'todo'; delete it.ins; delete it.sch; delete it.schd; }
+  else { it.buy = true; if (it.s === 'done') { it.s = 'arrived'; it.ins = localDay(new Date()); } else it.s = it.s === 'work' ? 'picked' : 'pick'; }
+  matLog(`${it.buy ? '🛒 something to buy' : '🔨 work to do'}: ${it.n}`);
+  _matDirty = true; renderMatMgr();
+}
+function matSetNum(id, k, v) { const n = matNum(v); matSet(id, k, n ? n : ''); }
+function matEcList(it) {
+  const board = ((_matD && _matD.rooms) || []).flatMap(r => (r.items || []).map(x => x.ec).filter(Boolean));
+  return [...new Set([...(typeof EST_DEFAULT_CATS !== 'undefined' ? EST_DEFAULT_CATS : []), ...board, ...(it && it.ec ? [it.ec] : [])])];
+}
+function matEditorPlusHtml(it) {
+  const id = escq(it.id);
+  return `${it.hm ? '' : `<div class="field" style="flex: 1 1 100%;">
+      <button type="button" class="pick-chip${it.buy ? ' sel' : ''}" style="width: 100%; font-weight: 800; letter-spacing: 0.4px;" onclick="matBuyToggle('${id}')" aria-pressed="${!!it.buy}">
+        ${it.buy ? '✓ 🛒 SOMETHING TO BUY — picked → ordered → received → scheduled → installed' : '🔨 WORK TO DO — to do → in work → done · tap if this is something to buy'}</button></div>`}
+    <div class="field" style="flex: 1 1 100%;"><label>Selection / notes — shows on the row · 🏢 office only, never on their page</label>
+      <input type="text" id="matSel-${id}" value="${esc(it.sel || '')}" placeholder="what was picked — the model, the colour, where it comes from…" onchange="matSet('${id}', 'sel', this.value)"></div>
+    <div class="field"><label>Estimate $ · 🏢</label><input type="text" id="matEst-${id}" inputmode="decimal" value="${it.est ? esc(String(it.est)) : ''}" onchange="matSetNum('${id}', 'est', this.value)"></div>
+    <div class="field"><label>Actual $ paid · 🏢</label><input type="text" id="matAct-${id}" inputmode="decimal" value="${it.act ? esc(String(it.act)) : ''}" onchange="matSetNum('${id}', 'act', this.value)"></div>
+    <div class="field" style="min-width: 170px; flex: 1;"><label>💰 Estimate line it belongs to · 🏢</label>
+      <select id="matEc-${id}" onchange="matSet('${id}', 'ec', this.value)"><option value="">— none —</option>${matEcList(it).map(n => `<option${it.ec === n ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+    ${matIsBuy(it) ? `<div class="field"><label>Install scheduled for</label><input type="date" id="matSchd-${id}" value="${esc(it.schd || '')}" onchange="matSet('${id}', 'schd', this.value); matSet('${id}', 'sch', this.value ? true : '')"></div>` : ''}`;
+}
+// ---------- 📋 paste a list ----------
+let _matPaste = false, _matPasteRows = null, _matPasteText = '';
+function matPasteOpen() { _matPaste = true; _matPasteRows = null; renderMatMgr(); const w = $('revModal'); if (w) w.scrollTop = 0; setTimeout(() => { const b = $('matPasteBox'); if (b) b.focus(); }, 80); }
+function matPasteClose() { _matPaste = false; _matPasteRows = null; _matPasteText = ''; renderMatMgr(); }
+// One item per row. TABLE (tabs, or " | " between cells): a line on its own names the room, a heading row ("Item · Selection /
+// Notes · Picked · Ordered · Received …") says which column is which, a ☒ ticks that box. PLAIN lines: CAPITALS or a trailing
+// colon name the room, every other line is an item ("name - what was picked"). A room exists only once an item lands in it,
+// so a title, a legend and a summary page fall away on their own. Nothing is guessed: no trades, no prices invented.
+function matParseList(text) {
+  const lines = String(text || '').replace(/\r/g, '').split('\n').map(l => l.replace(/ /g, ' '));
+  const cellsOf = l => l.includes('\t') ? l.split('\t') : / \| /.test(l) ? l.split(' | ') : null;
+  const sepN = lines.filter(l => { const c = cellsOf(l); return !!c && c.filter(x => x.trim()).length >= 2; }).length;
+  const table = lines.some(l => l.includes('\t')) ? sepN >= 1 : sepN >= 2;   // one stray " | " in a plain list does not make it a table
+  const YES = /^(☒|☑|✓|✔|x|yes|y|done)$/i, BOX = /[☒☑☐]/, DEF = { n: 0, sel: 1, P: 2, O: 3, R: 4, S: 5, I: 6 };
+  const rooms = []; let pending = '', map = null, skipped = 0;
+  const roomFor = name => { const nm = (name || 'General').trim().slice(0, 40) || 'General'; let r = rooms.find(x => x.name.toLowerCase() === nm.toLowerCase()); if (!r) { r = { name: nm, items: [], on: true }; rooms.push(r); } return r; };
+  const headMap = cells => { const m = {}; cells.forEach((c, i) => { const t = c.trim().toLowerCase(); if (!t) return;
+      if (/^(item|what|name)\b/.test(t)) m.n = i; else if (/line|categor/.test(t)) m.ec = i; else if (/select|note|spec|descr/.test(t)) m.sel = i; else if (/pick|confirm|chosen/.test(t)) m.P = i;
+      else if (/order/.test(t)) m.O = i; else if (/receiv|arriv|deliver|on site/.test(t)) m.R = i; else if (/sched/.test(t)) m.S = i; else if (/install/.test(t)) m.I = i;
+      else if (/actual|paid|cost/.test(t)) m.act = i; else if (/est|budget|allow/.test(t)) m.est = i; });
+    return m.n != null && Object.keys(m).length >= 2 ? m : null; };
+  const push = (room, it) => { if (!it.n || BOX.test(it.n)) { skipped++; return; } const r = roomFor(room); const dup = r.items.find(x => x.n.toLowerCase() === it.n.toLowerCase()); if (dup) Object.assign(dup, it); else r.items.push(it); };
+  for (const l of lines) {
+    if (!l.trim()) continue;
+    if (table) {
+      const cells = cellsOf(l);
+      if (!cells || cells.filter(x => x.trim()).length < 2) {
+        if (cells && !cells.some(x => x.trim())) continue;                       // an empty table row
+        const t = (cells ? cells.join(' ') : l).trim();
+        if (BOX.test(t) || /•/.test(t)) { skipped++; continue; }                 // a legend, a run of bullets
+        pending = t; map = null; continue;                                       // a line on its own: the next room
+      }
+      const c = cells.map(x => x.trim());
+      if (!c.some(x => BOX.test(x) || YES.test(x))) { const hm = headMap(c); if (hm) { map = hm; continue; } }
+      const m = map || DEF, box = k => m[k] != null && YES.test(c[m[k]] || '');
+      const P = box('P'), O = box('O'), R = box('R'), S = box('S'), I = box('I');
+      push(pending, { n: (c[m.n] || '').slice(0, 80), sel: m.sel != null ? (c[m.sel] || '').slice(0, 300) : '', s: I || R ? 'arrived' : O ? 'ordered' : P ? 'picked' : 'pick', sch: S, ins: I,
+        est: m.est != null ? matNum(c[m.est]) : 0, act: m.act != null ? matNum(c[m.act]) : 0, ec: m.ec != null ? (c[m.ec] || '') : '' });
+    } else {
+      const t = l.trim();
+      if (/:$/.test(t) || (/[A-Z]/.test(t) && !/[a-z]/.test(t) && t.replace(/[^A-Z]/g, '').length >= 3)) { pending = t.replace(/:$/, ''); continue; }
+      const bare = t.replace(/^[-•*·\s]+/, ''), ticked = /^[☒☑✓✔]/.test(bare);
+      const clean = bare.replace(/^[☒☑☐✓✔]\s*/, '').replace(/^\d+[.)]\s+/, '');
+      const sp = clean.split(/\s+[-–—]\s+|:\s+/); const n = (sp.shift() || '').trim();
+      push(pending, { n: n.slice(0, 80), sel: sp.join(' - ').trim().slice(0, 300), s: ticked ? 'picked' : 'pick', sch: false, ins: false, est: 0, act: 0, ec: '' });
+    }
+  }
+  return { rooms: rooms.filter(r => r.items.length), skipped, table };
+}
+function matPastePreview() {
+  const b = $('matPasteBox'); _matPasteText = b ? b.value : _matPasteText;
+  _matPasteRows = matParseList(_matPasteText);
+  if (!_matPasteRows.rooms.length) toast('No items found in that — one item per line, a room name on a line of its own', false);
+  renderMatMgr();
+}
+function matPasteRoomFlip(i) { const r = _matPasteRows && _matPasteRows.rooms[i]; if (!r) return; r.on = !r.on; const b = $('matPasteBox'); if (b) _matPasteText = b.value; renderMatMgr(); }
+function matPasteAdd() {
+  const rows = ((_matPasteRows && _matPasteRows.rooms) || []).filter(r => r.on && r.items.length);
+  if (!rows.length) { toast('Nothing to add — paste a list and tap 👁 Preview first', false); return; }
+  const ecs = matEcList(); let added = 0, updated = 0, newRooms = 0;
+  rows.forEach(pr => {
+    let r = _matD.rooms.find(x => String(x.name || '').toLowerCase() === pr.name.toLowerCase());
+    if (!r) { r = { name: pr.name, items: [] }; _matD.rooms.push(r); newRooms++; }
+    r.items = r.items || [];
+    pr.items.forEach(p => {
+      let it = r.items.find(x => String(x.n || '').toLowerCase() === p.n.toLowerCase());
+      if (it) { updated++; if (!matIsBuy(it)) { it.buy = true; it.s = 'pick'; } }
+      else { it = { id: matNextId(), n: p.n, t: 'Misc', buy: true, s: 'pick' }; r.items.push(it); added++; }
+      if (MAT_BUY_CHAIN.indexOf(p.s) > MAT_BUY_CHAIN.indexOf(it.s || 'pick')) it.s = p.s;      // a paste never walks a row backwards
+      if (it.s === 'ordered' && !it.odate) it.odate = localDay(new Date());
+      if (p.sel) it.sel = p.sel; if (p.sch) it.sch = true; if (p.ins && !it.ins) it.ins = localDay(new Date());
+      if (p.est) it.est = p.est; if (p.act) it.act = p.act;
+      const ec = p.ec ? ecs.find(e => e.toLowerCase() === p.ec.trim().toLowerCase()) : ''; if (ec) it.ec = ec;   // an estimate line only by its exact name
+    });
+  });
+  matLog(`📋 pasted a list: ${rows.length} categor${rows.length === 1 ? 'y' : 'ies'} · ${added} new · ${updated} updated`);
+  _matPaste = false; _matPasteRows = null; _matPasteText = ''; _matDirty = true;
+  renderMatMgr();
+  toast(`📋 ${added} item${added === 1 ? '' : 's'} added${updated ? ` · ${updated} updated` : ''}${newRooms ? ` · ${newRooms} new categor${newRooms === 1 ? 'y' : 'ies'}` : ''} ✓`);
+}
+function matPasteHtml() {
+  if (!_matPaste) return '';
+  const pr = _matPasteRows, on = pr ? pr.rooms.filter(r => r.on) : [], items = on.flatMap(r => r.items);
+  const cnt = k => items.filter(x => MAT_BUY_CHAIN.indexOf(x.s) >= k).length;
+  return `<div class="set-section fc-sec" id="matPasteSec" style="margin: 0 0 10px; border: 2px solid var(--accent);">
+    <h4 style="margin-top: 0;">📋 Paste a list</h4>
+    <div class="hint" style="margin: 0 0 6px;">Copy your list — a Word table, a spreadsheet, or plain lines — and paste it here. A line on its own names the room; each row is an item; a ☒ ticks Picked, Ordered or Received. On a PC you can drop the Word file itself onto the box. Nothing is added until you tap ✓ Add them.</div>
+    <textarea id="matPasteBox" class="grow" rows="7" style="width: 100%; font-size: 12.5px;" placeholder="KITCHEN&#10;Countertops - Viatera Everest&#10;Kitchen faucet - Delta Trinsic&#10;&#10;…or paste the table straight out of Word"
+      ondragover="event.preventDefault(); this.style.borderStyle = 'dashed';" ondragleave="this.style.borderStyle = '';"
+      ondrop="event.preventDefault(); this.style.borderStyle = ''; matDocxDrop(event.dataTransfer.files)">${esc(_matPasteText || '')}</textarea>
+    <div class="rev-row" style="margin-top: 8px; flex-wrap: wrap; gap: 6px;">
+      <button type="button" class="btn-primary" onclick="matPastePreview()">👁 Preview</button>
+      <label class="btn-ghost" style="cursor: pointer; display: inline-flex; align-items: center;">📄 Pick a Word file<input type="file" id="matPasteFile" accept=".docx,.txt,.csv,.tsv" style="display: none;" onchange="matDocxDrop(this.files)"></label>
+      <button type="button" class="btn-ghost x-plate x-small" onclick="matPasteClose()">✕ Never mind</button>
+    </div>
+    ${pr && pr.rooms.length ? `<div id="matPastePrev" style="margin-top: 10px; border-top: 1px solid var(--grid); padding-top: 8px;">
+      <div style="font-weight: 800;">${on.length} categor${on.length === 1 ? 'y' : 'ies'} · ${items.length} item${items.length === 1 ? '' : 's'} · ${cnt(1)} picked · ${cnt(2)} ordered · ${cnt(3)} received${pr.skipped ? ` <span class="hint" style="margin: 0; font-weight: 400;">· ${pr.skipped} line${pr.skipped === 1 ? '' : 's'} skipped</span>` : ''}</div>
+      ${pr.rooms.map((r, i) => `<div class="frow" style="gap: 6px; align-items: center; flex-wrap: nowrap; margin-top: 5px;">
+        <button type="button" class="pick-chip${r.on ? ' sel' : ''}" style="flex: none; font-size: 11px; padding: 4px 9px; min-height: 30px;" onclick="matPasteRoomFlip(${i})" aria-pressed="${r.on}">${r.on ? '✓ add' : '○ skip'}</button>
+        <span style="flex: 1; min-width: 0; font-size: 13px;${r.on ? '' : ' opacity: .55;'}"><b>${esc(r.name)}</b> · ${r.items.length} <span class="hint" style="margin: 0;">— ${esc(r.items.slice(0, 3).map(x => x.n).join(', '))}${r.items.length > 3 ? '…' : ''}</span></span></div>`).join('')}
+      <button type="button" class="btn-primary" style="width: 100%; margin-top: 10px; font-weight: 800;" onclick="matPasteAdd()">✓ Add them — ${items.length} item${items.length === 1 ? '' : 's'}</button>
+      <div class="hint" style="margin-top: 6px;">Every row lands as 🛒 something to buy, office-side. A row with the same name in the same category is updated, never doubled, and never walked backwards. Trades, prices and estimate lines are yours to tap afterwards.</div>
+    </div>` : ''}
+  </div>`;
+}
+// a .docx is a zip; word/document.xml holds the words. Paragraphs come out as lines, table rows as tab-separated lines —
+// the same shape a paste out of Word has, so one parser reads both.
+async function matZipEntry(buf, name) {
+  const b = new Uint8Array(buf), dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  let e = b.length - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) return null;
+  const n = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true);
+  for (let i = 0; i < n; i++) {
+    if (p + 46 > b.length || dv.getUint32(p, true) !== 0x02014b50) return null;
+    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true), lho = dv.getUint32(p + 42, true);
+    if (new TextDecoder().decode(b.subarray(p + 46, p + 46 + nlen)) === name) {
+      const start = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true), raw = b.subarray(start, start + csize);
+      if (method === 0) return new TextDecoder().decode(raw);
+      if (method !== 8 || typeof DecompressionStream === 'undefined') return null;
+      return await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+    }
+    p += 46 + nlen + xlen + clen;
+  }
+  return null;
+}
+async function matDocxText(buf) {
+  const xml = await matZipEntry(buf, 'word/document.xml'); if (!xml) return null;
+  const body = xml.slice(Math.max(0, xml.indexOf('<w:body')));
+  const dec = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+  const textOf = s => { let o = ''; const re = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:tab\/>|<w:br\/>/g; let m; while ((m = re.exec(s))) o += m[1] != null ? m[1] : ' '; return dec(o).replace(/\s+/g, ' ').trim(); };
+  const out = []; const re = /<w:tbl>|<w:tbl\s|<w:p[ >]/g; let m;
+  while ((m = re.exec(body))) {
+    if (m[0].startsWith('<w:tbl')) {
+      const end = body.indexOf('</w:tbl>', m.index); if (end < 0) break;
+      body.slice(m.index, end).split(/<w:tr[ >]/).slice(1).forEach(r => out.push(r.split(/<w:tc>|<w:tc\s/).slice(1).map(textOf).join('\t')));
+      re.lastIndex = end + 8;
+    } else {
+      const end = body.indexOf('</w:p>', m.index); if (end < 0) break;
+      const t = textOf(body.slice(m.index, end)); if (t) out.push(t);
+      re.lastIndex = end + 6;
+    }
+  }
+  return out.join('\n');
+}
+async function matDocxDrop(files) {
+  const f = files && files[0]; if (!f) return;
+  try {
+    busyShow('📄 READING THE FILE…');
+    let txt = null;
+    if (/\.docx$/i.test(f.name)) txt = await matDocxText(await f.arrayBuffer());
+    else if (/\.(txt|tsv)$/i.test(f.name)) txt = await f.text();
+    else if (/\.csv$/i.test(f.name)) txt = (await f.text()).split('\n').map(l => l.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"')).join('\t')).join('\n');
+    if (txt == null) { busyDone('⚠ COULD NOT READ IT'); toast('That file would not open here — copy the list and paste it instead', false); return; }
+    _matPaste = true; _matPasteText = txt; _matPasteRows = matParseList(txt);
+    busyDone('📄 ✓ READ');
+    renderMatMgr();
+    if (!_matPasteRows.rooms.length) toast('No items found in that file — copy the list and paste it instead', false);
+  } catch (e) { busyDone('⚠ COULD NOT READ IT'); toast('That file would not open here — copy the list and paste it instead', false); }
+}
+// ---------- 💰 the estimates board rolls the build list up under each line ----------
+let _estMatRoll = {};
+function estMatRoll(off) {
+  const out = {};
+  ((off && off.rooms) || []).forEach(r => (r.items || []).forEach(it => { const k = String(it.ec || '').trim().toLowerCase(); if (!k) return;
+    const o = out[k] = out[k] || { n: 0, picked: 0, ordered: 0, recv: 0, inst: 0, est: 0, act: 0 };
+    o.n++; const i = MAT_BUY_CHAIN.indexOf(it.s || 'pick'); if (i >= 1) o.picked++; if (i >= 2) o.ordered++; if (i >= 3) o.recv++; if (it.ins) o.inst++;
+    o.est += +it.est || 0; o.act += +it.act || 0; }));
+  return out;
+}
+function estMatRollBit(name) {
+  const o = _estMatRoll[String(name || '').trim().toLowerCase()]; if (!o) return '';
+  return `📋 ${o.n} on the build list · ${o.picked} picked · ${o.ordered} ordered · ${o.recv} received · ${o.inst} installed${o.est ? ` · est ${matMoney(o.est)}` : ''}${o.act ? ` · paid ${matMoney(o.act)}` : ''}`;
+}
 function matWord(s, hm) {
   const chain = hm === false ? TASK_STATES : MAT_STATES;
   return (MAT_STATES.find(x => x[0] === s) || TASK_STATES.find(x => x[0] === s) || chain[0])[1];
@@ -13901,7 +14189,7 @@ function matWord(s, hm) {
 async function openMaterials(i) {
   if (portalGuard()) return;
   if (CREW_NAME) { toast('📋 The board is coming to office phones next — it lives in Eric\'s Dropbox and needs its own copy out here first', false); return; }
-  _matIdx = i; _matEdit = ''; _matDirty = false; _matArm = ''; _matTagF = '';
+  _matIdx = i; _matEdit = ''; _matDirty = false; _matArm = ''; _matTagF = ''; _matStageF = ''; _matPaste = false; _matPasteRows = null; _matPasteText = '';
   const c = _portalIdx.clients[i];
   toast('⏳ Loading the board…');
   matTplLoad();
@@ -13975,16 +14263,17 @@ function renderMatMgr() {
         <button type="button" class="pick-chip${!_matTagF ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="_matTagF = ''; renderMatMgr()">${!_matTagF ? '✓ ' : ''}✳ whole board</button>
         ${names.map(tg => `<button type="button" class="pick-chip${_matTagF === tg ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="_matTagF = _matTagF === '${escq(tg)}' ? '' : '${escq(tg)}'; renderMatMgr()">${_matTagF === tg ? '✓ ' : ''}🏷 ${esc(tg)} (${used[tg]})</button>`).join('')}
       </div>`; })()}
+    ${matTopBarHtml()}
     ${_matD.rooms.map(((r, ri) => {
-      const its = (r.items || []).filter(x => !_matTagF || matItemTags(x).includes(_matTagF));
-      if (_matTagF && !its.length) return ''; // this category has nothing for that trade
-      const doneN = its.filter(x => x.s === 'done' || x.s === 'arrived').length;
+      const its = (r.items || []).filter(x => (!_matTagF || matItemTags(x).includes(_matTagF)) && matStageOk(x));   // 📋 v6.89 — the trade AND the stage he asked for
+      if ((_matTagF || _matStageF) && !its.length) return ''; // this category has nothing for that trade or that stage
+      const doneN = its.filter(matItemDone).length;
       const pct = its.length ? Math.round(doneN / its.length * 100) : 0;
       const shut = _matRmShut.has(ri);
-      const openIts = its.filter(x => !(x.s === 'done' || x.s === 'arrived')).length;
+      const openIts = its.filter(x => !matItemDone(x)).length;
       return `<div class="set-section fc-sec" data-ri="${ri}" style="margin-top: 10px;"><h4>
       <button type="button" style="background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;" onclick="matRmToggle(${ri})" aria-expanded="${!shut}">${shut ? '▸' : '▾'} ${esc(r.name)}</button>
-      ${its.length ? `<span class="hint" style="margin: 0; font-weight: 400;">· ${doneN}/${its.length} done${shut && openIts ? ` · <b>${openIts} open</b>` : ''}</span>` : ''}
+      ${its.length ? `<span class="hint mat-counts" style="margin: 0; font-weight: 400;">${matRoomCounts(its)}${shut && openIts ? ` · <b>${openIts} open</b>` : ''}</span>` : ''}
       <span style="float: right; display: inline-flex; gap: 4px;">
         <button class="btn-ghost req-x mat-grip" style="padding: 5px 6px; min-width: 26px;" onpointerdown="matRoomDragStart(event, ${ri})" oncontextmenu="event.preventDefault()" aria-label="drag this category onto another to fold it in" title="drag onto another category — its items and steps move over">⠿</button>
         <button class="btn-ghost req-x" style="padding: 5px 6px; min-width: 26px;" onclick="matRoomMove(${ri}, -1)" aria-label="move category up" ${ri === 0 ? 'disabled' : ''}>▲</button>
@@ -14007,6 +14296,7 @@ function renderMatMgr() {
     <div class="rev-row" style="margin-top: 12px; flex-wrap: wrap;">
       <button class="btn-primary" style="flex: 2; background: var(--accent); color: #fff; border: 2px solid var(--accent); font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,.35);" onclick="matSave()">📤 Send 🏠 client portion to the client's page${_matPubDirty ? ' — <b>changes waiting</b>' : ''}</button>
       ${!_matD.rooms.length ? `<button class="btn-ghost" style="flex: 2; background: var(--surface-1); border: 2.5px solid var(--accent); color: var(--ink); font-weight: 800;" onclick="matFromMaster()">🧱 Start from the master list</button>` : ''}
+      <button class="btn-ghost" style="flex: 1; min-width: 130px; font-weight: 800;" onclick="matPasteOpen()">📋 Paste a list</button>
       <button class="btn-ghost x-plate" style="flex: 1;" onclick="matClose()">✕ Close</button>
     </div>
     <div class="hint" style="margin-top: 8px;">Everything here saves ITSELF as you work — 📤 is only for showing the client. Per-client setup: 🧱 start from the master, ✕ what this job doesn't need, ➕ what's special.</div>`;
@@ -14024,11 +14314,11 @@ function matMgrItem(ri, it) {
   const kids = it.kids || [];
   const ready = kids.length && kids.every(k => k.ok);
   const editing = _matEdit === it.id;
-  const itDone = it.s === 'done' || it.s === 'arrived';
+  const itDone = matItemDone(it);   // 📋 v6.89 — a thing to buy is done when it is INSTALLED
   const open = editing || _matItOpen.has(it.id);
-  const w = matWord(it.s, matIsHm(it));
+  const w = matWord(it.s, matIsBuy(it));
   const glyph = w.split(' ')[0];
-  const word = w.slice(glyph.length).trim().toLowerCase();
+  const word = matIsBuy(it) && it.ins ? 'installed' : w.slice(glyph.length).trim().toLowerCase();
   const openN = kids.filter(k => !k.ok).length;
   const pktN = ((it.pkt || {}).docs || []).length + ((it.pkt || {}).notes ? 1 : 0);
   return `<div class="mat-item${itDone ? ' mi-done' : ''}${matIsHm(it) ? ' mi-hm' : ''}">
@@ -14042,6 +14332,7 @@ function matMgrItem(ri, it) {
       `<span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap to ${open ? 'fold' : 'open'} · hold for the works">${open ? '▾' : '▸'} <b>${esc(it.n)}</b>
         <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
     </div>
+    ${!editing && (matIsBuy(it) || it.sel || it.est || it.act) ? `<div class="mat-line2">${matIsBuy(it) ? matStripHtml(it) : ''}<span class="mat-sel">${[esc(it.sel || it.pick || ''), it.schd ? '📅 install ' + esc(it.schd) : '', matCostBits(it), it.ec ? '💰 ' + esc(it.ec) : ''].filter(Boolean).join(' · ')}</span></div>` : ''}
     ${open && !editing && matIsHm(it) ? matConvoHtml(it) : ''}
     ${open && kids.length && !editing ? (() => {
       const okN = kids.filter(k => k.ok).length;
@@ -14093,6 +14384,7 @@ function matMgrEditor(it) {
       <button type="button" class="pick-chip${hm ? ' sel' : ''}" style="width: 100%; font-weight: 800; letter-spacing: 0.4px;"
         onclick="matHmToggle('${id}')" aria-pressed="${hm}">
         ${hm ? '✓ 🏠 REQUIRES HOMEOWNER INPUT OR CHOICE — on their page, pick lamps' : '🏢 OFFICE ONLY — they never see this · tap if they need to pick or approve it'}</button></div>
+    ${matEditorPlusHtml(it)}
     <!-- ✎ v5.79 — the name box moved UP into the item's top row, bold, next to the chevron
          (Eric: "soon as i push new and it has text box ready to name the main name") -->
     <div class="field" style="flex: 1 1 100%;"><label>🏷 Tags — who needs to see this item on their list (tap to light · ➕ your own)</label>
@@ -14367,14 +14659,14 @@ async function matLampTap(id, st) {
   if (_lampArm !== key) {
     _lampArm = key;
     renderMatMgr();
-    toast(`Tap again to LOCK ${matWord(st, matIsHm(it))} on ${it.n}`);
+    toast(`Tap again to LOCK ${matWord(st, matIsBuy(it))} on ${it.n}`);
     setTimeout(() => { if (_lampArm === key) { _lampArm = ''; renderMatMgr(); } }, 5000);
     return;
   }
   _lampArm = '';
   it.s = st;
   if (st === 'ordered' && !it.odate) it.odate = localDay(new Date());
-  matLog(`🔒 locked ${matWord(st, matIsHm(it))} — ${it.n}`);
+  matLog(`🔒 locked ${matWord(st, matIsBuy(it))} — ${it.n}`);
   _matDirty = true;
   renderMatMgr();
   if (matIsHm(it)) { await matSave(); } // her lamps move now — the lock is the approval
@@ -14383,10 +14675,10 @@ function matLampRowMgr(it) {
   // 🎛 v5.79 — Eric: "the edit, delete, todo in work and done buttons are too distracting,
   // move them off to the right." One quiet row, tucked right at the bottom of the open item:
   // the lamp chain + ✎ edit + ✕ delete. The sub checklist got their old spot up top.
-  const chain = matIsHm(it) ? ['pick', 'picked', 'ordered', 'arrived'] : ['todo', 'work', 'done'];
+  const chain = matChain(it);
   return `<div class="chips-row" style="margin: 6px 0 0 34px; display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; opacity: .8;">
     ${chain.map(st => {
-      const w = matWord(st, matIsHm(it));
+      const w = matWord(st, matIsBuy(it));
       const on = (it.s || chain[0]) === st;
       const armed = _lampArm === it.id + ':' + st;
       return `<button type="button" class="pick-chip${on ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;${armed ? ' border-width: 2.5px; font-weight: 800;' : ''}"
@@ -14660,7 +14952,7 @@ function matKidOk(id, ki) {
 function matCycle(id) {
   const it = matFindItem(id);
   if (!it) return;
-  const order = matIsHm(it) ? ['pick', 'picked', 'ordered', 'arrived'] : ['todo', 'work', 'done'];
+  const order = matChain(it);
   const at = order.indexOf(it.s || order[0]);
   const next = order[(at + 1) % order.length];
   // 🔒 v5.61 — Eric: "once all the sub items are checked, THEN the main one opens for
@@ -14670,7 +14962,7 @@ function matCycle(id) {
     toast(`🔒 ${open.length} step${open.length > 1 ? 's' : ''} still open — ${open.slice(0, 2).map(k => k.n).join(', ')}${open.length > 2 ? '…' : ''}. Check them off first.`, false);
     return;
   }
-  matLog(`${matWord(next, matIsHm(it))} — ${it.n}`);
+  matLog(`${matWord(next, matIsBuy(it))} — ${it.n}`);
   it.s = next;
   if (it.s === 'ordered' && !it.odate) it.odate = localDay(new Date());
   _matDirty = true;
@@ -14682,12 +14974,13 @@ function matHmToggle(id) {
   if (!it) return;
   _matPubDirty = true;
   matLog(`${matIsHm(it) ? '🏢 pulled OFF the client page' : '🏠 put ON the client page'}: ${it.n}`);
+  // 📋 v6.89 — a 🛒 row stays on the buying chain whichever side of the wall it is on; only a plain task maps across
   if (matIsHm(it)) {
     delete it.hm;
-    it.s = it.s === 'arrived' ? 'done' : it.s === 'ordered' ? 'work' : 'todo';
+    if (!it.buy) it.s = it.s === 'arrived' ? 'done' : it.s === 'ordered' ? 'work' : 'todo';
   } else {
+    if (!it.buy) it.s = it.s === 'done' ? 'arrived' : it.s === 'work' ? 'picked' : 'pick';
     it.hm = true;
-    it.s = it.s === 'done' ? 'arrived' : it.s === 'work' ? 'picked' : 'pick';
   }
   _matDirty = true;
   renderMatMgr();
@@ -14715,7 +15008,7 @@ async function matTplLoad() {
 async function matTplSave(ri) {
   const r = _matD.rooms[ri];
   if (!r || !(r.items || []).length) { toast('Nothing in that category to save yet', false); return; }
-  const scrub = it => ({ n: it.n, t: it.t || 'Misc', ...(matItemTags(it).length ? { tg: matItemTags(it) } : {}), ...(it.hm ? { hm: true } : {}),
+  const scrub = it => ({ n: it.n, t: it.t || 'Misc', ...(matItemTags(it).length ? { tg: matItemTags(it) } : {}), ...(it.hm ? { hm: true } : {}), ...(it.buy ? { buy: true } : {}), ...(it.ec ? { ec: it.ec } : {}),
     ...(it.kids && it.kids.length ? { kids: it.kids.map(k => ({ n: k.n, ...(k.note ? { note: k.note } : {}), ...(k.cv ? { cv: true } : {}) })) } : {}) });
   _matTpl = _matTpl.filter(t => t.name.toLowerCase() !== r.name.toLowerCase());
   _matTpl.push({ name: r.name, items: (r.items || []).map(scrub) });
@@ -14731,7 +15024,7 @@ function matTplInsert() {
   const tpl = _matTpl.find(t => t.name === (sel && sel.value));
   if (!tpl) { toast('Pick a template first', false); return; }
   _matD.rooms.push({ name: tpl.name, items: tpl.items.map(it => ({
-    id: matNextId(), n: it.n, t: it.t, s: it.hm ? 'pick' : 'todo', ...(it.tg ? { tg: [...it.tg] } : {}), ...(it.hm ? { hm: true } : {}),
+    id: matNextId(), n: it.n, t: it.t, s: (it.hm || it.buy) ? 'pick' : 'todo', ...(it.tg ? { tg: [...it.tg] } : {}), ...(it.hm ? { hm: true } : {}), ...(it.buy ? { buy: true } : {}), ...(it.ec ? { ec: it.ec } : {}),
     ...(it.kids ? { kids: it.kids.map(k => ({ ...k })) } : {}) })) });
   matLog(`📑 added category "${tpl.name}" from template`);
   _matDirty = true;
@@ -14854,6 +15147,7 @@ async function matSaveMaster() {
   // master = structure only: statuses reset, picks/dates/remarks stripped, kids unconfirmed
   const m = { updated: localDay(new Date()), rooms: _matD.rooms.map(r => ({ name: r.name, items: (r.items || []).map(x => {
     const d = { id: x.id, n: x.n, t: x.t || 'Misc', s: 'pick' };
+    if (x.buy) d.buy = true; if (x.ec) d.ec = x.ec;   // 📋 v6.89 — the process keeps what KIND of row it is and its estimate line; never a selection or a cost
     if (x.kids) d.kids = x.kids.map(k => ({ n: k.n, ok: false }));
     return d;
   }) })) };
@@ -14874,7 +15168,7 @@ async function matSave() {
         .map(x => {
           if (!hm) return x;
           // 🏠 v5.71 — the client sees ONLY the steps flagged 🏠, scrubbed to name/ok/note
-          const { pkt, ...rest } = x;
+          const { pkt, sel, est, act, ec, ...rest } = x;   // 📋 v6.89 — his selection notes (suppliers), raw costs and the estimate line NEVER ride to their file
           const cvKids = (x.kids || []).filter(k => k.cv).map(k => ({ n: k.n, ok: k.ok || undefined, note: k.note }));
           if (cvKids.length) rest.kids = cvKids; else delete rest.kids;
           return rest;
@@ -18583,7 +18877,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.88';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.89';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
