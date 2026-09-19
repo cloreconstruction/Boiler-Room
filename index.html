@@ -3859,7 +3859,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.89 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.90 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7082,7 +7082,7 @@ function renderFcJobSel() {
 async function loadFolderList(selectPath) {
   $('fcFolderSel').innerHTML = '<option value="">loading folders…</option>';
   try {
-    const r = await dbxRpc('files/list_folder', { path: DBX_ROOT, recursive: true });
+    const r = await dbxList({ path: DBX_ROOT, recursive: true });
     if (r.error) throw new Error('list failed');
     const paths = (r.entries || [])
       .filter(f => f['.tag'] === 'folder' && f.path_display && f.path_display.length > DBX_ROOT.length)
@@ -7758,7 +7758,7 @@ try { sumShared = new Set(JSON.parse(lsGet('daylog-sum-shared') || '[]')); } cat
 async function loadSummaryList() {
   $('sumList').innerHTML = '<span class="hint">loading…</span>';
   try {
-    const r = await dbxRpc('files/list_folder', { path: DBX_ROOT + '/Summaries', recursive: false });
+    const r = await dbxList({ path: DBX_ROOT + '/Summaries', recursive: false });
     const files = (r.entries || []).filter(f => f['.tag'] === 'file')
       .sort((a, b) => (b.server_modified || '').localeCompare(a.server_modified || ''));
     $('sumList').innerHTML = files.length
@@ -7785,7 +7785,7 @@ async function shareSummary(ev, p, name) {
     toast('🔓 Unlocking for the crew…');
     const txt = await dbxDownload(p);
     if (txt == null) throw new Error('missing');
-    const r = await dbxRpc('files/list_folder', { path: '/Clore DayLog/Crew', recursive: false });
+    const r = await dbxList({ path: '/Clore DayLog/Crew', recursive: false });
     const folks = (r.entries || []).filter(f => f['.tag'] === 'folder');
     if (!folks.length) { toast('No crew folders yet — ⚙ Setup → Set up crew folders first', false); return; }
     for (const f of folks) await dbxUpload((f.path_display || f.path_lower) + '/Summaries/' + name, txt);
@@ -9257,16 +9257,58 @@ function sweepStatusHtml() {
   const ago = Math.round((Date.now() - +new Date(s.at)) / 60000);
   const when = ago < 1 ? 'just now' : ago < 60 ? `${ago} min ago` : ago < 1440 ? `${Math.round(ago / 60)} h ago` : new Date(s.at).toLocaleDateString([], { month: 'short', day: 'numeric' });
   if (s.err) return `<div class="hint sweep-line" style="margin-top: 6px;">⚠ Inbox sweep FAILED ${when}: ${esc(String(s.err).slice(0, 140))} · ${tap}</div>`;
-  return `<div class="hint sweep-line" style="margin-top: 6px;">📥 Inbox sweep ${when}: ${s.seen || 0} in the Inbox · ${s.texts || 0} text${s.texts === 1 ? '' : 's'} and ${s.mails || 0} email${s.mails === 1 ? '' : 's'} filed${s.left ? ` · ${s.left} still waiting for the next sweep` : ''} · ${tap}</div>`;
+  if (s.wait) return `<div class="hint sweep-line" style="margin-top: 6px;">⏳ Inbox sweep ${when}: another of your devices is catching up on the Inbox — this one waits its turn · ${tap}</div>`;   // 🔑 v6.90
+  const part = s.part ? ` · ⚠ ${/^the listing was cut short/.test(s.part) ? esc(s.part) : 'the listing was cut short (' + esc(String(s.part).slice(0, 60)) + ')'}` : '';
+  return `<div class="hint sweep-line" style="margin-top: 6px;">📥 Inbox sweep ${when}: ${s.seen || 0} in the Inbox · ${s.texts || 0} text${s.texts === 1 ? '' : 's'} and ${s.mails || 0} email${s.mails === 1 ? '' : 's'} filed${s.left ? ` · ${s.left} still waiting for the next sweep` : ''}${s.missed ? ` · ⚠ ${s.missed} could not be read this time` : ''}${part} · ${tap}</div>`;
 }
 async function sweepNow() {
+  if (_sweepBusy) { toast('📥 A sweep is already running — watch the line under the text meter'); return; }   // v6.90 — one at a time
   toast('📥 Sweeping the Inbox…');
   await checkInboxTexts();
   const s = window._sweepLast || {};
   toast(s.err ? `⚠ The sweep failed: ${String(s.err).slice(0, 90)}` : `📥 ${s.texts || 0} texts and ${s.mails || 0} emails filed · ${s.left || 0} still waiting`, !s.err);
   renderTextDigest(); const ss = $('sweepStatusSet'); if (ss) ss.innerHTML = sweepStatusHtml();
 }
-async function checkInboxTexts() {
+// 📥 v6.90 — CATCHING UP. One sweep files twenty; 336 were waiting when the listing bug (see dbxList) was found. When a
+// sweep leaves files behind AND it handled something, the next sweep follows by itself a breath later — until the Inbox
+// is clear, a round handles nothing, or forty rounds have run — and the working band says how many are left. One sweep
+// at a time: a sync landing in the middle of a catch-up waits its turn instead of reading the same files beside it.
+// 🔑 ONE DEVICE CATCHES UP. entries.json is last-writer-wins: his PC and his phone both filing the same backlog for
+// minutes would write over each other's log. The device that starts a catch-up takes a short lease (App Data/
+// sweep-lease.json — a random device id and an `until`, ninety seconds, renewed every round, handed back at the end); a
+// device that finds someone else's live lease skips its sweep and says so under the text meter. No lease file, a lease
+// that cannot be read, or an expired one = sweep as always.
+let _sweepBusy = false, _sweepNext = 0;
+const SWEEP_LEASE = () => DBX_ROOT + '/App Data/sweep-lease.json';
+function sweepDevice() { let d = lsGet('daylog-device'); if (!d) { d = Math.random().toString(36).slice(2, 10); lsSet('daylog-device', d); } return d; }
+async function sweepLeaseOther() {
+  try { const j = JSON.parse((await dbxDownload(SWEEP_LEASE())) || 'null'); return !!(j && j.dev && j.dev !== sweepDevice() && +new Date(j.until) > Date.now()); } catch (e) { return false; }
+}
+async function sweepLeaseSet(ms) { try { await dbxUpload(SWEEP_LEASE(), JSON.stringify({ dev: sweepDevice(), until: new Date(Date.now() + ms).toISOString() })); } catch (e) {} }
+async function checkInboxTexts(round) {
+  round = +round || 0;
+  if (_sweepBusy) return;
+  _sweepBusy = true; clearTimeout(_sweepNext); _sweepNext = 0;
+  try {
+    if (dbx.refreshToken && !CREW_NAME && await sweepLeaseOther()) {
+      sweepNote({ at: new Date().toISOString(), wait: true, err: '' }); renderTextDigest();
+      if (round > 0) busyDone('📥 ANOTHER DEVICE IS CATCHING UP — this one waits');
+      return;
+    }
+    if (round > 0) await sweepLeaseSet(90000);
+    await inboxSweepOnce();
+    const s = window._sweepLast || {};
+    if (!s.err && s.left > 0 && s.did > 0 && round < 40 && !window._sweepChainOff) {
+      if (!round && !CREW_NAME) await sweepLeaseSet(90000);
+      busyShow(`📥 CATCHING UP ON THE INBOX — ${s.left} LEFT…`);
+      _sweepNext = setTimeout(() => { _sweepNext = 0; checkInboxTexts(round + 1); }, window._sweepGap || 1500);
+    } else if (round > 0) {
+      await sweepLeaseSet(0);   // hand it back: the next device sweeps at once
+      busyDone(s.err ? '⚠ THE INBOX SWEEP STOPPED' : s.left > 0 ? `📥 ${s.left} STILL WAITING — the next sync goes on` : '📥 ✓ INBOX CAUGHT UP');
+    }
+  } finally { _sweepBusy = false; }
+}
+async function inboxSweepOnce() {
   if (!dbx.refreshToken) { sweepNote({ at: new Date().toISOString(), err: 'no Dropbox connection on this phone (⚙ Setup → Dropbox)' }); return; }
   // 📥 v6.41 — wait for the review pile to land first: a card pushed a breath before
   // checkPending() replaced the queue from the file used to vanish (hot texts had this too).
@@ -9283,7 +9325,7 @@ async function checkInboxTexts() {
   mailLockPersonalOnce();
   const n0 = { t: entries.filter(e => e.texted).length, m: entries.filter(e => e.mail).length };   // 📥 v6.86 — what this sweep files, for the status line
   try {
-    const r = await dbxRpc('files/list_folder', { path: DBX_ROOT + '/Inbox', recursive: false });
+    const r = await dbxList({ path: DBX_ROOT + '/Inbox', recursive: false });
     if (!r || !Array.isArray(r.entries)) throw new Error('Inbox listing: ' + String((r && r.error_summary) || 'no answer from Dropbox'));   // 📥 v6.86 — a refused listing used to read as an empty Inbox
     const all = r.entries.filter(f => f['.tag'] === 'file');
     const named = all.filter(f => /^text\b.*\.txt$/i.test(f.name));
@@ -9291,9 +9333,14 @@ async function checkInboxTexts() {
     // "Text - …". ANY .txt in the Inbox whose first line is FROM: is a text too, whatever
     // the phone called it. Files that aren't texts are remembered so they're read once.
     const extra = [];
-    for (const f of all.filter(f => /\.txt$/i.test(f.name) && !named.includes(f) && !_notText.has(f.name)).slice(0, 20)) {   // v6.41 — was 8: a closed day of mail is twenty files, not five syncs
-      if (pendDone.has('text:' + f.name)) { archiveText(f.path_lower); continue; }
-      const head = (await dbxDownload(f.path_lower)) || '';
+    // 📥 v6.90 — a file already handled whose archive move failed gets its move tried again on its own (twenty a sweep),
+    // and no longer takes one of the twenty places: with a backlog, twenty stuck files at the front starved all behind them.
+    const isDone = f => pendDone.has('text:' + f.name);
+    const cand = all.filter(f => /\.txt$/i.test(f.name) && !named.includes(f) && !_notText.has(f.name));
+    cand.filter(isDone).slice(0, 20).forEach(f => archiveText(f.path_lower));
+    for (const f of cand.filter(f => !isDone(f)).slice(0, 20)) {   // v6.41 — was 8: a closed day of mail is twenty files, not five syncs
+      const head = _txtCache.has(f.name) ? _txtCache.get(f.name) : await dbxDownload(f.path_lower);   // 📥 v6.90 — an email waiting behind a pile of texts was downloaded again on every sweep
+      if (head == null) continue;                                                 // a read that FAILED says nothing about the file — ask again next sweep
       if (/^\s*FROM:\s*\S/i.test(head)) { _txtCache.set(f.name, head); extra.push(f); }
       else _notText.add(f.name);
     }
@@ -9310,7 +9357,13 @@ async function checkInboxTexts() {
       } catch (err) { return im.path_lower; } // couldn't move — point at where it sits
     };
     const claimed = new Set();
-    for (const f of files.slice(0, 20)) {
+    // 📥 v6.90 — twenty NEW files a sweep, the newest first. Files already handled or already on a card (a hot text waits
+    // in the Inbox until he answers its card) ride along for their late photos and archive retries, but they no longer use
+    // up the twenty: enough of them at the front and nothing new was ever read again.
+    const waiting = f => isDone(f) || pendingQueue.some(p => p.id === 'text:' + f.name);
+    const fresh = files.filter(f => !waiting(f)).sort((a, b) => String(b.server_modified || '').localeCompare(String(a.server_modified || '')));
+    let did = 0, missed = 0;
+    for (const f of [...files.filter(waiting).slice(0, 40), ...fresh.slice(0, 20)]) {
       const id = 'text:' + f.name;
       const mine = imgs.filter(im => stem(im.name) === stem(f.name));
       const queued = pendingQueue.find(p => p.id === id);
@@ -9329,7 +9382,11 @@ async function checkInboxTexts() {
         if (!queued) archiveText(f.path_lower);
         continue;
       }
-      const txt = _txtCache.get(f.name) || (await dbxDownload(f.path_lower)) || '';
+      // 📥 v6.90 — a read that FAILED is not an empty text. It used to be logged as "(photo only — no words)" and the
+      // file moved away, the words gone for good; with hundreds of files to catch up on, a refused read is no longer rare.
+      const got = _txtCache.has(f.name) ? _txtCache.get(f.name) : await dbxDownload(f.path_lower);
+      if (got == null) { missed++; continue; }
+      const txt = got || '';
       const m = txt.match(/^FROM:\s*(.+)$/im);
       let from = m ? m[1].trim() : '';
       if (!from) { const fm = f.name.match(/^text\s*-\s*([^-]+)/i); from = fm ? fm[1].trim() : '?'; }
@@ -9345,14 +9402,14 @@ async function checkInboxTexts() {
         const m = mailParse(txt);
         const verdict = await mailSort(m, f, id);
         if (verdict === 'later') { _txtCache.set(f.name, txt); continue; }
-        _txtCache.delete(f.name);
+        _txtCache.delete(f.name); did++;
         renderMailAsk();
         continue;
       }
       // 🤖 v5.99 — a machine wrote this one: filed under /Texts/Robots, never into the log
       if (textIsRobot(from, body)) {
         pendMarkDone(id);
-        _txtCache.delete(f.name);
+        _txtCache.delete(f.name); did++;
         noteRobotSkip();
         archiveText(f.path_lower, true);
         continue;
@@ -9364,7 +9421,11 @@ async function checkInboxTexts() {
       // evening nudge, and the daily 📬 digest proves nothing slipped through.
       if (hot) {
         pendingQueue.push({ id, kind: 'text', source: f.name, payload: { from, body, path: f.path_lower, photos, hot, personal, ts: f.server_modified } });
-        if (!CREW_NAME && prefs.pushSecret) {
+        did++;
+        // 📥 v6.90 — a hot text found days late (the catch-up) still pins its card, but it does not ring: "needs you NOW"
+        // about something four days old is a false alarm, and a backlog would ring a dozen of them in a minute.
+        const late = f.server_modified && Date.now() - +new Date(f.server_modified) > 12 * 3600e3;
+        if (!CREW_NAME && prefs.pushSecret && !late) {
           fetch('/.netlify/functions/notify', { method: 'POST',
             headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
             body: JSON.stringify({ title: '🔥 A text needs you', body: 'It is pinned at the top of Boiler Room.', tag: 'hot-text' })   // 📵 v6.41 — no names, no message words on a lock screen
@@ -9373,7 +9434,7 @@ async function checkInboxTexts() {
       } else {
         autoLogText(from, body, photos, personal, f.server_modified);
         pendMarkDone(id);           // v5.98 — WRITTEN DOWN, so a restart can't forget it
-        _txtCache.delete(f.name);
+        _txtCache.delete(f.name); did++;
         archiveText(f.path_lower);  // handled = out of the Inbox (retried above if it fails)
       }
     }
@@ -9388,7 +9449,10 @@ async function checkInboxTexts() {
       autoLogText(oFrom, '', [await claim(im)], isPersonalSender(oFrom) || undefined, im.server_modified);
       pendMarkDone(id); // v5.98 — written down, same as the worded ones
     }
-    sweepNote({ at: new Date().toISOString(), seen: all.length, texts: entries.filter(e => e.texted).length - n0.t, mails: entries.filter(e => e.mail).length - n0.m, left: Math.max(0, files.length - 20), err: '' });   // 📥 v6.86
+    // 📥 v6.86 the note · v6.90: `left` = new files this sweep did not get to (or could not read), `did` = what it handled
+    // (the catch-up goes on only while that is more than nothing), `part` = why a listing was cut short, if it was
+    sweepNote({ at: new Date().toISOString(), seen: all.length, texts: entries.filter(e => e.texted).length - n0.t, mails: entries.filter(e => e.mail).length - n0.m,
+      left: Math.max(0, fresh.length - did), did, missed, part: r.partial || '', wait: false, err: '' });
     renderPendBanner(); renderTextDigest(); renderTxtNudges(); renderMailAsk();
   } catch (e) {
     // 📥 v6.86 — never quiet again: the status line under the meter says what went wrong
@@ -9544,11 +9608,15 @@ function autoLogText(from, body, photos, personal, srcTs) {
   // v5.27 — only REAL names earn a chip; numbers wait for their ✎ rename in the digest
   if (!tagLooksJunky(from) && !knownTags().some(x => x.toLowerCase() === from.toLowerCase())) { prefs.tags.unshift(from); renderTagChips(); }
   const phs = (photos || []).filter(Boolean);
+  // 📅 v6.90 — dated by when it ARRIVED, as an email has been since v6.41. A sweep runs minutes after a text lands, so
+  // nobody saw the difference — until 200 texts from five days were about to be filed as "today" and break the meter's
+  // record, its average and the day they belong to.
+  const when = srcTs && !isNaN(new Date(srcTs)) ? new Date(srcTs) : null;
   const e = addEntry('Note', `Text from ${from}: ${(body || '(photo only — no words)').slice(0, 800)}${phs.length ? ` (📷 ${phs.length})` : ''}`, '—',
     { noSniff: true, texted: true, tags: tagClean(from),
       ...(phs.length ? { photoPath: phs[0], photoPaths: phs } : {}),
       ...(personal ? { personal: true } : {}), ...(who ? { who } : {}),
-      ...(srcTs ? { textTs: srcTs } : {}) });
+      ...(srcTs ? { textTs: srcTs } : {}), ...(when ? { ts: when } : {}) });
   scheduleSave(); // v5.25 — nudge recording retired with the strip; the digest spots questions live
   return e;
 }
@@ -9883,7 +9951,7 @@ async function crewJoin() {
   if (!dbx.refreshToken) { msg.textContent = 'Step 1 first: connect Dropbox above — using the crew member\'s OWN account.'; return; }
   msg.textContent = '⏳ Looking for the shared crew folder…';
   try {
-    const r = await dbxRpc('files/list_folder', { path: '', recursive: false });
+    const r = await dbxList({ path: '', recursive: false });
     const folders = (r.entries || []).filter(f => f['.tag'] === 'folder');
     for (const f of folders.slice(0, 30)) {
       let cfg = null;
@@ -10977,7 +11045,7 @@ function lockDayGo(d) {
 async function checkCrewLogs() {
   if (!dbx.refreshToken || CREW_NAME) return;
   try {
-    const r = await dbxRpc('files/list_folder', { path: CREW_DIR, recursive: false });
+    const r = await dbxList({ path: CREW_DIR, recursive: false });
     const folders = (r.entries || []).filter(f => f['.tag'] === 'folder');
     for (const f of folders.slice(0, 12)) {
       let j = null;
@@ -11225,7 +11293,7 @@ async function renderPortalList() {
     const grab = async p => { tried.push(p); try { const t = await dbxDownload(p); if (t) { raw = t; return true; } } catch (e) {} return false; };
     if (!(await grab(DBX_ROOT + '/portal.json'))) {
       try {
-        const r = await dbxRpc('files/list_folder', { path: '', recursive: false });
+        const r = await dbxList({ path: '', recursive: false });
         for (const f of (r.entries || []).filter(x => x['.tag'] === 'folder').slice(0, 30)) {
           if (await grab((f.path_display || f.path_lower) + '/portal.json')) break;
         }
@@ -15250,7 +15318,7 @@ async function renderQbLights() {
   if (!dbx.refreshToken) { box.innerHTML = '<span class="hint">Connect Dropbox to read the feed.</span>'; return; }
   let files = [];
   try {
-    const r = await dbxRpc('files/list_folder', { path: '/Clore Project Tracker/QB Exports', recursive: false });
+    const r = await dbxList({ path: '/Clore Project Tracker/QB Exports', recursive: false });
     files = (r.entries || []).filter(f => f['.tag'] === 'file');
   } catch (e) { box.innerHTML = ''; return; }
   const KINDS = [[/sales by product/i, 'SALES'], [/invoice list/i, 'INVOICES'], [/transaction list/i, 'TRANSACTIONS']];
@@ -17690,7 +17758,7 @@ async function findPortalRoot(force) {
   const mine = String(DBX_ROOT || '').toLowerCase();
   const tries = [];
   try {
-    const r = await dbxRpc('files/list_folder', { path: '', recursive: false });
+    const r = await dbxList({ path: '', recursive: false });
     for (const f of (r.entries || []).filter(x => x['.tag'] === 'folder').slice(0, 40)) {
       const b = f.path_display || f.path_lower;
       if (String(b).toLowerCase() === mine) continue;              // his own mount is not a grant
@@ -18877,7 +18945,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.89';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.90';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -19021,6 +19089,30 @@ async function dbxRpc(path, arg) {
     body: JSON.stringify(arg)
   });
   return r.json();
+}
+// 📄 v6.90 — A FOLDER LISTING COMES IN PAGES. Eric, 2026-09-18, a picture of the line under the text meter: "Inbox sweep
+// just now: 0 in the Inbox · 0 texts and 0 emails filed" — with 336 files sitting in that folder, the oldest from 09-14.
+// Dropbox answers files/list_folder a page at a time, and a page may hold few entries or NONE AT ALL while has_more is
+// true (a folder thousands of files have passed through pages over what has left it first). Every listing in the app
+// read page one and stopped; on 09-14 page one of /Inbox came back empty, the sweep read that as an empty Inbox, and the
+// cloud watcher — the same one-page read — went blind the same day. dbxList follows the cursor to the end (bounded: 120
+// pages or 25 seconds) and hands back page one's shape with everything in it, so a caller changes one word. A refused
+// first call comes back as Dropbox's own error object, exactly as before; a page that fails part-way leaves `partial`
+// (the reason, in Dropbox's words) on what was gathered — never silence.
+async function dbxList(arg, maxPages = 120, maxMs = 25000) {
+  const t0 = Date.now();
+  const first = await dbxRpc('files/list_folder', { limit: 2000, ...arg });
+  if (!first || !Array.isArray(first.entries)) return first;
+  const out = { ...first, entries: [...first.entries] };
+  let cur = first.cursor, more = !!first.has_more, pages = 1;
+  while (more && cur && pages < maxPages && Date.now() - t0 < maxMs) {
+    const r = await dbxRpc('files/list_folder/continue', { cursor: cur });
+    if (!r || !Array.isArray(r.entries)) { out.partial = String((r && r.error_summary) || 'no answer from Dropbox').replace(/\/\.*$/, ''); break; }
+    out.entries.push(...r.entries); cur = r.cursor; more = !!r.has_more; pages++;
+  }
+  if (more && !out.partial) out.partial = 'the listing was cut short after ' + pages + ' pages';
+  out.has_more = false; out.pages = pages;
+  return out;
 }
 // 🔎 v6.33 — is there a file at this path? TRUE, FALSE, or it throws. dbxDownload folds "not
 // there" and "could not reach Dropbox" into the same null, and the receipt doors need to tell
@@ -19492,7 +19584,7 @@ async function backupNow() {
 async function listBackups() {
   if (!dbx.refreshToken) { $('backupMsg').textContent = 'Connect Dropbox first.'; return; }
   try {
-    const r = await dbxRpc('files/list_folder', { path: DBX_ROOT + '/App Data/Backups' });
+    const r = await dbxList({ path: DBX_ROOT + '/App Data/Backups' });
     const files = (r.entries || []).filter(f => f['.tag'] === 'file' && f.name.endsWith('.json'))
       .sort((a, b) => b.name.localeCompare(a.name));
     $('backupSel').innerHTML = files.length

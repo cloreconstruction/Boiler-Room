@@ -7546,6 +7546,28 @@ var api = (tok, path, arg) => fetch("https://api.dropboxapi.com/2/" + path, {
   headers: { Authorization: "Bearer " + tok, "content-type": "application/json" },
   body: JSON.stringify(arg)
 });
+var LIST_MAX_PAGES = 40;
+var LIST_MAX_MS = 6e3;
+var LATE_MS = 24 * 3600 * 1e3;
+async function listAll(tok, path, log) {
+  const t0 = Date.now();
+  let r = await api(tok, "files/list_folder", { path, recursive: false, limit: 2e3 });
+  if (!r.ok) return { ok: false, status: r.status };
+  let j = await r.json(), pages = 1;
+  const entries = [...j.entries || []];
+  while (j.has_more && j.cursor && pages < LIST_MAX_PAGES && Date.now() - t0 < LIST_MAX_MS) {
+    r = await api(tok, "files/list_folder/continue", { cursor: j.cursor });
+    if (!r.ok) {
+      log("the /Inbox listing was cut short \u2014 Dropbox said " + r.status);
+      return { ok: true, entries, pages };
+    }
+    j = await r.json();
+    entries.push(...j.entries || []);
+    pages++;
+  }
+  if (j.has_more) log("the /Inbox listing was cut short after " + pages + " pages");
+  return { ok: true, entries, pages };
+}
 async function dl(tok, path) {
   const r = await fetch("https://content.dropboxapi.com/2/files/download", {
     method: "POST",
@@ -7622,13 +7644,17 @@ async function run({ now = /* @__PURE__ */ new Date(), env = process.env, log = 
     } catch (e) {
     }
   }
-  const lr = await api(tok, "files/list_folder", { path: INBOX, recursive: false });
+  const lr = await listAll(tok, INBOX, log);
   if (!lr.ok) {
     log("cannot list /Inbox \u2014 Dropbox said " + lr.status);
     return { ok: false, why: "no inbox" };
   }
-  const all = ((await lr.json()).entries || []).filter((f) => f[".tag"] === "file" && /\.txt$/i.test(f.name));
-  const todo = all.filter((f) => !judged[f.name]).slice(0, MAX_PER_RUN);
+  const all = lr.entries.filter((f) => f[".tag"] === "file" && /\.txt$/i.test(f.name));
+  const isText = (f) => /^text\b/i.test(f.name);
+  all.filter((f) => isText(f) && !judged[f.name]).forEach((f) => {
+    judged[f.name] = { skip: "text", at: now.toISOString() };
+  });
+  const todo = all.filter((f) => !judged[f.name]).sort((a, b) => String(b.server_modified || "").localeCompare(String(a.server_modified || ""))).slice(0, MAX_PER_RUN);
   const fresh = [];
   for (const f of todo) {
     const txt = await dl(tok, f.path_lower);
@@ -7664,9 +7690,10 @@ async function run({ now = /* @__PURE__ */ new Date(), env = process.env, log = 
       bucket = "maybe";
       by = "hush";
     }
-    const row = { bucket, why: v.why, gist: v.gist, by, at: now.toISOString(), push: "none" };
+    const late = !!f.server_modified && +now - +new Date(f.server_modified) > LATE_MS;
+    const row = { bucket, why: v.why, gist: v.gist, by, at: now.toISOString(), push: late && bucket === "important" ? "late" : "none" };
     judged[f.name] = row;
-    if (bucket === "important") fresh.push(row);
+    if (bucket === "important" && !late) fresh.push(row);
   }
   const held = Object.values(judged).filter((r) => r && r.push === "held");
   const ring = [...fresh, ...held];
@@ -7698,7 +7725,7 @@ async function run({ now = /* @__PURE__ */ new Date(), env = process.env, log = 
     if (at && at < cut) delete judged[k];
   }
   await up(tok, JUDGED, JSON.stringify({ ...judged }, null, 1));
-  return { ok: true, seen: all.length, judged: todo.length, important: fresh.length, pushed };
+  return { ok: true, seen: all.length, judged: todo.length, important: fresh.length, pushed, pages: lr.pages };
 }
 var mail_watch_default = async () => {
   try {

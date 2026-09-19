@@ -16,11 +16,15 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   // ── the gap that made this build: the only writer was a Setup card nobody has to open ──
   ok('the sweep publishes the rules, not just the Setup card', (() => {
-    const start = src.indexOf('async function checkInboxTexts(');
-    if (start < 0) return false;
-    let i = src.indexOf('{', start), d = 0, end = -1;
-    for (; i < src.length; i++) { if (src[i] === '{') d++; else if (src[i] === '}') { d--; if (!d) { end = i; break; } } }
-    return end > 0 && src.slice(start, end).includes('publishMailRules()');
+    // 📥 v6.90 — checkInboxTexts is now the one-at-a-time door (it chains the catch-up); the sweep itself is inboxSweepOnce
+    const bodyOf = name => {
+      const start = src.indexOf('async function ' + name + '(');
+      if (start < 0) return '';
+      let i = src.indexOf('{', start), d = 0, end = -1;
+      for (; i < src.length; i++) { if (src[i] === '{') d++; else if (src[i] === '}') { d--; if (!d) { end = i; break; } } }
+      return end > 0 ? src.slice(start, end) : '';
+    };
+    return bodyOf('checkInboxTexts').includes('inboxSweepOnce()') && bodyOf('inboxSweepOnce').includes('publishMailRules()');
   })());
 
   const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});

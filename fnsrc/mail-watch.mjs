@@ -115,6 +115,26 @@ const api = (tok, path, arg) => fetch('https://api.dropboxapi.com/2/' + path, {
   method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'content-type': 'application/json' },
   body: JSON.stringify(arg)
 });
+// 📄 v6.90 — A LISTING COMES IN PAGES, and a page may hold nothing at all while has_more is true. This read page one
+// and stopped; on 2026-09-14 page one of /Inbox came back empty and the watcher judged nothing for four days while 109
+// emails waited (the phone had the same one-page read — see dbxList in index.html). Follow the cursor to the end, inside
+// the run's budget: forty pages or six seconds, whichever comes first; what was gathered is used either way.
+const LIST_MAX_PAGES = 40, LIST_MAX_MS = 6000;
+const LATE_MS = 24 * 3600 * 1000;
+async function listAll(tok, path, log) {
+  const t0 = Date.now();
+  let r = await api(tok, 'files/list_folder', { path, recursive: false, limit: 2000 });
+  if (!r.ok) return { ok: false, status: r.status };
+  let j = await r.json(), pages = 1;
+  const entries = [...(j.entries || [])];
+  while (j.has_more && j.cursor && pages < LIST_MAX_PAGES && Date.now() - t0 < LIST_MAX_MS) {
+    r = await api(tok, 'files/list_folder/continue', { cursor: j.cursor });
+    if (!r.ok) { log('the /Inbox listing was cut short — Dropbox said ' + r.status); return { ok: true, entries, pages }; }
+    j = await r.json(); entries.push(...(j.entries || [])); pages++;
+  }
+  if (j.has_more) log('the /Inbox listing was cut short after ' + pages + ' pages');
+  return { ok: true, entries, pages };
+}
 async function dl(tok, path) {
   const r = await fetch('https://content.dropboxapi.com/2/files/download', {
     method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Dropbox-API-Arg': hsafe({ path }) }
@@ -166,10 +186,16 @@ export async function run({ now = new Date(), env = process.env, log = () => {} 
   const jTxt = await dl(tok, JUDGED);
   if (jTxt) { try { const p = JSON.parse(jTxt); if (p && typeof p === 'object') judged = p; } catch (e) {} }
 
-  const lr = await api(tok, 'files/list_folder', { path: INBOX, recursive: false });
+  const lr = await listAll(tok, INBOX, log);
   if (!lr.ok) { log('cannot list /Inbox — Dropbox said ' + lr.status); return { ok: false, why: 'no inbox' }; }
-  const all = ((await lr.json()).entries || []).filter(f => f['.tag'] === 'file' && /\.txt$/i.test(f.name));
-  const todo = all.filter(f => !judged[f.name]).slice(0, MAX_PER_RUN);
+  const all = lr.entries.filter(f => f['.tag'] === 'file' && /\.txt$/i.test(f.name));
+  // 📄 v6.90 — a file the Shortcut NAMED as a text is a text: marked without a download, and it does not use up the
+  // run. Two hundred texts were waiting when the listing bug was found; at eight files a run the watcher would have
+  // spent a day reading them before it reached one email. Emails go first, the newest first.
+  const isText = f => /^text\b/i.test(f.name);
+  all.filter(f => isText(f) && !judged[f.name]).forEach(f => { judged[f.name] = { skip: 'text', at: now.toISOString() }; });
+  const todo = all.filter(f => !judged[f.name])
+    .sort((a, b) => String(b.server_modified || '').localeCompare(String(a.server_modified || ''))).slice(0, MAX_PER_RUN);
 
   const fresh = [];
   for (const f of todo) {
@@ -193,9 +219,12 @@ export async function run({ now = new Date(), env = process.env, log = () => {} 
     let bucket = v.bucket, by = 'cloud';
     if (m.addr && mailListed(rules.loud || [], m.addr)) { bucket = 'important'; by = 'loud'; }
     else if (m.addr && mailListed(rules.hush || [], m.addr) && bucket === 'important') { bucket = 'maybe'; by = 'hush'; }
-    const row = { bucket, why: v.why, gist: v.gist, by, at: now.toISOString(), push: 'none' };
+    // 📄 v6.90 — an important email found more than a day late (the catch-up after the listing bug) is written down for
+    // the phone like any other, but it does not ring: a dozen pings about last week's mail would bury today's.
+    const late = !!f.server_modified && (+now - +new Date(f.server_modified)) > LATE_MS;
+    const row = { bucket, why: v.why, gist: v.gist, by, at: now.toISOString(), push: late && bucket === 'important' ? 'late' : 'none' };
     judged[f.name] = row;
-    if (bucket === 'important') fresh.push(row);
+    if (bucket === 'important' && !late) fresh.push(row);
   }
 
   // anything important still holding from a quiet-hours run rides this push too
@@ -222,7 +251,7 @@ export async function run({ now = new Date(), env = process.env, log = () => {} 
     if (at && at < cut) delete judged[k];
   }
   await up(tok, JUDGED, JSON.stringify({ ...judged }, null, 1));
-  return { ok: true, seen: all.length, judged: todo.length, important: fresh.length, pushed };
+  return { ok: true, seen: all.length, judged: todo.length, important: fresh.length, pushed, pages: lr.pages };
 }
 
 // 🗣 v6.46 — say it out loud in the Netlify log. Only counts and fixed words ever reach here:
