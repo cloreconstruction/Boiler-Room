@@ -3930,7 +3930,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.93 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.94 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15555,23 +15555,62 @@ const QB_FRESH_PATH = () => DBX_ROOT + '/App Data/qb-refresh.json';
 let qbFresh = null;
 function qbFreshSeen() { return lsGet('daylog-qbfresh-seen') || ''; }
 function qbFreshStamp(j) { return String((j && (j.ranAt || j.importDate)) || ''); }
-// a page counts as refreshed only if the run says so IN WORDS — a missing flag is a miss,
-// never a pass. Silence must never read as success on a money screen.
+// 📚 v6.94 — THE WINDOW CHECKS THE PAGES ITSELF. Eric, looking at "⚠ 1 of 9 client budgets refreshed · 8 did not": "i think
+// theres still problems with budgets updating? check through the process start to finish and see." Start to finish it
+// held: his three exports = the ledger row for row, and eight pages tied to the books to the cent. The WINDOW was wrong:
+// it counted a page as good only when the run had REWRITTEN it (`updated === true`), so a page whose numbers had not
+// moved in QuickBooks — checked, agreeing, left alone — read "✕ NOT UPDATED", every week since v6.18. And it could not see
+// the one real miss: a page made after the run's client list is not ON the receipt, so it never showed at all while its
+// homeowner looked at $0. Now the window reads every client page and compares it, to the cent, with what the run says the
+// books hold:  ✓ UPDATED / ✓ CURRENT (matches the books) · ⚠ DOES NOT MATCH · ○ NOTHING IN QUICKBOOKS YET (the run found
+// no customer) · ⚠ NOT ON THE RUN'S LIST (a page the run has never heard of) · ? could not read the page. A flag is no
+// longer trusted on its own in either direction — the figures are. Until the pages have been read (or if they cannot be)
+// the old words stand, softened: a page the run left alone reads "NOT REWRITTEN", not "NOT UPDATED".
+let _qbfCheck = null, _qbfCheckStamp = '';
+const qbfCents = n => Math.round((+n || 0) * 100);
+async function qbFreshVerify(force) {
+  const stamp = qbFreshStamp(qbFresh);
+  if (!qbFresh || !stamp) return null;
+  if (!force && _qbfCheck && _qbfCheck.ok && _qbfCheckStamp === stamp) return _qbfCheck;
+  const out = { pages: {}, unlisted: [], ok: false };
+  try {
+    let idx = _portalIdx;
+    if (!idx || !Array.isArray(idx.clients)) idx = JSON.parse((await dbxDownload(portalRoot() + '/index.json')) || 'null');
+    if (!idx || !Array.isArray(idx.clients)) throw new Error('no client list');
+    const listed = new Set(((qbFresh.clients) || []).map(c => String(c.code || '')));
+    for (const c of idx.clients) {
+      let pg = null; try { pg = JSON.parse((await dbxDownload(portalRoot() + '/' + c.code + '.json')) || 'null'); } catch (e) {}
+      out.pages[c.code] = pg ? { invoiced: +pg.invoiced || 0, paid: +pg.paid || 0, open: +pg.open || 0 } : null;
+      if (!listed.has(String(c.code))) out.unlisted.push({ code: c.code, job: String(c.job || c.name || c.code) });
+    }
+    out.ok = true;
+  } catch (e) { out.ok = false; }
+  _qbfCheck = out; _qbfCheckStamp = stamp;
+  return out;
+}
 function qbFreshRows() {
   const cl = ((qbFresh || {}).clients) || [];
-  return cl.map(c => ({
-    job: String(c.job || c.code || '(unnamed)'),
-    ok: c.updated === true,
-    at: c.at || '',
-    why: String(c.why || c.note || ''),
-    invoiced: typeof c.invoiced === 'number' ? c.invoiced : null,
-    paid: typeof c.paid === 'number' ? c.paid : null,
-    open: typeof c.open === 'number' ? c.open : null
-  }));
+  const chk = _qbfCheck && _qbfCheck.ok && _qbfCheckStamp === qbFreshStamp(qbFresh) ? _qbfCheck : null;
+  const rows = cl.map(c => {
+    const has = typeof c.invoiced === 'number';
+    const r = { job: String(c.job || c.code || '(unnamed)'), code: String(c.code || ''), updated: c.updated === true, at: c.at || '', why: String(c.why || c.note || ''),
+      invoiced: has ? c.invoiced : null, paid: typeof c.paid === 'number' ? c.paid : null, open: typeof c.open === 'number' ? c.open : null, page: null };
+    if (!has) r.state = 'nobooks';
+    else if (!chk) r.state = r.updated ? 'updated' : 'unchecked';
+    else {
+      const pg = chk.pages[r.code]; r.page = pg || null;
+      r.state = !pg ? 'noread' : (qbfCents(pg.invoiced) === qbfCents(c.invoiced) && qbfCents(pg.paid) === qbfCents(c.paid) && qbfCents(pg.open) === qbfCents(c.open)) ? (r.updated ? 'updated' : 'current') : 'mismatch';
+    }
+    r.ok = r.state === 'updated' || r.state === 'current';
+    return r;
+  });
+  if (chk) chk.unlisted.forEach(u => rows.push({ job: u.job, code: u.code, updated: false, at: '', why: '', invoiced: null, paid: null, open: null, page: chk.pages[u.code] || null, state: 'unlisted', ok: false }));
+  return rows;
 }
+// done = the page matches the books; quiet = nothing in QuickBooks yet (said, but it is not a fault); miss = needs a look
 function qbFreshCount() {
   const r = qbFreshRows();
-  return { done: r.filter(x => x.ok).length, all: r.length, miss: r.filter(x => !x.ok) };
+  return { done: r.filter(x => x.ok).length, all: r.length, miss: r.filter(x => !x.ok && x.state !== 'nobooks'), quiet: r.filter(x => x.state === 'nobooks') };
 }
 async function checkQbFresh() {
   if (CREW_NAME || !dbx.refreshToken) return;
@@ -15580,19 +15619,23 @@ async function checkQbFresh() {
     qbFresh = t ? JSON.parse(t) : null;
   } catch (e) { qbFresh = null; }
   renderQbFresh();
+  // the banner's words rest on the pages themselves — read them once per run, only while the banner is still up
+  const stamp = qbFreshStamp(qbFresh);
+  if (qbFresh && stamp && qbFreshSeen() !== stamp) qbFreshVerify().then(() => renderQbFresh()).catch(() => {});
 }
 function renderQbFresh() {
   const box = $('qbFreshStrip');
   if (!box) return;
   const stamp = qbFreshStamp(qbFresh);
   if (!qbFresh || !stamp || qbFreshSeen() === stamp) { box.innerHTML = ''; return; }
-  const { done, all, miss } = qbFreshCount();
+  const { done, all, miss, quiet } = qbFreshCount();
   const when = qbFresh.ranAt ? new Date(qbFresh.ranAt).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : (qbFresh.importDate || '');
   const clean = all > 0 && !miss.length;
+  const checked = !!(_qbfCheck && _qbfCheck.ok && _qbfCheckStamp === stamp);
   // brightness + glyph + the spelled-out word — never colour on its own
   box.innerHTML = `<button type="button" class="app-banner qb-fresh${clean ? ' ok' : ' warn'}" onclick="openQbFresh()">
-    <b>${clean ? '📚 BOOKS UPDATED' : '⚠ BOOKS PART-UPDATED'}</b> · ${esc(when)}<br>
-    <span>${all ? `${done} of ${all} client budget${all === 1 ? '' : 's'} refreshed` : 'the run left no client list'}${miss.length ? ` — ${miss.length} still need${miss.length === 1 ? 's' : ''} a look` : ' — every page is current'} · tap to see them</span></button>`;
+    <b>${clean ? '📚 BOOKS UPDATED' : checked ? '⚠ BOOKS — A PAGE NEEDS A LOOK' : '⚠ BOOKS PART-UPDATED'}</b> · ${esc(when)}<br>
+    <span>${all ? `${done} of ${all} client budget${all === 1 ? '' : 's'} ${checked ? 'match the books' : 'refreshed'}` : 'the run left no client list'}${quiet.length ? ` · ${quiet.length} not in QuickBooks yet` : ''}${miss.length ? ` — ${miss.length} need${miss.length === 1 ? 's' : ''} a look` : ' — every page is current'} · tap to see them</span></button>`;
 }
 function qbFreshDismiss() {
   lsSet('daylog-qbfresh-seen', qbFreshStamp(qbFresh));
@@ -15600,31 +15643,44 @@ function qbFreshDismiss() {
   closeReview();
   toast('📚 Marked as seen — it comes back on the next QuickBooks run');
 }
-function openQbFresh() {
-  closePanels();
-  const rows = qbFreshRows();
-  const { done, all, miss } = qbFreshCount();
+function qbFreshBodyHtml() {
+  // what needs him rides on top: a page that does not match, a page the run has never heard of — then the rest
+  const RANK = { mismatch: 0, unlisted: 1, noread: 2, unchecked: 3, nobooks: 4, updated: 5, current: 6 };
+  const rows = qbFreshRows().map((r, i) => ({ r, i })).sort((a, b) => (RANK[a.r.state] - RANK[b.r.state]) || (a.i - b.i)).map(x => x.r);
+  const { done, all, miss, quiet } = qbFreshCount();
+  const checked = !!(_qbfCheck && _qbfCheck.ok && _qbfCheckStamp === qbFreshStamp(qbFresh));
   const when = (qbFresh && qbFresh.ranAt) ? new Date(qbFresh.ranAt).toLocaleString([], { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
   const money = v => v == null ? '' : '$' + Math.round(v).toLocaleString();
-  const body = !qbFresh
-    ? `<div class="hint">No QuickBooks run has left a receipt yet. The next time Logan's three reports come in and Claude processes them, this fills in — one line per client page, saying plainly whether its budget was rewritten.</div>`
-    : `<div class="hint" style="margin: 0 0 10px;">Last run: <b>${esc(when || qbFresh.importDate || 'unknown')}</b>${qbFresh.importDate ? ` · books through <b>${esc(qbFresh.importDate)}</b>` : ''}${(qbFresh.source || []).length ? `<br>Read from: ${(qbFresh.source || []).slice(0, 4).map(esc).join(' · ')}` : ''}</div>
-      <div class="qbf-tally ${all && !miss.length ? 'ok' : 'warn'}">${all && !miss.length ? '✓' : '⚠'} <b>${done} of ${all}</b> client budget${all === 1 ? '' : 's'} refreshed${miss.length ? ` · ${miss.length} did not` : ''}</div>
-      ${rows.length ? rows.map(r => `<div class="qbf-row">
-        <div class="qbf-w">${r.ok ? '✓' : '✕'}</div>
+  const fig = o => o ? `invoiced ${money(o.invoiced)} · paid ${money(o.paid)} · open ${money(o.open)}` : '';
+  const GLYPH = { updated: '✓', current: '✓', mismatch: '⚠', nobooks: '○', unlisted: '⚠', noread: '?', unchecked: '○' };
+  const words = r => r.state === 'updated' ? `<b>UPDATED</b>${r.at ? ' ' + esc(new Date(r.at).toLocaleString([], { hour: 'numeric', minute: '2-digit' })) : ''}${checked ? ' — the page matches the books' : ''}${r.invoiced != null ? ' · ' + fig(r) : ''}`
+    : r.state === 'current' ? `<b>CURRENT</b> — nothing moved in QuickBooks; the page matches the books · ${fig(r)}`
+    : r.state === 'mismatch' ? `<b>DOES NOT MATCH THE BOOKS</b> — their page: ${fig(r.page)} · the books: ${fig(r)}. Tell Claude.`
+    : r.state === 'nobooks' ? `<b>NOTHING IN QUICKBOOKS YET</b>${r.why ? ' — ' + esc(r.why) : ''}`
+    : r.state === 'unlisted' ? `<b>NOT ON THE BOOKS RUN'S LIST</b> — the run has never been told about this page, so its money never moves${r.page ? ` (their page shows ${fig(r.page)})` : ''}. Tell Claude which QuickBooks customer it is.`
+    : r.state === 'noread' ? `<b>COULD NOT READ THE PAGE</b> to check it — open this again in a moment`
+    : `<b>NOT REWRITTEN</b>${r.why ? ' — ' + esc(r.why) : ' — the run gave no reason'} · the pages have not been checked yet`;
+  if (!qbFresh) return `<div class="hint">No QuickBooks run has left a receipt yet. The next time Logan's three reports come in and Claude processes them, this fills in — one line per client page, saying plainly whether its budget matches the books.</div>`;
+  return `<div class="hint" style="margin: 0 0 10px;">Last run: <b>${esc(when || qbFresh.importDate || 'unknown')}</b>${qbFresh.importDate ? ` · books through <b>${esc(qbFresh.importDate)}</b>` : ''}${(qbFresh.source || []).length ? `<br>Read from: ${(qbFresh.source || []).slice(0, 4).map(esc).join(' · ')}` : ''}</div>
+      <div class="qbf-tally ${all && !miss.length ? 'ok' : 'warn'}" id="qbfTally">${all && !miss.length ? '✓' : '⚠'} <b>${done} of ${all}</b> client budget${all === 1 ? '' : 's'} ${checked ? 'match the books' : 'refreshed'}${quiet.length ? ` · ${quiet.length} not in QuickBooks yet` : ''}${miss.length ? ` · ${miss.length} need${miss.length === 1 ? 's' : ''} a look` : ''}${checked ? '' : (_qbfCheck && _qbfCheckStamp === qbFreshStamp(qbFresh)) ? ' · the pages could not be read to check them' : ' · ⏳ checking the pages…'}</div>
+      ${rows.length ? rows.map(r => `<div class="qbf-row" data-state="${r.state}">
+        <div class="qbf-w">${GLYPH[r.state] || '○'}</div>
         <div style="flex: 1; min-width: 0;">
           <div style="font-weight: 800;">${esc(r.job)}</div>
-          <div class="hint" style="margin: 1px 0 0;">${r.ok
-            ? `updated${r.at ? ' ' + esc(new Date(r.at).toLocaleString([], { hour: 'numeric', minute: '2-digit' })) : ''}${r.invoiced != null ? ` · invoiced ${money(r.invoiced)}` : ''}${r.paid != null ? ` · paid ${money(r.paid)}` : ''}${r.open != null ? ` · open ${money(r.open)}` : ''}`
-            : `<b>NOT UPDATED</b>${r.why ? ' — ' + esc(r.why) : ' — the run gave no reason'}`}</div>
+          <div class="hint" style="margin: 1px 0 0;">${words(r)}</div>
         </div></div>`).join('') : '<div class="hint">The run named no client pages at all — that itself is worth asking Claude about.</div>'}
-      ${miss.length ? `<div class="hint" style="margin-top: 10px;">A page usually misses because QuickBooks has no customer whose name matches the job, or because the page was built after the export was pulled. Tell Claude the job name and it gets sorted on the next run.</div>` : ''}`;
+      ${miss.length ? `<div class="hint" style="margin-top: 10px;">A page needs a look when the run has never been told about it, or when what it shows is not what the books say. Tell Claude the job and its customer name in QuickBooks, and it is sorted on the next run. A page that is CURRENT was checked and left alone on purpose — nothing had changed.</div>` : ''}`;
+}
+function openQbFresh() {
+  closePanels();
   $('revBox').innerHTML = `<h3>📚 Client budgets
     ${winX('closeReview()', 'close')}</h3>
-    ${body}
+    <div id="qbfBody">${qbFreshBodyHtml()}</div>
     ${qbFresh ? `<button type="button" class="btn-primary" style="width: 100%; font-weight: 800; margin-top: 12px; padding: 12px;" onclick="qbFreshDismiss()">✓ Got it — clear the banner</button>` : ''}`;
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
+  // read the pages (again, if he is looking) and redraw in place
+  qbFreshVerify(true).then(() => { const b = $('qbfBody'); if (b) b.innerHTML = qbFreshBodyHtml(); renderQbFresh(); }).catch(() => {});
 }
 // ================= /BOOKS UPDATED =================
 // 📣 v5.21 — the button that rings Claude: raises UPDATE-NOW.txt in the exports folder.
@@ -19156,7 +19212,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.93';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.94';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
