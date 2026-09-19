@@ -32,6 +32,20 @@
   .own-inline { display: inline-block; margin-top: 6px; min-height: 32px; }
   .soon.own-off { position: relative; }
   .own-tag { position: absolute; left: 0; right: 0; bottom: 0; background: var(--gold); color: #1c1608; font-size: 10px; font-weight: 800; letter-spacing: .4px; text-align: center; padding: 3px 4px; }
+  /* ┄ v6.96 — Eric: "anytime im in the client preview i want anything they cant see to have a dashed border, bright, even
+     the buttons that are for me." ONE sign for "only you see this": a bright dashed edge in a colour their page never
+     uses (--mine) — on the OWNER VIEW line, on every bar button and ✎/➕/hide switch that is his, on a card, a tile or an
+     option board he has hidden, on the empty-budget stand-in. The rim of a hidden thing stays at full brightness; only
+     what is inside it dims (it used to dim rim and all). A thing they DO see keeps its plain edge. The line at the top
+     says it in words, so it is never the colour alone. */
+  :root { --mine: #4de3ff; }
+  [data-theme="light"] { --mine: #0070d6; }
+  .own-head { background: var(--card); color: var(--ink); border: 2.5px dashed var(--mine); }
+  .own-head b { color: var(--mine); }
+  .own-bar button, .own-inline { border: 2.5px dashed var(--mine); }
+  .own-off { opacity: 1; outline: 3px dashed var(--mine); outline-offset: 2px; }
+  .own-off > *:not(.own-bar):not(.own-tag) { opacity: .5; }
+  .own-tag { background: var(--card); color: var(--ink); border-top: 2.5px dashed var(--mine); }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 640px; margin: 0 auto; padding: 22px 16px 60px; }
   header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 8px; }
@@ -175,7 +189,7 @@ function ownerBar(key, edit, extra) {
 function ownerDecorate() {
   if (!OWNER) return;
   const app = document.getElementById('app'); if (!app) return;
-  app.insertAdjacentHTML('afterbegin', `<div class="own-head">👁 OWNER VIEW — this is exactly what they see. The bars are yours; they never see them.</div>`);
+  app.insertAdjacentHTML('afterbegin', `<div class="own-head">👁 OWNER VIEW — this is exactly what they see. <b>┄ A bright dashed edge, like this one, means ONLY YOU see it</b> — your buttons, and anything you have hidden from them.</div>`);   // ┄ v6.96
   OWN_CARDS.forEach(([key, id, edit]) => {
     const el = document.getElementById(id); if (!el) return;
     if (el.dataset.ownEmpty) {   // 👁 v6.64 — an empty card has no switch, only the door in
