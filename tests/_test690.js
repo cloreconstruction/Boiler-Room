@@ -60,7 +60,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return { seen: s.seen, texts: s.texts, err: s.err || '', logged: entries.filter(e => e.texted).length, cont: F.contCalls, left: F.files.length, line: line ? line.textContent : '', lease: F.lease.length };
   });
   ok('three empty pages, then the files: the sweep follows the cursor — 3 in the Inbox, 3 texts filed, the Inbox emptied, and the line under the meter says so',
-    r1.seen === 3 && r1.texts === 3 && !r1.err && r1.logged === 3 && r1.cont === 3 && r1.left === 0 && r1.lease === 0 && /3 in the Inbox · 3 texts and 0 emails filed/.test(r1.line), JSON.stringify(r1));
+    r1.seen === 3 && r1.texts === 3 && !r1.err && r1.logged === 3 && r1.cont === 3 && r1.left === 0 && r1.lease === 0 && /3 in the Inbox · 3 texts and 0 emails brought into your log/.test(r1.line), JSON.stringify(r1));
 
   const r2 = await page.evaluate(async () => {
     const F = window._fake; F.reset(); F.lead = 2; F.files = [F.text('TEXT -Sep 17, 2026 at 9_55 AM.txt', 'Dale Example', 'x')];
@@ -161,7 +161,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return { held, expired, junk };
   });
   ok('🔑 another device holds the lease → this one does not sweep, and the line says it waits its turn; an expired lease or one that cannot be read stops nothing',
-    r8.held.lists === 0 && r8.held.logged === 0 && /another of your devices is catching up/.test(r8.held.line) && r8.expired.lists === 1 && r8.expired.logged === 1 && r8.junk.logged === 2, JSON.stringify(r8));
+    r8.held.lists === 0 && r8.held.logged === 0 && /another of your devices is bringing the texts in/.test(r8.held.line) && r8.expired.lists === 1 && r8.expired.logged === 1 && r8.junk.logged === 2, JSON.stringify(r8));
 
   console.log('— ☁ v6.90 the cloud watcher reads every page too —');
 

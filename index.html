@@ -3866,7 +3866,7 @@
     <div class="set-section" id="setMail">
       <h4>📧 Email senders</h4>
       <!-- 📥 v6.86 — the Inbox sweep, on demand and in words -->
-      <div class="rev-row" style="gap: 6px; margin: 0 0 6px; flex-wrap: wrap;"><button type="button" class="btn-ghost" onclick="sweepNow()">📥 Sweep the Inbox now</button></div>
+      <div class="rev-row" style="gap: 6px; margin: 0 0 6px; flex-wrap: wrap;"><button type="button" class="btn-ghost" onclick="sweepNow()">📥 Check for new texts &amp; emails now</button></div>
       <div id="sweepStatusSet" style="margin: 0 0 8px;"></div>
       <div class="hint" style="margin: 0 0 8px;">Who the app keeps and who it skips. ✓ ALWAYS files their emails onto your log, locked to you. 🚫 NEVER drops them into the Robots folder, nothing logged. A name that starts with @ means everyone at that company.</div>
       <label class="hint" style="display: flex; gap: 8px; align-items: center; margin: 0 0 8px; cursor: pointer;">
@@ -3930,7 +3930,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.92 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.93 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9337,21 +9337,23 @@ function sweepNote(patch) {
 }
 function sweepStatusHtml() {
   let s = window._sweepLast; if (!s) { try { s = JSON.parse(lsGet('daylog-sweep-last') || 'null'); } catch (e) { s = null; } }
-  const tap = '<a href="javascript:void(0)" onclick="sweepNow()">Sweep now</a>';
-  if (!s || !s.at) return `<div class="hint sweep-line" style="margin-top: 6px;">📥 Inbox sweep: has not run yet on this phone — it runs with every sync · ${tap}</div>`;
+  // 🗣 v6.93 — Eric: "i'd say just change 'sweep now' to different wording, i thought that meant send all text to the grinder
+  // like the 'flush' word we used. it means 'go check for texts'?" It does. Every word he reads about it says CHECK now.
+  const tap = '<a href="javascript:void(0)" onclick="sweepNow()">Check for texts now</a>';
+  if (!s || !s.at) return `<div class="hint sweep-line" style="margin-top: 6px;">📥 Has not checked for new texts yet on this phone — it checks with every sync · ${tap}</div>`;
   const ago = Math.round((Date.now() - +new Date(s.at)) / 60000);
   const when = ago < 1 ? 'just now' : ago < 60 ? `${ago} min ago` : ago < 1440 ? `${Math.round(ago / 60)} h ago` : new Date(s.at).toLocaleDateString([], { month: 'short', day: 'numeric' });
-  if (s.err) return `<div class="hint sweep-line" style="margin-top: 6px;">⚠ Inbox sweep FAILED ${when}: ${esc(String(s.err).slice(0, 140))} · ${tap}</div>`;
-  if (s.wait) return `<div class="hint sweep-line" style="margin-top: 6px;">⏳ Inbox sweep ${when}: another of your devices is catching up on the Inbox — this one waits its turn · ${tap}</div>`;   // 🔑 v6.90
+  if (s.err) return `<div class="hint sweep-line" style="margin-top: 6px;">⚠ The check for new texts FAILED ${when}: ${esc(String(s.err).slice(0, 140))} · ${tap}</div>`;
+  if (s.wait) return `<div class="hint sweep-line" style="margin-top: 6px;">⏳ ${when}: another of your devices is bringing the texts in — this one waits its turn · ${tap}</div>`;   // 🔑 v6.90
   const part = s.part ? ` · ⚠ ${/^the listing was cut short/.test(s.part) ? esc(s.part) : 'the listing was cut short (' + esc(String(s.part).slice(0, 60)) + ')'}` : '';
-  return `<div class="hint sweep-line" style="margin-top: 6px;">📥 Inbox sweep ${when}: ${s.seen || 0} in the Inbox · ${s.texts || 0} text${s.texts === 1 ? '' : 's'} and ${s.mails || 0} email${s.mails === 1 ? '' : 's'} filed${s.left ? ` · ${s.left} still waiting for the next sweep` : ''}${s.missed ? ` · ⚠ ${s.missed} could not be read this time` : ''}${part} · ${tap}</div>`;
+  return `<div class="hint sweep-line" style="margin-top: 6px;">📥 Checked for new texts ${when}: ${s.seen || 0} in the Inbox · ${s.texts || 0} text${s.texts === 1 ? '' : 's'} and ${s.mails || 0} email${s.mails === 1 ? '' : 's'} brought into your log${s.left ? ` · ${s.left} more on the next check` : ''}${s.missed ? ` · ⚠ ${s.missed} could not be read this time` : ''}${part} · ${tap}</div>`;
 }
 async function sweepNow() {
-  if (_sweepBusy) { toast('📥 A sweep is already running — watch the line under the text meter'); return; }   // v6.90 — one at a time
-  toast('📥 Sweeping the Inbox…');
+  if (_sweepBusy) { toast('📥 Already checking for texts — watch the line under the text counter'); return; }   // v6.90 — one at a time
+  toast('📥 Checking for new texts and emails…');
   await checkInboxTexts();
   const s = window._sweepLast || {};
-  toast(s.err ? `⚠ The sweep failed: ${String(s.err).slice(0, 90)}` : `📥 ${s.texts || 0} texts and ${s.mails || 0} emails filed · ${s.left || 0} still waiting`, !s.err);
+  toast(s.err ? `⚠ The check failed: ${String(s.err).slice(0, 90)}` : `📥 ${s.texts || 0} texts and ${s.mails || 0} emails brought in · ${s.left || 0} still to come`, !s.err);
   renderTextDigest(); const ss = $('sweepStatusSet'); if (ss) ss.innerHTML = sweepStatusHtml();
 }
 // 📥 v6.90 — CATCHING UP. One sweep files twenty; 336 were waiting when the listing bug (see dbxList) was found. When a
@@ -9397,7 +9399,7 @@ async function checkInboxTexts(round, tries) {
       _sweepNext = setTimeout(() => { _sweepNext = 0; checkInboxTexts(round + 1); }, window._sweepGap || 2500);
     } else if (round > 0 || (tries | 0) > 0) {
       await sweepLeaseSet(0);   // hand it back: the next device sweeps at once
-      busyDone(s.err ? '⚠ THE INBOX SWEEP STOPPED' : s.left > 0 ? `📥 ${s.left} STILL WAITING — the next sync goes on` : '📥 ✓ INBOX CAUGHT UP');
+      busyDone(s.err ? '⚠ THE CHECK FOR TEXTS STOPPED — see the line under the text counter' : s.left > 0 ? `📥 ${s.left} STILL WAITING — the next sync goes on` : '📥 ✓ INBOX CAUGHT UP');
     }
   } finally { _sweepBusy = false; }
 }
@@ -19154,7 +19156,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.92';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.93';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

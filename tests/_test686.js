@@ -165,15 +165,15 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   const r9 = await page.evaluate(async () => {
     renderTextDigest();
     const line = document.querySelector('#txtDigest .sweep-line');
-    const good = !!line && /Inbox sweep just now: 1 in the Inbox/.test(line.textContent) && /Sweep now/.test(line.textContent) && typeof sweepNow === 'function';
+    const good = !!line && /Checked for new texts just now: 1 in the Inbox/.test(line.textContent) && /Check for texts now/.test(line.textContent) && !/sweep/i.test(line.textContent)   /* v6.93 — "sweep" read like "flush" to him */ && typeof sweepNow === 'function';
     openPanel('settings'); renderMailSenders();
     const set = $('sweepStatusSet');
-    const inSetup = !!set && /Inbox sweep/.test(set.textContent) && !![...$('setMail').querySelectorAll('button')].find(b => /Sweep the Inbox now/.test(b.textContent));
+    const inSetup = !!set && /Checked for new texts/.test(set.textContent) && !![...$('setMail').querySelectorAll('button')].find(b => /Check for new texts & emails now/.test(b.textContent));
     closePanels();
     window.dbxRpc = async () => ({ error_summary: 'expired_access_token/' });
     await checkInboxTexts();
     renderTextDigest();
-    const bad = /⚠ Inbox sweep FAILED just now: Inbox listing: expired_access_token/.test(document.querySelector('#txtDigest .sweep-line').textContent) && /FAILED just now: Inbox listing: expired_access_token/.test($('sweepStatusSet').textContent);
+    const bad = /⚠ The check for new texts FAILED just now: Inbox listing: expired_access_token/.test(document.querySelector('#txtDigest .sweep-line').textContent) && /FAILED just now: Inbox listing: expired_access_token/.test($('sweepStatusSet').textContent);
     return good && inSetup && bad ? true : JSON.stringify({ good, inSetup, bad, line: line && line.textContent, set: set && set.textContent, last: window._sweepLast });
   });
   ok('the line under the text meter and Setup → 📧 Email senders say it in words, with a Sweep now tap; a failure reads ⚠ FAILED', r9 === true, r9);
