@@ -968,6 +968,17 @@
     .wl-fix, .wl-box { margin-left: 56px; }
     #wfPend .wl-bar { max-width: 880px; }
   }
+  /* 🔗 v7.04 — an entry number in the Wizard's answer is a link (underline + weight + brass); the entry opens OVER the answer */
+  .wl-ent { color: var(--accent); font-weight: 800; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; padding: 3px 1px; }
+  .we-sheet { position: fixed; inset: 0; z-index: 330; display: flex; align-items: flex-start; justify-content: center; padding: max(12px, env(safe-area-inset-top)) 8px 8px; background: rgba(0,0,0,.62); }
+  .we-box { width: min(100%, 620px); max-height: 92%; overflow-y: auto; padding: 12px 14px 14px; border: 2px solid var(--accent); border-radius: 14px; background: var(--surface-1); color: var(--ink-1); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  .we-head { display: flex; align-items: center; gap: 10px; } .we-head b { font-size: 16px; letter-spacing: .6px; color: var(--accent); } .we-head span { flex: 1; font-size: 13px; color: var(--ink-2); }
+  .we-meta { font-size: 13px; color: var(--ink-2); margin: 6px 0 8px; line-height: 1.45; }
+  .we-words { font-size: 16px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .we-ai { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--accent); font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); } .we-ai b { display: block; color: var(--ink-1); margin-bottom: 2px; }
+  /* a photo opened from the full-screen answer (z 320) used to open UNDER it: the lightbox now sits over the answer and the entry window, the working band over the lightbox */
+  #lightbox { z-index: 340 !important; } #busyBand { z-index: 350 !important; }
+  #toast { z-index: 360 !important; }   /* and a toast was hidden under the full-screen answer too ("Kept — 2 waiting" was never seen there) */
   .wl-fix.pend { border-left-style: dashed; border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--accent) 10%, transparent); font-weight: 600; }   /* ✎ v7.02 — kept, not saved yet: dashed + the words */
   .wl-bar { margin: 12px 0 4px; padding: 10px; border: 2px solid var(--accent); border-radius: 12px; font-size: 15px; } .wl-bar .btn-primary, .wl-bar .btn-ghost { min-height: 44px; }
   .wl-bar-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; } .wl-bar-top b { font-size: 14.5px; } .wl-drop { font-size: 12.5px; padding: 4px 10px; }
@@ -4070,7 +4081,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.03 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.04 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -17511,7 +17522,7 @@ function wizLinesHtml(md) {
   const fixes = wizFixesFor(_lastAnswer && _lastAnswer.keep);
   return `<div class="wl-list">` + lines.map((l, i) => {
     const fx = fixes.filter(f => f.line === l), pn = _wizPend.find(f => f.i === i && f.line === l);
-    return `<div class="wl-line${pn ? ' has-pend' : ''}" data-i="${i}" onclick="wizLineTap(${i})"><div class="wl-t">${mdToHtml(l)}</div><button type="button" class="wl-x" onclick="event.stopPropagation(); wizLineFix(${i})" aria-label="${pn ? 'change the fix you kept on this line' : 'correct this line'}" title="${pn ? 'change the fix you kept' : 'correct this line'}">✎</button></div>` +
+    return `<div class="wl-line${pn ? ' has-pend' : ''}" data-i="${i}" onclick="wizLineTap(${i})"><div class="wl-t">${wizLinkEntries(mdToHtml(l))}</div><button type="button" class="wl-x" onclick="event.stopPropagation(); wizLineFix(${i})" aria-label="${pn ? 'change the fix you kept on this line' : 'correct this line'}" title="${pn ? 'change the fix you kept' : 'correct this line'}">✎</button></div>` +
       fx.map(f => `<div class="wl-fix">✎ Eric: ${esc(f.t)}</div>`).join('') +
       (pn ? `<div class="wl-fix pend">✎ KEPT — not saved yet: ${esc(pn.t)}</div>` : '') + `<div class="wl-box" id="wlBox-${i}"></div>`;
   }).join('') + `<div class="wl-bar"${_wizPend.length ? '' : ' hidden'}>${wizPendBarInner()}</div></div>`;
@@ -17521,6 +17532,33 @@ function wizLinesHtml(md) {
 // starts), the answer keeps a readable width, the line under the mouse lights up as one band with its pencil — and a click
 // ANYWHERE on the line opens its fix, so there is nothing to aim at. The phone is as it was (a tap on the words does nothing).
 function wizLineTap(i) { if (window.matchMedia && window.matchMedia('(min-width: 701px)').matches) wizLineFix(i); }
+// 🔗 v7.04 — Eric: "on the summary it has the entry number which i really like but i think i should be able to click on
+// that and see the entry." The Wizard cites its records in words — "entry 3667", "(entry 3667, 3666)", "entries 12 and
+// 15", "Entry #14" — so every number that follows the word entry/entries AND is a record in the log becomes a link
+// (underlined, heavy, brass — never the colour alone). A bare "#1330" is an invoice, not an entry: it stays plain. The
+// entry opens in a small window OVER the answer (the answer stays where it was): when, the job, the whole of the words,
+// what was read off its photo, its tags, 📷 to see the photo. On a PC the link does not also open the line's fix box.
+function wizLinkEntries(html) {
+  return String(html).replace(/\b(entr(?:y|ies))(\s+)((?:#?\d{1,6})(?:(?:\s*,\s*(?:and\s+)?|\s+and\s+|\s*&amp;\s*|\s*,?\s*(?:repeated|also|see)\s+)#?\d{1,6})*)/gi, (m, word, sp, list) =>
+    word + sp + list.replace(/#?\d{1,6}/g, n => { const id = +n.replace('#', ''); return entries.some(e => e.id === id) ? `<a href="javascript:void(0)" class="wl-ent" onclick="event.stopPropagation(); wizEntryOpen(${id})" title="open entry ${id}">${n}</a>` : n; }));
+}
+function wizEntryOpen(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) { toast('That entry is not in the log any more', false); return; }
+  let host = $('wizEntHost'); if (!host) { host = document.createElement('div'); host.id = 'wizEntHost'; document.body.appendChild(host); }
+  const ts = e.ts instanceof Date ? e.ts : new Date(e.ts), when = ts.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + fmtTime(ts);
+  const qty = e.miles != null ? `${(+e.miles).toFixed(1)} mi` : e.amount != null ? fmtMoney(+e.amount) : e.hours != null ? `${(+e.hours).toFixed(1)} hrs` : '';
+  const photos = e.photoPaths && e.photoPaths.length ? e.photoPaths : e.photoPath ? [e.photoPath] : [];
+  const locked = typeof isLocked === 'function' ? isLocked(e) : !!e.personal;
+  host.innerHTML = `<div class="we-sheet" onclick="if (event.target === this) wizEntryClose()"><div class="we-box" role="dialog" aria-label="log entry ${id}">
+    <div class="we-head"><b>ENTRY ${id}</b><span>${esc(when)}</span><button type="button" class="btn-ghost x-plate x-small" style="min-width: 44px;" onclick="wizEntryClose()" aria-label="close the entry" title="close the entry">✕</button></div>
+    <div class="we-meta">${esc(e.type || 'Note')} · ${esc(e.job || '—')}${e.who && e.who !== 'Me' ? ' · ' + esc(e.who) : ''}${qty ? ' · <b>' + qty + '</b>' : ''}${e.mail ? ' · 📧 email' : e.texted ? ' · 💬 text' : ''}${locked ? ' · 🔒 personal — it stays on this phone' : ''}</div>
+    <div class="we-words">${esc(e.details || '')}</div>
+    ${e.ai ? `<div class="we-ai"><b>🔮 read off the photo, and your corrections</b>${esc(String(e.ai).slice(0, 1500))}</div>` : ''}
+    ${(e.tags || []).length ? `<div class="we-meta" style="margin-top: 8px;">${e.tags.map(t => '🏷 ' + esc(t)).join(' · ')}</div>` : ''}
+    <div class="rev-row" style="margin-top: 10px; flex-wrap: wrap; gap: 6px;">${photos.length ? `<button type="button" class="btn-primary" onclick="openEntryPhoto(${id}, event)">📷 See the photo${photos.length > 1 ? 's · ' + photos.length : ''}</button>` : ''}<button type="button" class="btn-ghost" onclick="wizEntryClose()">‹ Back to the answer</button></div></div></div>`;
+}
+function wizEntryClose() { const h = $('wizEntHost'); if (h) h.innerHTML = ''; }
 function wizPendBarInner() {
   const n = _wizPend.length; if (!n) return '';
   return `<div class="wl-bar-top"><b>✎ ${n} fix${n === 1 ? '' : 'es'} kept — not saved yet</b><button type="button" class="btn-ghost wl-drop" onclick="wizPendDrop()">${_wizPendArm ? '⚠ SURE? tap again — they are gone' : '✕ Drop them'}</button></div>
@@ -20257,7 +20295,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.03';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.04';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
