@@ -2303,6 +2303,10 @@
   .ch-sh-job small { display: block; font-size: 13px; color: var(--ink-2); line-height: 1.4; }
   .ch-sh-l { display: block; margin: 10px 0 4px; font-size: 12.5px; font-weight: 800; letter-spacing: .4px; color: var(--accent); }
   .ch-sh-l small { font-weight: 400; letter-spacing: 0; color: var(--ink-2); } .ch-sh-l.mine { color: var(--ink-1); }
+  .ch-rem { margin-top: 12px; padding: 10px; border: 1.5px solid var(--grid); border-radius: 12px; }   /* 🔔 v7.01 — the reminder */
+  .ch-rem-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-top: 6px; font-size: 13.5px; color: var(--ink-2); }
+  .ch-rem-row .pick-chip { min-height: 40px; padding: 6px 12px; font-weight: 800; letter-spacing: .4px; }
+  .ch-rem-row select { min-height: 40px; font-size: 16px; margin: 0 2px; }
   @media (min-width: 701px) {   /* on the PC the calendar keeps a readable width and a part's letter sits right beside its hours */
     .ch-dow, .ch-pr { max-width: 800px; grid-template-columns: 110px repeat(7, minmax(0, 1fr)) 60px; gap: 3px; }
     .ch-c { font-size: 13.5px; min-height: 36px; }
@@ -2964,7 +2968,7 @@
        v5.40 — Eric moved them to the VERY top, above the hot strip. -->
   <div class="sc-row" id="scRow">
     <button type="button" class="sc-btn" onclick="openPortalWin()">🏠 <span>Project portal</span></button>
-    <button type="button" class="sc-btn" onclick="crewViewMenu()">👷 <span>Crew portal</span></button>
+    <button type="button" class="sc-btn" onclick="crewViewMenu()">👷 <span>Crew portal<span class="sc-n" id="scCrewN"></span></span></button>
     <!-- 📇 v6.17 — addresses, numbers, emails, door codes. One tap, out of the way. -->
     <button type="button" class="sc-btn" onclick="openJobCards()">📇 <span>Job cards</span></button>
     <!-- 📊 v6.76 — Eric: "make a button for it up to the right of job cards at the top of main page." The summaries page: the sort tab and the summary tab; the count is what waits to be sorted. -->
@@ -4050,7 +4054,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.00 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.01 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -10390,7 +10394,7 @@ async function chLoad() {
 }
 function chSaveSoon(P) {
   if (P) P.touch = new Date().toISOString();
-  _chDirty = true; chMirror(); chSaveWord();
+  _chDirty = true; chMirror(); chSaveWord(); chBadge();
   clearTimeout(_chT); _chT = setTimeout(chSaveNow, 1200);
 }
 async function chSaveNow() {
@@ -10609,6 +10613,7 @@ async function chScan() {
       return { ppe, name: f.name, path: f.path_lower || f.path_display, hash: f.content_hash, kind: P ? 'newer' : 'new' };
     }).filter(Boolean).slice(0, 3);
   } catch (e) { _chFound = []; }
+  chBadge();
 }
 async function chTakeFound(i) {
   const f = _chFound[i]; if (!f) return;
@@ -10623,6 +10628,70 @@ async function chWarm() {   // the send sheet must ride his tap, so the original
   try { const b = await chDownloadBuf(P.keep); if (b) { _chBuf[P.ppe] = b; if ($('chSendBtn')) renderCrewHours(); } } catch (e) {}
 }
 
+// ---------- 🔔 v7.01 — THE REMINDER. Eric: "also i need some kind of reminder to look at payroll every week or two weeks,
+// every week is better for the summary." Two halves. (1) A COUNT on the 👷 Crew portal plate whenever hours wait for him —
+// a pay period to approve or to send, or a new file the email pipe has put in Dropbox (`chBadge`, the same corner badge the
+// Summary plate wears; the folder is looked at no more than once every six hours per device). (2) A PUSH to his own phone:
+// the hourly timer `hours-reminder` reads App Data/hours-reminder.json, which THIS window writes — off / every week /
+// every 2 weeks (the week right after a pay period ends), the day, the Alaska hour. He asked for one, so it starts ON —
+// every Friday 8 am, the morning after Phil's weekly recap lands — said in words the first time, and his to change at the
+// foot of this page. The push says only "Time to look at the crew's hours": no name, no dollars, no hours. Never a crew phone.
+const CH_REM_PATH = () => DBX_ROOT + '/App Data/hours-reminder.json';
+const CH_DAYS = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
+let _chRem = null, _chRemKnown = false;
+const chRemDefault = () => ({ on: true, every: 1, day: 5, at: 8 });
+const chHourWord = h => (h % 12 || 12) + (h < 12 ? ' am' : ' pm');
+const chRemWords = () => !_chRem || !_chRem.on ? 'off' : `${_chRem.every === 2 ? 'every 2 weeks, the week after a pay period ends' : 'every week'} — ${CH_DAYS[_chRem.day]} at ${chHourWord(_chRem.at)}`;
+async function chRemLoad() {
+  if (CREW_NAME || !dbx.refreshToken) return;
+  try {
+    const raw = await dbxDownload(CH_REM_PATH());
+    if (raw != null) { const j = JSON.parse(raw); if (j && typeof j === 'object') { _chRem = { ...chRemDefault(), ...j }; _chRemKnown = true; } return; }
+    if (await dbxPathExists(CH_REM_PATH())) return;   // it is there but would not read just now — leave it be
+    _chRem = chRemDefault(); _chRemKnown = true; await chRemSave(true);
+  } catch (e) { /* offline — nothing is assumed, nothing is written */ }
+}
+async function chRemSave(first) {
+  if (CREW_NAME || !dbx.refreshToken || !_chRem) return false;
+  const ks = Object.keys(chStore().periods).sort(); _chRem.anchor = ks[ks.length - 1] || _chRem.anchor || '';   // the newest pay period's Saturday: what "every 2 weeks" counts from
+  _chRem.touch = new Date().toISOString();
+  try { await dbxUpload(CH_REM_PATH(), JSON.stringify(_chRem, null, 1)); if (first) toast('🔔 Reminder ON — a push every Friday at 8 am. It is at the foot of this page if you want another day, or none'); return true; }
+  catch (e) { toast('⚠ The reminder did not save — check the connection', false); return false; }
+}
+function chRemSet(k, v) {
+  if (CREW_NAME) return; if (!_chRem) _chRem = chRemDefault();
+  if (k === 'mode') { _chRem.on = +v !== 0; if (+v) _chRem.every = +v === 2 ? 2 : 1; }
+  else if (k === 'day') _chRem.day = Math.max(0, Math.min(6, +v || 0));
+  else if (k === 'at') _chRem.at = Math.max(5, Math.min(20, +v || 8));
+  if (_chRem.on && _chRem.every === 2 && !Object.keys(chStore().periods).length) { _chRem.every = 1; toast('Every 2 weeks counts from a pay period — bring one in first. It is set to every week for now', false); }
+  _chRemKnown = true; renderCrewHours();
+  chRemSave(false).then(ok => { if (ok) toast(_chRem.on ? '🔔 Reminder: ' + chRemWords() : '🔕 Reminder OFF'); });
+}
+function chRemHtml() {
+  if (CREW_NAME || !dbx.refreshToken) return '';
+  const r = _chRem || chRemDefault(), mode = !_chRem || !r.on ? 0 : (r.every === 2 ? 2 : 1), shown = _chRemKnown ? mode : -1;
+  return `<div class="ch-rem" id="chRem"><div class="ch-nh" style="color: var(--accent);">🔔 REMINDER — a push to your phone</div>
+    <div class="ch-rem-row" role="group" aria-label="how often">${[[0, 'OFF'], [1, 'EVERY WEEK'], [2, 'EVERY 2 WEEKS']].map(([v, w]) => `<button type="button" class="pick-chip${shown === v ? ' sel' : ''}" onclick="chRemSet('mode', ${v})" aria-pressed="${shown === v}">${shown === v ? '✓ ' : ''}${w}</button>`).join('')}</div>
+    ${shown > 0 ? `<div class="ch-rem-row"><label>on <select id="chRemDay" onchange="chRemSet('day', this.value)" aria-label="which day">${CH_DAYS.map((d, i) => `<option value="${i}"${r.day === i ? ' selected' : ''}>${d}</option>`).join('')}</select></label>
+      <label>at <select id="chRemAt" onchange="chRemSet('at', this.value)" aria-label="what time, Alaska">${Array.from({ length: 16 }, (_, i) => i + 5).map(h => `<option value="${h}"${r.at === h ? ' selected' : ''}>${chHourWord(h)}</option>`).join('')}</select> Alaska time</label></div>` : ''}
+    <div class="hint" style="margin: 4px 0 0;">${!_chRemKnown ? '⏳ reading the setting…' : shown > 0 ? `It says only "Time to look at the crew's hours" — no names, no numbers.${shown === 2 ? ' Every 2 weeks rings the week right after a pay period ends.' : ''} It needs notifications ON for Boiler Room on this phone (Setup → 🔔 Notifications).` : 'No push. The 👷 Crew portal button still shows a count when hours are waiting.'}</div></div>`;
+}
+// the count on the 👷 Crew portal plate: what waits for him
+function chBadge() {
+  const el = $('scCrewN'); if (!el) return; if (CREW_NAME) { el.textContent = ''; return; }
+  const n = Object.values(chStore().periods).filter(p => chLit(p) < 3).length + _chFound.length;
+  el.textContent = n ? String(n) : '';
+  el.setAttribute('aria-label', n ? n + ' waiting in crew hours' : '');
+}
+async function chBoot() {   // once, a few seconds after the app opens: the badge, and (at most every six hours) a look in the Dropbox folder
+  if (CREW_NAME) return; chBadge();
+  if (!dbx.refreshToken) return;
+  try {
+    await chLoad(); chBadge();
+    const last = +lsGet('daylog-chscan-at') || 0;
+    if (Date.now() - last > 6 * 3600e3) { lsSet('daylog-chscan-at', String(Date.now())); await chScan(); chBadge(); }
+  } catch (e) {}
+}
 // ---------- the door and the window ----------
 function chDoorWord() {
   const ps = Object.values(chStore().periods), n = k => ps.filter(p => chLit(p) === k).length, bits = [];
@@ -10637,6 +10706,7 @@ async function openCrewHours() {
   pickOne(); renderCrewHours();
   $('revModal').classList.add('show', 'mat-full'); document.body.classList.add('modal-open');
   if (!_chDirty) { await chLoad(); pickOne(); renderCrewHours(); }
+  chRemLoad().then(() => { if ($('chBox')) renderCrewHours(); });   // 🔔 v7.01
   chWarm();
   await chScan(); if ($('chBox')) renderCrewHours();
 }
@@ -10871,7 +10941,7 @@ function renderCrewHours() {
   box.innerHTML = `<div id="chBox"><h3 class="mat-head"><span>⏱ Crew hours</span> <span id="chSaveWord" class="hint" style="margin: 0; font-size: 11px;">${_chDirty ? '⏳ saving…' : '✓ saved'}</span>
       <span class="mat-head-btns"><button type="button" class="btn-ghost req-x x-plate x-small" style="min-width: 44px;" onclick="chClose()" aria-label="close crew hours" title="close crew hours">✕</button></span></h3>
     <div class="hint" style="margin: 0 0 8px;">${P ? 'Tap a day for the work types · ✎ a fix rides to Logan · ● a note of your own stays with you.' : 'From Phil\'s time clock, every two weeks. Read here, never changed — tap a day to see the work types; a wrong day gets a ✎ fix that rides to Logan, and ● a note of your own stays with you.'}</div>
-    ${door}${body}${P ? `<div class="ch-door" style="margin-top: 12px;">${drop}</div>` : ''}
+    ${door}${body}${P ? `<div class="ch-door" style="margin-top: 12px;">${drop}</div>` : ''}${chRemHtml()}
     ${others.length ? `<div class="ch-others"><div class="ch-nh" style="color: var(--ink-2);">OTHER PAY PERIODS</div>${others.map(k => { const o = S.periods[k], l = chLit(o); return `<button type="button" class="ch-other" onclick="chPick('${escq(k)}')"><span><b>ending ${chMD(k)}/${k.slice(2, 4)}</b> · ${chF(chTot(o))} h</span><span class="ch-mini" role="img" aria-label="${CH_LIGHTS[l - 1][2]}">${[1, 2, 3, 4].map(n => `<i${n <= l ? ' class="on"' : ''}></i>`).join('')}<small>${'①②③④'[l - 1]} ${CH_LIGHTS[l - 1][1]}</small></span></button>`; }).join('')}</div>` : ''}</div>`;
 }
 
@@ -20102,7 +20172,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.00';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.01';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -20705,6 +20775,7 @@ async function pullRemote() {
   checkInboxTexts(); // texts the phone's Shortcuts saved into /Inbox
   checkClientAsks(); // 💬 v5.19 — client questions/remarks from the portal pages
   checkCrewLogs(); // crew punches + routed notes become 👷 review cards
+  if (!window._chBooted) { window._chBooted = true; chBoot(); } else chBadge();   // ⏱ v7.01 — the count on the 👷 Crew portal plate: hours waiting for him
   refreshCrewCfg(); // crew phones pick up Eric's latest job/category list
   publishSharedNotes(); // 🔓 unlocked notes sweep out; re-locked ones sweep back off
   checkSharedNotes(); // crew phones pick up their FROM ERIC list
