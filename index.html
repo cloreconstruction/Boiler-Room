@@ -958,6 +958,16 @@
   .wl-t p, .wl-t ul, .wl-t ol { margin: 0; }
   .wl-x { flex: 0 0 36px; min-height: 32px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer; }
   .wl-fix { margin: 2px 0 6px 12px; padding: 4px 8px; border-left: 3px solid var(--accent); font-size: 13.5px; }
+  @media (min-width: 701px) {   /* 🖥 v7.03 — on the PC: the pencil leads the line, the row under the mouse is one lit band, a click anywhere on it opens the fix */
+    .wl-list { max-width: 880px; }
+    .wl-line { padding: 4px 8px; border-radius: 8px; cursor: pointer; align-items: center; }
+    .wl-line .wl-x { order: -1; flex-basis: 40px; min-height: 36px; }
+    .wl-line:hover { background: color-mix(in srgb, var(--accent) 13%, transparent); }
+    .wl-line:hover .wl-t { opacity: 1; }
+    .wl-line:hover .wl-x { border-color: var(--accent); color: var(--accent); border-width: 2px; }
+    .wl-fix, .wl-box { margin-left: 56px; }
+    #wfPend .wl-bar { max-width: 880px; }
+  }
   .wl-fix.pend { border-left-style: dashed; border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--accent) 10%, transparent); font-weight: 600; }   /* ✎ v7.02 — kept, not saved yet: dashed + the words */
   .wl-bar { margin: 12px 0 4px; padding: 10px; border: 2px solid var(--accent); border-radius: 12px; font-size: 15px; } .wl-bar .btn-primary, .wl-bar .btn-ghost { min-height: 44px; }
   .wl-bar-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; } .wl-bar-top b { font-size: 14.5px; } .wl-drop { font-size: 12.5px; padding: 4px 10px; }
@@ -4060,7 +4070,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.02 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.03 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -17501,11 +17511,16 @@ function wizLinesHtml(md) {
   const fixes = wizFixesFor(_lastAnswer && _lastAnswer.keep);
   return `<div class="wl-list">` + lines.map((l, i) => {
     const fx = fixes.filter(f => f.line === l), pn = _wizPend.find(f => f.i === i && f.line === l);
-    return `<div class="wl-line${pn ? ' has-pend' : ''}" data-i="${i}"><div class="wl-t">${mdToHtml(l)}</div><button type="button" class="wl-x" onclick="wizLineFix(${i})" aria-label="${pn ? 'change the fix you kept on this line' : 'correct this line'}" title="${pn ? 'change the fix you kept' : 'correct this line'}">✎</button></div>` +
+    return `<div class="wl-line${pn ? ' has-pend' : ''}" data-i="${i}" onclick="wizLineTap(${i})"><div class="wl-t">${mdToHtml(l)}</div><button type="button" class="wl-x" onclick="event.stopPropagation(); wizLineFix(${i})" aria-label="${pn ? 'change the fix you kept on this line' : 'correct this line'}" title="${pn ? 'change the fix you kept' : 'correct this line'}">✎</button></div>` +
       fx.map(f => `<div class="wl-fix">✎ Eric: ${esc(f.t)}</div>`).join('') +
       (pn ? `<div class="wl-fix pend">✎ KEPT — not saved yet: ${esc(pn.t)}</div>` : '') + `<div class="wl-box" id="wlBox-${i}"></div>`;
   }).join('') + `<div class="wl-bar"${_wizPend.length ? '' : ' hidden'}>${wizPendBarInner()}</div></div>`;
 }
+// 🖥 v7.03 — Eric: "on the phone the edit buttons on the summary works great but on the pc its hard to follow across and
+// click the right edit pencil as is far apart on the big screen." On a PC the pencil now LEADS its line (right where the eye
+// starts), the answer keeps a readable width, the line under the mouse lights up as one band with its pencil — and a click
+// ANYWHERE on the line opens its fix, so there is nothing to aim at. The phone is as it was (a tap on the words does nothing).
+function wizLineTap(i) { if (window.matchMedia && window.matchMedia('(min-width: 701px)').matches) wizLineFix(i); }
 function wizPendBarInner() {
   const n = _wizPend.length; if (!n) return '';
   return `<div class="wl-bar-top"><b>✎ ${n} fix${n === 1 ? '' : 'es'} kept — not saved yet</b><button type="button" class="btn-ghost wl-drop" onclick="wizPendDrop()">${_wizPendArm ? '⚠ SURE? tap again — they are gone' : '✕ Drop them'}</button></div>
@@ -20242,7 +20257,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.02';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.03';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
