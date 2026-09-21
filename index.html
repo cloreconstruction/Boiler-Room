@@ -2262,6 +2262,54 @@
   .ch-other { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 8px; min-height: 46px; margin: 0 0 6px; padding: 6px 10px; border: 1.5px solid var(--grid); border-radius: 12px; background: transparent; color: var(--ink-1); font: inherit; font-size: 13.5px; cursor: pointer; text-align: left; }
   .ch-mini { display: inline-flex; align-items: center; gap: 3px; flex: none; } .ch-mini i { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid var(--baseline, #8a8177); display: inline-block; } .ch-mini i.on { background: var(--accent); border-color: var(--accent); }
   .ch-mini small { margin-left: 4px; font-size: 11px; color: var(--ink-2); letter-spacing: .3px; }
+  /* 🗓 v7.00 — BY WEEK: a job is a LETTER (the tag); a day on two jobs is a box split by a line, a part a job — two shades,
+     but the letter is what tells them apart; ✎ top corner = a fix for Logan, ● bottom corner = his own note. */
+  .ch-tag { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 20px; height: 20px; padding: 0 4px; border: 1.5px solid var(--accent); border-radius: 6px; color: var(--accent); font-size: 11.5px; font-weight: 900; letter-spacing: 0; line-height: 1; vertical-align: 1px; }
+  .ch-tag.sm { min-width: 17px; height: 17px; font-size: 10.5px; }
+  .ch-tag.unk { border-color: var(--warn, #ffa657); color: var(--warn, #ffa657); }
+  .ch-legend { margin: 6px 0 2px; }
+  .ch-lg { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-top: 1px solid var(--grid); }
+  .ch-lgn { flex: 1; min-width: 0; min-height: 46px; text-align: left; background: transparent; border: 0; color: var(--ink-1); font: inherit; font-weight: 800; font-size: 13.5px; letter-spacing: .3px; padding: 2px 0; cursor: pointer; overflow-wrap: anywhere; }
+  .ch-lgn small { display: block; font-weight: 400; letter-spacing: 0; font-size: 12px; color: var(--ink-2); }
+  .ch-lg.unk .ch-lgn { color: var(--warn, #ffa657); }
+  .ch-week { border-top: 2px solid var(--grid); margin-top: 8px; padding-top: 2px; }
+  .ch-wk.big { font-size: 12.5px; color: var(--accent); }
+  .ch-c.split { display: flex; flex-direction: column; align-items: stretch; justify-content: center; padding: 0; }
+  .ch-part { position: relative; display: block; padding: 4px 2px 3px 10px; text-align: right; font-size: 11.5px; font-weight: 700; line-height: 1; color: var(--ink-1); white-space: nowrap; }
+  .ch-part.one { padding: 0; text-align: center; font-size: 12px; }   /* one job: the hours centred, its letter in the corner above them */
+  .ch-part.one u { left: -1px; top: -8px; transform: none; }
+  .ch-part.one.lg { letter-spacing: -.2px; }
+  .ch-part.lg:not(.one) { font-size: 10px; letter-spacing: -.5px; padding-left: 8px; padding-right: 1px; }
+  .ch-part u { position: absolute; left: 2px; top: 50%; transform: translateY(-50%); text-decoration: none; font-size: 8.5px; font-weight: 900; color: var(--accent); }
+  .ch-part.unk u { color: var(--warn, #ffa657); }
+  .ch-part.s0 { background: var(--raised, color-mix(in srgb, var(--ink-1) 10%, transparent)); }
+  .ch-part.s1 { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+  .ch-c.split .ch-part:first-child { border-radius: 5px 5px 0 0; }
+  .ch-part + .ch-part { border-top: 2px solid var(--surface-1); }
+  .ch-c.split { background: transparent; }
+  .ch-c.split em { display: block; font-style: normal; font-size: 9.5px; font-weight: 400; line-height: 1.35; color: var(--ink-2); border-top: 1px dashed var(--baseline, #8a8177); }
+  .ch-c i.mn { top: auto; bottom: -5px; right: -1px; font-size: 9px; color: var(--ink-1); }
+  .ch-c.mn { box-shadow: inset 0 -2.5px 0 var(--ink-2); }
+  .ch-pr.all { margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--grid); }
+  .ch-pr.all .ch-pn { font-weight: 400; font-size: 12px; color: var(--ink-2); }
+  .ch-all { text-align: center; font-size: 11.5px; color: var(--ink-2); }
+  .ch-key { margin: 8px 0 2px; font-size: 12px; line-height: 1.5; color: var(--ink-muted); }
+  .ch-nh.fix { color: var(--accent); } .ch-nh.mine { color: var(--ink-2); margin-top: 6px; }
+  .ch-sheet { position: fixed; inset: 0; z-index: 85; display: flex; align-items: flex-start; justify-content: center; padding: max(10px, env(safe-area-inset-top)) 8px 8px; background: rgba(0,0,0,.6); }
+  .ch-sheet-box { width: min(100%, 560px); max-height: 92%; overflow-y: auto; padding: 12px 14px 14px; border: 2px solid var(--accent); border-radius: 14px; background: var(--surface-1); color: var(--ink-1); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  .ch-sh-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .ch-sh-head b { font-size: 17px; color: var(--accent); } .ch-sh-head span { font-size: 13.5px; color: var(--ink-2); }
+  .ch-sh-job { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-top: 1px solid var(--grid); font-size: 14px; line-height: 1.35; }
+  .ch-sh-job small { display: block; font-size: 13px; color: var(--ink-2); line-height: 1.4; }
+  .ch-sh-l { display: block; margin: 10px 0 4px; font-size: 12.5px; font-weight: 800; letter-spacing: .4px; color: var(--accent); }
+  .ch-sh-l small { font-weight: 400; letter-spacing: 0; color: var(--ink-2); } .ch-sh-l.mine { color: var(--ink-1); }
+  @media (min-width: 701px) {   /* on the PC the calendar keeps a readable width and a part's letter sits right beside its hours */
+    .ch-dow, .ch-pr { max-width: 800px; grid-template-columns: 110px repeat(7, minmax(0, 1fr)) 60px; gap: 3px; }
+    .ch-c { font-size: 13.5px; min-height: 36px; }
+    .ch-part, .ch-part.one, .ch-part.lg { text-align: center; padding-left: 2px; padding-right: 2px; font-size: 13px; letter-spacing: 0; }
+    .ch-part u { position: static; transform: none; display: inline-block; margin-right: 5px; font-size: 10.5px; vertical-align: 1px; }
+    .ch-ps, .ch-key, .ch-legend { max-width: 800px; }
+  }
   /* ✎ the edit window: over the board (80), under the toast (90) and the photo lightbox (100) */
   .mat-sheet { position: fixed; inset: 0; z-index: 85; background: rgba(0,0,0,.62); display: flex; align-items: stretch; justify-content: center; }
   .mat-sheet-box { background: var(--surface-1); width: min(100%, 640px); display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
@@ -4002,7 +4050,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.99 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.00 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -10297,13 +10345,27 @@ function crewBadgeTap() { if (crewPreview) crewPreviewToggle(); }
 // colour alone. THE WALLS: Eric's phone only (never a crew phone, never the preview); nothing here reaches a client
 // page or a push; the file's pay columns are never read (hours only — per-person wage isolation); Logan's address is
 // typed once into prefs and is never in this file, because this file is public.
+//
+// 🗓 v7.00 — BY WEEK, A SPLIT DAY, AND TWO KINDS OF NOTE. Eric, first evening with it: "i really like the layout of the
+// week calendar and how each box gets filled in. i also need more then just by job and by person, i also need by week,
+// and i think if there is more than one job per day, the calendar box for the day could be split into 2 or more and hours
+// are on each job and could have job when mouse hover and could even be two differnent shades or colors ? maybe just a
+// slash mark to split the day into multiple jobs. also think i shold be able to click on the day or hours or in somewaay be
+// able to see the categories worked as well and be able to put notes on it even if those notes are onlly for my record,
+// make those sepereate from hour fixes notes i send to logan to fix payroll excel."
+// BY WEEK is the first tab now: the period's jobs (each a LETTER — A is the biggest — with its OK box), then a calendar a
+// week, a row a person with ALL his jobs in it. A day on two or more jobs is a box SPLIT by a line, a part a job: its
+// hours, its letter, one of two shades (the letter is what tells them apart — never the shade alone), the day's total
+// under it; the hover says the jobs in words. A tap on ANY day box, in any view, opens THE DAY: the jobs he was on, the
+// work types and hours under each, and two boxes that never mix — ✎ A FIX FOR LOGAN (rides with the file, as before) and
+// ● MY NOTE (his record only: it is never in what goes to Logan, the log, a crew phone or a client page).
 const CH_PATH = () => DBX_ROOT + '/App Data/crew-hours.json';
 const CH_KEEP = () => DBX_ROOT + '/App Data/Time Clock';
 const CH_FOUND_DIR = '/Clore Project Tracker/QB Exports';
 const CH_FILE_RE = /^Clore-PPE-(\d{4}-\d{2}-\d{2})(?: \(\d+\))?\.xlsx$/i;
 const CH_LIGHTS = [['📥', 'GATHER', 'gather and OK the hours'], ['👍', 'APPROVED', 'approved'], ['📗', 'TO LOGAN', 'sent to Logan'], ['💵', 'PAID', 'paid']];
 const CH_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-let _ch = null, _chT = null, _chDirty = false, _chPpe = '', _chView = 'job', _chOpen = '', _chFound = [], _chBuf = {}, _chArm = '', _chArmT = 0, _chNote = null, _chAskSent = '', _chMailEdit = false, _chHist = false;
+let _ch = null, _chT = null, _chDirty = false, _chPpe = '', _chView = ['week', 'job', 'who'].includes(lsGet('daylog-chview')) ? lsGet('daylog-chview') : 'week', _chOpen = '', _chFound = [], _chBuf = {}, _chArm = '', _chArmT = 0, _chNote = null, _chAskSent = '', _chMailEdit = false, _chHist = false;
 
 // ---------- the store: App Data/crew-hours.json, the newest few mirrored on the phone ----------
 function chStore() {
@@ -10437,7 +10499,7 @@ function chParse(rows, fileName) {
   }
   const live = people.filter(p => p.lines.some(l => l.h.some(x => x)));
   if (!live.length) return { err: 'That file has no hours in it' };
-  const P = { ppe, name: String(fileName || ''), at: new Date().toISOString(), people: live, warn, ok: {}, notes: [], hist: [] };
+  const P = { ppe, name: String(fileName || ''), at: new Date().toISOString(), people: live, warn, ok: {}, notes: [], mine: [], hist: [] };
   P.sig = chSig(P);
   return P;
 }
@@ -10508,7 +10570,7 @@ async function chBringIn(buf, name, src) {
   const S = chStore(), old = S.periods[P.ppe];
   let said = `⏱ Pay period ending ${chMD(P.ppe)} is in — ${chF(chTot(P))} h · ${P.people.length} people`;
   if (old) {
-    P.notes = old.notes || []; P.hist = old.hist || [];
+    P.notes = old.notes || []; P.mine = old.mine || []; P.hist = old.hist || [];   // his fixes for Logan, his own notes and the history all stay
     const moved = old.sig === P.sig ? [] : chDiff(old, P);
     if (!moved.length) { P.ok = old.ok || {}; P.apAt = old.apAt || ''; P.sentAt = old.sentAt || ''; P.paidAt = old.paidAt || ''; P.chg = old.chg || []; said = `⏱ Already in — the hours in this file are the same (pay period ending ${chMD(P.ppe)})`; }
     else {
@@ -10528,7 +10590,7 @@ async function chBringIn(buf, name, src) {
   } else if (old && old.sig === P.sig) { P.keep = old.keep || ''; P.hash = old.hash || ''; }
   S.periods[P.ppe] = P; if (S.gone) delete S.gone[P.ppe];
   chApCheck(P);
-  _chPpe = P.ppe; _chOpen = ''; _chNote = null; _chAskSent = '';
+  _chPpe = P.ppe; _chOpen = ''; _chNote = null; chSheetDraw(); _chAskSent = '';
   _chFound = _chFound.filter(f => f.ppe !== P.ppe);
   chSaveSoon(P); busyDone('⏱ ✓ THE PAY PERIOD IS IN');
   if ($('revModal').classList.contains('show')) renderCrewHours();
@@ -10578,9 +10640,10 @@ async function openCrewHours() {
   chWarm();
   await chScan(); if ($('chBox')) renderCrewHours();
 }
-function chClose() { if (_chDirty) chSaveNow(); _chNote = null; _chArm = ''; closeReview(); }
-function chPick(ppe) { if (!chStore().periods[ppe]) return; _chPpe = ppe; _chOpen = ''; _chNote = null; _chArm = ''; _chAskSent = ''; renderCrewHours(); chWarm(); $('revModal').scrollTop = 0; }
-function chSetView(v) { _chView = v === 'who' ? 'who' : 'job'; _chOpen = ''; renderCrewHours(); }
+function chClose() { if (_chNote) chNoteSave(); if (_chDirty) chSaveNow(); _chNote = null; chSheetDraw(); _chArm = ''; closeReview(); }
+function chPick(ppe) { if (!chStore().periods[ppe]) return; _chPpe = ppe; _chOpen = ''; _chNote = null; chSheetDraw(); _chArm = ''; _chAskSent = ''; renderCrewHours(); chWarm(); $('revModal').scrollTop = 0; }
+function chSetView(v) { _chView = ['week', 'job', 'who'].includes(v) ? v : 'week'; lsSet('daylog-chview', _chView); _chOpen = ''; renderCrewHours(); }
+function chJobOpen(i) { _chView = 'job'; lsSet('daylog-chview', 'job'); _chOpen = 'j' + i; renderCrewHours(); const b = document.querySelector('#revBox .ch-jt[aria-expanded="true"]'); if (b) b.scrollIntoView({ block: 'start' }); }   // from the BY WEEK list: that job, opened
 function chFold(k) { _chOpen = _chOpen === k ? '' : k; renderCrewHours(); }
 function chArmed(key) {   // two taps for anything that takes a light back off
   if (_chArm === key) { _chArm = ''; clearTimeout(_chArmT); return true; }
@@ -10625,21 +10688,52 @@ function chRemove() {
   _chPpe = ''; const ks = Object.keys(S.periods).sort().reverse(); _chPpe = ks[0] || '';
   chSaveSoon(); renderCrewHours(); toast('Off the list — the Excel file itself is still in Dropbox');
 }
-// ✎ a note on a person's day (or on the whole period): it rides to Logan with the file. The hours are never edited here.
-function chNoteOpen(pi, d) {
-  const P = chCur(); if (!P) return; const pp = pi >= 0 ? P.people[pi] : null, who = pp ? pp.n : '';
-  const ex = (P.notes || []).find(x => x.who === who && x.d === d);
-  _chNote = { who, f: pp ? pp.f : '', d, id: ex ? ex.id : '', t: ex ? ex.t : '' };
-  renderCrewHours(); const b = $('chNoteBox'); if (b) { b.focus(); b.scrollIntoView({ block: 'center' }); }
+// 🗓 v7.00 — every job in the period wears a LETTER (A = the most hours; the hours with no job wear ?), the same in every view
+function chTags(P) { const m = {}; let n = 0; chJobs(P).forEach(j => { m[j.p] = /unknown/i.test(j.p) ? '?' : String.fromCharCode(65 + (n++ % 26)); }); return m; }
+// one person's one day, a part a job (in letter order): the hours, and the work types under it
+function chDayParts(P, pp, d, tags) {
+  const m = {}, order = Object.keys(tags);
+  pp.lines.forEach(l => { const x = l.h[d]; if (!x) return; const q = m[l.p] = m[l.p] || { p: l.p, tag: tags[l.p] || '?', x: 0, svc: [], note: [] }; q.x += x; q.svc.push([l.s, x]); if (l.note) q.note.push(l.note); });
+  return Object.values(m).sort((a, b) => order.indexOf(a.p) - order.indexOf(b.p));
+}
+// THE DAY — a tap on any day box: the jobs, the work types, and two notes that never mix. The hours are never edited here.
+//   ✎ P.notes — A FIX FOR LOGAN: rides with the file (chSendWords).   ● P.mine — MY NOTE: his record only, never sent.
+function chNoteOpen(pi, d, focus) {
+  const P = chCur(); if (!P) return; const pp = pi >= 0 ? P.people[pi] : null;
+  _chNote = { pi, who: pp ? pp.n : '', f: pp ? pp.f : '', d, focus: focus || '' };
+  chSheetDraw();
+  const b = $(focus === 'mine' ? 'chMineBox' : focus === 'fix' ? 'chNoteBox' : ''); if (b) b.focus();
 }
 function chNoteSave() {
-  const P = chCur(), N = _chNote; if (!P || !N) return; const t = (($('chNoteBox') || {}).value || '').trim().slice(0, 400);
-  P.notes = (P.notes || []).filter(x => x.id !== N.id);
-  if (t) P.notes.push({ id: N.id || 'n' + Date.now().toString(36), who: N.who, f: N.f, d: N.d, t, at: new Date().toISOString() });
-  _chNote = null; chSaveSoon(P); renderCrewHours(); toast(t ? '✎ Noted — it rides to Logan with the file' : '✎ Note removed');
+  const P = chCur(), N = _chNote; if (!P || !N) return;
+  const put = (key, boxId) => {
+    const el = $(boxId); if (!el) return 0; const t = (el.value || '').trim().slice(0, 400), list = P[key] || [], ex = list.find(x => x.who === N.who && x.d === N.d);
+    if ((ex ? ex.t : '') === t) return 0;
+    P[key] = list.filter(x => x !== ex); if (t) P[key].push({ id: (ex && ex.id) || 'n' + Date.now().toString(36) + key[0], who: N.who, f: N.f, d: N.d, t, at: new Date().toISOString() });
+    return t ? 1 : -1;
+  };
+  const a = put('notes', 'chNoteBox'), b = put('mine', 'chMineBox');
+  _chNote = null; chSheetDraw();
+  if (a || b) { chSaveSoon(P); renderCrewHours(); toast([a > 0 ? '✎ the fix rides to Logan with the file' : a < 0 ? '✎ the fix is off' : '', b > 0 ? '● your note is kept — only you see it' : b < 0 ? '● your note is off' : ''].filter(Boolean).join(' · ')); }
 }
-function chNoteDel(id) { const P = chCur(); if (!P) return; P.notes = (P.notes || []).filter(x => x.id !== id); chSaveSoon(P); renderCrewHours(); }
+function chNoteDel(id, key) { const P = chCur(); if (!P) return; const k = key === 'mine' ? 'mine' : 'notes'; P[k] = (P[k] || []).filter(x => x.id !== id); chSaveSoon(P); renderCrewHours(); }
 const chNoteWhere = (P, n) => n.who ? `${n.f || n.who}${n.d >= 0 ? ' · ' + chDayWord(P.ppe, n.d) : ''}` : 'the whole pay period';
+// the window sits OUTSIDE the scrolling page (a fixed box inside a scrolling one is at the mercy of its parent — the Build
+// List's edit window learned it), at the TOP of the screen so the phone's keyboard never covers the writing boxes.
+function chSheetDraw() {
+  let host = $('chSheetHost'); if (!host) { host = document.createElement('div'); host.id = 'chSheetHost'; document.body.appendChild(host); }
+  const P = chCur(), N = _chNote; if (!P || !N || CREW_NAME) { host.innerHTML = ''; return; }
+  const pp = N.pi >= 0 ? P.people[N.pi] : null, tags = chTags(P), parts = pp && N.d >= 0 ? chDayParts(P, pp, N.d, tags) : [], tot = parts.reduce((s, q) => s + q.x, 0);
+  const val = key => esc((((P[key] || []).find(x => x.who === N.who && x.d === N.d)) || {}).t || '');
+  host.innerHTML = `<div class="ch-sheet" onclick="if (event.target === this) chNoteSave()"><div class="ch-sheet-box" role="dialog" aria-label="the day">
+    <div class="ch-sh-head"><b>${pp ? esc(pp.f) + (N.d >= 0 ? ' · ' + chDayWord(P.ppe, N.d) : '') : 'The whole pay period'}</b><span>${pp && N.d >= 0 ? (tot ? chF(tot) + ' h' + (parts.length > 1 ? ' on ' + parts.length + ' jobs' : '') : 'no hours this day') : 'ending ' + chMD(P.ppe)}</span></div>
+    ${parts.map(q => `<div class="ch-sh-job"><span class="ch-tag${/unknown/i.test(q.p) ? ' unk' : ''}">${esc(q.tag)}</span><div><b>${esc(chJobName(q.p))}</b> · ${chF(q.x)} h<small>${esc(q.svc.map(([s, x]) => chSvcName(s) + ' ' + chF(x)).join(' · '))}</small>${q.note.length ? `<small>the time clock's note: ${esc(q.note.join(' · '))}</small>` : ''}</div></div>`).join('')}
+    <label class="ch-sh-l" for="chNoteBox">✎ A FIX FOR LOGAN <small>— rides with the file when you send it. The hours are not changed here; the fix is made in the time clock.</small></label>
+    <textarea id="chNoteBox" rows="2" class="grow" style="width: 100%; font-size: 16px;" placeholder="e.g. should be 8 hours, he left at 2">${val('notes')}</textarea>
+    <label class="ch-sh-l mine" for="chMineBox">● MY NOTE <small>— your record only. It is never sent to Logan or anyone.</small></label>
+    <textarea id="chMineBox" rows="2" class="grow" style="width: 100%; font-size: 16px;" placeholder="e.g. rained out after lunch">${val('mine')}</textarea>
+    <button type="button" class="btn-primary" id="chSheetDone" style="width: 100%; margin-top: 10px; font-weight: 800;" onclick="chNoteSave()">✓ DONE — it is saved</button></div></div>`;
+}
 
 // ---------- 📗 to Logan: the ORIGINAL Excel + his notes, on the phone's send sheet ----------
 function chMailSave() { const v = (($('chMailBox') || {}).value || '').trim(); if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast('That does not look like an email address', false); return; } prefs.loganMail = v; _chMailEdit = false; scheduleSave(); renderCrewHours(); if (v) toast('✓ Saved — 📗 sends go to ' + v); }
@@ -10695,8 +10789,9 @@ function chSent(how) {
 function renderCrewHours() {
   const box = $('revBox'); if (!box || CREW_NAME) return;
   const S = chStore(), P = chCur(), keys = Object.keys(S.periods).sort().reverse();
-  const door = `<div class="ch-door">
-      <label class="ch-drop" ondragover="event.preventDefault(); this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault(); this.classList.remove('over'); chDrop(event.dataTransfer.files)">📄 Drop the time clock's Excel file here — or tap to pick it<input type="file" id="chFile" accept=".xlsx,.csv" style="display: none;" onchange="chDrop(this.files); this.value = ''"></label>
+  const drop = `<label class="ch-drop" ondragover="event.preventDefault(); this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault(); this.classList.remove('over'); chDrop(event.dataTransfer.files)">📄 Drop the time clock's Excel file here — or tap to pick it<input type="file" id="chFile" accept=".xlsx,.csv" style="display: none;" onchange="chDrop(this.files); this.value = ''"></label>`;
+  // 🗓 v7.00 — with a pay period on the page the drop box moves UNDER it (the calendar is what he came for); what Dropbox has found still leads
+  const door = `<div class="ch-door">${P ? '' : drop}
       ${_chFound.map((f, i) => `<span class="ch-found"><button type="button" class="ch-found-b" onclick="chTakeFound(${i})">📥 ${f.kind === 'new' ? 'FOUND IN DROPBOX' : 'A NEWER FILE IN DROPBOX'}<small>pay period ending ${chMD(f.ppe)} — tap to bring it in</small></button><button type="button" class="ch-found-x" onclick="chSkipFound(${i})" aria-label="not this one — stop offering it" title="not this one">✕</button></span>`).join('')}
     </div>`;
   let body = '';
@@ -10716,17 +10811,39 @@ function renderCrewHours() {
       : lit >= 3 ? `<div class="hint" style="margin: 2px 0 0;">📗 sent ${chMD(String(P.sentAt).slice(0, 10))}${P.keep || ready ? ` · <a href="javascript:void(0)" id="chSendAgain" style="color: var(--accent); font-weight: 700; text-decoration: none;" onclick="chSend()">send it again</a>` : ''}</div>`
       : `<div class="ch-send off" aria-disabled="true">📗 SEND TO LOGAN<small>lights up when every job is OK'd</small></div>`;
     const need = flags.length ? `<div class="ch-need"><div class="ch-nh">⚠ NEEDS A LOOK · ${flags.length}</div>${flags.map(t => `<div class="ch-nf">${t}</div>`).join('')}</div>` : '';
-    const notes = `<div class="ch-notes">${(P.notes || []).length ? `<div class="ch-nh" style="color: var(--accent);">✎ YOUR NOTES FOR LOGAN · ${P.notes.length}</div>` + P.notes.map(n => `<div class="ch-nf"><b>${esc(chNoteWhere(P, n))}</b> — ${esc(n.t)} <a href="javascript:void(0)" class="ch-nx" onclick="chNoteDel('${escq(n.id)}')" aria-label="take this note off">✕</a></div>`).join('') : ''}
-      ${_chNote ? `<div class="ch-notebox"><div style="font-weight: 800; font-size: 13px;">✎ A note for Logan — ${esc(chNoteWhere(P, _chNote))}</div><div class="hint" style="margin: 2px 0 6px;">The hours are not changed here — the note rides with the file, and the fix is made in the time clock.</div><textarea id="chNoteBox" rows="2" class="grow" style="width: 100%;" placeholder="e.g. should be 8 hours, he left at 2">${esc(_chNote.t)}</textarea><div class="frow" style="gap: 6px; margin-top: 6px;"><button type="button" class="btn-primary" onclick="chNoteSave()">✓ Save the note</button><button type="button" class="btn-ghost x-plate x-small" onclick="_chNote = null; renderCrewHours()">✕ Never mind</button></div></div>`
-        : `<button type="button" class="btn-ghost" style="font-size: 12px; margin-top: 4px;" onclick="chNoteOpen(-1, -1)">➕ a note for Logan</button> <span class="hint" style="margin: 0;">— or tap any day box below</span>`}</div>`;
-    const noted = (n, dd) => (P.notes || []).some(x => x.who === n && x.d === dd);
-    const strip = (pi, n, f, h, w) => h.slice(w * 7, w * 7 + 7).map((x, i) => { const dd = w * 7 + i, nt = noted(n, dd); return `<button type="button" class="ch-c ${x ? 'h' : 'e'}${i === 0 || i === 6 ? ' we' : ''}${nt ? ' nt' : ''}" onclick="chNoteOpen(${pi}, ${dd})" aria-label="${esc(f)} · ${chDayWord(P.ppe, dd)} · ${x ? chF(x) + ' hours' : 'no hours'}${nt ? ' · has your note' : ''} — tap to write a note">${x ? chF(x) : '·'}${nt ? '<i aria-hidden="true">✎</i>' : ''}</button>`; }).join('');
+    // 🗓 v7.00 — two lists that never mix: what rides to Logan, and what is only his
+    const noteList = (key, head) => (P[key] || []).length ? `<div class="ch-nh ${key === 'mine' ? 'mine' : 'fix'}">${head} · ${P[key].length}</div>` + P[key].map(n => `<div class="ch-nf"><b>${esc(chNoteWhere(P, n))}</b> — ${esc(n.t)} <a href="javascript:void(0)" class="ch-nx" onclick="chNoteDel('${escq(n.id)}', '${key}')" aria-label="take this note off">✕</a></div>`).join('') : '';
+    const notes = `<div class="ch-notes">${noteList('notes', '✎ FIXES FOR LOGAN — they ride with the file')}${noteList('mine', '● MY NOTES — only you see these, never sent')}
+      <div class="frow" style="gap: 6px; flex-wrap: wrap; margin-top: 4px;"><button type="button" class="btn-ghost" style="font-size: 12px;" onclick="chNoteOpen(-1, -1, 'fix')">➕ a fix for Logan</button><button type="button" class="btn-ghost" style="font-size: 12px;" onclick="chNoteOpen(-1, -1, 'mine')">➕ a note for me</button><span class="hint" style="margin: 0; align-self: center;">— or tap any day box</span></div></div>`;
+    const tags = chTags(P), tagIx = Object.keys(tags);
+    const has = (key, n, dd) => (P[key] || []).some(x => x.who === n && x.d === dd);
+    const marks = (n, dd) => (has('notes', n, dd) ? '<i class="fx" aria-hidden="true">✎</i>' : '') + (has('mine', n, dd) ? '<i class="mn" aria-hidden="true">●</i>' : '');
+    const markWords = (n, dd) => (has('notes', n, dd) ? ' · has a fix for Logan' : '') + (has('mine', n, dd) ? ' · has your own note' : '');
+    const strip = (pi, n, f, h, w) => h.slice(w * 7, w * 7 + 7).map((x, i) => { const dd = w * 7 + i; return `<button type="button" class="ch-c ${x ? 'h' : 'e'}${i === 0 || i === 6 ? ' we' : ''}${has('notes', n, dd) ? ' nt' : ''}${has('mine', n, dd) ? ' mn' : ''}" onclick="chNoteOpen(${pi}, ${dd})" aria-label="${esc(f)} · ${chDayWord(P.ppe, dd)} · ${x ? chF(x) + ' hours' : 'no hours'}${markWords(n, dd)} — tap for the work types and notes">${x ? chF(x) : '·'}${marks(n, dd)}</button>`; }).join('');
+    // a day in the BY WEEK calendar: ALL his jobs that day. One job = the hours and its letter; two or more = the box split
+    // by a line, a part a job (two shades — the LETTER is what tells them apart), the day's total under; the hover says it.
+    const wcell = (pi, pp, dd, i) => {
+      const parts = chDayParts(P, pp, dd, tags), x = parts.reduce((s, q) => s + q.x, 0), say = parts.map(q => `${q.tag} ${chJobName(q.p)} ${chF(q.x)} h`).join(' · ');
+      const part = (q, cls) => `<span class="ch-part ${cls}${/unknown/i.test(q.p) ? ' unk' : ''}${chF(q.x).length > 3 ? ' lg' : ''}"><u>${esc(q.tag)}</u>${chF(q.x)}</span>`;   // 10.5 is four characters in a 30px box: it is set a size smaller so the letter never covers it
+      const inner = !parts.length ? '·' : parts.length === 1 ? part(parts[0], 'one') : parts.map(q => part(q, 's' + (tagIx.indexOf(q.p) % 2))).join('') + `<em>${chF(x)}</em>`;
+      return `<button type="button" class="ch-c ${parts.length ? 'h' : 'e'}${parts.length > 1 ? ' split' : ''}${i === 0 || i === 6 ? ' we' : ''}${has('notes', pp.n, dd) ? ' nt' : ''}${has('mine', pp.n, dd) ? ' mn' : ''}" onclick="chNoteOpen(${pi}, ${dd})" title="${esc(pp.f + ' · ' + chDayWord(P.ppe, dd) + (say ? ' — ' + say : ' — no hours'))}" aria-label="${esc(pp.f)} · ${chDayWord(P.ppe, dd)} · ${parts.length ? chF(x) + ' hours — ' + esc(say) : 'no hours'}${markWords(pp.n, dd)} — tap for the work types and notes">${inner}${marks(pp.n, dd)}</button>`;
+    };
+    const okBtn = (j, i) => { const unk = /unknown/i.test(j.p), ok = !!(P.ok || {})[j.p]; return `<button type="button" class="ch-ok${ok ? ' on' : ''}${unk && !ok ? ' warn' : ''}" onclick="chOk(${i})" aria-pressed="${ok}" aria-label="${ok ? 'OK\'d — tap to reopen it' : unk ? 'these hours have no job on them — tap to OK them as they are' : 'tap to OK this job\'s hours'}">${ok ? '✓' : unk ? '⚠' : '○'}<b>${ok ? 'OK\'D' : unk ? 'OK AS IS?' : 'OK?'}</b></button>`; };
     const dow = w => `<div class="ch-dow"><span></span>${CH_DOW.map((x, i) => `<span${i === 0 || i === 6 ? ' class="we"' : ''}>${x[0]}<small>${chMD(d[w * 7 + i]).split('/')[1]}</small></span>`).join('')}<span>wk</span></div>`;
     let folds = '';
-    if (_chView === 'job') folds = js.map((j, i) => {
-      const open = _chOpen === 'j' + i, unk = /unknown/i.test(j.p), ok = !!(P.ok || {})[j.p], ppl = Object.entries(j.ppl).sort((a, b) => chSum(b[1].h, 0, 14) - chSum(a[1].h, 0, 14));
-      return `<div class="ch-job${unk ? ' unk' : ''}"><div class="ch-jh"><button type="button" class="ch-jt" aria-expanded="${open}" onclick="chFold('j${i}')" title="${esc(j.p)}">${open ? '▾' : '▸'} ${unk ? '⚠ ' : ''}${esc(chJobName(j.p).toUpperCase())}<small>${chF(j.tot)} h · ${ppl.length} ${ppl.length === 1 ? 'person' : 'people'} · wk 1 ${chF(j.w[0])} · wk 2 ${chF(j.w[1])}</small></button>
-        <button type="button" class="ch-ok${ok ? ' on' : ''}${unk && !ok ? ' warn' : ''}" onclick="chOk(${i})" aria-pressed="${ok}" aria-label="${ok ? 'OK\'d — tap to reopen it' : unk ? 'these hours have no job on them — tap to OK them as they are' : 'tap to OK this job\'s hours'}">${ok ? '✓' : unk ? '⚠' : '○'}<b>${ok ? 'OK\'D' : unk ? 'OK AS IS?' : 'OK?'}</b></button></div>
+    if (_chView === 'week') folds = `<div class="ch-legend" role="group" aria-label="the jobs in this pay period">` + js.map((j, i) => { const unk = /unknown/i.test(j.p); return `<div class="ch-lg${unk ? ' unk' : ''}"><span class="ch-tag${unk ? ' unk' : ''}">${esc(tags[j.p])}</span><button type="button" class="ch-lgn" onclick="chJobOpen(${i})" title="${esc(j.p)}" aria-label="${esc(chJobName(j.p))} — open this job">${unk ? '⚠ ' : ''}${esc(chJobName(j.p).toUpperCase())}<small>${chF(j.tot)} h · wk 1 ${chF(j.w[0])} · wk 2 ${chF(j.w[1])}</small></button>${okBtn(j, i)}</div>`; }).join('') + `</div>` +
+      [0, 1].map(w => {
+        const who = P.people.map((pp, pi) => ({ pp, pi, t: pp.lines.reduce((s, l) => s + chSum(l.h, w * 7, w * 7 + 7), 0) })).filter(r => r.t > 0), all = Array(7).fill(0);
+        who.forEach(r => r.pp.lines.forEach(l => l.h.slice(w * 7, w * 7 + 7).forEach((x, i) => { all[i] += x; }))); const wt = who.reduce((s, r) => s + r.t, 0);
+        return `<div class="ch-week" data-week="${w + 1}"><div class="ch-wk big">WEEK ${w + 1} · ${chMD(d[w * 7])} – ${chMD(d[w * 7 + 6])} · ${chF(wt)} h · ${who.length} ${who.length === 1 ? 'person' : 'people'}</div>` +
+          (who.length ? dow(w) + who.map(r => `<div class="ch-pr"><div class="ch-pn">${esc(r.pp.f)}<small>${esc(r.pp.g)}</small></div>${[0, 1, 2, 3, 4, 5, 6].map(i => wcell(r.pi, r.pp, w * 7 + i, i)).join('')}<div class="ch-pt">${chF(r.t)}</div></div>`).join('') +
+            `<div class="ch-pr all"><div class="ch-pn">everyone</div>${all.map((x, i) => `<span class="ch-all${i === 0 || i === 6 ? ' we' : ''}">${x ? chF(x) : '·'}</span>`).join('')}<div class="ch-pt">${chF(wt)}</div></div>` : '<div class="hint" style="margin: 4px 0 0;">no hours this week</div>') + `</div>`;
+      }).join('') +
+      `<div class="ch-key">A box split by a line = more than one job that day: a part a job, its <b>letter</b> beside its hours, the day's total under. <b>✎</b> a fix for Logan · <b>●</b> your own note. Tap any day for the work types and the notes.</div>`;
+    else if (_chView === 'job') folds = js.map((j, i) => {
+      const open = _chOpen === 'j' + i, unk = /unknown/i.test(j.p), ppl = Object.entries(j.ppl).sort((a, b) => chSum(b[1].h, 0, 14) - chSum(a[1].h, 0, 14));
+      return `<div class="ch-job${unk ? ' unk' : ''}"><div class="ch-jh"><button type="button" class="ch-jt" aria-expanded="${open}" onclick="chFold('j${i}')" title="${esc(j.p)}">${open ? '▾' : '▸'} <span class="ch-tag${unk ? ' unk' : ''}">${esc(tags[j.p])}</span> ${unk ? '⚠ ' : ''}${esc(chJobName(j.p).toUpperCase())}<small>${chF(j.tot)} h · ${ppl.length} ${ppl.length === 1 ? 'person' : 'people'} · wk 1 ${chF(j.w[0])} · wk 2 ${chF(j.w[1])}</small></button>
+        ${okBtn(j, i)}</div>
         ${open ? [0, 1].filter(w => j.w[w] > 0).map(w => `<div class="ch-wk">WEEK ${w + 1} · ${chMD(d[w * 7])} – ${chMD(d[w * 7 + 6])} · ${chF(j.w[w])} h</div>${dow(w)}` + ppl.filter(([, q]) => chSum(q.h, w * 7, w * 7 + 7) > 0).map(([n, q]) => `<div class="ch-pr"><div class="ch-pn">${esc(q.f)}<small>${esc(q.g)}</small></div>${strip(q.pi, n, q.f, q.h, w)}<div class="ch-pt">${chF(chSum(q.h, w * 7, w * 7 + 7))}</div></div>`).join('')).join('') +
           `<div class="ch-ps">${esc(Object.entries(ppl.reduce((m, [, q]) => { Object.entries(q.svc).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; }); return m; }, {})).sort((a, b) => b[1] - a[1]).map(([k, v]) => chSvcName(k) + ' ' + chF(v)).join(' · '))}</div>` : ''}</div>`;
     }).join('');
@@ -10735,7 +10852,7 @@ function renderCrewHours() {
       pp.lines.forEach(l => { const q = byJob[l.p] = byJob[l.p] || Array(14).fill(0); l.h.forEach((x, i) => q[i] += x); });
       return `<div class="ch-job"><div class="ch-jh"><button type="button" class="ch-jt" aria-expanded="${open}" onclick="chFold('p${pi}')">${open ? '▾' : '▸'} ${esc(pp.f.toUpperCase())} <span style="font-weight: 400; opacity: .75;">${esc(pp.g)}</span><small>${chF(t)} h · wk 1 ${chF(pp.lines.reduce((s, l) => s + chSum(l.h, 0, 7), 0))} · wk 2 ${chF(pp.lines.reduce((s, l) => s + chSum(l.h, 7, 14), 0))}${ot ? ` · the clock counts ${chF(ot)} h as overtime` : ''}</small></button></div>
         ${open ? [0, 1].map(w => { const rows = Object.entries(byJob).filter(([, h]) => chSum(h, w * 7, w * 7 + 7) > 0); if (!rows.length) return `<div class="ch-wk">WEEK ${w + 1} · ${chMD(d[w * 7])} – ${chMD(d[w * 7 + 6])} · no hours</div>`; const all = Array(14).fill(0); rows.forEach(([, h]) => h.forEach((x, i) => all[i] += x));
-          return `<div class="ch-wk">WEEK ${w + 1} · ${chMD(d[w * 7])} – ${chMD(d[w * 7 + 6])} · ${chF(chSum(all, w * 7, w * 7 + 7))} h</div>${dow(w)}` + rows.map(([p, h]) => `<div class="ch-pl">${esc(chJobName(p))}</div><div class="ch-pr"><div class="ch-pn"></div>${strip(pi, pp.n, pp.f, h, w)}<div class="ch-pt">${chF(chSum(h, w * 7, w * 7 + 7))}</div></div>`).join(''); }).join('') : ''}</div>`;
+          return `<div class="ch-wk">WEEK ${w + 1} · ${chMD(d[w * 7])} – ${chMD(d[w * 7 + 6])} · ${chF(chSum(all, w * 7, w * 7 + 7))} h</div>${dow(w)}` + rows.map(([p, h]) => `<div class="ch-pl"><span class="ch-tag sm${/unknown/i.test(p) ? ' unk' : ''}">${esc(tags[p] || '?')}</span> ${esc(chJobName(p))}</div><div class="ch-pr"><div class="ch-pn"></div>${strip(pi, pp.n, pp.f, h, w)}<div class="ch-pt">${chF(chSum(h, w * 7, w * 7 + 7))}</div></div>`).join(''); }).join('') : ''}</div>`;
     }).join('');
     const left = js.length - okN;
     body = `<div class="ch-card" id="chCard">
@@ -10743,8 +10860,8 @@ function renderCrewHours() {
       <div class="ch-cubes" role="group" aria-label="where this pay period stands">${cubes}</div>
       <div class="ch-word" id="chWord">${word}</div>
       ${send}${need}${notes}
-      <div class="ch-tabs"><button type="button" class="pick-chip${_chView === 'job' ? ' sel' : ''}" onclick="chSetView('job')" aria-pressed="${_chView === 'job'}">BY JOB</button><button type="button" class="pick-chip${_chView === 'who' ? ' sel' : ''}" onclick="chSetView('who')" aria-pressed="${_chView === 'who'}">BY PERSON</button>
-        ${_chView === 'job' && left > 0 && lit < 3 ? `<button type="button" class="btn-ghost" style="margin-left: auto; font-size: 12px;" onclick="chOkAll()">✓ OK every job — ${left} left</button>` : ''}</div>
+      <div class="ch-tabs">${[['week', 'BY WEEK'], ['job', 'BY JOB'], ['who', 'BY PERSON']].map(([k, w]) => `<button type="button" class="pick-chip${_chView === k ? ' sel' : ''}" onclick="chSetView('${k}')" aria-pressed="${_chView === k}">${w}</button>`).join('')}
+        ${_chView !== 'who' && left > 0 && lit < 3 ? `<button type="button" class="btn-ghost" style="margin-left: auto; font-size: 12px;" onclick="chOkAll()">✓ OK every job — ${left} left</button>` : ''}</div>
       ${folds}
       <div class="ch-foot"><a href="javascript:void(0)" onclick="_chHist = !_chHist; renderCrewHours()" aria-expanded="${_chHist}">${_chHist ? '▾' : '▸'} 🕘 history</a> · file: ${esc(P.name || '—')} · <a href="javascript:void(0)" onclick="chRemove()">${_chArm === 'rm' ? '⚠ SURE? tap again — it comes off this list' : '✕ take this pay period off the list'}</a>
         ${_chHist ? `<div style="margin-top: 6px;">${(P.hist || []).slice().reverse().map(x => `<div>${chMD(String(x.at).slice(0, 10))} — ${esc(x.t)}</div>`).join('') || 'nothing yet'}</div>` : ''}</div>
@@ -10753,8 +10870,8 @@ function renderCrewHours() {
   const others = keys.filter(k => k !== _chPpe);
   box.innerHTML = `<div id="chBox"><h3 class="mat-head"><span>⏱ Crew hours</span> <span id="chSaveWord" class="hint" style="margin: 0; font-size: 11px;">${_chDirty ? '⏳ saving…' : '✓ saved'}</span>
       <span class="mat-head-btns"><button type="button" class="btn-ghost req-x x-plate x-small" style="min-width: 44px;" onclick="chClose()" aria-label="close crew hours" title="close crew hours">✕</button></span></h3>
-    <div class="hint" style="margin: 0 0 8px;">From Phil's time clock, every two weeks. Read here, never changed — a wrong day gets a ✎ note that rides to Logan.</div>
-    ${door}${body}
+    <div class="hint" style="margin: 0 0 8px;">${P ? 'Tap a day for the work types · ✎ a fix rides to Logan · ● a note of your own stays with you.' : 'From Phil\'s time clock, every two weeks. Read here, never changed — tap a day to see the work types; a wrong day gets a ✎ fix that rides to Logan, and ● a note of your own stays with you.'}</div>
+    ${door}${body}${P ? `<div class="ch-door" style="margin-top: 12px;">${drop}</div>` : ''}
     ${others.length ? `<div class="ch-others"><div class="ch-nh" style="color: var(--ink-2);">OTHER PAY PERIODS</div>${others.map(k => { const o = S.periods[k], l = chLit(o); return `<button type="button" class="ch-other" onclick="chPick('${escq(k)}')"><span><b>ending ${chMD(k)}/${k.slice(2, 4)}</b> · ${chF(chTot(o))} h</span><span class="ch-mini" role="img" aria-label="${CH_LIGHTS[l - 1][2]}">${[1, 2, 3, 4].map(n => `<i${n <= l ? ' class="on"' : ''}></i>`).join('')}<small>${'①②③④'[l - 1]} ${CH_LIGHTS[l - 1][1]}</small></span></button>`; }).join('')}</div>` : ''}</div>`;
 }
 
@@ -19985,7 +20102,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.99';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.00';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

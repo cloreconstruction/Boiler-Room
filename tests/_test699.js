@@ -116,13 +116,14 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— 🗂 by job, by person —');
 
   const bj = await page.evaluate(async () => {
+    chSetView('job');   // 🗓 v7.00 — BY WEEK opens first now; this suite walks BY JOB and BY PERSON (the week view has its own suite, _test700)
     const heads = [...document.querySelectorAll('#revBox .ch-jt')].map(b => b.textContent.replace(/\s+/g, ' ').trim());
     _fold(/OAK HOUSE/).click(); await new Promise(r => setTimeout(r, 40));
     const job = _fold(/OAK HOUSE/).closest('.ch-job'), rows = [...job.querySelectorAll('.ch-pr')].map(r => r.textContent.replace(/\s+/g, ' ').trim());
     const cells = [...job.querySelectorAll('.ch-pr')[0].querySelectorAll('.ch-c')].map(c => c.textContent.trim()), wk = [...job.querySelectorAll('.ch-wk')].map(x => x.textContent.trim());
     return { heads, rows, cells, wk, svc: job.querySelector('.ch-ps').textContent, exp: _fold(/OAK HOUSE/).getAttribute('aria-expanded'), label: job.querySelector('.ch-c.h').getAttribute('aria-label'), title: _fold(/OAK HOUSE/).getAttribute('title') };
   });
-  ok('BY JOB: the jobs by hours with the QuickBooks prefix off the name (the full name stays in the title), the hours with no job LAST', bj.heads.length === 3 && /^▸ OAK HOUSE71\.5 h · 2 people · wk 1 63\.5 · wk 2 8\.0$/.test(bj.heads[0].replace('▾', '▸')) && /PINE CABIN13\.5 h · 2 people · wk 1 0\.0 · wk 2 13\.5/.test(bj.heads[1]) && /⚠ NO JOB ON IT2\.5 h · 1 person/.test(bj.heads[2]) && bj.title === 'OTM - Oak House [250101]', JSON.stringify(bj.heads));
+  ok('BY JOB: the jobs by hours with the QuickBooks prefix off the name (the full name stays in the title), the hours with no job LAST', bj.heads.length === 3 && /^▸ A OAK HOUSE71\.5 h · 2 people · wk 1 63\.5 · wk 2 8\.0$/.test(bj.heads[0].replace('▾', '▸')) && /PINE CABIN13\.5 h · 2 people · wk 1 0\.0 · wk 2 13\.5/.test(bj.heads[1]) && /⚠ NO JOB ON IT2\.5 h · 1 person/.test(bj.heads[2]) && bj.title === 'OTM - Oak House [250101]', JSON.stringify(bj.heads));
   ok('an open job shows each week it has hours in, a row a person with the seven day boxes and the week\'s total, and the work types underneath', bj.exp === 'true' && bj.wk.length === 2 && /^WEEK 1 · 9\/27 – 10\/3 · 63\.5 h$/.test(bj.wk[0]) && /^WEEK 2 · 10\/4 – 10\/10 · 8\.0 h$/.test(bj.wk[1]) && bj.cells.join(',') === '·,10.0,10.0,10.0,10.0,·,·' && /^AnnL3.*40\.0$/.test(bj.rows[0]) && /^BoL1.*23\.5$/.test(bj.rows[1]) && /Framing 48\.0 · Siding 23\.5/.test(bj.svc) && /Ann · Mon 9\/28 · 10\.0 hours/.test(bj.label), JSON.stringify(bj));
   ok('BY PERSON: a person\'s two weeks, job by job, with what the clock counts as overtime — a cross-check, nothing to tap but notes', await page.evaluate(async () => {
     chSetView('who'); const hs = [...document.querySelectorAll('#revBox .ch-jt')].map(b => b.textContent.replace(/\s+/g, ' ').trim());
@@ -160,11 +161,11 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('tapping a day box opens a note FOR LOGAN on that person and day — the hours themselves are never changed here; the box wears a ✎, the note is listed', await page.evaluate(async () => {
     const sig0 = _P().sig; _fold(/OAK HOUSE/).click(); await new Promise(r => setTimeout(r, 30));
     const cell = [..._fold(/OAK HOUSE/).closest('.ch-job').querySelectorAll('.ch-pr')[1].querySelectorAll('.ch-c')][2]; cell.click();
-    const head = (document.querySelector('#revBox .ch-notebox') || {}).textContent || '';
+    const head = (document.querySelector('#chSheetHost .ch-sheet-box') || {}).textContent || '';   // 🗓 v7.00 — the note lives in THE DAY window now
     $('chNoteBox').value = 'should be 10, he left at 4'; chNoteSave();
     const c2 = [..._fold(/OAK HOUSE/).closest('.ch-job').querySelectorAll('.ch-pr')[1].querySelectorAll('.ch-c')][2], list = document.querySelector('#revBox .ch-notes').textContent.replace(/\s+/g, ' ');
     chNoteOpen(-1, -1); $('chNoteBox').value = 'Bo gets a pay grade next week'; chNoteSave();
-    return /A note for Logan — Bo · Tue 9\/29/.test(head) && /hours are not changed here/.test(head) && c2.classList.contains('nt') && /✎/.test(c2.textContent) && /has your note/.test(c2.getAttribute('aria-label')) && /YOUR NOTES FOR LOGAN · 1/.test(list) && /Bo · Tue 9\/29 — should be 10, he left at 4/.test(list) &&
+    return /Bo · Tue 9\/29/.test(head) && /13\.0 h/.test(head) && /A FIX FOR LOGAN/.test(head) && /hours are not changed here/.test(head) && c2.classList.contains('nt') && /✎/.test(c2.textContent) && /has a fix for Logan/.test(c2.getAttribute('aria-label')) && /FIXES FOR LOGAN — they ride with the file · 1/.test(list) && /Bo · Tue 9\/29 — should be 10, he left at 4/.test(list) &&
       _P().notes.length === 2 && _P().notes[1].who === '' && _P().sig === sig0 && chSig(_P()) === sig0 && _lit() === '1100';
   }));
 
