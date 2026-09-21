@@ -2168,6 +2168,8 @@
   .mat-firstbtn .mb-i, .mat-flip .mb-i { filter: none; opacity: .85; }
   .mat-firstbtn.on { background: var(--warn, #ffa657); border-color: var(--warn, #ffa657); color: #111; }
   .mat-flip { border-style: dashed; }
+  .mat-flip.armed { border-style: solid; border-width: 2.5px; border-color: var(--warn, #ffa657); }   /* ⇄ v6.98 — armed: ⚠ sure? for four seconds */
+  .mat-flip.is-off { opacity: .5; }
   .mat-item.mi-first { background: color-mix(in srgb, var(--warn, #ffa657) 9%, transparent); border-radius: 8px; box-shadow: inset 3px 0 0 var(--warn, #ffa657); }
   .mat-first-band { font-size: 11.5px; font-weight: 800; letter-spacing: .4px; color: var(--warn, #ffa657); margin: 0 0 4px 2px; }
   .mat-item.mi-editing { outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: 8px; }
@@ -3934,7 +3936,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.97 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.98 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -14569,12 +14571,29 @@ function matFirstToggle(id) {
 }
 // the two small plates after the lights: ⚠ 1st on every row; ⇄ (checklist ↔ something to buy) while no light is lit yet —
 // the moment a pasted "test winch" still reads "pick needed" is the moment he wants the flip under his thumb
+// ⇄ v6.98 — Eric: "how do i swith from checklist to item to pick and order" … "yes make it show on every row all the time."
+// The ⇄ plate used to leave the row the moment a light was lit (v6.91), so he could not find it. It is on EVERY row now,
+// always in the same place after ⚠ 1st. One tap flips a row that has nothing to lose; a row with progress the flip would
+// re-map (ordered, received, installed — in work, done) arms first — "⚠ sure?" for four seconds — so a stray thumb cannot
+// turn an ordered faucet into a to-do. A 🏠 row wears the plate too, dimmed and saying why it stays something to buy.
+let _matFlipArm = '', _matFlipT = 0;
+const matFlipRisky = it => matIsBuy(it) ? ((it.s || 'pick') !== 'pick' || !!it.ins) : (it.s === 'work' || it.s === 'done');
+function matFlipTap(id) {
+  const it = matFindItem(id); if (!it) return;
+  if (it.hm) { toast('🏠 It is on the homeowner\'s page, so it stays something to buy — take it off their page first (✎ edit → 🏠 The homeowner)', false); return; }
+  if (matFlipRisky(it) && _matFlipArm !== id) {
+    _matFlipArm = id; renderMatMgr();
+    clearTimeout(_matFlipT); _matFlipT = setTimeout(() => { if (_matFlipArm === id) { _matFlipArm = ''; renderMatMgr(); } }, 4000);
+    return;
+  }
+  _matFlipArm = ''; clearTimeout(_matFlipT);
+  matBuyToggle(id);
+}
 function matRowBtnsHtml(it) {
-  const id = escq(it.id), on = !!it.first, buy = matIsBuy(it);
-  const untouched = !it.hm && (it.s || '') !== 'work' && !matBoxes(it).some(([k]) => matBoxOn(it, k));
+  const id = escq(it.id), on = !!it.first, buy = matIsBuy(it), armed = _matFlipArm === it.id;
   const fw = on ? 'FIRST — it rides at the top of its category; tap to take the flag off' : 'flag it FIRST — it goes to the top of its category, the rest waits on it';
-  const xw = buy ? 'make it a checklist item — on a list, scheduled, done' : 'make it something to buy — picked, ordered, received, scheduled, installed';
-  return `<span class="mat-strip mat-rowbtns"><button type="button" class="mat-box mat-firstbtn${on ? ' on' : ''}" onclick="event.stopPropagation(); matFirstToggle('${id}')" aria-pressed="${on}" aria-label="${fw}" title="${fw}"><span class="mb-i" aria-hidden="true">⚠</span><b>1st</b>${on ? '<i class="mb-ck" aria-hidden="true">✓</i>' : ''}</button>${untouched ? `<button type="button" class="mat-box mat-flip" onclick="event.stopPropagation(); matBuyToggle('${id}')" aria-label="${xw}" title="${xw}"><span class="mb-i" aria-hidden="true">⇄</span><b>${buy ? 'list' : 'buy'}</b></button>` : ''}</span>`;
+  const xw = it.hm ? 'on the homeowner\'s page — it stays something to buy' : armed ? 'tap again to flip it — its lights are carried across as best they fit' : buy ? 'make it a checklist item — on a list, scheduled, done' : 'make it something to buy — picked, ordered, received, scheduled, installed';
+  return `<span class="mat-strip mat-rowbtns"><button type="button" class="mat-box mat-firstbtn${on ? ' on' : ''}" onclick="event.stopPropagation(); matFirstToggle('${id}')" aria-pressed="${on}" aria-label="${fw}" title="${fw}"><span class="mb-i" aria-hidden="true">⚠</span><b>1st</b>${on ? '<i class="mb-ck" aria-hidden="true">✓</i>' : ''}</button><button type="button" class="mat-box mat-flip${armed ? ' armed' : ''}${it.hm ? ' is-off' : ''}" onclick="event.stopPropagation(); matFlipTap('${id}')" aria-label="${xw}" title="${xw}"${it.hm ? ' aria-disabled="true"' : ''}><span class="mb-i" aria-hidden="true">${armed ? '⚠' : it.hm ? '🏠' : '⇄'}</span><b>${armed ? 'sure?' : buy ? 'list' : 'buy'}</b></button></span>`;
 }
 // 👷 whose list? A tag IS somebody's list (the 🏷 sort at the top of the board shows it) — the trades, his crew, any name he adds
 function matWhoBank(it) { return [...new Set([...matTagBank(it), ...((typeof crew !== 'undefined' && crew) || [])])]; }
@@ -14687,7 +14706,7 @@ function renderMatMgr() {
       <button type="button" class="btn-ghost req-x x-plate x-small" style="min-width: 44px;" onclick="matClose()" aria-label="close the board" title="close the board">✕</button>
     </span></h3>
     ${_matHistShow ? matHistHtml() : ''}
-    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client · <a href="javascript:void(0)" style="color: var(--accent); font-weight: 700; text-decoration: none; white-space: nowrap;" onclick="_matHelp = !_matHelp; renderMatMgr()" aria-expanded="${_matHelp}">${_matHelp ? '▾' : '▸'} ? how this works</a>${_matHelp ? `<span id="matHelpBox" style="display: block; margin-top: 6px; line-height: 1.55;">Tap a <b>light</b> to tick it, tap again to un-tick. Something to buy: 👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed. A checklist item: 👷 on somebody's list · 📅 scheduled · ✅ done. <b>⚠ 1st</b> sends a row to the top of its category — the rest waits on it. <b>⇄</b> turns a row into a checklist item (or back) while no light is lit; later it is in the open row and in ✎ edit. Tap a <b>name</b> to open the row; <b>✎ edit</b> (or hold the name) opens its window. The round lamp steps a row along.</span>` : ''}` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
+    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client · <a href="javascript:void(0)" style="color: var(--accent); font-weight: 700; text-decoration: none; white-space: nowrap;" onclick="_matHelp = !_matHelp; renderMatMgr()" aria-expanded="${_matHelp}">${_matHelp ? '▾' : '▸'} ? how this works</a>${_matHelp ? `<span id="matHelpBox" style="display: block; margin-top: 6px; line-height: 1.55;">Tap a <b>light</b> to tick it, tap again to un-tick. Something to buy: 👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed. A checklist item: 👷 on somebody's list · 📅 scheduled · ✅ done. <b>⚠ 1st</b> sends a row to the top of its category — the rest waits on it. <b>⇄</b> at the end of every row turns it into a checklist item, or back into something to buy — a row that already has progress asks ⚠ sure? first. Tap a <b>name</b> to open the row; <b>✎ edit</b> (or hold the name) opens its window. The round lamp steps a row along.</span>` : ''}` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
     ${(() => { // 🏷 v5.80 — the sort: tap a tag, see that trade's list (the electrician's list)
       const used = {};
       _matD.rooms.forEach(r => (r.items || []).forEach(x => matItemTags(x).forEach(tg => { used[tg] = (used[tg] || 0) + 1; })));
@@ -19417,7 +19436,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.97';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.98';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

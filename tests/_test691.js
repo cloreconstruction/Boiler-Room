@@ -62,13 +62,13 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
       /to do — on nobody's list yet/.test(row) && !/pick needed/i.test(row) && /Fans on, every vent open/.test(row);
   }));
 
-  ok('⇄ is under his thumb while no light is lit: "Test winch · pick needed" flips to a checklist item in ONE tap and the pick is gone; once a light is lit the ⇄ leaves the row (it stays in the open row and in ✎ edit); a 🏠 homeowner row never offers it', await page.evaluate(() => {
+  ok('⇄ is under his thumb: "Test winch · pick needed" flips to a checklist item in ONE tap and the pick is gone; since v6.98 the plate is on EVERY row all the time (the open row and ✎ edit have it too)', await page.evaluate(() => {
     const flip = n => _row(n).querySelector('.mat-flip');
     const before = /pick needed/.test(_row('Test winch').textContent) && !!flip('Test winch') && /checklist item/.test(flip('Test winch').getAttribute('aria-label')) && flip('Test winch').textContent.replace(/\s+/g, '') === '⇄list';
     flip('Test winch').click();
     const it = _it('Test winch'), row = _row('Test winch').textContent;
     const after = !it.buy && it.s === 'todo' && !/pick needed/.test(row) && _lights('Test winch').length === 3 && flip('Test winch').textContent.replace(/\s+/g, '') === '⇄buy';
-    const gone = !flip('Garage door') && !flip('Garage paint') && !flip('Pendants x2');
+    const gone = !!flip('Garage door') && !!flip('Garage paint') && !!flip('Pendants x2');   // v6.98 — Eric: "yes make it show on every row all the time"
     _row('Garage door').querySelector('[role="button"]').click();   // open the row: the flip lives there too
     const inRow = [..._row('Garage door').querySelectorAll('.chips-row button')].some(b => /⇄ make it a checklist item/.test(b.textContent));
     _row('Garage door').querySelector('[role="button"]').click();
