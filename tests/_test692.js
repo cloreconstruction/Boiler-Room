@@ -111,8 +111,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   });
   ok('it is bounded: three do-overs, then it stops, says so in words (the band and the line under the meter), and hands the lease back — the next sync goes on', r3.logged === 20 && r3.lists === 5 && /STOPPED/.test(r3.band) && /FAILED/.test(r3.line) && /too_many_requests/.test(r3.line) && r3.leaseBack, JSON.stringify(r3));
 
-  ok('the source: one line for the moves, a 429 handled in all three Dropbox calls', (() => {
-    return /let _arcLine = Promise\.resolve\(\);/.test(src) && (src.match(/r\.status === 429 && i < 3/g) || []).length === 3 && /await Promise\.race\(\[arcDrain\(\)/.test(src);
+  // ⏱ v6.99 — a fourth Dropbox call joined them (chDownloadBuf, the time clock's Excel as bytes) and it waits on a 429 the same way
+  ok('the source: one line for the moves, a 429 handled in all three Dropbox calls (and in the v6.99 bytes download)', (() => {
+    return /let _arcLine = Promise\.resolve\(\);/.test(src) && (src.match(/r\.status === 429 && i < 3/g) || []).length === 4 && /await Promise\.race\(\[arcDrain\(\)/.test(src);
   })());
 
   ok('nothing runs off the right edge of the main page', await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth));

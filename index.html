@@ -2196,6 +2196,72 @@
     .mat-item .chips-row .pick-chip { min-height: 34px !important; }
     .mat-sel { flex-basis: 100%; font-size: 13.5px; line-height: 1.4; }
   }
+  /* ⏱ v6.99 — CREW HOURS. The four lights are the Build List's light (an icon over its word, lit = the brass plate + a ✓ in
+     the corner — never colour alone); a day box is a number or a dot, a box with his note wears a ✎. */
+  .ch-door { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+  .ch-drop { flex: 1 1 200px; min-height: 48px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px 12px; border: 2.5px dashed var(--baseline, #8a8177); border-radius: 12px; font-size: 13px; line-height: 1.35; color: var(--ink-2); cursor: pointer; }
+  .ch-drop.over { border-color: var(--accent); color: var(--ink-1); }
+  .ch-found { flex: 1 1 200px; display: flex; gap: 4px; }
+  .ch-found-b { flex: 1; min-height: 48px; border: 2px solid var(--good, #8fd694); border-radius: 12px; background: transparent; color: var(--ink-1); font: inherit; font-size: 12.5px; font-weight: 800; letter-spacing: .3px; padding: 6px 10px; cursor: pointer; text-align: left; }
+  .ch-found-b small { display: block; font-weight: 400; letter-spacing: 0; font-size: 12px; color: var(--ink-2); }
+  .ch-found-x { flex: none; min-width: 40px; border: 1.5px solid var(--baseline, #8a8177); border-radius: 12px; background: transparent; color: var(--ink-2); font: inherit; cursor: pointer; }
+  .ch-card { border: 1.5px solid var(--grid); border-radius: 14px; padding: 10px; background: var(--surface-1); }
+  .ch-ph { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; font-size: 13.5px; color: var(--ink-2); }
+  .ch-ph b { color: var(--accent); letter-spacing: .7px; font-size: 14.5px; }
+  .ch-cubes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 9px 0 5px; }
+  .ch-cube { position: relative; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 2px; border: 2px solid var(--baseline, #8a8177); border-radius: 10px; background: transparent; color: var(--ink-2); font: inherit; cursor: pointer; margin: 0; }
+  .ch-cube .mb-i { font-size: 18px; line-height: 1.1; filter: grayscale(1); opacity: .45; }
+  .ch-cube b { font-size: 10.5px; font-weight: 800; letter-spacing: .3px; line-height: 1.1; }
+  .ch-cube .mb-ck { position: absolute; top: 1px; right: 5px; font-style: normal; font-size: 12px; font-weight: 900; }
+  .ch-cube.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink, #111); }
+  .ch-cube.on .mb-i { filter: none; opacity: 1; }
+  .ch-cube.now { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 38%, transparent); }
+  .ch-cube.armed { background: transparent; color: var(--ink-1); border: 2.5px solid var(--warn, #ffa657); }
+  .ch-cube.armed .mb-i { filter: none; opacity: 1; }
+  .ch-word { font-size: 13.5px; color: var(--ink-2); margin: 0 0 8px; line-height: 1.4; }
+  .ch-word b { color: var(--ink-1); }
+  .ch-send { display: block; width: 100%; margin: 0 0 4px; font-weight: 900; letter-spacing: .5px; font-size: 15px; line-height: 1.25; min-height: 52px; }
+  .ch-send small { display: block; font-weight: 400; letter-spacing: 0; font-size: 12px; opacity: .85; }
+  .ch-send.off { border: 2px dashed var(--baseline, #8a8177); border-radius: 12px; text-align: center; padding: 8px 10px; color: var(--ink-muted); background: transparent; }
+  .ch-mail { margin: 6px 0 2px; } .ch-mail label { display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 3px; }
+  .ch-ask { border: 2px solid var(--accent); border-radius: 12px; padding: 8px 10px; font-size: 13.5px; line-height: 1.4; margin-bottom: 6px; }
+  .ch-need { border: 2px solid var(--warn, #ffa657); border-radius: 10px; padding: 7px 9px; margin: 8px 0; }
+  .ch-nh { font-weight: 800; font-size: 12.5px; letter-spacing: .5px; color: var(--warn, #ffa657); margin-bottom: 3px; }
+  .ch-nf { font-size: 13.5px; line-height: 1.4; padding: 2px 0; color: var(--ink-1); overflow-wrap: anywhere; }
+  .ch-nx { color: var(--ink-2); text-decoration: none; font-weight: 800; padding: 4px 8px; }
+  .ch-notes { margin: 6px 0 8px; }
+  .ch-notebox { border: 2px solid var(--accent); border-radius: 10px; padding: 8px 10px; margin-top: 4px; }
+  .ch-tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 2px; }
+  .ch-tabs .pick-chip { min-height: 40px; padding: 6px 16px; font-weight: 800; letter-spacing: .5px; }
+  .ch-job { border-top: 1px solid var(--grid); padding: 7px 0 6px; }
+  .ch-jh { display: flex; align-items: center; gap: 8px; }
+  .ch-jt { flex: 1; min-width: 0; min-height: 46px; text-align: left; background: transparent; border: 0; color: var(--ink-1); font: inherit; font-weight: 800; font-size: 14.5px; letter-spacing: .4px; padding: 2px 0; cursor: pointer; overflow-wrap: anywhere; }
+  .ch-jt small { display: block; font-weight: 400; letter-spacing: 0; font-size: 12.5px; color: var(--ink-2); }
+  .ch-job.unk .ch-jt { color: var(--warn, #ffa657); }
+  .ch-ok { flex: none; min-width: 64px; min-height: 46px; border: 2px solid var(--baseline, #8a8177); border-radius: 10px; background: transparent; color: var(--ink-2); font: inherit; font-size: 16px; line-height: 1.1; cursor: pointer; padding: 3px 6px; }
+  .ch-ok b { display: block; font-size: 9.5px; letter-spacing: .4px; }
+  .ch-ok.on { background: var(--good, #8fd694); border-color: var(--good, #8fd694); color: #111; }
+  .ch-ok.warn { border-color: var(--warn, #ffa657); color: var(--warn, #ffa657); }
+  .ch-wk { margin: 8px 0 2px; font-size: 11.5px; font-weight: 800; letter-spacing: .6px; color: var(--ink-2); }
+  .ch-dow, .ch-pr { display: grid; grid-template-columns: 74px repeat(7, minmax(0, 1fr)) 40px; gap: 2px; align-items: center; }
+  .ch-dow { font-size: 11px; color: var(--ink-muted); text-align: center; } .ch-dow small { display: block; font-size: 9.5px; opacity: .8; } .ch-dow .we { opacity: .6; }
+  .ch-pr { margin-top: 3px; }
+  .ch-pn { font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ch-pn small { display: block; color: var(--ink-muted); font-weight: 400; font-size: 10.5px; line-height: 1.1; }
+  .ch-pl { font-size: 12.5px; color: var(--ink-2); margin: 5px 0 0; overflow-wrap: anywhere; }
+  .ch-c { position: relative; min-height: 34px; padding: 0; margin: 0; border-radius: 6px; font: inherit; font-size: 12.5px; text-align: center; cursor: pointer; }
+  .ch-c.h { background: var(--raised, color-mix(in srgb, var(--ink-1) 10%, transparent)); border: 1px solid transparent; color: var(--ink-1); font-weight: 700; }
+  .ch-c.e { background: transparent; border: 1px dashed var(--baseline, #8a8177); color: var(--ink-muted); }
+  .ch-c.e.we { border-color: transparent; }
+  .ch-c.nt { border: 2px solid var(--accent); }
+  .ch-c i { position: absolute; top: -5px; right: -2px; font-style: normal; font-size: 11px; color: var(--accent); }
+  .ch-pt { text-align: right; font-weight: 800; font-size: 13.5px; color: var(--accent); }
+  .ch-ps { font-size: 12px; color: var(--ink-muted); margin: 5px 0 2px; line-height: 1.4; }
+  .ch-foot { border-top: 1px solid var(--grid); margin-top: 8px; padding-top: 8px; font-size: 12px; color: var(--ink-muted); line-height: 1.6; overflow-wrap: anywhere; }
+  .ch-foot a { color: var(--ink-2); font-weight: 700; text-decoration: none; }
+  .ch-others { margin-top: 12px; }
+  .ch-other { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 8px; min-height: 46px; margin: 0 0 6px; padding: 6px 10px; border: 1.5px solid var(--grid); border-radius: 12px; background: transparent; color: var(--ink-1); font: inherit; font-size: 13.5px; cursor: pointer; text-align: left; }
+  .ch-mini { display: inline-flex; align-items: center; gap: 3px; flex: none; } .ch-mini i { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid var(--baseline, #8a8177); display: inline-block; } .ch-mini i.on { background: var(--accent); border-color: var(--accent); }
+  .ch-mini small { margin-left: 4px; font-size: 11px; color: var(--ink-2); letter-spacing: .3px; }
   /* ✎ the edit window: over the board (80), under the toast (90) and the photo lightbox (100) */
   .mat-sheet { position: fixed; inset: 0; z-index: 85; background: rgba(0,0,0,.62); display: flex; align-items: stretch; justify-content: center; }
   .mat-sheet-box { background: var(--surface-1); width: min(100%, 640px); display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
@@ -3936,7 +4002,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v6.98 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v6.99 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -10195,10 +10261,12 @@ function crewViewMenu() {
   const sheet = document.createElement('div');
   sheet.id = 'crewViewSheet';
   sheet.style.cssText = 'margin: 0 0 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;';
-  sheet.innerHTML = crew.map(n =>
+  // ⏱ v6.99 — Eric: "i think it shoudbe on the crew portal button at the top." The crew's hours are the first plate here.
+  sheet.innerHTML = `<button type="button" class="sc-btn" id="chDoor" style="grid-column: 1 / -1;" onclick="const s = $('crewViewSheet'); if (s) s.remove(); openCrewHours()">⏱ <span>Crew hours — pay periods<span id="chDoorWord">${chDoorWord() ? ' · ' + esc(chDoorWord()) : ''}</span></span></button>` + crew.map(n =>
     `<button type="button" class="sc-btn" onclick="crewViewAs('${escq(n)}')">👁 <span>View as ${esc(n)}</span></button>`).join('') +
     `<button type="button" class="sc-btn" style="grid-column: 1 / -1; opacity: .85;" onclick="jumpSetup('setCrew'); const s = $('crewViewSheet'); if (s) s.remove();">⚙ <span>Crew setup — folders, roster, reopen a day</span></button>`;
   $('scRow').after(sheet);
+  chScan().then(() => { const w = $('chDoorWord'); if (w) w.textContent = chDoorWord() ? ' · ' + chDoorWord() : ''; });   // ⏱ v6.99 — is a new pay-period file waiting in Dropbox?
 }
 function crewViewAs(name) {
   prefs.previewAs = name;
@@ -10208,6 +10276,487 @@ function crewViewAs(name) {
   else crewPreviewToggle();
 }
 function crewBadgeTap() { if (crewPreview) crewPreviewToggle(); }
+
+// ================= ⏱ v6.99 — CREW HOURS: THE TIME CLOCK'S PAY-PERIOD FILE, BY JOB, FOUR LIGHTS =================
+// Eric: "i want to make a place for me to upload an excel spreadsheet from phils time clock app and have it readable on
+// my boiler room. and the idea would be i could arrange by job and week and just summarize the week so I can easily,
+// quickly see hours and missing hours or days and approve and pass onto logan and want to have the cube lights for: need
+// to gather and approve hours, approved, sent to logan, paid … not looking to rebuild boiler room time clock or replicate
+// phils app, just gathering intel and approving and seeing quickly." Then, to the three questions: "lets do every two
+// weeks pay period" · "[Logan's portal address] is the email to get things to logan portal, lets make that how i send the
+// excel sheet" · "i think it shoudbe on the crew portal button at the top."
+//
+// THE FILE is the time clock's own: Clore-PPE-<the Saturday the period ends>.xlsx — two Sunday-to-Saturday weeks, a row
+// per person · job · work type with the hours of each day. The email pipe already drops it into Dropbox (QB Exports), so
+// this page FINDS it and he taps to bring it in; the drop box is the other door. It is READ here, never edited: the time
+// clock stays the one true record, so a wrong day gets a ✎ NOTE that rides to Logan with the file — and if a newer file
+// for the same period comes in with different hours, the period drops back to ① and says exactly what changed.
+// THE LIGHTS belong to the PAY PERIOD (his call): ① 📥 GATHER → ② ✓ APPROVED (lights by itself when every job is OK'd)
+// → ③ 📗 TO LOGAN (the phone's send sheet, the ORIGINAL Excel + his notes attached; the To line cannot be filled by a web
+// page when a file rides along, so the address is copied for one paste) → ④ 💵 PAID (his tap). Icon + word + ✓ — never
+// colour alone. THE WALLS: Eric's phone only (never a crew phone, never the preview); nothing here reaches a client
+// page or a push; the file's pay columns are never read (hours only — per-person wage isolation); Logan's address is
+// typed once into prefs and is never in this file, because this file is public.
+const CH_PATH = () => DBX_ROOT + '/App Data/crew-hours.json';
+const CH_KEEP = () => DBX_ROOT + '/App Data/Time Clock';
+const CH_FOUND_DIR = '/Clore Project Tracker/QB Exports';
+const CH_FILE_RE = /^Clore-PPE-(\d{4}-\d{2}-\d{2})(?: \(\d+\))?\.xlsx$/i;
+const CH_LIGHTS = [['📥', 'GATHER', 'gather and OK the hours'], ['👍', 'APPROVED', 'approved'], ['📗', 'TO LOGAN', 'sent to Logan'], ['💵', 'PAID', 'paid']];
+const CH_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+let _ch = null, _chT = null, _chDirty = false, _chPpe = '', _chView = 'job', _chOpen = '', _chFound = [], _chBuf = {}, _chArm = '', _chArmT = 0, _chNote = null, _chAskSent = '', _chMailEdit = false, _chHist = false;
+
+// ---------- the store: App Data/crew-hours.json, the newest few mirrored on the phone ----------
+function chStore() {
+  if (!_ch) { try { _ch = JSON.parse(lsGet('daylog-crewhours') || 'null'); } catch (e) { _ch = null; } }
+  if (!_ch || typeof _ch !== 'object' || !_ch.periods || typeof _ch.periods !== 'object') _ch = { v: 1, periods: {} };
+  return _ch;
+}
+function chMirror() {
+  const s = chStore(), keys = Object.keys(s.periods).sort().reverse().slice(0, 8);
+  lsSet('daylog-crewhours', JSON.stringify({ v: 1, skip: s.skip || {}, periods: Object.fromEntries(keys.map(k => [k, s.periods[k]])) }));
+}
+async function chLoad() {
+  if (CREW_NAME || !dbx.refreshToken) return;
+  try {
+    const j = JSON.parse(await dbxDownload(CH_PATH()) || 'null');
+    if (!j || !j.periods || typeof j.periods !== 'object') return;
+    const mine = chStore();   // a period brought in while offline rides in; for one both hold, the newer touch wins
+    Object.keys(mine.periods).forEach(k => { const a = mine.periods[k], b = j.periods[k]; if (!b || String(a.touch || '') > String(b.touch || '')) j.periods[k] = a; });
+    j.skip = { ...(j.skip || {}), ...(mine.skip || {}) };
+    _ch = j; chMirror();
+  } catch (e) { /* no file yet, or a bad read — what this device has stands */ }
+}
+function chSaveSoon(P) {
+  if (P) P.touch = new Date().toISOString();
+  _chDirty = true; chMirror(); chSaveWord();
+  clearTimeout(_chT); _chT = setTimeout(chSaveNow, 1200);
+}
+async function chSaveNow() {
+  clearTimeout(_chT);
+  if (CREW_NAME || !dbx.refreshToken) { _chDirty = false; chSaveWord(); return; }
+  try {
+    // read-modify-write: the phone's mirror holds only the newest few, so whatever else the file has is carried over
+    const raw = await dbxDownload(CH_PATH());
+    if (raw == null && await dbxPathExists(CH_PATH())) throw new Error('could not read the file that is there');
+    let remote = null; try { remote = JSON.parse(raw || 'null'); } catch (e) { remote = null; }
+    const mine = chStore();
+    if (remote && remote.periods && typeof remote.periods === 'object') Object.keys(remote.periods).forEach(k => { if (!mine.periods[k] && !(mine.gone || {})[k]) mine.periods[k] = remote.periods[k]; });
+    await dbxUpload(CH_PATH(), JSON.stringify(mine, null, 1));
+    _chDirty = false;
+  } catch (e) { toast('⚠ The crew hours did not save — check the connection', false); }
+  chSaveWord();
+}
+function chSaveWord() { const w = $('chSaveWord'); if (w) w.textContent = _chDirty ? '⏳ saving…' : '✓ saved'; }
+async function chDownloadBuf(path) {
+  for (let i = 0; ; i++) {
+    const t = await getToken();
+    const r = await fetch('https://content.dropboxapi.com/2/files/download', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Dropbox-API-Arg': hsafe({ path }) } });
+    if (r.status === 429 && i < 3) { await dbxSlowDown(r, i); continue; }
+    if (!r.ok) return null;
+    return r.arrayBuffer();
+  }
+}
+
+// ---------- reading the file: an .xlsx is a zip (the Build List's reader opens it), sheet 1 → rows of cells ----------
+async function chXlsxRows(buf) {
+  const dec = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (m, d) => String.fromCodePoint(+d)).replace(/&#x([0-9a-fA-F]+);/g, (m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&amp;/g, '&');
+  const tOf = s => { let o = ''; const re = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g; let m; while ((m = re.exec(s))) o += m[1]; return dec(o); };
+  const ss = [], ssx = await matZipEntry(buf, 'xl/sharedStrings.xml');
+  if (ssx) { const re = /<si(?:\s[^>]*)?>([\s\S]*?)<\/si>/g; let m; while ((m = re.exec(ssx))) ss.push(tOf(m[1])); }
+  let x = await matZipEntry(buf, 'xl/worksheets/sheet1.xml'); if (!x) return null;
+  x = x.replace(/<row\b[^>]*\/>/g, '');
+  const colIx = ref => { let n = 0; for (const ch of ref.replace(/\d+/g, '')) n = n * 26 + (ch.charCodeAt(0) - 64); return n - 1; };
+  const rows = [], rr = /<row(?:\s[^>]*)?>([\s\S]*?)<\/row>/g; let m;
+  while ((m = rr.exec(x))) {
+    const row = [], cr = /<c\s([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let c;
+    while ((c = cr.exec(m[1]))) {
+      const at = c[1], inner = c[2] || '', ref = (at.match(/r="([A-Z]+)\d+"/) || [])[1], t = (at.match(/t="([^"]+)"/) || [])[1];
+      let v = (inner.match(/<v>([\s\S]*?)<\/v>/) || [])[1];
+      if (t === 's') v = ss[+v]; else if (t === 'inlineStr') v = tOf(inner); else if (t === 'str') v = dec(v || ''); else if (v != null && v !== '') v = +v;
+      if (ref) row[colIx(ref)] = v == null ? '' : v;
+    }
+    rows.push(Array.from(row, v => v == null ? '' : v));
+  }
+  return rows;
+}
+function chCsvRows(text) {
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ',') { row.push(cur); cur = ''; }
+    else if (ch === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+    else if (ch !== '\r') cur += ch;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows.map(r => r.map(c => /^-?\d+(?:\.\d+)?$/.test(c) ? +c : c));
+}
+function chDates(ppe) { const [y, m, d] = String(ppe).split('-').map(Number); return Array.from({ length: 14 }, (_, i) => localDay(new Date(y, m - 1, d - 13 + i))); }
+const chMD = iso => { const p = String(iso).split('-'); return (+p[1]) + '/' + (+p[2]); };
+const chDayWord = (ppe, d) => CH_DOW[d % 7] + ' ' + chMD(chDates(ppe)[d]);
+const chF = n => (Math.round((+n || 0) * 10) / 10).toFixed(1);
+const chSum = (h, a, b) => h.slice(a, b).reduce((s, x) => s + (+x || 0), 0);
+function chHash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return h.toString(16); }
+const chSig = P => chHash(JSON.stringify(P.people.map(p => [p.n, p.lines.map(l => [l.p, l.s, l.h])])));
+// the walker. HOURS ONLY: the summary block is read by its heading NAMES for the five hour columns — whatever sits to
+// their right (gross pay, taxes, cost an hour) is never looked at, so it can never be kept.
+function chParse(rows, fileName) {
+  const S = v => String(v == null ? '' : v).trim();
+  const hi = rows.findIndex(r => S(r[0]) === 'Employee' && S(r[1]) === 'Project');
+  if (hi < 0) return { err: 'That is not the time clock\'s pay-period file — it has no "Employee · Project · Service" heading' };
+  const H = rows[hi].map(S), dayCols = []; H.forEach((c, i) => { if (/^(SUN|MON|TUE|WED|THU|FRI|SAT)$/i.test(c)) dayCols.push(i); });
+  if (dayCols.length !== 14 || !/^SUN$/i.test(H[dayCols[0]]) || !/^SAT$/i.test(H[dayCols[13]])) return { err: 'The file should hold two Sunday-to-Saturday weeks — this one has ' + dayCols.length + ' day columns' };
+  const noteCol = H.findIndex(c => /^notes$/i.test(c)), billCol = H.findIndex(c => /^billable/i.test(c));
+  const isoOf = v => typeof v === 'number' && v > 30000 ? new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400e3).toISOString().slice(0, 10) : S(v);
+  const above = hi > 0 ? rows[hi - 1] : [];
+  let ppe = (S((rows[0] || [])[0]).match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || (String(fileName || '').match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+  if (!ppe && /^\d{4}-\d{2}-\d{2}$/.test(isoOf(above[dayCols[13]]))) ppe = isoOf(above[dayCols[13]]);
+  if (!ppe) return { err: 'Could not find the day the pay period ends — it should be in the file\'s name (Clore-PPE-2026-09-12) or on its first line' };
+  if (new Date(ppe + 'T12:00:00').getDay() !== 6) return { err: 'This file says the pay period ends ' + ppe + ', which is not a Saturday — its columns run Sunday to Saturday, so the days would land wrong' };
+  const dates = chDates(ppe), warn = [];
+  if (dayCols.some((c, i) => { const v = isoOf(above[c]); return v && v !== dates[i] && v !== chMD(dates[i]); })) warn.push('The dates written over the day columns do not match a period ending ' + chMD(ppe) + ' — check the file');
+  // the summary block, by heading name
+  const sums = {}, si = rows.findIndex(r => S(r[0]) === 'Employee' && /^Reg Hrs Wk1$/i.test(S(r[1])));
+  if (si >= 0) {
+    const SH = rows[si].map(S), col = n => SH.findIndex(c => c.toLowerCase() === n.toLowerCase());
+    const c1 = col('Reg Hrs Wk1'), c2 = col('OT Hrs Wk1'), c3 = col('Reg Hrs Wk2'), c4 = col('OT Hrs Wk2'), c5 = col('QOT Hrs'), c6 = col('Total OT Hrs');
+    for (let i = si + 1; i < rows.length && i !== hi - 1 && i !== hi; i++) {
+      const n = S(rows[i][0]); if (!n || n === 'Employee' || /^WARNING/i.test(n)) break;
+      const g = c => c >= 0 ? +(+rows[i][c] || 0).toFixed(4) : 0;
+      sums[n] = { r1: g(c1), o1: g(c2), r2: g(c3), o2: g(c4), q: g(c5), ot: c6 >= 0 ? g(c6) : +(g(c2) + g(c4)).toFixed(4) };   // the clock's OWN overtime total — it is more than the two weeks added (a week over forty counts too)
+    }
+  }
+  const people = []; let cur = null;
+  for (const r of rows.slice(hi + 1)) {
+    const a = S(r[0]);
+    if (/^WARNING/i.test(a)) { warn.push(a.replace(/^WARNING:\s*/i, '')); continue; }
+    if (/^Total:?$/i.test(a)) { cur = null; continue; }
+    if (a) { const m = a.match(/^(.*?),\s*(.*?)\s*\((L\d)\)$/) || a.match(/^(.*?),\s*(.*)$/); cur = { n: m ? m[1] + ', ' + m[2] : a, f: m ? m[2] : a.split(/\s+/)[0], g: (m && m[3]) || '', lines: [], sum: sums[a] || null }; people.push(cur); }
+    if (cur && S(r[1])) cur.lines.push({ p: S(r[1]), s: S(r[2]), b: billCol >= 0 ? S(r[billCol]) : '', h: dayCols.map(c => +(+r[c] || 0).toFixed(4)), note: noteCol >= 0 ? S(r[noteCol]).slice(0, 300) : '' });
+  }
+  const live = people.filter(p => p.lines.some(l => l.h.some(x => x)));
+  if (!live.length) return { err: 'That file has no hours in it' };
+  const P = { ppe, name: String(fileName || ''), at: new Date().toISOString(), people: live, warn, ok: {}, notes: [], hist: [] };
+  P.sig = chSig(P);
+  return P;
+}
+// what moved between two files of the same period — by person, job and day, in words he can read
+function chDiff(A, B) {
+  const flat = P => { const m = {}; P.people.forEach(p => p.lines.forEach(l => l.h.forEach((x, d) => { if (x) { const k = p.n + '' + l.p + '' + d; m[k] = (m[k] || 0) + x; } }))); return m; };
+  const a = flat(A), b = flat(B), out = [];
+  [...new Set([...Object.keys(a), ...Object.keys(b)])].sort().forEach(k => {
+    const x = a[k] || 0, y = b[k] || 0; if (Math.abs(x - y) < 0.005) return;
+    const [n, p, d] = k.split(''); out.push({ p, t: `${(n.split(', ')[1] || n)} · ${chJobName(p)} · ${chDayWord(B.ppe, +d)}: ${chF(x)} → ${chF(y)} h` });
+  });
+  return out;
+}
+const chJobName = p => /unknown/i.test(p) ? 'NO JOB ON IT' : (String(p).replace(/^(?:(?:END|OTMN|OTMuC|OTM\(uC\)|OTM|O)\s*-\s*)+/i, '').replace(/\s*\[\d+\]\s*$/, '').trim() || String(p));
+const chSvcName = s => /unknown/i.test(s) ? 'no work type' : (String(s).replace(/^\w+\s*-\s*/, '').trim() || String(s));
+function chJobs(P) {
+  const m = {};
+  P.people.forEach((pp, pi) => pp.lines.forEach(l => {
+    const t = chSum(l.h, 0, 14); if (!t) return;
+    const j = m[l.p] = m[l.p] || { p: l.p, tot: 0, w: [0, 0], ppl: {} };
+    const q = j.ppl[pp.n] = j.ppl[pp.n] || { pi, f: pp.f, g: pp.g, h: Array(14).fill(0), svc: {} };
+    l.h.forEach((x, i) => { q.h[i] += x; j.w[i < 7 ? 0 : 1] += x; }); q.svc[l.s] = (q.svc[l.s] || 0) + t; j.tot += t;
+  }));
+  return Object.values(m).sort((a, b) => (/unknown/i.test(a.p) - /unknown/i.test(b.p)) || b.tot - a.tot || a.p.localeCompare(b.p));
+}
+const chLit = P => P.paidAt ? 4 : P.sentAt ? 3 : P.apAt ? 2 : 1;
+const chCur = () => chStore().periods[_chPpe] || null;
+const chTot = P => P.people.reduce((s, p) => s + p.lines.reduce((a, l) => a + chSum(l.h, 0, 14), 0), 0);
+function chHistAdd(P, t) { P.hist = [...(P.hist || []), { at: new Date().toISOString(), t: String(t).slice(0, 300) }].slice(-60); }
+function chApCheck(P) {
+  const js = chJobs(P), all = js.length > 0 && js.every(j => (P.ok || {})[j.p]);
+  if (all && !P.apAt) { P.apAt = new Date().toISOString(); chHistAdd(P, '✓ every job OK\'d — APPROVED'); }
+  if (!all && P.apAt) P.apAt = '';
+  return all;
+}
+// ⚠ NEEDS A LOOK — facts off the file, nothing guessed. An empty Friday is NOT a flag (the crew works four tens); the
+// day boxes show every hole anyway. A Monday-to-Thursday on which nobody at all has hours is said once.
+function chFlags(P) {
+  const out = [], day = (pp, d) => pp.lines.reduce((s, l) => s + l.h[d], 0);
+  (P.chg || []).forEach(c => out.push('🔁 changed since you OK\'d it — ' + esc(c.t)));
+  P.people.forEach(pp => {
+    const nj = pp.lines.filter(l => /unknown/i.test(l.p)), h = Array(14).fill(0); nj.forEach(l => l.h.forEach((x, i) => h[i] += x));
+    if (chSum(h, 0, 14)) out.push(`<b>${esc(pp.f)}</b> — ${chF(chSum(h, 0, 14))} h with <b>no job on it</b> (${h.map((x, i) => x ? chDayWord(P.ppe, i) + ' · ' + chF(x) : '').filter(Boolean).join(', ')})`);
+    const ns = pp.lines.filter(l => /unknown/i.test(l.s) && !/unknown/i.test(l.p)).reduce((s, l) => s + chSum(l.h, 0, 14), 0);
+    if (ns) out.push(`<b>${esc(pp.f)}</b> — ${chF(ns)} h with <b>no work type on it</b>`);
+    for (let d = 0; d < 14; d++) if (day(pp, d) > 12) out.push(`<b>${esc(pp.f)}</b> — ${chF(day(pp, d))} h on ${chDayWord(P.ppe, d)}`);
+  });
+  for (let d = 0; d < 14; d++) if (d % 7 >= 1 && d % 7 <= 4 && !P.people.some(pp => day(pp, d))) out.push(`<b>${chDayWord(P.ppe, d)}</b> — nobody has hours`);
+  (P.warn || []).forEach(w => {
+    const m = /no pay grade is set .*?fact:\s*(.*?)\.\s*Check/i.exec(w);
+    if (m) m[1].split(';').forEach(n => { const f = (n.match(/,\s*([^()]+?)\s*(?:\(|$)/) || [])[1] || n.trim(); out.push(`<b>${esc(f)}</b> — no pay grade set in the time clock (it shows the lowest grade)`); });
+    else out.push('the file says: ' + esc(w.slice(0, 220)));
+  });
+  return out;
+}
+
+// ---------- bringing a file in: the drop box, or the one the email pipe already put in Dropbox ----------
+async function chDrop(files) {
+  const f = files && files[0]; if (!f || CREW_NAME) return;
+  if (!/\.(xlsx|csv)$/i.test(f.name)) { toast('That is not an Excel file — the time clock sends one named Clore-PPE-….xlsx', false); return; }
+  try { await chBringIn(await f.arrayBuffer(), f.name, null); } catch (e) { busyDone('⚠ COULD NOT READ IT'); toast('That file would not open here', false); }
+}
+async function chBringIn(buf, name, src) {
+  busyShow('⏱ READING THE TIME CLOCK FILE…');
+  const rows = /\.csv$/i.test(name) ? chCsvRows(new TextDecoder().decode(buf)) : await chXlsxRows(buf);
+  const P = rows ? chParse(rows, name) : { err: 'That file would not open here — is it the Excel file the time clock sends?' };
+  if (P.err) { busyDone('⚠ COULD NOT READ IT'); toast(P.err, false); return null; }
+  const S = chStore(), old = S.periods[P.ppe];
+  let said = `⏱ Pay period ending ${chMD(P.ppe)} is in — ${chF(chTot(P))} h · ${P.people.length} people`;
+  if (old) {
+    P.notes = old.notes || []; P.hist = old.hist || [];
+    const moved = old.sig === P.sig ? [] : chDiff(old, P);
+    if (!moved.length) { P.ok = old.ok || {}; P.apAt = old.apAt || ''; P.sentAt = old.sentAt || ''; P.paidAt = old.paidAt || ''; P.chg = old.chg || []; said = `⏱ Already in — the hours in this file are the same (pay period ending ${chMD(P.ppe)})`; }
+    else {
+      const hit = new Set(moved.map(x => x.p));
+      P.ok = Object.fromEntries(Object.entries(old.ok || {}).filter(([k]) => !hit.has(k)));
+      P.chg = moved.slice(0, 40);
+      chHistAdd(P, `🔁 a newer file changed ${moved.length} day${moved.length === 1 ? '' : 's'}` + (old.sentAt ? ` — it HAD been sent to Logan on ${String(old.sentAt).slice(0, 10)}` : old.apAt ? ' — it had been approved' : ''));
+      said = `🔁 The hours CHANGED in this file — ${moved.length} day${moved.length === 1 ? '' : 's'}. Back to ① — look, OK and send again`;
+    }
+  }
+  chHistAdd(P, `📥 brought in ${name}`);
+  if (src && src.hash) P.srcHash = src.hash;
+  _chBuf[P.ppe] = buf;
+  if (dbx.refreshToken) {
+    try { const r = await dbxUpload(CH_KEEP() + '/' + name.replace(/[\\/:*?"<>|]/g, '_'), buf, !!(old && old.keep && old.sig !== P.sig)); P.keep = (r && (r.path_display || r.path_lower)) || ''; P.hash = (r && r.content_hash) || ''; }
+    catch (e) { P.keep = (old && old.sig === P.sig && old.keep) || ''; toast('⚠ The original could not be kept in Dropbox — sending will need the file again', false); }
+  } else if (old && old.sig === P.sig) { P.keep = old.keep || ''; P.hash = old.hash || ''; }
+  S.periods[P.ppe] = P; if (S.gone) delete S.gone[P.ppe];
+  chApCheck(P);
+  _chPpe = P.ppe; _chOpen = ''; _chNote = null; _chAskSent = '';
+  _chFound = _chFound.filter(f => f.ppe !== P.ppe);
+  chSaveSoon(P); busyDone('⏱ ✓ THE PAY PERIOD IS IN');
+  if ($('revModal').classList.contains('show')) renderCrewHours();
+  toast(said, !/CHANGED/.test(said));
+  return P;
+}
+async function chScan() {
+  if (CREW_NAME || !dbx.refreshToken) { _chFound = []; return; }
+  try {
+    const r = await dbxList({ path: CH_FOUND_DIR, recursive: false }), best = {};
+    (r.entries || []).forEach(f => { if (f['.tag'] !== 'file') return; const m = CH_FILE_RE.exec(f.name); if (!m) return; const b = best[m[1]]; if (!b || String(f.server_modified) > String(b.server_modified)) best[m[1]] = f; });
+    const S = chStore();
+    _chFound = Object.keys(best).sort().reverse().map(ppe => {
+      const f = best[ppe], P = S.periods[ppe];
+      if ((S.skip || {})[f.content_hash] || (P && (P.hash === f.content_hash || P.srcHash === f.content_hash))) return null;
+      return { ppe, name: f.name, path: f.path_lower || f.path_display, hash: f.content_hash, kind: P ? 'newer' : 'new' };
+    }).filter(Boolean).slice(0, 3);
+  } catch (e) { _chFound = []; }
+}
+async function chTakeFound(i) {
+  const f = _chFound[i]; if (!f) return;
+  busyShow('📥 GETTING THE FILE FROM DROPBOX…');
+  const buf = await chDownloadBuf(f.path);
+  if (!buf) { busyDone('⚠ COULD NOT GET IT'); toast('Could not get that file from Dropbox — check the connection', false); return; }
+  await chBringIn(buf, f.name, f);
+}
+function chSkipFound(i) { const f = _chFound[i]; if (!f) return; const S = chStore(); S.skip = { ...(S.skip || {}), [f.hash]: 1 }; _chFound.splice(i, 1); chSaveSoon(); renderCrewHours(); }
+async function chWarm() {   // the send sheet must ride his tap, so the original is fetched BEFORE he taps
+  const P = chCur(); if (!P || _chBuf[P.ppe] || !P.keep || !dbx.refreshToken) return;
+  try { const b = await chDownloadBuf(P.keep); if (b) { _chBuf[P.ppe] = b; if ($('chSendBtn')) renderCrewHours(); } } catch (e) {}
+}
+
+// ---------- the door and the window ----------
+function chDoorWord() {
+  const ps = Object.values(chStore().periods), n = k => ps.filter(p => chLit(p) === k).length, bits = [];
+  if (n(1)) bits.push(n(1) + ' to approve'); if (n(2)) bits.push(n(2) + ' to send'); if (n(3)) bits.push(n(3) + ' not paid yet');
+  if (_chFound.length) bits.push('📥 new file');
+  return bits.join(' · ');
+}
+async function openCrewHours() {
+  if (CREW_NAME || crewPreview) return;
+  _chArm = ''; _chNote = null; _chAskSent = ''; _chOpen = ''; _chMailEdit = false; _chHist = false;
+  const pickOne = () => { const ks = Object.keys(chStore().periods).sort().reverse(); if (!_chPpe || !chStore().periods[_chPpe]) _chPpe = ks.find(k => chLit(chStore().periods[k]) < 3) || ks[0] || ''; };
+  pickOne(); renderCrewHours();
+  $('revModal').classList.add('show', 'mat-full'); document.body.classList.add('modal-open');
+  if (!_chDirty) { await chLoad(); pickOne(); renderCrewHours(); }
+  chWarm();
+  await chScan(); if ($('chBox')) renderCrewHours();
+}
+function chClose() { if (_chDirty) chSaveNow(); _chNote = null; _chArm = ''; closeReview(); }
+function chPick(ppe) { if (!chStore().periods[ppe]) return; _chPpe = ppe; _chOpen = ''; _chNote = null; _chArm = ''; _chAskSent = ''; renderCrewHours(); chWarm(); $('revModal').scrollTop = 0; }
+function chSetView(v) { _chView = v === 'who' ? 'who' : 'job'; _chOpen = ''; renderCrewHours(); }
+function chFold(k) { _chOpen = _chOpen === k ? '' : k; renderCrewHours(); }
+function chArmed(key) {   // two taps for anything that takes a light back off
+  if (_chArm === key) { _chArm = ''; clearTimeout(_chArmT); return true; }
+  _chArm = key; renderCrewHours(); clearTimeout(_chArmT); _chArmT = setTimeout(() => { if (_chArm === key) { _chArm = ''; renderCrewHours(); } }, 4000);
+  return false;
+}
+function chOk(i) {
+  const P = chCur(); if (!P) return; const j = chJobs(P)[i]; if (!j) return;
+  if (chLit(P) >= 3) { toast('It has gone to Logan — take the 📗 light off first if the hours need another look', false); return; }
+  P.ok = P.ok || {};
+  if (P.ok[j.p]) delete P.ok[j.p]; else { P.ok[j.p] = new Date().toISOString(); P.chg = (P.chg || []).filter(c => c.p !== j.p); }
+  const was = !!P.apAt, all = chApCheck(P);
+  chSaveSoon(P); renderCrewHours();
+  if (all && !was) toast('✓ Every job is OK\'d — the pay period is APPROVED. 📗 Send it to Logan when you are ready');
+}
+function chOkAll() {
+  const P = chCur(); if (!P || chLit(P) >= 3) return;
+  const before = { ...(P.ok || {}) }, chg = P.chg || [], ap = P.apAt || '', now = new Date().toISOString();
+  P.ok = P.ok || {}; chJobs(P).forEach(j => { if (!P.ok[j.p]) P.ok[j.p] = now; }); P.chg = [];
+  chApCheck(P); chSaveSoon(P); renderCrewHours();
+  toastUndo('✓ Every job OK\'d — the pay period is APPROVED', () => { P.ok = before; P.chg = chg; P.apAt = ap; chApCheck(P); chSaveSoon(P); renderCrewHours(); });
+}
+function chCube(n) {
+  const P = chCur(); if (!P) return; const lit = chLit(P), left = chJobs(P).filter(j => !(P.ok || {})[j.p]).length;
+  if (n === 1) { toast(lit === 1 ? `① ${left} job${left === 1 ? '' : 's'} left to OK — open one, look, tap its OK box` : '① The hours are gathered and OK\'d'); return; }
+  if (n === 2) { if (lit === 1) chOkAll(); else toast(lit === 2 ? '② Approved — tap a job\'s ✓ to reopen it, or 📗 send it to Logan' : '② Approved ' + String(P.apAt || '').slice(0, 10)); return; }
+  if (n === 3) {
+    if (lit < 2) { toast('OK every job first — then it can go to Logan', false); return; }
+    if (lit === 2) { chSend(); return; }
+    if (lit === 3) { if (!chArmed('c3')) return; P.sentAt = ''; chHistAdd(P, '↩ the 📗 light taken back off'); chSaveSoon(P); renderCrewHours(); toast('📗 off — it reads APPROVED again. What Logan already has is still his'); return; }
+    toast('Take 💵 PAID off first', false); return;
+  }
+  if (n === 4) {
+    if (lit < 3) { toast('Send it to Logan first — 💵 comes after', false); return; }
+    if (lit === 3) { P.paidAt = new Date().toISOString(); chHistAdd(P, '💵 marked PAID'); chSaveSoon(P); renderCrewHours(); toastUndo('💵 PAID — this pay period is done', () => { P.paidAt = ''; chSaveSoon(P); renderCrewHours(); }); return; }
+    if (!chArmed('c4')) return; P.paidAt = ''; chHistAdd(P, '↩ 💵 PAID taken back off'); chSaveSoon(P); renderCrewHours();
+  }
+}
+function chRemove() {
+  const P = chCur(); if (!P) return; if (!chArmed('rm')) return;
+  const S = chStore(); delete S.periods[P.ppe]; S.gone = { ...(S.gone || {}), [P.ppe]: 1 }; delete _chBuf[P.ppe];
+  _chPpe = ''; const ks = Object.keys(S.periods).sort().reverse(); _chPpe = ks[0] || '';
+  chSaveSoon(); renderCrewHours(); toast('Off the list — the Excel file itself is still in Dropbox');
+}
+// ✎ a note on a person's day (or on the whole period): it rides to Logan with the file. The hours are never edited here.
+function chNoteOpen(pi, d) {
+  const P = chCur(); if (!P) return; const pp = pi >= 0 ? P.people[pi] : null, who = pp ? pp.n : '';
+  const ex = (P.notes || []).find(x => x.who === who && x.d === d);
+  _chNote = { who, f: pp ? pp.f : '', d, id: ex ? ex.id : '', t: ex ? ex.t : '' };
+  renderCrewHours(); const b = $('chNoteBox'); if (b) { b.focus(); b.scrollIntoView({ block: 'center' }); }
+}
+function chNoteSave() {
+  const P = chCur(), N = _chNote; if (!P || !N) return; const t = (($('chNoteBox') || {}).value || '').trim().slice(0, 400);
+  P.notes = (P.notes || []).filter(x => x.id !== N.id);
+  if (t) P.notes.push({ id: N.id || 'n' + Date.now().toString(36), who: N.who, f: N.f, d: N.d, t, at: new Date().toISOString() });
+  _chNote = null; chSaveSoon(P); renderCrewHours(); toast(t ? '✎ Noted — it rides to Logan with the file' : '✎ Note removed');
+}
+function chNoteDel(id) { const P = chCur(); if (!P) return; P.notes = (P.notes || []).filter(x => x.id !== id); chSaveSoon(P); renderCrewHours(); }
+const chNoteWhere = (P, n) => n.who ? `${n.f || n.who}${n.d >= 0 ? ' · ' + chDayWord(P.ppe, n.d) : ''}` : 'the whole pay period';
+
+// ---------- 📗 to Logan: the ORIGINAL Excel + his notes, on the phone's send sheet ----------
+function chMailSave() { const v = (($('chMailBox') || {}).value || '').trim(); if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast('That does not look like an email address', false); return; } prefs.loganMail = v; _chMailEdit = false; scheduleSave(); renderCrewHours(); if (v) toast('✓ Saved — 📗 sends go to ' + v); }
+function chSendWords(P) {
+  const d = chDates(P.ppe), L = [], strip = h => h.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+  L.push(`Crew hours — pay period ending ${CH_DOW[6]} ${chMD(P.ppe)}/${P.ppe.slice(0, 4)} (${chMD(d[0])} – ${chMD(d[13])})`);
+  L.push(`APPROVED by Eric on ${chMD(localDay(new Date()))}. The time clock's Excel file is attached, unchanged.`, '');
+  P.people.forEach(pp => {
+    const w1 = pp.lines.reduce((s, l) => s + chSum(l.h, 0, 7), 0), w2 = pp.lines.reduce((s, l) => s + chSum(l.h, 7, 14), 0), ot = pp.sum ? pp.sum.ot : 0;
+    L.push(`${pp.n}${pp.g ? ' (' + pp.g + ')' : ''}: week 1 ${chF(w1)} h · week 2 ${chF(w2)} h · total ${chF(w1 + w2)} h${ot ? ` (the time clock counts ${chF(ot)} h of that as overtime)` : ''}`);
+  });
+  L.push('', `All together: ${chF(chTot(P))} h.`);
+  if ((P.notes || []).length) { L.push('', 'NOTES FROM ERIC:'); P.notes.forEach(n => L.push(`- ${chNoteWhere(P, n)}: ${n.t}`)); }
+  const fl = chFlags(P).filter(x => !/^🔁/.test(x)); if (fl.length) { L.push('', 'WORTH A LOOK (from the file):'); fl.forEach(x => L.push('- ' + strip(x))); }
+  return L.join('\n');
+}
+function chSend() {
+  const P = chCur(); if (!P || CREW_NAME) return;
+  if (chLit(P) < 2) { toast('OK every job first — then it can go to Logan', false); return; }
+  const to = String(prefs.loganMail || '').trim();
+  if (!to) { _chMailEdit = true; renderCrewHours(); const b = $('chMailBox'); if (b) b.focus(); toast('Where does Logan\'s mail go? Type his portal address once — it is remembered', false); return; }
+  const buf = _chBuf[P.ppe];
+  if (!buf) { if (P.keep) { chWarm(); toast('⏳ Getting the Excel file ready — tap 📗 again in a moment', false); } else toast('The Excel file is not on this device — drop it in again (the hours will match) and then send', false); return; }
+  const words = chSendWords(P), subject = `Crew hours — pay period ending ${chMD(P.ppe)}/${P.ppe.slice(0, 4)} — APPROVED`;
+  const isCsv = /\.csv$/i.test(P.name), xName = P.name || `Clore-PPE-${P.ppe}.xlsx`;   // the file goes exactly as it came — its own name, its own bytes
+  const files = [new File([buf], xName, { type: isCsv ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), new File([words], `Clore-PPE-${P.ppe} - approved by Eric.txt`, { type: 'text/plain' })];
+  try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(to).catch(() => {}); } catch (e) {}
+  if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
+    toast('📋 ' + to + ' is copied — paste it on the To line');
+    navigator.share({ files, title: subject, text: words }).then(() => chSent('the send sheet')).catch(e => { if (e && e.name === 'AbortError') toast('Not sent — the send sheet was closed', false); else chSendByHand(files, to, subject, words); });
+  } else chSendByHand(files, to, subject, words);
+}
+// no send sheet in this browser: both files are saved to the downloads folder and the mail app opens with the address,
+// the subject and the words filled in — he drags the two files on. Only he knows whether it went, so he says so.
+function chSendByHand(files, to, subject, words) {
+  files.forEach(f => { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); });
+  const href = 'mailto:' + encodeURIComponent(to).replace(/%40/g, '@') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(words.slice(0, 1500));
+  window._chMailto = href;
+  try { const a = document.createElement('a'); a.href = href; a.click(); } catch (e) {}
+  _chAskSent = _chPpe; renderCrewHours();
+  toast('📥 Both files are in your downloads and your mail is opening — attach the two files and send');
+}
+function chSent(how) {
+  const P = chCur(); if (!P) return;
+  P.sentAt = new Date().toISOString(); _chAskSent = ''; chHistAdd(P, '📗 sent to Logan (' + how + ')');
+  if (!knownTags().some(g => g.toLowerCase() === 'bookkeeper')) prefs.tags.push('Bookkeeper');
+  const nn = (P.notes || []).length;
+  addEntry('Note', `📗 Crew hours → Logan: pay period ending ${chMD(P.ppe)} · ${chF(chTot(P))} h · ${P.people.length} people${nn ? ` · ${nn} note${nn === 1 ? '' : 's'} from you` : ''}`, jobs.find(j => /^(shop|internal)/i.test(j)) || '—', { tags: ['Bookkeeper'], chRef: P.ppe });
+  chSaveSoon(P); if ($('chBox')) renderCrewHours();
+  toast('📗 SENT TO LOGAN ✓ — tap 💵 when the crew is paid');
+}
+
+function renderCrewHours() {
+  const box = $('revBox'); if (!box || CREW_NAME) return;
+  const S = chStore(), P = chCur(), keys = Object.keys(S.periods).sort().reverse();
+  const door = `<div class="ch-door">
+      <label class="ch-drop" ondragover="event.preventDefault(); this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault(); this.classList.remove('over'); chDrop(event.dataTransfer.files)">📄 Drop the time clock's Excel file here — or tap to pick it<input type="file" id="chFile" accept=".xlsx,.csv" style="display: none;" onchange="chDrop(this.files); this.value = ''"></label>
+      ${_chFound.map((f, i) => `<span class="ch-found"><button type="button" class="ch-found-b" onclick="chTakeFound(${i})">📥 ${f.kind === 'new' ? 'FOUND IN DROPBOX' : 'A NEWER FILE IN DROPBOX'}<small>pay period ending ${chMD(f.ppe)} — tap to bring it in</small></button><button type="button" class="ch-found-x" onclick="chSkipFound(${i})" aria-label="not this one — stop offering it" title="not this one">✕</button></span>`).join('')}
+    </div>`;
+  let body = '';
+  if (!P) body = `<div class="hint" style="margin: 6px 0 0; font-size: 13.5px; line-height: 1.55;">No pay period here yet. The time clock emails an Excel file named <b>Clore-PPE-…xlsx</b> every two weeks — when it lands in Dropbox it shows up above as <b>📥 FOUND</b>, or you can drop the file on the box. It is read, never changed.</div>`;
+  else {
+    const d = chDates(P.ppe), lit = chLit(P), js = chJobs(P), okN = js.filter(j => (P.ok || {})[j.p]).length, flags = chFlags(P), tot = chTot(P), to = String(prefs.loganMail || '').trim();
+    const word = lit === 1 ? `<b>① GATHER</b> — ${okN} of ${js.length} job${js.length === 1 ? '' : 's'} OK'd${flags.length ? ` · ${flags.length} to look at` : ''}`
+      : lit === 2 ? `<b>② APPROVED</b> ${chMD(String(P.apAt).slice(0, 10))} — ready to go to Logan`
+      : lit === 3 ? `<b>③ SENT TO LOGAN</b> ${chMD(String(P.sentAt).slice(0, 10))} — tap 💵 when the crew is paid`
+      : `<b>④ PAID</b> ${chMD(String(P.paidAt).slice(0, 10))} — this pay period is done`;
+    const cubes = CH_LIGHTS.map(([ic, wd, say], i) => { const on = i < lit, armed = _chArm === 'c' + (i + 1); return `<button type="button" class="ch-cube${on ? ' on' : ''}${i === lit - 1 ? ' now' : ''}${armed ? ' armed' : ''}" onclick="chCube(${i + 1})" aria-pressed="${on}" aria-label="${i + 1} — ${say}: ${on ? 'lit' : 'not yet'}${armed ? ' — tap again to take it off' : ''}"><span class="mb-i" aria-hidden="true">${armed ? '⚠' : ic}</span><b>${armed ? 'SURE?' : wd}</b>${on && !armed ? '<i class="mb-ck" aria-hidden="true">✓</i>' : ''}</button>`; }).join('');
+    const mailRow = (_chMailEdit || !to) && lit >= 2 ? `<div class="ch-mail"><label for="chMailBox">Logan's portal address — typed once, remembered</label><div class="frow" style="gap: 6px; flex-wrap: nowrap;"><input type="email" id="chMailBox" value="${esc(to)}" placeholder="name@…" autocomplete="off" autocapitalize="off" style="flex: 1; min-width: 0; min-height: 46px; font-size: 16px;" onkeydown="if (event.key === 'Enter') chMailSave()"><button type="button" class="btn-primary" style="flex: none;" onclick="chMailSave()">✓ Save</button></div></div>`
+      : (to && lit >= 2 ? `<div class="hint" style="margin: 4px 0 0;">to <b>${esc(to)}</b> · <a href="javascript:void(0)" style="color: var(--accent); font-weight: 700; text-decoration: none;" onclick="_chMailEdit = true; renderCrewHours()">✎ change</a></div>` : '');
+    const ready = !!_chBuf[P.ppe];
+    const send = _chAskSent === P.ppe ? `<div class="ch-ask"><b>Did it go?</b> Both files are in your downloads; your mail opened with the address and the words.<div class="frow" style="gap: 6px; margin-top: 6px;"><button type="button" class="btn-primary" onclick="chSent('by hand')">✓ Yes — mark it SENT</button><button type="button" class="btn-ghost" onclick="_chAskSent = ''; renderCrewHours()">✕ Not yet</button></div></div>`
+      : lit === 2 ? `<button type="button" id="chSendBtn" class="btn-primary ch-send" onclick="chSend()">📗 SEND TO LOGAN<small>the Excel file, unchanged · your notes${ready ? '' : ' · ⏳ getting the file ready'}</small></button>${mailRow}`
+      : lit >= 3 ? `<div class="hint" style="margin: 2px 0 0;">📗 sent ${chMD(String(P.sentAt).slice(0, 10))}${P.keep || ready ? ` · <a href="javascript:void(0)" id="chSendAgain" style="color: var(--accent); font-weight: 700; text-decoration: none;" onclick="chSend()">send it again</a>` : ''}</div>`
+      : `<div class="ch-send off" aria-disabled="true">📗 SEND TO LOGAN<small>lights up when every job is OK'd</small></div>`;
+    const need = flags.length ? `<div class="ch-need"><div class="ch-nh">⚠ NEEDS A LOOK · ${flags.length}</div>${flags.map(t => `<div class="ch-nf">${t}</div>`).join('')}</div>` : '';
+    const notes = `<div class="ch-notes">${(P.notes || []).length ? `<div class="ch-nh" style="color: var(--accent);">✎ YOUR NOTES FOR LOGAN · ${P.notes.length}</div>` + P.notes.map(n => `<div class="ch-nf"><b>${esc(chNoteWhere(P, n))}</b> — ${esc(n.t)} <a href="javascript:void(0)" class="ch-nx" onclick="chNoteDel('${escq(n.id)}')" aria-label="take this note off">✕</a></div>`).join('') : ''}
+      ${_chNote ? `<div class="ch-notebox"><div style="font-weight: 800; font-size: 13px;">✎ A note for Logan — ${esc(chNoteWhere(P, _chNote))}</div><div class="hint" style="margin: 2px 0 6px;">The hours are not changed here — the note rides with the file, and the fix is made in the time clock.</div><textarea id="chNoteBox" rows="2" class="grow" style="width: 100%;" placeholder="e.g. should be 8 hours, he left at 2">${esc(_chNote.t)}</textarea><div class="frow" style="gap: 6px; margin-top: 6px;"><button type="button" class="btn-primary" onclick="chNoteSave()">✓ Save the note</button><button type="button" class="btn-ghost x-plate x-small" onclick="_chNote = null; renderCrewHours()">✕ Never mind</button></div></div>`
+        : `<button type="button" class="btn-ghost" style="font-size: 12px; margin-top: 4px;" onclick="chNoteOpen(-1, -1)">➕ a note for Logan</button> <span class="hint" style="margin: 0;">— or tap any day box below</span>`}</div>`;
+    const noted = (n, dd) => (P.notes || []).some(x => x.who === n && x.d === dd);
+    const strip = (pi, n, f, h, w) => h.slice(w * 7, w * 7 + 7).map((x, i) => { const dd = w * 7 + i, nt = noted(n, dd); return `<button type="button" class="ch-c ${x ? 'h' : 'e'}${i === 0 || i === 6 ? ' we' : ''}${nt ? ' nt' : ''}" onclick="chNoteOpen(${pi}, ${dd})" aria-label="${esc(f)} · ${chDayWord(P.ppe, dd)} · ${x ? chF(x) + ' hours' : 'no hours'}${nt ? ' · has your note' : ''} — tap to write a note">${x ? chF(x) : '·'}${nt ? '<i aria-hidden="true">✎</i>' : ''}</button>`; }).join('');
+    const dow = w => `<div class="ch-dow"><span></span>${CH_DOW.map((x, i) => `<span${i === 0 || i === 6 ? ' class="we"' : ''}>${x[0]}<small>${chMD(d[w * 7 + i]).split('/')[1]}</small></span>`).join('')}<span>wk</span></div>`;
+    let folds = '';
+    if (_chView === 'job') folds = js.map((j, i) => {
+      const open = _chOpen === 'j' + i, unk = /unknown/i.test(j.p), ok = !!(P.ok || {})[j.p], ppl = Object.entries(j.ppl).sort((a, b) => chSum(b[1].h, 0, 14) - chSum(a[1].h, 0, 14));
+      return `<div class="ch-job${unk ? ' unk' : ''}"><div class="ch-jh"><button type="button" class="ch-jt" aria-expanded="${open}" onclick="chFold('j${i}')" title="${esc(j.p)}">${open ? '▾' : '▸'} ${unk ? '⚠ ' : ''}${esc(chJobName(j.p).toUpperCase())}<small>${chF(j.tot)} h · ${ppl.length} ${ppl.length === 1 ? 'person' : 'people'} · wk 1 ${chF(j.w[0])} · wk 2 ${chF(j.w[1])}</small></button>
+        <button type="button" class="ch-ok${ok ? ' on' : ''}${unk && !ok ? ' warn' : ''}" onclick="chOk(${i})" aria-pressed="${ok}" aria-label="${ok ? 'OK\'d — tap to reopen it' : unk ? 'these hours have no job on them — tap to OK them as they are' : 'tap to OK this job\'s hours'}">${ok ? '✓' : unk ? '⚠' : '○'}<b>${ok ? 'OK\'D' : unk ? 'OK AS IS?' : 'OK?'}</b></button></div>
+        ${open ? [0, 1].filter(w => j.w[w] > 0).map(w => `<div class="ch-wk">WEEK ${w + 1} · ${chMD(d[w * 7])} – ${chMD(d[w * 7 + 6])} · ${chF(j.w[w])} h</div>${dow(w)}` + ppl.filter(([, q]) => chSum(q.h, w * 7, w * 7 + 7) > 0).map(([n, q]) => `<div class="ch-pr"><div class="ch-pn">${esc(q.f)}<small>${esc(q.g)}</small></div>${strip(q.pi, n, q.f, q.h, w)}<div class="ch-pt">${chF(chSum(q.h, w * 7, w * 7 + 7))}</div></div>`).join('')).join('') +
+          `<div class="ch-ps">${esc(Object.entries(ppl.reduce((m, [, q]) => { Object.entries(q.svc).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; }); return m; }, {})).sort((a, b) => b[1] - a[1]).map(([k, v]) => chSvcName(k) + ' ' + chF(v)).join(' · '))}</div>` : ''}</div>`;
+    }).join('');
+    else folds = P.people.map((pp, pi) => {
+      const open = _chOpen === 'p' + pi, t = pp.lines.reduce((s, l) => s + chSum(l.h, 0, 14), 0), ot = pp.sum ? pp.sum.ot : 0, byJob = {};
+      pp.lines.forEach(l => { const q = byJob[l.p] = byJob[l.p] || Array(14).fill(0); l.h.forEach((x, i) => q[i] += x); });
+      return `<div class="ch-job"><div class="ch-jh"><button type="button" class="ch-jt" aria-expanded="${open}" onclick="chFold('p${pi}')">${open ? '▾' : '▸'} ${esc(pp.f.toUpperCase())} <span style="font-weight: 400; opacity: .75;">${esc(pp.g)}</span><small>${chF(t)} h · wk 1 ${chF(pp.lines.reduce((s, l) => s + chSum(l.h, 0, 7), 0))} · wk 2 ${chF(pp.lines.reduce((s, l) => s + chSum(l.h, 7, 14), 0))}${ot ? ` · the clock counts ${chF(ot)} h as overtime` : ''}</small></button></div>
+        ${open ? [0, 1].map(w => { const rows = Object.entries(byJob).filter(([, h]) => chSum(h, w * 7, w * 7 + 7) > 0); if (!rows.length) return `<div class="ch-wk">WEEK ${w + 1} · ${chMD(d[w * 7])} – ${chMD(d[w * 7 + 6])} · no hours</div>`; const all = Array(14).fill(0); rows.forEach(([, h]) => h.forEach((x, i) => all[i] += x));
+          return `<div class="ch-wk">WEEK ${w + 1} · ${chMD(d[w * 7])} – ${chMD(d[w * 7 + 6])} · ${chF(chSum(all, w * 7, w * 7 + 7))} h</div>${dow(w)}` + rows.map(([p, h]) => `<div class="ch-pl">${esc(chJobName(p))}</div><div class="ch-pr"><div class="ch-pn"></div>${strip(pi, pp.n, pp.f, h, w)}<div class="ch-pt">${chF(chSum(h, w * 7, w * 7 + 7))}</div></div>`).join(''); }).join('') : ''}</div>`;
+    }).join('');
+    const left = js.length - okN;
+    body = `<div class="ch-card" id="chCard">
+      <div class="ch-ph"><b>PAY PERIOD ENDING ${CH_DOW[6].toUpperCase()} ${chMD(P.ppe)}</b><span>${chMD(d[0])} – ${chMD(d[13])} · ${chF(tot)} h · ${P.people.length} people</span></div>
+      <div class="ch-cubes" role="group" aria-label="where this pay period stands">${cubes}</div>
+      <div class="ch-word" id="chWord">${word}</div>
+      ${send}${need}${notes}
+      <div class="ch-tabs"><button type="button" class="pick-chip${_chView === 'job' ? ' sel' : ''}" onclick="chSetView('job')" aria-pressed="${_chView === 'job'}">BY JOB</button><button type="button" class="pick-chip${_chView === 'who' ? ' sel' : ''}" onclick="chSetView('who')" aria-pressed="${_chView === 'who'}">BY PERSON</button>
+        ${_chView === 'job' && left > 0 && lit < 3 ? `<button type="button" class="btn-ghost" style="margin-left: auto; font-size: 12px;" onclick="chOkAll()">✓ OK every job — ${left} left</button>` : ''}</div>
+      ${folds}
+      <div class="ch-foot"><a href="javascript:void(0)" onclick="_chHist = !_chHist; renderCrewHours()" aria-expanded="${_chHist}">${_chHist ? '▾' : '▸'} 🕘 history</a> · file: ${esc(P.name || '—')} · <a href="javascript:void(0)" onclick="chRemove()">${_chArm === 'rm' ? '⚠ SURE? tap again — it comes off this list' : '✕ take this pay period off the list'}</a>
+        ${_chHist ? `<div style="margin-top: 6px;">${(P.hist || []).slice().reverse().map(x => `<div>${chMD(String(x.at).slice(0, 10))} — ${esc(x.t)}</div>`).join('') || 'nothing yet'}</div>` : ''}</div>
+    </div>`;
+  }
+  const others = keys.filter(k => k !== _chPpe);
+  box.innerHTML = `<div id="chBox"><h3 class="mat-head"><span>⏱ Crew hours</span> <span id="chSaveWord" class="hint" style="margin: 0; font-size: 11px;">${_chDirty ? '⏳ saving…' : '✓ saved'}</span>
+      <span class="mat-head-btns"><button type="button" class="btn-ghost req-x x-plate x-small" style="min-width: 44px;" onclick="chClose()" aria-label="close crew hours" title="close crew hours">✕</button></span></h3>
+    <div class="hint" style="margin: 0 0 8px;">From Phil's time clock, every two weeks. Read here, never changed — a wrong day gets a ✎ note that rides to Logan.</div>
+    ${door}${body}
+    ${others.length ? `<div class="ch-others"><div class="ch-nh" style="color: var(--ink-2);">OTHER PAY PERIODS</div>${others.map(k => { const o = S.periods[k], l = chLit(o); return `<button type="button" class="ch-other" onclick="chPick('${escq(k)}')"><span><b>ending ${chMD(k)}/${k.slice(2, 4)}</b> · ${chF(chTot(o))} h</span><span class="ch-mini" role="img" aria-label="${CH_LIGHTS[l - 1][2]}">${[1, 2, 3, 4].map(n => `<i${n <= l ? ' class="on"' : ''}></i>`).join('')}<small>${'①②③④'[l - 1]} ${CH_LIGHTS[l - 1][1]}</small></span></button>`; }).join('')}</div>` : ''}</div>`;
+}
 
 // --- Eric's side: stand up one folder per crew member with the shared config in it ---
 async function publishCrewFolders() {
@@ -19436,7 +19985,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v6.98';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v6.99';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
