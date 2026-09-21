@@ -50,7 +50,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('✎ on a line opens a box right under it with the locked words above, and closes the others', await page.evaluate(() => {
     wizLineFix(2);
     const box = $('wlBox-2'), lock = box && box.querySelector('.wl-lock');
-    const a = !!lock && /took delivery of 2 kings/.test(lock.textContent) && !!$('wlText-2') && /Fix this line — and ask again/.test(box.textContent);
+    const a = !!lock && /took delivery of 2 kings/.test(lock.textContent) && !!$('wlText-2') && /Keep this fix/.test(box.textContent);   // ✎ v7.02 — a fix is KEPT; the saving (and the asking again) is at the end
     wizLineFix(1);
     return a && $('wlBox-2').innerHTML === '' && !!$('wlText-1');
   }));
@@ -61,6 +61,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     wizLineFix(2);
     $('wlText-2').value = 'it was 3 kings, the ticket is smudged';
     wizLineSave(2);
+    wizPendSave(true);   // ✎ v7.02 — "Save and ask again" at the end does what the one button used to do per line (_test702 walks the keeping)
     const src1 = entries.find(e => e.ai && /two kings on the truck/.test(e.ai));
     const note = entries.find(e => /^✎ Correction/.test(e.details || ''));
     const row = wizLog()[0];

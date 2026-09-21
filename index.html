@@ -958,6 +958,12 @@
   .wl-t p, .wl-t ul, .wl-t ol { margin: 0; }
   .wl-x { flex: 0 0 36px; min-height: 32px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer; }
   .wl-fix { margin: 2px 0 6px 12px; padding: 4px 8px; border-left: 3px solid var(--accent); font-size: 13.5px; }
+  .wl-fix.pend { border-left-style: dashed; border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--accent) 10%, transparent); font-weight: 600; }   /* ✎ v7.02 — kept, not saved yet: dashed + the words */
+  .wl-bar { margin: 12px 0 4px; padding: 10px; border: 2px solid var(--accent); border-radius: 12px; font-size: 15px; } .wl-bar .btn-primary, .wl-bar .btn-ghost { min-height: 44px; }
+  .wl-bar-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; } .wl-bar-top b { font-size: 14.5px; } .wl-drop { font-size: 12.5px; padding: 4px 10px; }
+  .wl-bar-row { display: flex; gap: 6px; margin-top: 6px; } .wl-bar-row > * { flex: 1 1 0; min-width: 0; font-size: 14.5px; padding-left: 6px; padding-right: 6px; }
+  #wizFullBody .wl-bar { display: none; }   /* in the full screen the bar lives in the foot, always in reach */
+  #wfPend:empty { display: none; } #wfPend .wl-bar { margin: 0 0 8px; }
   .wl-lock { margin: 6px 0 4px; padding: 6px 8px; background: var(--surface-1); border-radius: 8px; opacity: .8; font-style: italic; }
   .rev-wizfix .rev-text { font-size: 13.5px; margin-top: 4px; }
   .vault-row {
@@ -2916,7 +2922,7 @@
 <!-- v5.08 — 🧙 the answer and ONLY the answer: full screen, back button at the bottom -->
 <div id="wizFull">
   <div class="wf-body" id="wizFullBody"></div>
-  <div class="wf-foot"><button class="btn-primary wf-back" onclick="closeWizFull()">‹ Back</button></div>
+  <div class="wf-foot"><div id="wfPend"></div><button class="btn-primary wf-back" onclick="closeWizFull()">‹ Back</button></div>
 </div>
 <div id="sumViewer">
   <div class="sv-head">
@@ -4054,7 +4060,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.01 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.02 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -17436,7 +17442,7 @@ function wizCorrectStart() {
   const t = $('wizCorrText');
   if (t) { t.focus(); fitTa(t); }
 }
-function applyCorrection(corr, line) {
+function applyCorrection(corr, line, quiet) {   // quiet (v7.02) = one of several fixes saved together: the log gets ONE note for the lot, from wizPendSave
   let touched = 0;
   const tag = line ? `ERIC CORRECTED (re "${line}"): ${corr}` : 'ERIC CORRECTED: ' + corr;
   if (_lastAnswer && (_lastAnswer.srcIds || []).length) {
@@ -17445,7 +17451,7 @@ function applyCorrection(corr, line) {
       if (e) { e.ai = (((e.ai ? e.ai + '\n' : '') + tag)).slice(0, 2000); touched++; }
     });
   }
-  addEntry('Note', `✎ Correction${line ? ` — re "${String(line).slice(0, 80)}"` : _lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, '—', { noSniff: true });   // 📌 v6.81 — a correction has no job of its own
+  if (!quiet) addEntry('Note', `✎ Correction${line ? ` — re "${String(line).slice(0, 80)}"` : _lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, '—', { noSniff: true });   // 📌 v6.81 — a correction has no job of its own
   wizKeepFix(corr, _lastAnswer && _lastAnswer.keep, line);   // 🧙📜 v6.73 — and onto the kept answer it fixes
   // ✎ v6.83 — the durable list the Wizard reads on every question: the note on the record's ai field was getting
   // cut off past 300 characters, so a fix did not always reach the next answer. This list always does.
@@ -17470,34 +17476,96 @@ function saveCorrectionInline() {
 // Wizard reads on every question. Then it asks the same question again, straight away, with the fix in.
 function wizLines(md) { return String(md || '').split('\n').map(l => l.trim()).filter(Boolean); }
 function wizFixesFor(keepAt) { const row = keepAt && wizLog().find(x => x.at === keepAt); return row && Array.isArray(row.fix) ? row.fix.filter(f => f && f.line) : []; }
+// ✎ v7.02 — WORK THROUGH THE WHOLE ANSWER, SAVE AT THE END. Eric: "when i ask for a summary and i edit the line id like to
+// save it but not have it re ask the wizard right away, i want to work through the whole summary and make multiple edits
+// and then save at the end." v6.83 saved each line fix on the spot and asked the question again at once — so the second
+// fix had to be made on a NEW answer, and a summary with five wrong lines meant five waits. Now a line fix is KEPT on the
+// page (`_wizPend`: the line wears "✎ KEPT — not saved yet", ✎ again edits it or takes it off) and nothing is written and
+// nothing is asked. One bar — at the foot of the full screen, under the lines on the card — says how many are kept and
+// offers `✓ SAVE n FIXES` (they land everywhere a fix always did, with ONE note in the log for the lot, and the answer
+// stays up), `🧙 Save and ask again` (the same, then the question goes back ONCE with every fix in) and `✕ Drop them`
+// (two taps). Nothing typed is lost: the kept fixes ride between the card and the full screen, are mirrored on the phone,
+// and if the answer is about to go away (✕ on the card, a new question, another kept answer) they are saved first.
+let _wizPend = [], _wizPendCtx = null, _wizPendArm = false, _wizPendT = 0, _wizPendRead = false;
+function wizPendLoad() {
+  if (_wizPendRead) return; _wizPendRead = true;
+  try { const j = JSON.parse(lsGet('daylog-wizpend') || 'null'); if (j && j.ctx && Array.isArray(j.list) && j.list.length) { _wizPendCtx = j.ctx; _wizPend = j.list; } } catch (e) {}
+}
+function wizPendMirror() { lsSet('daylog-wizpend', _wizPend.length ? JSON.stringify({ ctx: _wizPendCtx, list: _wizPend }) : ''); }
+const wizAnsKey = md => String((_lastAnswer && _lastAnswer.keep) || md || '').slice(0, 200);
 function wizLinesHtml(md) {
   const lines = wizLines(md);
-  if (_lastAnswer) _lastAnswer.lines = lines;
+  wizPendLoad();
+  if (_wizPend.length && _wizPendCtx && _wizPendCtx.key !== wizAnsKey(md)) wizPendSave(false, true);   // a DIFFERENT answer is coming up: what was kept on the last one is saved first
+  if (_lastAnswer) { _lastAnswer.lines = lines; _lastAnswer.md = md; }
   const fixes = wizFixesFor(_lastAnswer && _lastAnswer.keep);
   return `<div class="wl-list">` + lines.map((l, i) => {
-    const fx = fixes.filter(f => f.line === l);
-    return `<div class="wl-line" data-i="${i}"><div class="wl-t">${mdToHtml(l)}</div><button type="button" class="wl-x" onclick="wizLineFix(${i})" aria-label="correct this line" title="correct this line">✎</button></div>` +
-      fx.map(f => `<div class="wl-fix">✎ Eric: ${esc(f.t)}</div>`).join('') + `<div class="wl-box" id="wlBox-${i}"></div>`;
-  }).join('') + `</div>`;
+    const fx = fixes.filter(f => f.line === l), pn = _wizPend.find(f => f.i === i && f.line === l);
+    return `<div class="wl-line${pn ? ' has-pend' : ''}" data-i="${i}"><div class="wl-t">${mdToHtml(l)}</div><button type="button" class="wl-x" onclick="wizLineFix(${i})" aria-label="${pn ? 'change the fix you kept on this line' : 'correct this line'}" title="${pn ? 'change the fix you kept' : 'correct this line'}">✎</button></div>` +
+      fx.map(f => `<div class="wl-fix">✎ Eric: ${esc(f.t)}</div>`).join('') +
+      (pn ? `<div class="wl-fix pend">✎ KEPT — not saved yet: ${esc(pn.t)}</div>` : '') + `<div class="wl-box" id="wlBox-${i}"></div>`;
+  }).join('') + `<div class="wl-bar"${_wizPend.length ? '' : ' hidden'}>${wizPendBarInner()}</div></div>`;
+}
+function wizPendBarInner() {
+  const n = _wizPend.length; if (!n) return '';
+  return `<div class="wl-bar-top"><b>✎ ${n} fix${n === 1 ? '' : 'es'} kept — not saved yet</b><button type="button" class="btn-ghost wl-drop" onclick="wizPendDrop()">${_wizPendArm ? '⚠ SURE? tap again — they are gone' : '✕ Drop them'}</button></div>
+    <div class="wl-bar-row"><button type="button" class="btn-primary" onclick="wizPendSave(false)">✓ SAVE ${n} FIX${n === 1 ? '' : 'ES'}</button>
+    <button type="button" class="btn-ghost" onclick="wizPendSave(true)">🧙 Save and ask again</button></div>`;
+}
+// redraw the lines wherever this answer is showing (the card, the full screen, or both) and the bar in the full screen's foot
+function wizPendRefresh() {
+  const md = _lastAnswer && (_lastAnswer.md || _lastAnswer.text);
+  if (md != null) document.querySelectorAll('.wl-list').forEach(el => { const open = el.querySelector('.wl-box textarea'); if (!open) el.outerHTML = wizLinesHtml(md); });
+  const foot = $('wfPend'); if (foot) foot.innerHTML = _wizPend.length ? `<div class="wl-bar">${wizPendBarInner()}</div>` : '';
 }
 function wizLineFix(i) {
   const box = $('wlBox-' + i); if (!box) return;
   document.querySelectorAll('.wl-box').forEach(b => { if (b !== box) b.innerHTML = ''; });
   if (box.innerHTML) { box.innerHTML = ''; return; }
-  const line = ((_lastAnswer && _lastAnswer.lines) || [])[i] || '';
+  const line = ((_lastAnswer && _lastAnswer.lines) || [])[i] || '', pn = _wizPend.find(f => f.i === i && f.line === line);
   box.innerHTML = `<div class="wl-lock hint">${esc(line)}</div>
-    <textarea id="wlText-${i}" class="grow" rows="2" placeholder="what this line should say"></textarea>
-    <div class="rev-row" style="margin-top: 6px;"><button class="btn-primary" onclick="wizLineSave(${i})">✓ Fix this line — and ask again</button><button class="btn-ghost" onclick="$('wlBox-${i}').innerHTML = ''">✕ Never mind</button></div>`;
+    <textarea id="wlText-${i}" class="grow" rows="2" style="width: 100%;" placeholder="what this line should say">${pn ? esc(pn.t) : ''}</textarea>
+    <div class="rev-row" style="margin-top: 6px; flex-wrap: wrap;"><button class="btn-primary" onclick="wizLineSave(${i})">✓ Keep this fix</button>${pn ? `<button class="btn-ghost" onclick="wizLineDrop(${i})">🗑 Take it off</button>` : ''}<button class="btn-ghost" onclick="$('wlBox-${i}').innerHTML = ''">✕ Never mind</button></div>
+    <div class="hint" style="margin-top: 4px;">It is kept here while you work through the rest — nothing is sent to the Wizard until you save at the end.</div>`;
   const t = $('wlText-' + i); if (t) { try { t.focus(); } catch (e) {} fitTa(t); }
 }
-function wizLineSave(i) {
-  const t = $('wlText-' + i); const fix = (t && t.value.trim()) || '';
+function wizLineSave(i) {   // KEEPS the fix on the page — the saving is wizPendSave, at the end
+  const t = $('wlText-' + i); const fix = ((t && t.value.trim()) || '').slice(0, 500);
   if (!fix) { toast('Say what the line should say first', false); return; }
-  const line = ((_lastAnswer && _lastAnswer.lines) || [])[i] || '';
-  applyCorrection(fix.slice(0, 500), line.slice(0, 300));
-  const box = $('wlBox-' + i); if (box) box.innerHTML = `<div class="wl-fix">✎ Eric: ${esc(fix)} — saved ✓</div>`;
-  toast('✎ Fixed — asking again with it in');
-  if (_lastAnswer && _lastAnswer.q && typeof aiKey === 'function' && aiKey()) { closeWizFull(); askInstant(_lastAnswer.q); }
+  const line = (((_lastAnswer && _lastAnswer.lines) || [])[i] || '').slice(0, 300);
+  if (!_wizPend.length || !_wizPendCtx) _wizPendCtx = { key: wizAnsKey(_lastAnswer && (_lastAnswer.md || _lastAnswer.text)), q: String((_lastAnswer && _lastAnswer.q) || ''), srcIds: ((_lastAnswer && _lastAnswer.srcIds) || []).slice(0, 20), keep: (_lastAnswer && _lastAnswer.keep) || '' };
+  _wizPend = _wizPend.filter(f => !(f.i === i && f.line === line)); _wizPend.push({ i, line, t: fix }); _wizPend.sort((a, b) => a.i - b.i);
+  _wizPendArm = false; wizPendMirror();
+  const box = $('wlBox-' + i); if (box) box.innerHTML = '';
+  wizPendRefresh();
+  toast(`✎ Kept — ${_wizPend.length} waiting. Save them when you are through`);
+}
+function wizLineDrop(i) {
+  const line = (((_lastAnswer && _lastAnswer.lines) || [])[i] || '').slice(0, 300);
+  _wizPend = _wizPend.filter(f => !(f.i === i && f.line === line)); wizPendMirror();
+  const box = $('wlBox-' + i); if (box) box.innerHTML = '';
+  wizPendRefresh();
+}
+function wizPendDrop() {
+  if (!_wizPendArm) { _wizPendArm = true; wizPendRefresh(); clearTimeout(_wizPendT); _wizPendT = setTimeout(() => { if (_wizPendArm) { _wizPendArm = false; wizPendRefresh(); } }, 4000); return; }
+  _wizPendArm = false; _wizPend = []; _wizPendCtx = null; wizPendMirror(); wizPendRefresh(); toast('✕ Dropped — nothing was saved');
+}
+// the end: every kept fix lands where a fix always did — the records the answer came from, the kept answer (with its
+// line), the list the Wizard reads on every question — and ONE note in the log for the lot. again = the question goes back once.
+function wizPendSave(again, leaving) {
+  wizPendLoad();
+  const list = _wizPend.slice(), ctx = _wizPendCtx; if (!list.length || !ctx) return 0;
+  const was = _lastAnswer, mine = was && wizAnsKey(was.md || was.text) === ctx.key;
+  if (!mine) _lastAnswer = { q: ctx.q, text: '', srcIds: ctx.srcIds || [], at: Date.now(), keep: ctx.keep };   // the answer these belong to is no longer the one on screen
+  list.forEach(f => applyCorrection(f.t, f.line, true));
+  const n = list.length, q = String(ctx.q || '').slice(0, 80);
+  addEntry('Note', n === 1 ? `✎ Correction — re "${String(list[0].line).slice(0, 80)}": ${list[0].t}` : `✎ ${n} corrections${q ? ` — re "${q}"` : ''}: ` + list.map(f => `"${String(f.line).slice(0, 60)}" → ${f.t}`).join(' · ').slice(0, 1200), '—', { noSniff: true });
+  if (!mine) _lastAnswer = was;
+  _wizPend = []; _wizPendCtx = null; _wizPendArm = false; wizPendMirror();
+  if (!leaving) wizPendRefresh();
+  toast(leaving ? `✎ ${n} fix${n === 1 ? '' : 'es'} you had kept ${n === 1 ? 'was' : 'were'} saved first ✓` : again ? `✎ ${n} saved — asking again with ${n === 1 ? 'it' : 'them'} in` : `✎ ${n} fix${n === 1 ? '' : 'es'} saved ✓ — every future answer uses ${n === 1 ? 'it' : 'them'}`);
+  if (again && !leaving && ctx.q && typeof aiKey === 'function' && aiKey()) { closeWizFull(); askInstant(ctx.q); }
+  return n;
 }
 async function askInstant(what) {
   const st = $('askStatus');
@@ -18776,8 +18844,10 @@ function showWizFull(q, md, srcIds, brain, files) {
     <div class="hint" style="margin-top: 10px;">Follow-up? Tap ‹ Back and just ask — I hold this exchange for 15 minutes.</div>`;
   $('wizFull').classList.add('show');
   document.body.classList.add('modal-open');
+  { const wf = $('wfPend'); if (wf) wf.innerHTML = _wizPend.length ? `<div class="wl-bar">${wizPendBarInner()}</div>` : ''; }   // ✎ v7.02 — the fixes he has kept, and the one SAVE, at the foot
 }
 function closeWizFull() {
+  if (_wizPend.length) wizPendSave(false, true);   // ✎ v7.02 — nothing typed is lost: fixes kept but not saved are saved as he leaves
   $('wizFull').classList.remove('show');
   if (!document.querySelector('.panel.open') && !$('sumViewer').classList.contains('show')) document.body.classList.remove('modal-open');
 }
@@ -18800,7 +18870,7 @@ function showInstantAnswer(q, md, srcIds) {
   const card = document.querySelector('.ask-card');
   if (card && card.scrollIntoView) card.scrollIntoView({ block: 'nearest' });
 }
-function hideInlineAnswer() { $('askInline').style.display = 'none'; }
+function hideInlineAnswer() { if (_wizPend.length) wizPendSave(false, true); $('askInline').style.display = 'none'; }   // ✎ v7.02 — kept fixes are saved before the answer goes away
 function openAnswerFull() { if (_lastAns) showAnswerModal(_lastAns.q, _lastAns.md); }
 function showAnswerModal(q, md) {
   $('svTitle').textContent = '🧙 The Wizard — just now';
@@ -20172,7 +20242,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.01';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.02';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
