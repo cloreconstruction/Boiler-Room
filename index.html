@@ -2689,6 +2689,31 @@
   /* 🗂 v5.79 — category drag-merge: the grip won't scroll the page, the drop target glows */
   .mat-grip { cursor: grab; touch-action: none; }
   .fc-sec.rm-drop { outline: 3px dashed var(--accent); outline-offset: 2px; border-radius: 10px; }
+  /* 📐 v7.06 — Eric: "On the plan rack, make the drag-and-drop areas bigger." The drop box was a strip 45px tall on
+     the PC. Now it is a target you cannot miss — 3px dashed, a big arrow, 17px words — and the WHOLE slot card takes the
+     drop. While a file is over a card its box lights: a solid edge, a tinted plate and the words turn to ⬇ LET GO, never
+     the colour alone. On the PC the slots sit two across, so all four standard ones are on the screen at once — a file
+     being dragged cannot scroll the page to reach the one below. */
+  .pk-wrap { max-width: 1100px; margin: 0 auto; }
+  .pk-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 10px; }
+  .pk-grid > .pk-slot { margin: 0; }
+  .pk-drop { margin-top: 8px; border: 3px dashed color-mix(in srgb, var(--accent) 70%, transparent); border-radius: 14px;
+    padding: 16px 14px; min-height: 120px; display: flex; align-items: center; justify-content: center; text-align: center;
+    cursor: pointer; font-size: 15px; line-height: 1.4; }
+  .pk-drop-idle, .pk-drop-hot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .pk-drop-arrow { font-size: 30px; line-height: 1; }
+  .pk-drop b { font-size: 17px; }
+  .pk-drop-sub { color: var(--ink-muted); font-size: 14px; }
+  .pk-drop-hot { display: none; font-size: 18px; font-weight: 800; letter-spacing: .03em; }
+  .pk-slot.pk-hot .pk-drop { border-style: solid; background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .pk-slot.pk-hot .pk-drop-idle { display: none; }
+  .pk-slot.pk-hot .pk-drop-hot { display: flex; }
+  .pk-drop:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  @media (min-width: 701px) {
+    .pk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .pk-drop { min-height: 180px; }
+    .pk-drop-arrow { font-size: 40px; }
+  }
   /* 📏 v5.83 — Eric: "it goes past the brown background... I can see the main page behind
      it." height:100% capped the brown at one screen; a long Build List scrolled out past the
      bottom of it. min-height + auto lets the background grow WITH the list. */
@@ -4081,7 +4106,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.05 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.06 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -12519,8 +12544,21 @@ async function portalVis(i, k) {
 // slides into history with a ⚠ SUPERSEDED banner when opened. Only current and numbered
 // history — the word Final is banned by design. Revisions auto-stamp R1, R2, R3 + date.
 let _pkIdx = -1, _pkD = null, _pkPend = {}, _pkHistShow = new Set(), _pkArm = '';
-const PK_SEED = [{ key: 'whole', name: 'Whole project' }, { key: 'trusses', name: 'Trusses' }, { key: 'windows', name: 'Windows' }];
+// 📐 v7.06 — Eric: "have it always have whole project, trusses, windows, and cabinets. Categories as a default."
+// These four are on EVERY rack, first and in this order; his own slots follow in the order he made them.
+const PK_SEED = [{ key: 'whole', name: 'Whole project' }, { key: 'trusses', name: 'Trusses' }, { key: 'windows', name: 'Windows' }, { key: 'cabinets', name: 'Cabinets' }];
 function pkPath(code) { return portalRoot() + '/plans-' + code + '.json'; }
+// A rack saved before v7.06 (or one where a standard slot was taken off) gets the missing ones back when it opens —
+// found by key, else by the same name — and nothing is written until the next real change. Every set, note and
+// piece of history rides along untouched. The standard slots are then slots 0-3, which pkStd reads.
+function pkHeal(d) {
+  const slots = (Array.isArray(d.slots) ? d.slots : []).filter(s => s && s.key);
+  const nm = s => String(s.name || '').trim().toLowerCase();
+  const std = PK_SEED.map(p => slots.find(s => s.key === p.key) || slots.find(s => nm(s) === p.name.toLowerCase()) || { key: p.key, name: p.name, cur: null, hist: [] });
+  d.slots = [...std, ...slots.filter(s => !std.includes(s))];
+  return d;
+}
+function pkStd(si) { return si < PK_SEED.length; }
 async function openPlanRack(i) {
   if (portalGuard()) return;
   if (CREW_NAME) { toast('📐 The rack lives in Eric\'s Dropbox — the crew copy is the next screw to turn', false); return; }
@@ -12528,7 +12566,8 @@ async function openPlanRack(i) {
   const c = _portalIdx.clients[i];
   toast('⏳ Opening the rack…');
   try { _pkD = JSON.parse(await dbxDownload(pkPath(c.code)) || 'null'); } catch (e) { _pkD = null; }
-  if (!_pkD || !Array.isArray(_pkD.slots)) _pkD = { slots: PK_SEED.map(s => ({ key: s.key, name: s.name, cur: null, hist: [] })) };
+  if (!_pkD || typeof _pkD !== 'object' || !Array.isArray(_pkD.slots)) _pkD = { slots: [] };
+  pkHeal(_pkD);   // 📐 v7.06 — the four standard slots, on every rack
   renderPlanRack();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -12548,34 +12587,40 @@ function renderPlanRack() {
   const c = _portalIdx.clients[_pkIdx];
   if (!c || !_pkD) return;
   const box = $('revBox');
-  box.innerHTML = `<h3>📐 ${esc(c.job)} — plan rack
+  box.innerHTML = `<div class="pk-wrap"><h3>📐 ${esc(c.job)} — plan rack
     ${winX('closePlanRack()', 'close the rack')}</h3>
     <div class="hint" style="margin: 0 0 10px;">One current set per slot — whatever sits in the slot IS the plan. Drop a new set in and say what changed; the old one slides into history. Nothing here is ever called Final.</div>
+    <div class="pk-grid">
     ${_pkD.slots.map((s, si) => {
       const cur = s.cur;
       const pend = _pkPend[s.key];
       const showH = _pkHistShow.has(s.key);
-      return `<div class="set-section fc-sec" style="margin-top: 10px;"><h4>📐 ${esc(s.name)}
+      // 📐 v7.06 — a standard slot never leaves the rack: its ✕ EMPTIES it, and shows only when there is something in it
+      const std = pkStd(si), full = !!(cur || (s.hist || []).length);
+      const k = escq(s.key);
+      return `<div class="set-section fc-sec pk-slot" data-pk="${esc(s.key)}"${pend ? '' : ` ondragover="pkDragOver(event)" ondragleave="pkDragLeave(event)" ondrop="pkDrop(event, '${k}')"`}><h4>📐 ${esc(s.name)}
         ${cur ? `<span style="font-weight: 800; letter-spacing: .5px;">· R${cur.rev} · ${esc(cur.date)}</span>` : '<span class="hint" style="margin: 0; font-weight: 400;">· no set yet</span>'}
-        <span style="float: right;">
-          <button type="button" class="btn-ghost req-x" style="font-size: 11px; color: var(--err, #c0392b);" onclick="pkDelSlot(${si})">${_pkArm === 'slot' + si ? '⚠ SURE? Slot only — files stay' : '✕'}</button>
-        </span></h4>
+        ${std && !full ? '' : `<span style="float: right;">
+          <button type="button" class="btn-ghost req-x" style="font-size: 11px; color: var(--err, #c0392b);" onclick="pkDelSlot(${si})" aria-label="${std ? 'empty' : 'take off'} the ${esc(s.name)} slot">${_pkArm === 'slot' + si ? (std ? '⚠ SURE? Empties it — files stay' : '⚠ SURE? Slot only — files stay') : '✕'}</button>
+        </span>`}</h4>
         ${cur ? `<button type="button" class="btn-primary" style="width: 100%; font-weight: 800; font-size: 15px; padding: 13px; background: var(--accent); color: #fff; border: 2px solid var(--accent);" onclick="pkOpen('${escq(s.key)}')">📄 OPEN THE CURRENT SET — R${cur.rev}</button>
         ${cur.note ? `<div class="hint" style="margin: 5px 0 0;">R${cur.rev} went up ${esc(cur.date)} — <b>${esc(cur.note)}</b></div>` : ''}` : ''}
         ${pend ? `<div class="frow" style="gap: 6px; margin-top: 8px; flex-wrap: wrap;">
           <div class="hint" style="flex: 1 1 100%; margin: 0;">📄 <b>${esc(pend.name)}</b> ready to go in as <b>R${(cur ? cur.rev : 0) + 1}</b>. What changed${cur ? ` from R${cur.rev}` : ''}? <b>(required — this is the line the crew reads)</b></div>
-          <input type="text" id="pkNote-${escq(s.key)}" placeholder="${cur ? 'heel height 12→14, garage header moved…' : 'first set — say what it covers'}" style="flex: 1; min-width: 150px;"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();pkStamp('${escq(s.key)}');}">
+          <!-- 📐 v7.06 — a real writing box (it was a bare input, a thin line beside the Stamp plate) -->
+          <div class="field" style="flex: 1; min-width: 150px;"><input type="text" id="pkNote-${escq(s.key)}" placeholder="${cur ? 'heel height 12→14, garage header moved…' : 'first set — say what it covers'}" style="min-height: 44px; font-size: 15px;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();pkStamp('${escq(s.key)}');}"></div>
           <button type="button" class="btn-primary" style="font-weight: 800;" onclick="pkStamp('${escq(s.key)}')">✓ Stamp it R${(cur ? cur.rev : 0) + 1}</button>
           <button type="button" class="btn-ghost req-x" onclick="delete _pkPend['${escq(s.key)}']; renderPlanRack()">✕</button>
         </div>` : `
-        <!-- 📐 v5.85 — Eric: "Make that all drag and drop. Into the three different windows." Each slot IS a drop zone. -->
-        <div id="pkDrop-${escq(s.key)}" style="border: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 8px; padding: 12px; text-align: center; cursor: pointer; font-size: 13px; margin-top: 8px;"
-          onclick="$('pkFile-${escq(s.key)}').click()"
-          ondragover="event.preventDefault(); this.style.borderStyle = 'solid';"
-          ondragleave="this.style.borderStyle = 'dashed';"
-          ondrop="event.preventDefault(); this.style.borderStyle = 'dashed'; pkPick('${escq(s.key)}', event.dataTransfer.files)">
-          ⬆ <b>Drop the new ${esc(s.name)} set right here</b> — drag the PDF onto this box, or tap to pick${cur ? ` · replaces R${cur.rev}` : ''}</div>
+        <!-- 📐 v5.85 — Eric: "Make that all drag and drop. Into the three different windows." Each slot IS a drop zone.
+             v7.06 — "make the drag-and-drop areas bigger": the box is big, and the whole card around it takes the drop. -->
+        <div id="pkDrop-${k}" class="pk-drop" role="button" tabindex="0" aria-label="Drop or pick the new ${esc(s.name)} set"
+          onclick="$('pkFile-${k}').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+          <span class="pk-drop-idle"><span class="pk-drop-arrow" aria-hidden="true">⬆</span>
+            <b>Drop the new ${esc(s.name)} set here</b>
+            <span class="pk-drop-sub">drag the PDF onto this box — or tap to pick a file${cur ? ` · it replaces R${cur.rev}` : ''}</span></span>
+          <span class="pk-drop-hot">⬇ LET GO — it goes in as ${esc(s.name)} R${(cur ? cur.rev : 0) + 1}</span></div>
         <input type="file" id="pkFile-${escq(s.key)}" accept="application/pdf,image/*" style="display: none;" onchange="pkPick('${escq(s.key)}', this.files)">
         ${(s.hist || []).length ? `<div class="chips-row" style="margin-top: 6px;"><button type="button" class="btn-ghost req-x" onclick="pkHistToggle('${escq(s.key)}')" aria-expanded="${showH}">${showH ? '▾' : '▸'} 🕘 ${s.hist.length} old set${s.hist.length === 1 ? '' : 's'} + changes</button></div>` : ''}`}
         ${showH && (s.hist || []).length ? `<div style="margin-top: 6px;">
@@ -12585,20 +12630,43 @@ function renderPlanRack() {
           </div>`).join('')}
         </div>` : ''}
       </div>`; }).join('')}
+    </div>
     <div class="frow" style="margin-top: 12px;">
       <div class="field" style="flex: 1;"><input type="text" id="pkNewSlot" placeholder="new slot — Septic, Electrical layout, Site plan…" onkeydown="if(event.key==='Enter'){event.preventDefault();pkAddSlot();}"></div>
       <button class="btn-ghost" onclick="pkAddSlot()">➕ slot</button>
     </div>
     <div class="rev-row" style="margin-top: 12px;">
       <button class="btn-ghost x-plate" style="flex: 1;" onclick="closePlanRack()">✕ Close</button>
-    </div>`;
+    </div></div>`;
 }
 function pkPick(key, files) {
   const f = files && files[0];
   if (!f) return;
   _pkPend[key] = f;
   renderPlanRack();
+  if (files.length > 1) toast(`📐 One set per slot — took the first file, ${f.name}`, false);   // 📐 v7.06
   setTimeout(() => { const b = $('pkNote-' + key); if (b) b.focus(); }, 80);
+}
+// 📐 v7.06 — the whole slot card is the drop target; its box lights while a FILE is over it (text or a link does not)
+function pkDragOver(ev) {
+  const types = ev.dataTransfer ? [...(ev.dataTransfer.types || [])] : [];
+  if (!types.includes('Files')) return;
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'copy';
+  const el = ev.currentTarget;
+  if (el.classList.contains('pk-hot')) return;
+  document.querySelectorAll('.pk-slot.pk-hot').forEach(x => x.classList.remove('pk-hot'));
+  el.classList.add('pk-hot');
+}
+function pkDragLeave(ev) {
+  const el = ev.currentTarget;
+  if (!el.contains(ev.relatedTarget)) el.classList.remove('pk-hot');
+}
+function pkDrop(ev, key) {
+  ev.preventDefault(); ev.stopPropagation();
+  ev.currentTarget.classList.remove('pk-hot');
+  const files = ev.dataTransfer && ev.dataTransfer.files;
+  if (files && files.length) pkPick(key, files);
 }
 async function pkStamp(key) {
   const s = _pkD.slots.find(x => x.key === key);
@@ -12608,7 +12676,13 @@ async function pkStamp(key) {
   const note = (($('pkNote-' + key) || {}).value || '').trim().slice(0, 200);
   if (!note) { toast('Say what changed first — that line is the whole point', false); const b = $('pkNote-' + key); if (b) b.focus(); return; }
   const rev = (s.cur ? s.cur.rev : 0) + 1;
-  const clean = (f.name || 'plan.pdf').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
+  // 📐 v7.06 — a long name was cut at 60 and lost its ending (a set went up as "…1117 layou", no .pdf, and would not
+  // open as a PDF). The ending is kept; only the name in front of it is shortened.
+  const raw = (f.name || 'plan.pdf').replace(/[^a-zA-Z0-9._ -]/g, '');
+  let ext = (raw.match(/\.[a-zA-Z0-9]{1,5}$/) || [''])[0];
+  const base = ext ? raw.slice(0, -ext.length) : raw;
+  if (!ext && /pdf/i.test(f.type || '')) ext = '.pdf';
+  const clean = (base.slice(0, 60 - ext.length).trim() || 'plan') + ext;
   const path = `${DBX_ROOT}/Plans/${c.code}/${s.key}/R${rev} ${clean}`;
   toast(`⏳ R${rev} going up…`);
   try {
@@ -14234,7 +14308,7 @@ async function pkAddSlot() {
   const v = (($('pkNewSlot') || {}).value || '').trim().slice(0, 40);
   if (!v) return;
   const key = v.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || ('slot' + _pkD.slots.length);
-  if (_pkD.slots.some(s => s.key === key)) { toast('That slot already exists', false); return; }
+  if (_pkD.slots.some(s => s.key === key || String(s.name || '').trim().toLowerCase() === v.toLowerCase())) { toast('That slot already exists', false); return; }
   _pkD.slots.push({ key, name: v, cur: null, hist: [] });
   await pkSave();
   renderPlanRack();
@@ -14242,6 +14316,9 @@ async function pkAddSlot() {
 async function pkDelSlot(si) {
   const s = _pkD.slots[si];
   if (!s) return;
+  // 📐 v7.06 — the four standard slots stay on the rack ("always have"): their ✕ empties the slot instead
+  const std = pkStd(si);
+  if (std && !s.cur && !(s.hist || []).length) return;
   if ((s.cur || (s.hist || []).length) && _pkArm !== 'slot' + si) {
     _pkArm = 'slot' + si;
     renderPlanRack();
@@ -14249,10 +14326,12 @@ async function pkDelSlot(si) {
     return;
   }
   _pkArm = '';
-  _pkD.slots.splice(si, 1);
+  if (std) { s.cur = null; s.hist = []; _pkHistShow.delete(s.key); }
+  else _pkD.slots.splice(si, 1);
   await pkSave();
   renderPlanRack();
-  toast(`✕ ${s.name} slot gone — the files themselves stay in Dropbox under Plans`);
+  toast(std ? `✕ ${s.name} emptied — the slot stays, and the files themselves stay in Dropbox under Plans`
+    : `✕ ${s.name} slot gone — the files themselves stay in Dropbox under Plans`);
 }
 // ✎✕ v5.80 — Eric: "I need to be able to edit and delete the client pages. I accidentally
 // have two for Gilbreath." Rename fixes the name everywhere (index + the page the homeowner
@@ -15876,8 +15955,14 @@ async function matOpenDoc(path) {
     if (!r.ok) throw new Error();
     // 📄 v5.85b — Eric: "it sends me some kind of unrecognizable file that won't open."
     // Dropbox hands the bytes back as octet-stream; the phone needs to be TOLD it's a PDF.
-    const mime = /\.pdf$/i.test(path) ? 'application/pdf' : (r.headers.get('content-type') || 'application/octet-stream');
-    const url = URL.createObjectURL(new Blob([await r.arrayBuffer()], { type: mime }));
+    // 📐 v7.06 — a paper whose name lost its ending (the plan rack cut long names at 60 before v7.06) is told apart
+    // by its first bytes: a PDF starts %PDF-, a JPEG FF D8 FF, a PNG 89 50 4E 47.
+    const buf = await r.arrayBuffer(), h = new Uint8Array(buf.slice(0, 5));
+    const sniff = String.fromCharCode(...h) === '%PDF-' ? 'application/pdf'
+      : h[0] === 0xFF && h[1] === 0xD8 && h[2] === 0xFF ? 'image/jpeg'
+      : h[0] === 0x89 && h[1] === 0x50 && h[2] === 0x4E && h[3] === 0x47 ? 'image/png' : '';
+    const mime = /\.pdf$/i.test(path) ? 'application/pdf' : (sniff || r.headers.get('content-type') || 'application/octet-stream');
+    const url = URL.createObjectURL(new Blob([buf], { type: mime }));
     $('cpFrame').src = url;
     $('cliPrev').classList.add('show');
   } catch (e) { toast('Couldn\'t open it — check the connection', false); }
@@ -20300,7 +20385,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.05';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.06';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
