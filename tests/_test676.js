@@ -72,7 +72,8 @@ const { chromium } = require('playwright');
   ok('the headings come in the agreed order with counts, and the personal note is nowhere on the page', await (async () => {
     const h = await secs();
     const t = await page.evaluate(() => $('revBox').textContent);
-    return h.map(x => x.key).join(',') === 'need,people,money,photos,wizard,sched,get,pocket,logan,record' && !/dentist/.test(t);
+    // 🎒 v7.07 — Eric: "I want the pocket list to be on the top of the page, just underneath [NEEDS] YOU" — the pocket's two headings moved up
+    return h.map(x => x.key).join(',') === 'need,get,pocket,people,money,photos,wizard,sched,logan,record' && !/dentist/.test(t);
   })());
 
   { const t = await body('need'); ok('NEEDS YOU says what waits, in words, with a way over to the sort tab', /1 waiting/.test(t) && /1 bills/.test(t) && /Open the sort tab/.test(t)); }
@@ -92,7 +93,7 @@ const { chromium } = require('playwright');
     return /Mery — 2 photos/.test(p) && /what did we do tuesday/.test(w) && /call the inspector/.test(s) && /inspection Thursday/.test(s) && /gravel for the drive/.test(s) && /today/.test(s);
   })());
 
-  ok('TO GET has the pocket item and the pocket note; SENT TO LOGAN has the bookkeeper note and the receipt on their page', await (async () => {
+  ok('the POCKET LIST (v7.07; it was TO GET) has the pocket item and the pocket note; SENT TO LOGAN has the bookkeeper note and the receipt on their page', await (async () => {
     const g = await body('get'), l = await body('logan');
     return /gravel for the drive/.test(g) && /screws for Hertz/.test(g) && /sent Logan the August receipts/.test(l) && /to Logan/.test(l) && /lumber package/.test(l) && /on their page/.test(l);
   })());

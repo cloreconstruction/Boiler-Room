@@ -103,7 +103,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   console.log('— 🎒 v6.78 a POCKET heading on the summary —');
 
-  ok('what left the pocket unfinished (flushed, overflow, not done) sits under 🎒 POCKET — not the done ones, which stay under TO GET', await page.evaluate(() => {
+  ok('what left the pocket unfinished (flushed, overflow, not done) sits under 🎒 POCKET — not the done ones, which stay under the POCKET LIST (TO GET until v7.07)', await page.evaluate(() => {
     entries = []; nextId = 1; prefs.pocket = [];
     addEntry('Note', '🎒 Flushed — call the gravel guy', '—', { noSniff: true, tags: ['pocket'], pocket: 'flushed' });
     addEntry('Note', '🎒 Overflow — pick up the saw', '—', { noSniff: true, tags: ['pocket'], pocket: 'over' });

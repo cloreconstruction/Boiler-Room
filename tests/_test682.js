@@ -96,7 +96,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return /gravel for the drive/.test(pl) && /blue tape/.test(pl) && !/gravel for the drive/.test(bo) && !/blue tape/.test(bo) && /frame the deck by Friday/.test(bo) && /screws for Hertz/.test(bo);
   }));
 
-  ok('the summary tab still lists the live pocket under TO GET, and nothing runs off the edge', await page.evaluate(() => {
+  ok('the summary tab still lists the live pocket under the POCKET LIST (TO GET until v7.07), and nothing runs off the edge', await page.evaluate(() => {
     revTab('summary');
     const t = document.querySelector('.rev-sec-body[data-sec="get"]').textContent;
     const r = /gravel for the drive/.test(t) && /blue tape/.test(t) && $('revBox').scrollWidth <= $('revBox').clientWidth;

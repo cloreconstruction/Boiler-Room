@@ -2834,6 +2834,7 @@
      Its own framed box with its name on it, a clear gap before ①; still inside the grinder card so the
      grinder stays first after the plates (v6.12, _test612). */
   .pk-card { padding: 8px 10px 10px; margin: 0 0 14px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface-1); }
+  .pk-card.pk-flash { outline: 3px solid var(--accent); outline-offset: 3px; }   /* 🎒 v7.07 — "here it is", from the log's 🎒 plate */
   .pk-top { display: flex; align-items: center; gap: 8px; }
   .pk-title { font-weight: 800; font-size: 13px; letter-spacing: .7px; }
   .pk-cap { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-variant-numeric: tabular-nums; }
@@ -4106,7 +4107,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.06 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.07 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -17931,6 +17932,7 @@ function pocketFlush() {
   return items.length;
 }
 function pocket() { return Array.isArray(prefs.pocket) ? prefs.pocket : (prefs.pocket = []); }
+function pocketByDay() { const t = pocketDay(0); return [...pocket()].filter(Boolean).sort((a, b) => (a.day > t) - (b.day > t)); }   // 🎒 v7.07 — today's first, newest first within a day
 function pocketDay(n) { const d = new Date(); d.setDate(d.getDate() + n); return localDay(d); }
 function pocketAdd(text) {
   const t = String(text || '').trim().slice(0, 140);
@@ -18012,8 +18014,11 @@ function renderPocket() {
 // under the clock is gone from the main page — the 📊 plate and the SUMMARY header button are the
 // doors. Nothing in the SUMMARY tab needs a tap; it is for reading.
 let _revTab = 'sort', _sumSpan = 'week', _sumSec = null;
-const SUM_SECS = [['need', '⚠ NEEDS YOU'], ['people', '👥 PEOPLE'], ['money', '💵 MONEY'], ['photos', '📷 PHOTOS'], ['wizard', '🧙 WIZARD'],
-  ['sched', '📅 SCHEDULE'], ['get', '🎒 TO GET'], ['pocket', '🎒 POCKET — not done'], ['logan', '📗 SENT TO LOGAN'], ['record', '📜 THE RECORD']];
+// 🎒 v7.07 — Eric: "When I click Summary, I want the pocket list to be on the top of the page, just underneath [NEEDS] YOU."
+// The pocket's two headings come right after NEEDS YOU — what is on the list (and what got done), then what was left
+// undone — and the page opens on the pocket list when it holds anything (NEEDS YOU keeps its count on its heading).
+const SUM_SECS = [['need', '⚠ NEEDS YOU'], ['get', '🎒 POCKET LIST'], ['pocket', '🎒 POCKET — not done'], ['people', '👥 PEOPLE'], ['money', '💵 MONEY'],
+  ['photos', '📷 PHOTOS'], ['wizard', '🧙 WIZARD'], ['sched', '📅 SCHEDULE'], ['logan', '📗 SENT TO LOGAN'], ['record', '📜 THE RECORD']];
 function revTabsHtml() {
   const n = pendingQueue.length + revRcptRows().n, b = boardLines().length;   // 📋 v6.79 — the third tab wears the open-line count
   return `<div class="rev-tabs"><button type="button" class="rev-tab${_revTab === 'sort' ? ' on' : ''}" onclick="revTab('sort')" aria-pressed="${_revTab === 'sort'}">📥 SORT${n ? ` · ${n}` : ''}</button><button type="button" class="rev-tab${_revTab === 'summary' ? ' on' : ''}" onclick="revTab('summary')" aria-pressed="${_revTab === 'summary'}">📊 SUMMARY</button><button type="button" class="rev-tab${_revTab === 'board' ? ' on' : ''}" onclick="revTab('board')" aria-pressed="${_revTab === 'board'}">📋 BOARD${b ? ` · ${b}` : ''}</button></div>`;
@@ -18068,10 +18073,11 @@ function renderSummary() {
     ...es.filter(e => e.mail && ['deadline', 'schedule'].includes(e.mailWhy)).map(e => line('📧', `<b>${who(e)}</b> — ${esc(e.mailSubj || '')}`, `${esc(MAIL_WHY_WORD[e.mailWhy] || '')}${e.mailGist ? ' — ' + esc(e.mailGist) : ''}`)),
     ...pocket().map(it => line('🎒', `<b>${it.day === todayD ? 'today' : it.day === tomD ? 'tomorrow' : esc(it.day)}</b> — ${esc(it.t)}`, '')),
   ];
-  // 🎒 TO GET — the pocket as it stands, then what got done
+  // 🎒 POCKET LIST (was TO GET, v6.76) — the pocket as it stands, then what got done
+  // 🎒 v7.07 — today's before tomorrow's, as on the pocket card; a done row wears its ✓ once (in the glyph column)
   S.get = [
-    ...pocket().map(it => line('🎒', esc(it.t), it.day === todayD ? 'today' : 'tomorrow')),
-    ...es.filter(e => e.pocket === 'done').map(e => line('✓', words(e), when(e))),
+    ...pocketByDay().map(it => line('🎒', esc(it.t), it.day <= todayD ? 'today' : 'tomorrow')),
+    ...es.filter(e => e.pocket === 'done').map(e => line('✓', esc(String(e.details || '').replace(/^✓\s*/, '').replace(/\s+/g, ' ').slice(0, 110)), when(e))),
   ];
   // 🎒 POCKET — not done: what left the pocket unfinished (flushed, overflow, swept by the morning). Eric: "make a
   // category for the pocket list flushes so if i don't get to the item itll go to the summary page and i can then
@@ -18102,7 +18108,7 @@ function renderSummary() {
       notes.map(e => line('·', `<b>${esc(e.job || '—')}</b> ${words(e)}`, '')).join('') + `</div>`;
   });
   const secs = SUM_SECS.map(([key, label]) => ({ key, label, items: S[key] || [] }));
-  if (_sumSec == null) { const f = secs.find(s => s.items.length); _sumSec = f ? f.key : ''; }
+  if (_sumSec == null) { const f = secs.find(s => ['get', 'pocket'].includes(s.key) && s.items.length) || secs.find(s => s.items.length); _sumSec = f ? f.key : ''; }   // 🎒 v7.07 — the pocket first
   box.innerHTML = `<h3>📊 Summary${winX('closeReview()', 'close')}</h3>${revTabsHtml()}
     <div class="chips-row" style="display: flex; gap: 6px; margin: 8px 0 4px;">
       <button type="button" class="pick-chip${_sumSpan === 'today' ? ' sel' : ''}" onclick="sumSpan('today')" aria-pressed="${_sumSpan === 'today'}">${_sumSpan === 'today' ? '✓ ' : ''}TODAY</button>
@@ -18778,6 +18784,13 @@ function rlSearchShow(open) {
   if (b) { const on = show || !!window._rlFiltersOn; b.classList.toggle('sel', on); b.textContent = show ? '✕ Close search' : on ? '🔍 Search ✓ ON' : '🔍 Search'; }
 }
 function rlSearchToggle() { rlSearchShow(); }
+// 🎒 v7.07 — a row still ON the pocket list (the 🎒 plate) goes to the list itself on the main page, lit for a moment
+function rlPocketGo() {
+  if ($('rlWin') && $('rlWin').classList.contains('show')) rlSearchShow(false);
+  const c = $('pocketCard'); if (!c) return;
+  try { c.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+  c.classList.add('pk-flash'); setTimeout(() => c.classList.remove('pk-flash'), 1800);
+}
 // tap a book entry in the feed → it unfolds into the full detailed row (✏️ edit, 📷, tags, ✓✓)
 function rlFlip(id) {
   window._rlOpen = window._rlOpen || new Set();
@@ -18794,6 +18807,9 @@ function renderAskRecent() {
   if (!box) return;
   window._rlN = window._rlN || 12;
   window._rlOpen = window._rlOpen || new Set();
+  // 🎒 v7.07 — Eric: "We can take the crew button off the running log search." A phone that had it lit lets it go.
+  if (prefs.rlFilter === 'crew') prefs.rlFilter = '';
+  if ((prefs.rlHide || []).includes('crew')) prefs.rlHide = prefs.rlHide.filter(x => x !== 'crew');
   const f = prefs.rlFilter || '', who = prefs.rlWho || '', hide = prefs.rlHide || [];
   // ⬇ the searches — the same fields the old full-log panel used, applied to the one log
   const q = (logQuery || '').trim().toLowerCase();
@@ -18836,13 +18852,17 @@ function renderAskRecent() {
   // running log." So besides his own entries and the Wizard, the feed now carries the review
   // pile too — 👷 crew messages and 🏠 client questions land here the moment they arrive,
   // BEFORE he's acted on them, marked ⏳ waiting. Tap one and the review card opens.
+  // 🎒 v7.07 — Eric: "on the running log, one of the top search filters I want is pocket list." A pocket note (checked off,
+  // flushed, left over, put back, not needed) is its own kind now, so the 🎒 plate finds every one of them.
   const kindOf = e => /^App feedback:/.test(e.details || '') || (e.tags || []).includes('App Feedback') ? 'fb'
+    : (e.pocket || (e.tags || []).includes('pocket')) ? 'pocket'
     : (e.who && e.who !== 'Me' && crew.includes(e.who)) ? 'crew'
     : e.mail ? 'mail'
     : e.texted ? 'text'
     : (e.photoPath || (e.photoPaths && e.photoPaths.length) || e.type === 'Photo') ? 'photo'
     : e.ask ? 'wiz' : 'grind';
-  const GLYPH = { text: '📱', photo: '📷', wiz: '❓', grind: '⚙', fb: '💬', crew: '👷', client: '🏠', mail: '📧' };
+  const GLYPH = { text: '📱', photo: '📷', wiz: '❓', grind: '⚙', fb: '💬', crew: '👷', client: '🏠', mail: '📧', pocket: '🎒' };
+  const POCKET_WORD = { back: 'back on the list', dropped: 'not needed' };   // 🎒 v7.07 — what became of a leftover, in words
   const personOf = e => textSender(e);   // ☎ v6.57 — same answer as before, plus the number in the words when the tag is gone
   const pendKind = p => p.kind === 'crew' ? 'crew' : p.kind === 'clientask' ? 'client'
     : p.kind === 'text' ? 'text' : p.kind === 'question' ? 'wiz' : 'grind';
@@ -18895,10 +18915,18 @@ function renderAskRecent() {
       });
       return rows;
     })()),
-    ...shownEntries.map(e => ({
-      ts: +new Date(e.ts), kind: kindOf(e), who: personOf(e), e,
-      h: `${GLYPH[kindOf(e)]} <span class="arq">${esc((e.details || '').replace(/^(Text|Email) from /, '').slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && !isOverheadEntry(e) && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}${!CREW_NAME ? rcptLampHtml(e) : ''}</span>` }))
+    ...shownEntries.map(e => { const k = kindOf(e), d = (e.details || '').replace(/^(Text|Email) from /, ''); return {
+      ts: +new Date(e.ts), kind: k, who: personOf(e), e,
+      h: `${GLYPH[k]} <span class="arq">${k === 'pocket' && POCKET_WORD[e.pocket] ? `<b>${POCKET_WORD[e.pocket]}</b> — ${esc(pocketWords(e).slice(0, 60))}` : esc((k === 'pocket' ? d.replace(/^🎒 /, '') : d).slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && !isOverheadEntry(e) && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}${!CREW_NAME ? rcptLampHtml(e) : ''}</span>` }; })
   ].filter(it => !isNaN(it.ts));
+  // 🎒 v7.07 — under the 🎒 plate, what is ON the pocket list right now leads (it is not on the log until it is checked
+  // off or flushed), then every pocket note, newest first. A tap on one still on the list goes to the list itself.
+  if (f === 'pocket' && !hardFiltersOn) {
+    const today = pocketDay(0), n = Date.now();
+    pocketByDay().filter(it => it.t && (!q || String(it.t).toLowerCase().includes(q))).forEach((it, i) => items.push({
+      ts: n + 1000 - i, kind: 'pocket', who: '', on: 'rlPocketGo()', w: it.day <= today ? 'today' : 'tomorrow',
+      h: `🎒 <span class="arq"><b>ON THE LIST</b> — ${esc(String(it.t).slice(0, 70))}</span>` }));
+  }
   const people = [...new Set(items.map(it => it.who).filter(Boolean))].slice(0, 20).sort();
   if (f) items = items.filter(it => it.kind === f);
   else if (hide.length) items = items.filter(it => !hide.includes(it.kind)); // 🚫 the third click
@@ -18932,10 +18960,12 @@ function renderAskRecent() {
       title="${only ? 'tap again: 🚫 hide these' : off ? 'hidden — tap: let them back in' : 'tap: only these · tap tap: hide these'}"
       onclick="rlSet('${v}')">${only ? '✓ ' : off ? '🚫 ' : ''}${w}</button>`;
   };
+  // 🎒 v7.07 — 🎒 Pocket list sits beside ⚙ Grinder in the top row; the 👷 Crew plate is off (crew traffic is still under
+  // ✳ All, and the person wheel picks one man)
   // 🧾 v6.86 — with Receipts ON the kind plates fold into ONE line that says so (Eric: "currently still has other things in there like a wizard and photo and grinder")
   box.innerHTML = (window._logRcptOnly ? `<div class="rl-filters"><button type="button" class="pick-chip sel rl-wide" onclick="rlRcptToggle()" title="tap: every kind of entry again">🧾 ✓ RECEIPTS ONLY — every other filter is off · tap to show everything</button></div>` : `<div class="rl-filters">
       <button type="button" class="pick-chip${!f && !who && !hide.length ? ' sel' : ''}" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; prefs.rlHide = []; window._rlN = 12; scheduleSave(); renderAskRecent();">${!f && !who && !hide.length ? '✓ ' : ''}✳ All</button>
-      ${chip('grind', '⚙ Grinder')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('mail', '📧 Emails')}${chip('photo', '📷 Pictures')}${chip('crew', '👷 Crew')}${chip('client', '🏠 Client')}${chip('fb', '💬 Feedback')}
+      ${chip('grind', '⚙ Grinder')}${chip('pocket', '🎒 Pocket list')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('mail', '📧 Emails')}${chip('photo', '📷 Pictures')}${chip('client', '🏠 Client')}${chip('fb', '💬 Feedback')}
       <button type="button" class="pick-chip rl-wide" onclick="openFeedback()" title="Say what works and what doesn't — it lands right here in the log">➕ 💬 Say something</button>
       ${people.length ? `<select class="mini-sel${who ? ' sel-on' : ''}" id="rlWhoSel" style="font-size: 11px; padding: 2px 6px;" onchange="rlWho(this.value)" title="${who ? 'showing ONLY ' + esc(who) + ' — pick the first line to show everyone again' : 'Just one person\'s traffic'}" aria-label="${who ? 'person filter ON — only ' + esc(who) : 'show just one person'}">
         <option value="">${who ? '✕ everyone — clear this filter' : '👤 person…'}</option>${people.map(pn => `<option value="${esc(pn)}"${who === pn ? ' selected' : ''}>${who === pn ? '✓ ONLY ' : ''}${esc(pn)}</option>`).join('')}</select>` : ''}
@@ -18946,7 +18976,7 @@ function renderAskRecent() {
         return `<div class="rl-openrow">${logRowHtml(it.e)}<div style="text-align: center; margin: 2px 0 6px;"><button type="button" class="btn-ghost" style="font-size: 11px; min-height: 24px; padding: 2px 16px;" onclick="rlFlip(${it.e.id})">▴ fold</button></div></div>`;
       }
       const d = new Date(it.ts);
-      const when = sameDay(d, new Date()) ? fmtTime(d) : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const when = it.w || (sameDay(d, new Date()) ? fmtTime(d) : d.toLocaleDateString([], { month: 'short', day: 'numeric' }));   // 🎒 v7.07 — a live pocket item says its day
       const on = it.e ? `rlFlip(${it.e.id})` : it.on;
       return `<div class="ask-recent-row" onclick="${on}">${it.h}<span class="arw">${when}</span></div>`;
     }).join('') : `<div class="hint" style="margin: 4px 0;">${filtersOn ? 'Nothing matches those searches — Clear filters ✕ shows everything again.' : 'Nothing under that filter yet — ✳ All shows everything.'}</div>`) +
@@ -20385,7 +20415,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.06';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.07';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
