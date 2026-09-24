@@ -4149,7 +4149,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.11 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.12 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -11095,10 +11095,39 @@ async function publishCrewFolders() {
   await publishSharedNotes();
   toast(`Crew folders ready — ${crew.join(', ')} ✓`);
 }
+// 👷 v7.12 — Eric, with Phil's screenshots of 2026-09-24: Phil's 🏠 Project portal read "No portal set up yet — ask Claude to build
+// the client pages" and his 📇 Job card listed only a job he had added himself. His phone was connected to HIS OWN Dropbox but had
+// never been set up as a crew phone (⚙ Setup → 📱 This phone → 👷), so it ran as an owner's phone and looked for files only Eric's
+// Dropbox has. When an owner's phone finds no portal, look for a crew folder in this Dropbox — a top folder holding crew.json,
+// exactly what crewJoin looks for — and if there is one, say whose it is and put the one button right there (the job card too).
+// Eric's own Dropbox always has the portal, so his phone never looks.
+let _crewDbx;   // undefined = not looked yet · null = none in this Dropbox · { name } = a crew member's Dropbox
+async function crewDbxFind() {
+  if (CREW_NAME || !dbx.refreshToken) return null;
+  if (_crewDbx !== undefined) return _crewDbx;
+  _crewDbx = null;
+  try {
+    const r = await dbxList({ path: '', recursive: false });
+    if (!r || !Array.isArray(r.entries)) { _crewDbx = undefined; return null; }   // a bad signal is not an answer — look again next time
+    for (const f of r.entries.filter(x => x['.tag'] === 'folder').slice(0, 30)) {
+      let cfg = null;
+      try { cfg = JSON.parse(await dbxDownload((f.path_lower || '') + '/crew.json') || 'null'); } catch (e) { cfg = null; }
+      if (cfg && cfg.name) { _crewDbx = { name: String(cfg.name).slice(0, 40) }; break; }
+    }
+  } catch (e) { _crewDbx = undefined; }
+  return _crewDbx;
+}
+function crewDbxHtml(c) {
+  return `<div class="set-section fc-sec crew-dbx" style="margin: 0 0 10px; padding: 12px;">
+    <div style="font-weight: 800; font-size: 15px; margin-bottom: 6px;">👷 This Dropbox is ${esc(c.name)}'s — a crew member's</div>
+    <div class="hint" style="margin: 0 0 8px;">This phone was never set up as a crew phone, so it is looking for Eric's own files. One tap sets it up as ${esc(c.name)}'s — then the jobs, the job cards and the project portal come through.</div>
+    <button type="button" class="btn-primary" style="width: 100%; min-height: 48px; font-weight: 800;" onclick="crewJoin('crewJoinHere')">👷 Set this phone up as ${esc(c.name)}'s</button>
+    <div class="hint" id="crewJoinHere" style="margin: 6px 0 0;"></div></div>`;
+}
 // --- crew member's phone: after connecting THEIR Dropbox, find the shared folder by its crew.json ---
-async function crewJoin() {
-  const msg = $('crewJoinMsg');
-  if (!dbx.refreshToken) { msg.textContent = 'Step 1 first: connect Dropbox above — using the crew member\'s OWN account.'; return; }
+async function crewJoin(msgId) {
+  const msg = (msgId && $(msgId)) || $('crewJoinMsg');   // 👷 v7.12 — the portal's own button says it where he tapped
+  if (!dbx.refreshToken) { msg.textContent = 'Step 1 first: connect Dropbox (⚙ Setup → Dropbox) — using the crew member\'s OWN account.'; return; }
   msg.textContent = '⏳ Looking for the shared crew folder…';
   try {
     const r = await dbxList({ path: '', recursive: false });
@@ -11721,6 +11750,7 @@ function openJobCard(job, edit) {
     <div class="hint" style="margin: 0 0 8px;">${mine ? 'Numbers, emails, the address and door codes for one job. The Wizard reads every card — just ask it.'
       : canEdit ? 'Eric\'s job cards — the address, the people, the codes. You can edit them; Eric\'s phone picks your changes up on its next sync.'
       : 'Addresses, numbers, emails and door codes for one job — read-only; ask your Wizard for it out loud too.'}</div>
+    ${mine && _crewDbx && _crewDbx.name ? crewDbxHtml(_crewDbx) : ''}
     ${pick}${job ? headsBar + body : ''}`;
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
@@ -12534,7 +12564,12 @@ async function renderPortalList() {
     let idx = null; try { idx = JSON.parse(t || 'null'); } catch (e) { idx = null; }
     if (idx && Array.isArray(idx.clients)) _portalIdx = idx;
     else if (!(_portalIdx && Array.isArray(_portalIdx.clients) && _portalIdx.clients.length)) throw new Error('not an index');
-  } catch (e) { box.innerHTML = '<span class="hint">No portal set up yet — ask Claude to build the client pages.</span>'; return; }
+  } catch (e) {
+    box.innerHTML = '<span class="hint">No portal set up yet — ask Claude to build the client pages.</span>';
+    // 👷 v7.12 — a crew member's Dropbox on a phone never set up as crew: say whose it is and put the one button right here
+    crewDbxFind().then(c => { if (c && box.isConnected && /No portal set up yet/.test(box.textContent)) box.innerHTML = crewDbxHtml(c); });
+    return;
+  }
   // 📊 v6.31 — paint from the cached dates immediately, then go and check them for real.
   // Not awaited: the list must not sit blank behind nine downloads on a job-site signal.
   refreshJrnAges(_portalIdx.clients || []);
@@ -20711,7 +20746,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.11';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.12';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
