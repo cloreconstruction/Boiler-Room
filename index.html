@@ -2137,8 +2137,7 @@
     font-size: 13px; padding: 10px; border: none; border-radius: 12px; cursor: pointer;
     background: var(--accent); color: var(--accent-ink); margin-bottom: 12px; font-family: inherit;
   }
-  #crewRoute { display: none; }
-  body.crew-mode #crewRoute { display: block; }
+  #crewRoute { display: none; }   /* ⚠ v7.13 — on a crew phone too: ⚠ Needs attention in UNLOCK IT took its place */
   /* 🔒 v5.44 — Eric: "when the locked button is on, gray out the buttons that are tagging
      someone else or sending to somebody else. You have to click the unlock button and then
      you can tag or send." So while 🔒 Just my log is picked, the tag chips and the whole
@@ -3161,18 +3160,20 @@
       <div class="chips-row" id="qnVisChips"></div>
       <!-- 📖 v5.53 — Eric: "little tiny descriptions... so the crew can understand and trust it" -->
       <div class="hint" id="visExplain" style="margin-top: 4px; font-size: 11px; line-height: 1.5;"></div>
-      <div class="lock-note" id="qnLockNote">🔒 LOCKED — this one stays on your phone. Tagging and sending are switched off. Tap 📨 Eric or 🔓 All crew above to unlock them.</div>
+      <div class="lock-note" id="qnLockNote">🔒 LOCKED — this one stays on your phone. Tagging and sending are switched off. Tap 📨 Just Eric or 🔓 All crew above to unlock them.</div>
     </div>
-    <!-- crew only: who it's for + how soon -->
+    <!-- crew only: who it's for + how soon. ⚠ v7.13 — retired from view: the ⚠ Needs attention plate in UNLOCK IT is
+         "Needs Eric's attention" + "I need it NOW" in one tap (Eric: "four buttons total on the unlocker"). The rows still
+         draw (hidden) so nothing that reads them breaks. -->
     <div id="crewRoute">
       <div class="field" style="margin: 10px 0 6px;"><label>Send it to</label></div>
       <div class="chip-grid" id="routeChips"></div>
       <div class="hint" style="margin-top: 6px;">No pick needed for the ⚙ Grinder — that's for end-of-day photos and anything you want on record.</div>
       <div class="field" style="margin: 10px 0 6px;"><label>How soon</label></div>
       <div class="chip-grid chip-grid--3" id="urgChips"></div>
-      <!-- v4.91 — your sent requests + their live status lamps -->
-      <div id="myReqStrip"></div>
     </div>
+    <!-- v4.91 — your sent requests + their live status lamps (⚠ v7.13 — out of #crewRoute, which no longer shows) -->
+    <div id="myReqStrip"></div>
     <!-- 📧 v6.38 — this card sat INSIDE the crew-only #crewRoute block, which is display:none on
          Eric's phone: it rendered and nobody could ever see it, so no new sender was ever
          approved and every email filed silently. Eric: "now where are these email showing up
@@ -3211,6 +3212,21 @@
       <div class="ask-inline__body" id="aiBody"></div>
       <div class="ask-inline__foot"><a href="javascript:void(0)" onclick="openAnswerFull()">Open full screen →</a></div>
     </div>
+  </div>
+
+  <!-- 👷 v7.13 — Eric: "The log that Phil has below the Grinder button that says 'From Eric' … is that on mine as well? I need to
+       be able to see incoming things from Phil, or just his running log that he's unlocked for me or everyone." His FROM ERIC the
+       other way round, in the same place: right under the grinder, above the running log. Eric's phone only (renderCrewFeed). -->
+  <div class="card" id="crewFeedCard" style="display: none;">
+    <div class="log-head" style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <button type="button" id="cfFoldBtn" class="card-sub" style="margin: 0; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; flex: 1; text-align: left;"
+        onclick="crewFeedFold()" aria-expanded="true">👷 FROM THE CREW</button>
+      <select id="cfShowN" class="mini-sel" title="How many crew notes show" style="width: auto; min-height: 28px; padding: 2px 8px; font-size: 12px;"
+        onchange="prefs.crewFeedN = this.value; scheduleSave(); renderCrewFeed();">
+        <option value="3">3</option><option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="all">All</option>
+      </select>
+    </div>
+    <div id="crewFeedList"></div>
   </div>
 
   <!-- 📧 v6.48 — Eric: "id like the email section to be below the grinder not above it."
@@ -4149,7 +4165,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.12 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.13 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6516,7 +6532,7 @@ function updateStepFlow() {
       const sum = el.querySelector('.g-step-sum');
       if (sum) sum.textContent = n === 4
         ? ((qnSel.size ? '· 🏷 ' + [...qnSel].join(', ') : '· none picked') + (qnBL && qnBLRoom ? ' · 📋 Build List → ' + qnBLRoom : ''))
-        : (qnVis === 'crew' ? '· 🔓 all crew' : qnVisNames.size ? '· 📨 ' + [...qnVisNames].join(', ') : '· 🔒 just you');
+        : (qnVis === 'crew' ? '· 🔓 all crew' : qnVisNames.size ? '· 📨 just ' + [...qnVisNames].join(', ') : '· 🔒 just you') + (attnOn() ? ' · ⚠ needs attention' : '');   // ⚠ v7.13
     }
   });
 }
@@ -7939,7 +7955,7 @@ function saveNoteFrom(boxId, fromPanel) {
   const vis = nExtra.vis || '', wasAsk = qnAsk;
   qnAsk = false; visReset(); // back to the resting state for the next note
   // never let him think a bell went out when the lock ate it
-  if (_lockedOut) toast('🔒 Just my log — so nobody was rung and this stays on your phone', false);
+  if (_lockedOut) toast('🔒 Just me — so nobody was rung and this stays on your phone', false);
   if (vis) publishSharedNotes(); // fire it toward the crew folder right away when online
   if (wasAsk && !isCrew() && prefs.pushSecret) {
     // 📢 an ask rings the phones right now — the card itself rides the sweep
@@ -11243,53 +11259,51 @@ function visWord(vis) {
 let qnVisNames = new Set();
 let qnVis = ''; // '' = just me
 let qnAsk = false; // v4.90 — ❓ this note is a QUESTION: it pops up on crew phones until somebody answers
+// ⚠ v7.13 — Eric: "My unlock it button should say 'Just me', 'Just Phil', and 'All crew'. And then I don't think we need the
+// buttons that send it to the specific person, but maybe just the exclamation point in a triangle, like the warning light,
+// where it means this needs someone's attention. I think there'd be four buttons total on the unlocker for both me and Phil.
+// They'll just say a little bit different things." FOUR plates on both phones:
+//   Eric's phone:  🔒 Just me · 📨 Just Phil · 🔓 All crew · ⚠ Needs attention
+//   a crew phone:  🔒 Just me · 📨 Just Eric · 🔓 All crew · ⚠ Needs attention
+// The first three are ONE choice — picking one lets the others go (v5.51's stacking of 🔓 crew + 📨 names left with the names).
+// "Just Phil" is Eric's office man (officeFolks), else the first on his roster. ⚠ on Eric's phone is the old ❓ NEEDS AN ANSWER
+// (`ask`: it stays up big on their page until somebody answers); on a crew phone it is the old 🔔 Needs Eric's attention +
+// 🔥 I need it NOW (`route` + `urg`: the 🔥 card pinned on Eric's page) — so that phone's "Send it to" and "How soon" rows are
+// gone. ⚠ on a note nobody can see would be aimed at no one: tapped while 🔒, it picks the everyday person first.
+function visBuddy() { return isCrew() ? 'Eric' : (officeFolks().find(n => crew.includes(n)) || crew[0] || ''); }
 function setVis(v) {
-  // 👥 v5.51 — Eric: "unlock for the crew AND also send it to Phil or Aaron or both."
-  // 🔓 crew and 📨 names STACK now instead of wiping each other: crew = everybody can see
-  // it (and the Wizard on their phones can look it up), the names = it lands DIRECT on
-  // those phones' FROM ERIC card marked 📨. Only 🔒 wipes the slate.
-  if (v === '') { qnVis = ''; qnVisNames.clear(); }         // 🔒 just me wipes the slate
-  else if (v === 'crew') { qnVis = qnVis === 'crew' ? '' : 'crew'; } // toggles; names stay
-  else { qnVisNames.has(v) ? qnVisNames.delete(v) : qnVisNames.add(v); } // names stack; crew stays
+  if (v === '') { qnVis = ''; qnVisNames.clear(); qnAsk = false; qnRoute = ''; qnUrg = ''; }   // 🔒 nothing sends, so nothing asks
+  else if (v === 'crew') { qnVis = 'crew'; qnVisNames.clear(); }
+  else { qnVis = ''; qnVisNames = new Set([v]); }
   renderVisChips();
 }
-function toggleAsk() { qnAsk = !qnAsk; renderVisChips(); }
+function attnOn() { return isCrew() ? (qnRoute === 'Eric' && qnUrg === 'now') : !!qnAsk; }
+function toggleAttn() {
+  const on = !attnOn();
+  if (on && !qnVis && !qnVisNames.size) { const b = visBuddy(); if (b) qnVisNames = new Set([b]); else qnVis = 'crew'; }
+  if (isCrew()) { qnRoute = on ? 'Eric' : ''; qnUrg = on ? 'now' : ''; if (typeof renderRouteChips === 'function') renderRouteChips(); }
+  else qnAsk = on;
+  renderVisChips();
+}
+function toggleAsk() { toggleAttn(); }   // the old name for Eric's ⚠
 function renderVisChips() {
   // 🔒 v5.52 — a personal tag on the note throws this whole row locked
   const pLock = typeof personalTagOn === 'function' && personalTagOn();
-  if (pLock && (qnVis || qnVisNames.size)) { qnVis = ''; qnVisNames.clear(); }
+  if (pLock && (qnVis || qnVisNames.size || attnOn())) { qnVis = ''; qnVisNames.clear(); qnAsk = false; qnRoute = ''; qnUrg = ''; }
   const selOf = v => v === '' ? (!qnVis && !qnVisNames.size) : v === 'crew' ? qnVis === 'crew' : qnVisNames.has(v);
-  // v5.33 — same rows wheel as the tags: 4 per row, Eric decides how many rows show.
-  // A SELECTED name never hides, no matter the cap.
-  const cols = visCols(), cap = (prefs.visRows || 2) * cols;
-  // 👷 v5.43 — a crew phone gets the same row, worded from HIS side of the truck.
-  // 🔒 keeps it in his own log · 📨 Eric is the everyday one · 🔓 asks Eric to pass it round.
-  // He does NOT get ❓ (that's Eric's siren) or ➕ person (the roster is Eric's to keep).
-  const mine = isCrew();
-  const opts = mine
-    ? [['', '🔒 Just my log'], ['Eric', '📨 Eric'], ['crew', '🔓 All crew'],
-       ...crewMates().filter(c => c !== 'Eric').map(c => [c, '📨 ' + c])]
-    : [['', '🔒 Just me'], ['crew', '🔓 All crew'], ...crew.map(c => [c, '📨 ' + c])];
-  const capped = opts.filter(([v], i) => i < cap - (mine ? 0 : 1) || selOf(v)); // room for ❓ on Eric's
-  const html = capped.map(([v, w]) => {
+  const mine = isCrew(), buddy = visBuddy(), attn = attnOn();
+  const opts = [['', '🔒 Just me'], ...(buddy ? [[buddy, '📨 Just ' + buddy]] : []), ['crew', '🔓 All crew']];
+  const cols = window.innerWidth > 700 ? opts.length + 1 : 2;   // ⚠ v7.13 — four across on a PC, two by two on the phone
+  const html = opts.map(([v, w]) => {
     const on = selOf(v);
-    return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="setVis('${escq(v)}')" aria-pressed="${on}">${on ? '✓&nbsp;' : ''}${esc(w)}</button>`;
+    return `<button type="button" class="pick-chip${on ? ' sel' : ''}" data-v="${esc(v)}" onclick="setVis('${escq(v)}')" aria-pressed="${on}">${on ? '✓&nbsp;' : ''}${esc(w)}</button>`;
   }).join('') +
-    (mine ? '' : `<button type="button" class="pick-chip${qnAsk ? ' sel' : ''}" onclick="toggleAsk()" aria-pressed="${qnAsk}" title="Rings their phones and stays up big until somebody answers — then it clears for everyone">${qnAsk ? '✓&nbsp;' : ''}❓ Needs an answer</button>`) +
-    `<div class="chip-bar">
-      ${mine ? '' : `<button type="button" class="pick-chip" onclick="visNewInput(this)" title="Add a person">➕ person</button>`}
-      <span class="sp"></span>
-      <select class="mini-sel" title="How many rows show"
-        onchange="prefs.visRows = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4].map(r => `<option value="${r}"${r === (prefs.visRows || 2) ? ' selected' : ''}>${r} row${r > 1 ? 's' : ''}</option>`).join('')}</select>
-      <select class="mini-sel" title="How many across — fewer across means bigger letters"
-        onchange="prefs.visCols = +this.value; scheduleSave(); renderVisChips();">${[1, 2, 3, 4, 5].map(c => `<option value="${c}"${c === cols ? ' selected' : ''}>${c} across</option>`).join('')}</select></div>` +
-    ((qnVis === 'crew' && qnVisNames.size) ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ 🔓 everybody can see it (Wizard too) · lands DIRECT 📨 on ${[...qnVisNames].map(esc).join(' + ')}</div>`
-      : qnVisNames.size > 1 ? `<div class="hint" style="grid-column: 1 / -1; margin: 2px 0 0;">→ goes to ${[...qnVisNames].map(esc).join(' + ')} — each sees it on their own phone</div>` : '');
+    `<button type="button" class="pick-chip vis-attn${attn ? ' sel' : ''}" data-v="attn" onclick="toggleAttn()" aria-pressed="${attn}" title="${mine ? 'Pins it at the top of Eric\'s page until it is answered' :'It stays up big on their page until somebody answers — then it clears for everyone'}">${attn ? '✓&nbsp;' : ''}⚠ Needs attention</button>`;
   // 📖 v5.53 — the standing one-liner that builds trust: what each chip DOES, in plain words
   const ex = $('visExplain');
   if (ex) ex.innerHTML = mine
-    ? '🔒 stays on <b>this phone only</b> — never syncs · 📨 lands on that person\'s phone · 🔓 the whole crew can see it and their Wizards can look it up.'
-    : '🔒 <b>just yours</b> — nothing sends · 📨 lands on that person\'s phone, marked for them · 🔓 every crew phone sees it and their Wizards can look it up · pick 🔓 <i>and</i> names to do both.';
+    ? '🔒 stays on <b>this phone only</b> — never syncs · 📨 goes to Eric · 🔓 the whole crew sees it, and their Wizards can look it up · ⚠ pins it at the top of Eric\'s page until it is answered.'
+    : `🔒 <b>just yours</b> — nothing sends · 📨 goes to ${buddy ? esc(buddy) + '\'s phone' : 'their phone'}, marked for them · 🔓 every crew phone sees it, and their Wizards can look it up · ⚠ stays up big on their page until somebody answers.`;
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
   // the personal lock: every chip but 🔒 goes dim and dead, with the reason on the glass
   ['qnVisChips', 'nVisChips'].forEach(id => {
@@ -11297,7 +11311,7 @@ function renderVisChips() {
     el.classList.toggle('personal-locked', pLock);
     if (pLock) {
       el.querySelectorAll('.pick-chip').forEach(b => {
-        if (!/Just m/.test(b.textContent)) { b.setAttribute('disabled', ''); b.setAttribute('aria-disabled', 'true'); }
+        if (b.dataset.v !== '') { b.setAttribute('disabled', ''); b.setAttribute('aria-disabled', 'true'); }
       });
       const note = document.createElement('div');
       note.className = 'lock-note'; note.style.display = 'block'; note.style.gridColumn = '1 / -1';
@@ -11339,12 +11353,7 @@ function lockGate() {
   // says so, rather than sitting there armed and quietly doing nothing on save.
   const ownerLock = !isCrew() && nobody;
   document.body.classList.toggle('owner-locked', ownerLock);
-  const askChip = [...document.querySelectorAll('#qnVisChips .pick-chip')]
-    .find(b => /Needs an answer/.test(b.textContent));
-  if (askChip) {
-    if (ownerLock) { askChip.setAttribute('disabled', ''); askChip.setAttribute('aria-disabled', 'true'); askChip.title = '🔒 Just me — a note nobody can see cannot ask anybody anything. Pick 🔓 All crew or a name first.'; }
-    else { askChip.removeAttribute('disabled'); askChip.setAttribute('aria-disabled', 'false'); askChip.title = 'Rings their phones and stays up big until somebody answers — then it clears for everyone'; }
-  }
+  // ⚠ v7.13 — the ⚠ plate is never dead now: tapped while 🔒 it picks the everyday person first (toggleAttn)
   if (ownerLock && qnAsk) qnAsk = false; // never leave the siren armed behind a lock
 }
 function visNewInput(btn) {
@@ -12048,6 +12057,102 @@ function crewSharedFold() {
   scheduleSave();
   renderCrewShared();
 }
+// ================= 👷 v7.13 — FROM THE CREW =================
+// Eric: "The log that Phil has below the Grinder button that says 'From Eric' and it's got a little searchable area is that on
+// mine as well? I need to be able to see incoming things from Phil, or just his running log that he's unlocked for me or
+// everyone." It was not: a crew note reached him only as a card in Summary → 📥 Sort → 👥 PEOPLE, and only ✓ Log it put it in
+// his running log. This is Phil's FROM ERIC the other way round, on Eric's phone only, right under the grinder: every note and
+// finished to-do a crew member unlocked FOR ERIC OR FOR EVERYONE (🔒 Just me never leaves that phone — livePayload), read
+// straight off the crew log the crew sweep already downloads (checkCrewLogs), newest first, who it was for in words, a search
+// box, a person and a job wheel, the picture, and ✓ Log it right on the row while its Sort card still waits. Clock, hours and
+// miles stay where they live (the Sort pile and ⏱ Crew hours).
+let _crewFeed = {};   // crew folder name → [{ e, key, folder }], from the last crew sweep
+let _cfWho = '', _cfJob = '', _cfQ = '';
+function cfForMe(e) {   // unlocked for Eric or for everyone — an old note with no unlock on it went to Eric
+  const v = e.vis;
+  if (!v || v === 'crew' || v === 'Eric') return true;
+  return Array.isArray(v) && v.includes('Eric');
+}
+function cfForWord(e) { return e.vis === 'crew' ? '🔓 for everyone' : '📨 for you'; }
+// a crew phone writes its picture under its OWN name for its folder ("/Phil/Job Notes/…"); on Eric's side that folder is
+// /Clore DayLog/Crew/Phil — the first segment is the mount, whatever he named it
+function cfPhotoPath(p, folder) {
+  p = String(p || ''); if (!p) return '';
+  if (/^\/clore daylog\//i.test(p)) return p;
+  const cut = p.indexOf('/', 1);
+  return cut > 0 ? folder + p.slice(cut) : '';
+}
+function crewFeedTake(name, folder, list) {
+  _crewFeed[name] = (Array.isArray(list) ? list : []).filter(e => e && !e.mine && !e.sample && !e.personal
+    && (e.type === 'Note' || e.type === 'Done') && String(e.details || '').trim() && cfForMe(e))
+    .slice(0, 120).map(e => ({ e, who: name, folder, key: `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}` }));
+}
+function crewFeedRows() {
+  return Object.values(_crewFeed).flat().sort((a, b) => String(b.e.ts).localeCompare(String(a.e.ts)));
+}
+function crewFeedFold() { prefs.crewFeedFold = !prefs.crewFeedFold; scheduleSave(); renderCrewFeed(); }
+function crewFeedLog(key) { reviewAct(key, 'log'); renderCrewFeed(); }
+function crewFeedSearch(v) {
+  _cfQ = String(v || '');
+  renderCrewFeed();
+  const b = $('cfSearch'); if (b) { b.focus(); const n = b.value.length; try { b.setSelectionRange(n, n); } catch (e) {} }   // the box keeps his thumb through the redraw
+}
+function renderCrewFeed() {
+  const card = $('crewFeedCard');
+  if (!card) return;
+  const all = isCrew() ? [] : crewFeedRows();
+  card.style.display = all.length ? '' : 'none';
+  if (!all.length) return;
+  const people = [...new Set(all.map(r => r.who))];
+  const title = people.length === 1 ? `FROM ${people[0].toUpperCase()}` : 'FROM THE CREW';
+  const jobsIn = [...new Set(all.map(r => r.e.job).filter(j => j && j !== '—'))].sort();
+  if (_cfWho && !people.includes(_cfWho)) _cfWho = '';
+  if (_cfJob && !jobsIn.includes(_cfJob)) _cfJob = '';
+  const q = _cfQ.trim().toLowerCase();
+  let list = all;
+  if (_cfWho) list = list.filter(r => r.who === _cfWho);
+  if (_cfJob) list = list.filter(r => r.e.job === _cfJob);
+  if (q) list = list.filter(r => [r.e.details, r.e.job, r.who, ...(r.e.tags || [])].join(' ').toLowerCase().includes(q));
+  const narrowed = !!(_cfWho || _cfJob || q);
+  const nRaw = prefs.crewFeedN == null ? '5' : String(prefs.crewFeedN);
+  const cap = nRaw === 'all' ? list.length : Math.max(1, parseInt(nRaw, 10) || 5);
+  const sel = $('cfShowN'); if (sel && sel.value !== nRaw) sel.value = nRaw;
+  const folded = prefs.crewFeedFold === true;
+  const btn = $('cfFoldBtn');
+  if (btn) {   // brightness + glyph + the spelled word: never a bare caret
+    btn.textContent = folded
+      ? `▸ 👷 ${title} — ${all.length} note${all.length === 1 ? '' : 's'}, tap to open`
+      : `▾ 👷 ${title} — showing ${Math.min(cap, list.length)} of ${narrowed ? list.length + ' found' : all.length}, tap to fold`;
+    btn.setAttribute('aria-expanded', folded ? 'false' : 'true');
+  }
+  const body = $('crewFeedList');
+  if (body) body.style.display = folded ? 'none' : '';
+  if (sel) sel.style.display = folded ? 'none' : '';
+  if (folded) return;
+  const find = `<div class="frow" style="gap: 6px; margin-bottom: 8px; flex-wrap: wrap; align-items: center;">
+      <input type="search" id="cfSearch" class="mini-sel${q ? ' sel-on' : ''}" style="flex: 2 1 160px; min-width: 0;" placeholder="🔍 Search what they sent" value="${esc(_cfQ)}"
+        oninput="crewFeedSearch(this.value)" aria-label="${q ? 'search ON — ' + esc(_cfQ) : 'search what the crew sent'}">
+      ${people.length > 1 ? `<select class="mini-sel${_cfWho ? ' sel-on' : ''}" style="flex: 1 1 110px; min-width: 0;" title="Just one person's notes" onchange="_cfWho = this.value; renderCrewFeed()">
+        <option value="">👷 everyone</option>${people.map(p => `<option value="${esc(p)}"${_cfWho === p ? ' selected' : ''}>${_cfWho === p ? '✓ ONLY ' : ''}${esc(p)}</option>`).join('')}</select>` : ''}
+      ${jobsIn.length > 1 ? `<select class="mini-sel${_cfJob ? ' sel-on' : ''}" style="flex: 1 1 110px; min-width: 0;" title="Just one job's notes" onchange="_cfJob = this.value; renderCrewFeed()">
+        <option value="">📂 every job</option>${jobsIn.map(j => `<option value="${esc(j)}"${_cfJob === j ? ' selected' : ''}>${_cfJob === j ? '✓ ' : ''}${esc(j)}</option>`).join('')}</select>` : ''}
+      ${narrowed ? `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 28px;" onclick="_cfWho = ''; _cfJob = ''; _cfQ = ''; renderCrewFeed()">✕ clear</button>` : ''}
+    </div>`;
+  body.innerHTML = find + (list.length ? '' : `<div class="hint" style="margin: 4px 0;">Nothing matches — ✕ clear brings every note back.</div>`) + list.slice(0, cap).map(r => {
+    const e = r.e, d = new Date(e.ts);
+    const when = isNaN(+d) ? '' : (sameDay(d, new Date()) ? fmtTime(d) : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + fmtTime(d));
+    const ph = cfPhotoPath(e.photoPath || (e.photoPaths || [])[0], r.folder);
+    const waiting = pendingQueue.some(p => p.id === r.key);
+    return `<div class="sum-row cf-row" style="cursor: default; font-size: 14.5px; display: block;">
+      <div class="hint" style="margin: 0 0 3px; font-size: 12px;">👷 <b>${esc(r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''} · ${cfForWord(e)}${e.type === 'Done' ? ' · ✅ finished' : ''}${e.route === 'Eric' && e.urg === 'now' ? ' · <b>⚠ NEEDS YOUR ATTENTION</b>' : ''}</div>
+      <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${esc(String(e.details || '').slice(0, 600))}</div>
+      ${ph || waiting ? `<div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+        ${ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(ph)}')">📷 Open the picture</button>` : ''}
+        ${waiting ? `<button type="button" class="pick-chip" onclick="crewFeedLog('${escq(r.key)}')" title="It also waits in Summary → Sort → People; this puts it in your own running log">✓ Log it — into your running log</button>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
 function crewNoteReply(id) {
   const box = $('crRep-' + id);
   if (!box) return;
@@ -12295,6 +12400,7 @@ async function checkCrewLogs() {
       if (isOffice(f.name)) { try { const t2 = await dbxDownload(f.path_lower + '/app data/card-edits.json'); if (t2) cardEditsTake(f.name, JSON.parse(t2)); } catch (e) {} }
       if (!j) continue;
       const name = f.name;
+      crewFeedTake(name, f.path_display || f.path_lower, j.entries);   // 👷 v7.13 — the FROM THE CREW card reads the same log
       // 📊 v5.09 — collect what this crew member has been asking their Wizard
       if (Array.isArray(j.askLog) && j.askLog.length) {
         try {
@@ -12355,6 +12461,7 @@ async function checkCrewLogs() {
       });
     }
     renderPendBanner();
+    renderCrewFeed();   // 👷 v7.13
   } catch (e) { /* no crew dir yet — quiet */ }
 }
 
@@ -20714,6 +20821,7 @@ function renderAll() { renderMailSenders(); renderKpis(); renderLog(); renderCha
   renderTagChips(); renderCrewGauges(); renderVisChips(); renderCrewShared(); renderCrewAsks();
   renderMyRequests(); renderAskStrip(); renderAskRecent(); renderTextDigest(); renderTxtNudges(); renderMileFace();
   renderPocket();   // 🎒 v6.73
+  renderCrewFeed();   // 👷 v7.13 — the FROM THE CREW card (hides itself on a crew phone and in the 👁 preview)
 }
 
 // ---------- export ----------
@@ -20746,7 +20854,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.12';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.13';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
