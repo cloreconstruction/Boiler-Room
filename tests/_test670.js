@@ -53,8 +53,9 @@ const { chromium } = require('playwright');
     return ids.join(',') === 'ml:1,renew:2026-10-01:state farm' && pendDone.has('jobsilence:Carrick:w2957') && pendDone.has('estchase:22') && pendDone.has('truck:F-250:100000') && window._saves >= 1;
   }));
 
+  // 📅 v7.11 — the pile as the app itself last saved it: every card carries its `at` stamp (pendStamp), so a load has nothing to stamp either
   ok('swept once means once: a later load with nothing to sweep does not save again', await page.evaluate(async () => {
-    window._dbxFiles[PENDING_PATH()] = JSON.stringify([{ id: 'ml:1', kind: 'mail', payload: { from: 'Bob', addr: 'bob@sub.com', subj: 'Invoice', body: 'x', why: 'invoice', gist: '', by: 'phone', known: true, entryId: 2 } }]);
+    window._dbxFiles[PENDING_PATH()] = JSON.stringify([{ id: 'ml:1', kind: 'mail', at: '2026-09-20T10:00:00.000Z', payload: { from: 'Bob', addr: 'bob@sub.com', subj: 'Invoice', body: 'x', why: 'invoice', gist: '', by: 'phone', known: true, entryId: 2 } }]);
     window._saves = 0;
     await checkPending();
     return pendingQueue.length === 1 && window._saves === 0;

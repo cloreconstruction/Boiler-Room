@@ -4149,7 +4149,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.10 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.11 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8409,6 +8409,7 @@ async function checkPending() {
     const txt = await dbxDownload(PENDING_PATH());
     const arr = txt ? JSON.parse(txt) : [];
     pendingQueue = (Array.isArray(arr) ? arr : []).filter(p => p && p.id && p.kind && !pendDone.has(p.id));
+    if (pendStamp()) savePendingSoon();   // 📅 v7.11 — a card never stamped gets the moment it came in, once, and keeps it
     // 🗑 v6.70 — the radar's suggested to-dos are off (RADAR_TODOS, see radarSweep); whatever is
     // still waiting from them goes here, once, marked done — pending.json is the app's to prune.
     const nags = pendingQueue.filter(p => /^(jobsilence|estchase|truck):/.test(String(p.id)));
@@ -17231,7 +17232,24 @@ async function weatherSweep() {
   } catch (e) { /* forecast is a bonus — never let it break a sync */ }
 }
 let _pendSaveTimer = null;
+// 📅 v7.11 — every waiting card keeps the moment it CAME IN (`p.at`, stamped once, saved with the pile), so the running log
+// files it there (pendWhen) and not at a due date. A 💳 bill with no stamp yet (the cards from before v7.11) takes the time
+// of the photo it was read off — its log entry carries the very same reading, word for word, never a guess; anything else
+// takes the moment this app first holds it.
+function pendStamp() {
+  const now = new Date().toISOString(); let n = 0;
+  pendingQueue.forEach(p => {
+    if (!p || p.at) return;
+    const pay = p.payload || {};
+    const src = p.kind === 'bill' && pay.what
+      ? entries.find(e => !e.sample && e.ts && String(e.ai || '').replace(/\s+/g, ' ').trim().slice(0, 240) === pay.what) : null;
+    const t = src ? +new Date(src.ts) : NaN;
+    p.at = isNaN(t) ? now : new Date(t).toISOString(); n++;
+  });
+  return n;
+}
 function savePendingSoon() {
+  pendStamp();   // 📅 v7.11 — a card made on this phone is stamped as it is saved
   if (!dbx.refreshToken) return;
   clearTimeout(_pendSaveTimer);
   _pendSaveTimer = setTimeout(() => {
@@ -19130,14 +19148,21 @@ function renderAskRecent() {
       const bits = [pay.who || '', pay.amt != null ? '$' + Number(pay.amt).toLocaleString() : '', pay.memo || pay.acct || ''];
       return ('QuickBooks line — ' + bits.filter(Boolean).join(' · ')).slice(0, 64);
     }
+    if (p.kind === 'bill') return ('💳 bill — ' + (pay.text || 'needs a look')).slice(0, 64);   // 📅 v7.11 — it read as a grinder note ("a grinder 'pay spenard…'"); it is a bill waiting on his call
     return (pay.text || pay.q || pay.body || pay.seen || pay.type || 'needs a look').slice(0, 64);
   };
   // and their real date, not the moment this list happened to render
+  // 📅 v7.11 — Eric: "on the running log a grinder 'pay spenard builers supply' has been stuck at the top row for a while".
+  // It was a 💳 bill card whose only date was its DUE date (10/10): a date in the future sorts above everything, so the row
+  // sat on top until the bill came due (a 🔁 renew card does the same with an expiry date), and the 👷 crew cards carry only
+  // a day, so they read as "right now" on every draw. A card is placed at the moment it CAME IN — its own time (a text's
+  // arrival, a QuickBooks line's date, a crew note's day), else the moment this app first held it (`p.at`, pendStamp) —
+  // and never later than now. A due date is when it is owed, not when it arrived.
+  const pendTime = v => { const s = String(v || ''); if (!s) return NaN; return +new Date(/^\d{4}-\d{2}-\d{2}$/.test(s) ? s + 'T12:00' : s); };
   const pendWhen = p => {
-    const pay = p.payload || {};
-    const d = pay.ts || pay.d || pay.due || '';
-    const t = d ? +new Date(d) : NaN;
-    return isNaN(t) ? Date.now() - 1 : t;
+    const pay = p.payload || {}, cap = Date.now() - 1;
+    const t = [pay.ts, pay.d, pay.day, p.at].map(pendTime).find(x => !isNaN(x));
+    return t === undefined ? cap : Math.min(t, cap);
   };
   const PEND_MANY = { qb: 'QuickBooks lines', todo: 'suggested to-dos', match: 'possible matches',
     text: 'texts', crew: 'crew messages', clientask: 'client questions', question: 'questions' };
@@ -20686,7 +20711,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.10';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.11';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
