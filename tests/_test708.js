@@ -57,7 +57,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return a && !$('matSheet');
   }));
   ok('holding the name still opens the edit window (kept, as he asked)', await page.evaluate(async () => {
-    const nm = _row('Toilet').querySelector('[role="button"][aria-expanded]');
+    const nm = _row('Toilet').querySelector('[role="button"].mat-nm');
     nm.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     await new Promise(r => setTimeout(r, 700));
     nm.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
@@ -75,6 +75,45 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const chips = [..._row('Countertop').querySelectorAll('.chips-row button')].map(b => b.textContent);
     const r = !chips.some(t => /✎ edit|✕ delete/.test(t)) && !!_row('Countertop').querySelector('.mat-quick .mat-q-ed');
     matItToggle('m1'); return r;
+  }));
+  // 🎛 v7.09 — Eric: "Pick Needed · Picked · Ordered · Arrived … get rid of the rest because we already have that in the new buttons on top"
+  ok('an opened row has NO bottom strip of lights at all now (pick needed · picked · ordered · arrived) — the P·O·R·S·I boxes on the row are the lights', await page.evaluate(() => {
+    matItToggle('m1');
+    const t = _row('Countertop').textContent;
+    const r = !/pick needed.*picked.*ordered.*arrived/i.test(t.replace(/\s+/g, ' ')) && !_row('Countertop').querySelector('.chips-row [onclick^="matLampTap"]') && _row('Countertop').querySelectorAll('.mat-strip:not(.mat-rowbtns) .mat-box').length === 5;
+    matItToggle('m1'); return r;
+  }));
+  // ✍ v7.09 — Eric: "there's a box that says 'Reply: Go straight onto their page.' I want that reply box gone." and "I don't think
+  // anything needs to fold because this will be really simple, especially with the edit window that opens for all details."
+  ok('NOTHING folds: a tap on the name opens the edit window; no row ever opens under itself; the steps count rides on the name line', await page.evaluate(async () => {
+    _it('m1').kids = [{ n: 'measure' }, { n: 'order', ok: true }]; renderMatMgr();
+    const trail = /1 open/.test(_row('Countertop').textContent);
+    _itHeld = false;   // the hold test above left the "swallow the tap that trails a hold" flag up, as a real hold does until its own tap lands
+    _row('Countertop').querySelector('.mat-nm').click(); await new Promise(r => setTimeout(r, 60));
+    const win = _matEdit === 'm1' && !!$('matSheet');
+    matEditClose(); matItToggle('m1');
+    const r = { trail, win, noSteps: !_row('Countertop').querySelector('.mat-steps'), names: document.querySelectorAll('#revBox .mat-item .mat-nm').length, rows: document.querySelectorAll('#revBox .mat-item').length };
+    return r.trail && r.win && r.noSteps && r.names === r.rows ? true : JSON.stringify(r);
+  }) === true);
+  ok('the steps can be checked off IN the edit window (☐ → ☑), where the ☑ Steps fold opens on its own for a row that has some', await page.evaluate(async () => {
+    matEditOpen('m1'); await new Promise(r => setTimeout(r, 60));
+    const body = document.querySelector('#matSheet .ms-foldsec[data-fold="steps"] .ms-foldbody');
+    const boxes = [...body.querySelectorAll('button[aria-pressed]')].filter(b => /^[☐☑]$/.test(b.textContent.trim()));
+    const before = boxes.map(b => b.textContent.trim()).join('');
+    boxes[0].click();
+    const after = [...document.querySelector('#matSheet .ms-foldsec[data-fold="steps"] .ms-foldbody').querySelectorAll('button[aria-pressed]')].filter(b => /^[☐☑]$/.test(b.textContent.trim())).map(b => b.textContent.trim()).join('');
+    const okNow = _it('m1').kids[0].ok === true;
+    matEditClose(); delete _it('m1').kids; renderMatMgr();
+    return !body.hidden && before === '☐☑' && after === '☑☑' && okNow;
+  }));
+  ok('a 🏠 homeowner row has no Reply box and no 💬 Reply plate anywhere — the client\'s remarks read in the edit window\'s 🏠 fold', await page.evaluate(async () => {
+    _it('m5').remarks = [{ from: 'client', text: 'we like the black one', ts: '2026-09-20T10:00:00.000Z' }];
+    renderMatMgr();
+    const rowT = _row('Their faucet').textContent;
+    matEditOpen('m5'); await new Promise(r => setTimeout(r, 60));
+    const t = $('matSheet').textContent;
+    const r = !document.querySelector('textarea[id^="cvR-"]') && !/💬 Reply|goes straight onto their page/.test(t + rowT) && /we like the black one/.test(t) && !/we like the black one/.test(rowT);
+    matEditClose(); return r;
   }));
 
   console.log('— 📷 v7.08 photo icons on the row —');

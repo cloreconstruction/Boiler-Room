@@ -36,9 +36,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return /🧾 Receipts to approve[^<]*<\/button>\s*(<!--[\s\S]*?-->\s*)?<button[^>]*onclick="openMoneyPage\('tracker'\)"[^>]*>📊 Project Tracker<\/button>/.test(h);
   }));
 
-  ok('the same button sits in the office-phone fold too (both folds carry it, plus the Money section)', (() => {
+  // 🏢 v7.09 — Eric: "I don't want him to have the Project Tracker, Receipts, or estimates" — the office-phone fold lost it; Eric's fold and the Money section keep it
+  ok('the button sits in Eric\'s fold and the Money section only — the office-phone fold does not carry it (v7.09)', (() => {
     const src = fs.readFileSync(fileURLToPath(appUrl), 'utf8');
-    return (src.match(/onclick="openMoneyPage\('tracker'\)"/g) || []).length === 3;
+    return (src.match(/onclick="openMoneyPage\('tracker'\)"/g) || []).length === 2;
   })());
 
   ok('tapping it opens the same Project Tracker page the Summary window shows', await page.evaluate(async () => {

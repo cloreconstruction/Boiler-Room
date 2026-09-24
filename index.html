@@ -1593,6 +1593,13 @@
   .pf-acts .btn-ghost { width: 100%; height: 100%; font-size: 12.5px; font-weight: 800; padding: 9px 5px;
     border-width: 2px; min-height: 46px; line-height: 1.2; text-align: center; }
   .pf-acts .pf-wide { grid-column: 1 / -1; }
+  /* ┄ v7.09 — on Eric's portal, what the office crew does NOT get wears a bright dashed edge (the v6.96 rule from the client
+     preview, the same colour the client page uses for "only you see this" — a colour the app itself never uses). */
+  :root { --mine: #4de3ff; }
+  .only-me { outline: 2.5px dashed var(--mine); outline-offset: 2px; }
+  .set-section.only-me { outline-width: 3px; outline-offset: 3px; }
+  .pf-visbox.only-me { outline-offset: 4px; border-radius: 6px; }
+  .only-me-key { margin: 0 0 10px; padding: 8px 10px; border: 2.5px dashed var(--mine); border-radius: 10px; font-size: 12.5px; line-height: 1.4; }
   .pf-small { display: grid; grid-template-columns: repeat(auto-fit, minmax(102px, 1fr)); gap: 5px;
     flex: 1 1 100%; margin-top: 6px; }
   .pf-small .btn-ghost { width: 100%; font-size: 12px; padding: 9px 4px; min-height: 40px; line-height: 1.2; }   /* 👍 v6.42 — a thumb */
@@ -2374,8 +2381,15 @@
   .mat-sheet-head .ms-title { flex: 1; min-width: 0; font-weight: 800; font-size: 16px; overflow-wrap: anywhere; }
   .mat-sheet-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 14px 14px 20px; }
   .mat-sheet-foot { display: flex; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--baseline, #8a8177); }
-  .ms-sec { margin: 0 0 16px; }
-  .ms-h { display: block; font-size: 11.5px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+  /* ✎ v7.09 — Eric: "In the edit window for a single item … make a little better division between each category." Every
+     open section is its own plate (a hairline box, room inside), its heading a brass word with a short brass rule under it;
+     the folded ones below keep their one-line rows, so open plates and folded rows read as two different things. */
+  .ms-sec { margin: 0 0 12px; padding: 10px 12px 12px; border: 1px solid color-mix(in srgb, var(--baseline, #8a8177) 40%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--surface-1, #1e1a14) 55%, transparent); }
+  .ms-sec.ms-foldsec { padding: 0; border: 0; background: transparent; }
+  .ms-h { display: block; font-size: 11.5px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; padding-bottom: 5px; border-bottom: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+  .ms-foldsec + .ms-foldsec .ms-fold { border-top: 0; }
+  .ms-foldsec .ms-fold { border-top: 1px solid color-mix(in srgb, var(--baseline, #8a8177) 45%, transparent); }
+  .ms-sec:not(.ms-foldsec) + .ms-foldsec { margin-top: 18px; }
   .ms-kind { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .ms-kind .pick-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; font-weight: 800; font-size: 13.5px; padding: 10px; min-height: 64px; white-space: normal; }
   .ms-kind .pick-chip small { font-weight: 500; font-size: 11px; opacity: .85; line-height: 1.3; }
@@ -4133,7 +4147,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.08 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.09 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8019,6 +8033,7 @@ function lbNav(d) {
 // in-app photo viewer — loads a large rendering through the Dropbox API (reliable in the
 // installed app, unlike external browser tabs, and it displays HEIC/odd formats as JPEG)
 async function showPhoto(path) {
+  path = localPath(path);   // 🗺 v7.09 — a path stored the way Eric's phone sees it, opened by THIS phone's name for the folder
   try {
     busyShow('📷 LOADING THE PHOTO…');   // 📷 v6.78 — Eric: "there should be a 'thinking' banner on the top too as sometimes it takes a bit to load the photos"
     const t = await getToken();
@@ -11456,8 +11471,8 @@ function allCards() { return CREW_NAME ? (crewCards || {}) : jobCards(); }
 function cardKey(job) { return String(job || '').trim().toLowerCase(); }
 function cardHas(c) { return !!(c && (c.addr || c.notes || (c.people || []).some(p => p.n || p.tel || p.em) || (c.codes || []).some(k => k.w || k.c))); }
 function cardGet(job) { const k = cardKey(job); return k ? (allCards()[k] || null) : null; }
-function cardMake(job) {                  // Eric's side only — a blank card the moment he needs one
-  const all = jobCards(), k = cardKey(job);
+function cardMake(job) {                  // a blank card the moment it is needed (on an office crew phone: the card Eric handed out — 📇 v7.09)
+  const all = allCards(), k = cardKey(job);
   if (!all[k]) all[k] = { job: String(job || '').trim(), addr: '', people: [], codes: [], notes: '' };
   if (!all[k].job) all[k].job = String(job || '').trim();
   return all[k];
@@ -11496,8 +11511,65 @@ function cardJobList() {
 // never vanish: turning the wheel or closing the window mid-edit saves first (cardStash).
 let _jcEdit = false;
 function cardStash() {                     // save whatever the form holds, quietly — no toast, no change of face
-  if (CREW_NAME || !_cardJob || !$('jcAddr')) return false;
-  cardRead(); scheduleSave(); publishSharedNotes(); return true;
+  if (!_cardJob || !$('jcAddr') || (CREW_NAME && !amOffice())) return false;
+  cardCommit(cardRead()); return true;
+}
+// 📇 v7.09 — Eric: "he should be able to see everything in the job card except the thing on the bottom where I can choose
+// whether it's private or crew … he should be able to edit any of the ones that are open to the crew." An OFFICE crew phone
+// edits the cards Eric handed out. Eric's phone saves into his prefs and publishes; an office phone writes the edit into
+// ITS OWN folder (App Data/card-edits.json — the folder Eric's sweep already reads) and keeps it on screen; Eric's phone
+// takes an edit that is NEWER than his card (never a locked one), stamps the card, and publishes it back to every phone.
+function cardCommit(c) {
+  if (!c) return;
+  if (!CREW_NAME) { c.updated = new Date().toISOString(); scheduleSave(); publishSharedNotes(); }
+  else cardEditPush(c);
+}
+function cardEditsMine() { try { const m = JSON.parse(lsGet('daylog-card-edits') || '{}'); return m && typeof m === 'object' ? m : {}; } catch (e) { return {}; } }
+async function cardEditPush(c) {
+  const k = cardKey(c.job); if (!k) return;
+  const at = new Date().toISOString();
+  const card = { job: c.job, addr: String(c.addr || ''), people: (c.people || []).filter(p => p.n || p.tel || p.em), codes: (c.codes || []).filter(x => x.w || x.c), notes: String(c.notes || '') };
+  crewCards[k] = { ...(crewCards[k] || {}), ...card, updated: at };   // on this phone at once
+  const mine = cardEditsMine(); mine[k] = { card, at, by: CREW_NAME }; lsSet('daylog-card-edits', JSON.stringify(mine));
+  if (!dbx.refreshToken) return;
+  try {
+    const p = DBX_ROOT + '/App Data/card-edits.json';
+    let cur = null; try { cur = JSON.parse(await dbxDownload(p) || 'null'); } catch (e) { cur = null; }
+    const edits = cur && cur.edits && typeof cur.edits === 'object' ? cur.edits : {};
+    Object.assign(edits, mine);
+    await dbxUpload(p, JSON.stringify({ by: CREW_NAME, at, edits }, null, 1));
+  } catch (e) { toast('⚠ The card did not reach Eric — check the connection; it goes on the next save', false); }
+}
+// a crew phone: Eric's cards just arrived — keep this phone's own edits on top until Eric's copy carries them (or something newer)
+function cardEditsOverlay() {
+  const mine = cardEditsMine(); let drop = false;
+  Object.entries(mine).forEach(([k, e]) => {
+    const c = crewCards[k];
+    if (!c || !e || !e.at || String(c.updated || '') >= String(e.at)) { delete mine[k]; drop = true; return; }   // Eric has it, has newer, or took the card back
+    crewCards[k] = { ...c, ...e.card, updated: e.at };
+  });
+  if (drop) lsSet('daylog-card-edits', JSON.stringify(mine));
+}
+// Eric's phone: an office phone's edits, read off its folder on the crew sweep
+function cardEditsTake(name, j) {
+  const eds = j && j.edits && typeof j.edits === 'object' ? j.edits : null; if (!eds) return;
+  const s = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
+  let took = 0;
+  Object.entries(eds).forEach(([k, e]) => {
+    if (!e || !e.card || !e.at) return;
+    const c = jobCards()[k]; if (!c || c.lock) return;                 // only a card he was handed, never a locked one
+    if (String(e.at) <= String(c.updated || '')) return;               // this phone already holds the same or newer
+    const x = e.card;
+    c.addr = s(x.addr, 200); c.notes = s(x.notes, 2000);
+    c.people = (Array.isArray(x.people) ? x.people : []).slice(0, 30).map(p => ({ n: s(p.n, 80), r: s(p.r, 80), tel: s(p.tel, 40), em: s(p.em, 120) })).filter(p => p.n || p.tel || p.em);
+    c.codes = (Array.isArray(x.codes) ? x.codes : []).slice(0, 30).map(y => ({ w: s(y.w, 80), c: s(y.c, 40) })).filter(y => y.w || y.c);
+    c.updated = String(e.at); c.editedBy = name; took++;
+  });
+  if (took) {
+    scheduleSave(); publishSharedNotes();
+    if (_cardJob && !_jcEdit && $('jcJob') && $('revModal').classList.contains('show')) openJobCard(_cardJob);   // on screen and not mid-edit: redraw
+    toast(`📇 ${name} updated ${took} job card${took > 1 ? 's' : ''}`);
+  }
 }
 function cardViewHtml(c, mine) {
   const ppl = (c.people || []).filter(p => p.n || p.tel || p.em), cds = (c.codes || []).filter(k => k.w || k.c);
@@ -11521,8 +11593,8 @@ function openJobCard(job, edit) {
   // sits on "▲ Choose the job" and no card is drawn until he picks (the clock's v6.21 rule: no
   // silent default). v6.77 — and the app's own job is not a pick either (see openJobCards).
   if (job && !list.some(j => cardKey(j) === cardKey(job))) job = '';
-  const mine = !CREW_NAME, same = cardKey(_cardJob) === cardKey(job);
-  if (mine && _jcEdit && _cardJob && !same) cardStash();   // 📇 v6.77 — the wheel moved mid-edit: keep the words first
+  const mine = !CREW_NAME, canEdit = mine || amOffice(), same = cardKey(_cardJob) === cardKey(job);   // 📇 v7.09 — an office crew phone edits too
+  if (canEdit && _jcEdit && _cardJob && !same) cardStash();   // 📇 v6.77 — the wheel moved mid-edit: keep the words first
   // a tick belongs to the card it was made on — changing job drops them all
   if (_jcPickJob !== cardKey(job)) { _jcPick = new Set(); _jcPickJob = cardKey(job); }
   _cardJob = job;
@@ -11531,7 +11603,7 @@ function openJobCard(job, edit) {
   const ppl = c.people || [], cds = c.codes || [];
   // 📇 v6.77 — which face: ✎ Edit asks for the form (true), ✓ Save asks for the card (false); otherwise the
   // same card keeps the face it had, and a card just turned to reads — unless there is nothing on it to read
-  _jcEdit = mine && !!job && (edit === true || (edit !== false && (same ? _jcEdit : !cardHas(c))));
+  _jcEdit = canEdit && !!job && (edit === true || (edit !== false && (same ? _jcEdit : !cardHas(c))));
   // 🔦 v6.30 — Eric: "at the top where i select the job i need that to be much brighter than
   // the rest of the the page as it needs to attract my eyes to it first to select the correct
   // job." Reading the WRONG job's card is how a code or a number goes to the wrong person, so
@@ -11606,15 +11678,18 @@ function openJobCard(job, edit) {
     <button type="button" class="btn-ghost jc-add" onclick="cardAddCode()">➕ Add a code</button>
     <div class="field" style="margin-top: 12px;"><label>📝 Anything else worth knowing here</label>
       <textarea id="jcNotes" rows="2" class="grow" oninput="fitTa(this)" placeholder="Dog in the back yard · park on the gravel · water shutoff is under the deck">${esc(c.notes || '')}</textarea></div>
-    ${lockBtn}
+    ${mine ? lockBtn : ''}
     <button type="button" class="btn-primary" style="width: 100%; font-weight: 800; margin-top: 10px; padding: 13px;" onclick="cardSave()">✓ Save this card</button>`;
-  const body = !mine ? cardViewHtml(c, false)
+  // 📇 v7.09 — an office crew phone gets the reading face, the hand-out ticks and ✎ Edit; the 👷/🔒 line stays Eric's alone
+  const body = !canEdit ? cardViewHtml(c, false)
     : _jcEdit ? form
-    : cardViewHtml(c, true) + share +
-      `<button type="button" class="btn-ghost jc-edit" onclick="openJobCard(_cardJob, true)">✎ Edit this card — names, numbers, codes, notes</button>` + lockBtn;
+    : cardViewHtml(c, mine) + share +
+      `<button type="button" class="btn-ghost jc-edit" onclick="openJobCard(_cardJob, true)">✎ Edit this card — names, numbers, codes, notes</button>` + (mine ? lockBtn : '');
   $('revBox').innerHTML = `<h3>📇 Job Card
     ${winX('closeReview()', 'close')}</h3>
-    <div class="hint" style="margin: 0 0 8px;">${mine ? 'Numbers, emails, the address and door codes for one job. The Wizard reads every card — just ask it.' : 'Addresses, numbers, emails and door codes for one job — read-only; ask your Wizard for it out loud too.'}</div>
+    <div class="hint" style="margin: 0 0 8px;">${mine ? 'Numbers, emails, the address and door codes for one job. The Wizard reads every card — just ask it.'
+      : canEdit ? 'Eric\'s job cards — the address, the people, the codes. You can edit them; Eric\'s phone picks your changes up on its next sync.'
+      : 'Addresses, numbers, emails and door codes for one job — read-only; ask your Wizard for it out loud too.'}</div>
     ${pick}${job ? headsBar + body : ''}`;
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
@@ -11622,7 +11697,7 @@ function openJobCard(job, edit) {
 // read whatever is on screen back onto the card. keepBlank leaves half-typed rows alone so
 // adding a second person never eats the first empty one.
 function cardRead(keepBlank) {
-  if (CREW_NAME || !_cardJob) return null;
+  if (!_cardJob || (CREW_NAME && !amOffice())) return null;   // 📇 v7.09 — an office crew phone reads its form too
   const c = cardMake(_cardJob);
   const v = id => { const el = $(id); return el ? String(el.value || '').trim() : ''; };
   if ($('jcAddr')) c.addr = v('jcAddr');
@@ -11640,6 +11715,7 @@ function cardAddCode() { const c = cardRead(true); if (!c) return; (c.codes = c.
 function cardDropPerson(i) { const c = cardRead(true); if (!c) return; (c.people || []).splice(i, 1); openJobCard(_cardJob); }
 function cardDropCode(i) { const c = cardRead(true); if (!c) return; (c.codes || []).splice(i, 1); openJobCard(_cardJob); }
 function cardLock() {
+  if (CREW_NAME) return;   // 📇 v7.09 — private or crew is Eric's call alone
   const c = cardRead(true); if (!c) return;
   c.lock = !c.lock;
   scheduleSave(); publishSharedNotes();
@@ -11649,9 +11725,9 @@ function cardLock() {
 }
 function cardSave() {
   const c = cardRead(); if (!c) return;
-  scheduleSave(); publishSharedNotes();
+  cardCommit(c);   // 📇 v7.09 — Eric's phone publishes; an office crew phone hands the edit to Eric
   openJobCard(_cardJob, false);   // 📇 v6.77 — saved: back to the reading face
-  toast(`📇 ${c.job} card saved ✓ — ask the Wizard for it any time`);
+  toast(CREW_NAME ? `📇 ${c.job} card saved ✓ — Eric's phone gets it on its next sync` : `📇 ${c.job} card saved ✓ — ask the Wizard for it any time`);
 }
 // what travels: every card he hasn't locked, and only the cards that actually hold something
 function cardBook() {
@@ -11671,7 +11747,7 @@ async function checkSharedNotes() {
     // 📇 v6.17 — Eric's job cards land on this phone: address, numbers, door codes, per job.
     // Whatever he took off the sweep simply isn't in the file, so this can only ever hold
     // what he meant to send.
-    if (j.cards && typeof j.cards === 'object' && !Array.isArray(j.cards)) crewCards = j.cards;
+    if (j.cards && typeof j.cards === 'object' && !Array.isArray(j.cards)) { crewCards = j.cards; cardEditsOverlay(); }   // 📇 v7.09 — this phone's own edits stay on top until Eric has them
     // 🚚 v5.51 — take Eric's truck book, keep the NEWER odometer per truck (his sweep vs
     // a trip just ended on this phone). Trucks Eric added appear; ones he removed go.
     if (Array.isArray(j.trucks) && j.trucks.length) {
@@ -12154,6 +12230,8 @@ async function checkCrewLogs() {
     for (const f of folders.slice(0, 12)) {
       let j = null;
       try { const t = await dbxDownload(f.path_lower + '/app data/entries.json'); if (t) j = JSON.parse(t); } catch (e) {}
+      // 📇 v7.09 — an office phone's job-card edits ride back in its own folder
+      if (isOffice(f.name)) { try { const t2 = await dbxDownload(f.path_lower + '/app data/card-edits.json'); if (t2) cardEditsTake(f.name, JSON.parse(t2)); } catch (e) {} }
       if (!j) continue;
       const name = f.name;
       // 📊 v5.09 — collect what this crew member has been asking their Wizard
@@ -12225,7 +12303,9 @@ async function checkCrewLogs() {
 let _portalIdx = null;
 function renderPortalFold(box, offRoot) {
   const cl = (_portalIdx || {}).clients || [];
-  const off = amOffice();
+  // 🏢 v7.09 — the office fold shows only when the shared Client Portal folder was actually FOUND (offRoot): without it
+  // portalRoot() falls back to this phone's own folder, and a board "saved" there is a board nobody sees.
+  const off = amOffice() && !!offRoot;
   box.innerHTML = cl.length ? cl.map((c, i) => {
       const open = _portalOpen === i;
       return `
@@ -12233,25 +12313,21 @@ function renderPortalFold(box, offRoot) {
         <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: 700;"
           onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}${jrnMeterHtml(c.code)}${qbMeterHtml(c.code)}</button>
         ${open ? (off ? `
-        <!-- 🏢 v6.07 — an OFFICE phone (Phil) gets the same fold Eric gets: lists, boxes, bids. -->
+        <!-- 🏢 v6.07 — an OFFICE phone (Phil) gets a fold of his own. v7.09 — Eric: "I don't want him to have the Project
+             Tracker, Receipts, or estimates but he should be able to click on Plans, Build List, and Journal" — and no
+             Rotate / Rename / Remove, no 🎛 they-can-see switches, no ➕ new page. Copy link and View as stay. -->
         <div class="pf-acts">
           <button class="btn-ghost" onclick="openPlanRack(${i})">📐 Plans</button>
           <button class="btn-ghost" onclick="openJournal(${i})">📖 Journal</button>
           <button class="btn-ghost" onclick="openMaterials(${i})">📋 Build List</button>
-          <button class="btn-ghost" onclick="openEstimates(${i})">💰 Estimates</button>
           <button class="btn-ghost" onclick="portalCopy(${i})">📋 Copy link</button>
           <button class="btn-ghost" onclick="portalIntel(${i})">📊 What they look at</button>
-          <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
-          <!-- 🧾 v6.30 — Eric asked for this to sit beside "view as a client": the tagged
-               receipts still waiting on this job, to check and approve in one sitting. -->
-          <button class="btn-ghost pf-wide" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(portalAppJob(c)) ? " · " + rcptCount(portalAppJob(c)) + " WAITING" : " · none"}</button>
-          <!-- 📊 v6.37 — Eric: "lets put a button for the project tracker next to the receipts to
-               approve button. for quick access" — the same read-only money page as Summary → 💰 Money. -->
-          <button class="btn-ghost pf-wide" onclick="openMoneyPage('tracker')">📊 Project Tracker</button>
+          <button class="btn-ghost" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
         </div>` : `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>`) : ''}
       </div>`;
-    }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="renderPortalList()">🔄 Look again</button>
-      ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — the Build List is yours too.</span>' : ''}</div>`
+    }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="findPortalRoot(true).then(() => renderPortalList())">🔄 Look again</button>
+      ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — Plans, the Journal and the Build List are yours to work. The money stays on Eric\'s phone.</span>'
+        : amOffice() ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE, but the shared <b>Client Portal</b> folder has not turned up on this phone yet — accept the Dropbox share, then tap 🔄 Look again.</span>' : ''}</div>`
       : '<span class="hint">Eric hasn\'t turned any client pages on yet.</span>';
 }
 // ═══════════ 📊 v6.31 — THE JOURNAL METER ═══════════
@@ -12361,7 +12437,7 @@ async function refreshJrnAges(clients) {
       if (rel && prefs.jrnRel[c.code] !== rel) { prefs.jrnRel[c.code] = rel; moved = true; }
     } catch (e) { /* leave the cached date alone — a bad signal is not news */ }
   }));
-  if (moved) { scheduleSave(); const b = $('portalList'); if (b && !CREW_NAME) renderPortalList(); }
+  if (moved) { scheduleSave(); const b = $('portalList'); if (b) renderPortalList(); }   // 📖 v7.09 — an office phone repaints too
 }
 async function renderPortalList() {
   const box = $('portalList');
@@ -12384,7 +12460,7 @@ async function renderPortalList() {
       offRoot = await findPortalRoot();   // any crew phone may hold the share; finding it promotes
       if (offRoot) {
         try { _portalIdx = JSON.parse(await dbxDownload(offRoot + '/index.json') || 'null'); } catch (e) { _portalIdx = null; }
-        if (_portalIdx && (_portalIdx.clients || []).length) return renderPortalFold(box, offRoot);
+        if (_portalIdx && (_portalIdx.clients || []).length) { refreshJrnAges(_portalIdx.clients); return renderPortalFold(box, offRoot); }   // 📖 v7.09 — the journal meters read the real dates here too (they said NO JOURNAL YET on every job)
       }
     }
     // 🏠 v5.48 — DON'T TRUST DBX_ROOT. A crew folder is a MOUNT in the crew member's own
@@ -12432,11 +12508,18 @@ async function renderPortalList() {
   // Not awaited: the list must not sit blank behind nine downloads on a job-site signal.
   refreshJrnAges(_portalIdx.clients || []);
   refreshQbAges();   // 📗 v6.54 — one file, every client
+  // ┄ v7.09 — Eric: "At the bottom where I can give a job a client page, he should not be able to see that, so put a
+  // dotted line around that, right?" Right — the v6.96 rule, on his own portal: a bright dashed edge = only Eric sees
+  // it, the office crew (Phil) does not. Estimates, Receipts, Project Tracker, Rotate / Rename / Remove, the 🎛
+  // they-can-see switches and ➕ Give a job a client page wear it; the line at the top says what it means. Nothing
+  // dashed when there is no office crew to keep it from.
+  const om = officeFolks().length ? ' only-me' : '';
+  const omKey = officeFolks().length ? `<div class="hint only-me-key">┄ A bright dashed edge means <b>only you see it</b> — ${esc(officeFolks().join(' and '))} does not.</div>` : '';
   // 📁 v5.57 — Eric: "buttons hidden and only the job name showing... pick the job name from
   // the list, and THEN it opens up into Journal, Materials, Copy link, etc." One clean list
   // of job names; tapping one unfolds ITS buttons and folds the last one shut (accordion —
   // seven jobs of open buttons was the clutter he was naming). ▸/▾ + words carry the state.
-  box.innerHTML = (_portalIdx.clients || []).map((c, i) => {
+  box.innerHTML = omKey + (_portalIdx.clients || []).map((c, i) => {
     const open = _portalOpen === i;
     return `
     <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px; ${open ? '' : 'padding-bottom: 4px;'}">
@@ -12450,23 +12533,23 @@ async function renderPortalList() {
         <button class="btn-ghost" onclick="openPlanRack(${i})">📐 Plans</button>
         <button class="btn-ghost" onclick="openJournal(${i})">📖 Journal</button>
         <button class="btn-ghost" onclick="openMaterials(${i})">📋 Build List</button>
-        <button class="btn-ghost" onclick="openEstimates(${i})">💰 Estimates</button>
+        <button class="btn-ghost${om}" onclick="openEstimates(${i})">💰 Estimates</button>
         <button class="btn-ghost" onclick="portalCopy(${i})">📋 Copy link</button>
         <button class="btn-ghost" onclick="portalIntel(${i})">📊 What they look at</button>
         <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
         <!-- 🧾 v6.30 — beside "view as a client", as Eric asked: the tagged receipts still
              waiting on this job, to check and approve in one sitting. -->
-        <button class="btn-ghost pf-wide" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(portalAppJob(c)) ? " · " + rcptCount(portalAppJob(c)) + " WAITING" : " · none"}</button>
+        <button class="btn-ghost pf-wide${om}" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(portalAppJob(c)) ? " · " + rcptCount(portalAppJob(c)) + " WAITING" : " · none"}</button>
         <!-- 📊 v6.37 — Eric: "lets put a button for the project tracker next to the receipts to
              approve button. for quick access" — the same read-only money page as Summary → 💰 Money. -->
-        <button class="btn-ghost pf-wide" onclick="openMoneyPage('tracker')">📊 Project Tracker</button>
+        <button class="btn-ghost pf-wide${om}" onclick="openMoneyPage('tracker')">📊 Project Tracker</button>
       </div>
       <div class="pf-small">
-        <button class="btn-ghost req-x" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? Kills their link' : '🔄 Rotate code'}</button>
-        <button class="btn-ghost req-x" onclick="portalEditStart(${i})">✎ Rename</button>
-        <button class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="portalDelete(${i})">${_portalDelArm === i + 1 ? '⚠ SURE? Comes down' : '✕ Remove page'}</button>
+        <button class="btn-ghost req-x${om}" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? Kills their link' : '🔄 Rotate code'}</button>
+        <button class="btn-ghost req-x${om}" onclick="portalEditStart(${i})">✎ Rename</button>
+        <button class="btn-ghost req-x${om}" style="color: var(--err, #c0392b);" onclick="portalDelete(${i})">${_portalDelArm === i + 1 ? '⚠ SURE? Comes down' : '✕ Remove page'}</button>
       </div>
-      <div style="flex: 1 1 100%; margin-top: 6px;">
+      <div class="pf-visbox${om}" style="flex: 1 1 100%; margin-top: 6px;">
         <span class="hint" style="margin: 0; font-size: 11px;">🎛 They can see — tap to flip, takes hold on their next load:</span>
         <div class="pf-vis">
         ${_visCache[c.code] ? VIS_KEYS.map(([k, lab]) => { const on = visOn(_visCache[c.code], k);
@@ -12487,7 +12570,7 @@ async function renderPortalList() {
   // No page, no match. Eric makes his own now, off his real job list, in two taps.
   const have = new Set((_portalIdx.clients || []).map(c => (c.job || '').toLowerCase()));
   const spare = jobs.filter(j => j && j !== '—' && !have.has(j.toLowerCase()));
-  box.innerHTML += `<div class="set-section fc-sec" style="margin-top: 12px;"><h4>➕ Give a job a client page</h4>
+  box.innerHTML += `<div class="set-section fc-sec${om}" style="margin-top: 12px;"><h4>➕ Give a job a client page</h4>
     <div class="frow">
       <div class="field" style="flex: 1; min-width: 160px;"><label>Job</label>
         <select id="npJob">${spare.length ? spare.map(j => `<option>${esc(j)}</option>`).join('') : '<option value="">every job already has one</option>'}</select></div>
@@ -12588,7 +12671,9 @@ function pkHeal(d) {
 function pkStd(si) { return si < PK_SEED.length; }
 async function openPlanRack(i) {
   if (portalGuard()) return;
-  if (CREW_NAME) { toast('📐 The rack lives in Eric\'s Dropbox — the crew copy is the next screw to turn', false); return; }
+  // 🏢 v7.09 — Eric: "he should be able to click on Plans". The sets live INSIDE the shared Client Portal folder now
+  // (portalRoot()/Plans/<code>/…), so an office phone reads and writes the same rack Eric does; portalGuard above
+  // still turns field crew away in words.
   _pkIdx = i; _pkPend = {}; _pkHistShow = new Set(); _pkArm = '';
   const c = _portalIdx.clients[i];
   toast('⏳ Opening the rack…');
@@ -12710,12 +12795,13 @@ async function pkStamp(key) {
   const base = ext ? raw.slice(0, -ext.length) : raw;
   if (!ext && /pdf/i.test(f.type || '')) ext = '.pdf';
   const clean = (base.slice(0, 60 - ext.length).trim() || 'plan') + ext;
-  const path = `${DBX_ROOT}/Plans/${c.code}/${s.key}/R${rev} ${clean}`;
+  // 🏢 v7.09 — under the shared Client Portal folder (it was /Clore DayLog/Plans, Eric's alone), stored by Eric's name for it
+  const path = `${portalRoot()}/Plans/${c.code}/${s.key}/R${rev} ${clean}`;
   toast(`⏳ R${rev} going up…`);
   try {
     const r = await dbxUpload(path, f, true);
     if (s.cur) s.hist = [s.cur, ...(s.hist || [])];
-    s.cur = { rev, date: localDay(new Date()), file: r.path_display || path, fname: clean, note };
+    s.cur = { rev, date: localDay(new Date()), file: canonPath(r.path_display || path), fname: clean, note };
     delete _pkPend[key];
     await pkSave();
     renderPlanRack();
@@ -12727,7 +12813,7 @@ function pkOpen(key) {
   if (!s || !s.cur) return;
   const b = document.querySelector('.cp-banner');
   if (b) b.textContent = `📐 CURRENT — ${s.name.toUpperCase()} R${s.cur.rev} · ${s.cur.date} · TAP TO COME BACK`;
-  matOpenDoc(s.cur.file);
+  matOpenDoc(s.cur.file);   // matOpenDoc turns Eric's name for the folder into this phone's (🗺 v7.09)
 }
 function pkOpenOld(key, hi) {
   const s = _pkD.slots.find(x => x.key === key);
@@ -13084,9 +13170,9 @@ function estOpts(x) { return (x.bids || []).filter(b => b.opt); }
 let _estOpenCats = new Set();
 async function openEstimates(i) {
   if (portalGuard()) return;
-  // 💰 v6.07 — this used to turn away every crew phone. An OFFICE phone reads and writes the
-  // same estimate files Eric does, through the folder he shares to that person's Dropbox.
-  if (CREW_NAME && !amOffice()) { toast('💰 Estimates are office-side — ask Eric to switch your phone to office in Setup → Crew', false); return; }
+  // 💰 v6.07 opened this board to an OFFICE phone; 🏢 v7.09 — Eric: "I don't want him to have the Project Tracker,
+  // Receipts, or estimates" — so the money stays on his phone, whatever kind of crew phone asks.
+  if (CREW_NAME) { toast('💰 The estimates board is Eric\'s — the money stays on his phone', false); return; }
   _estIdx = i; _estArm = ''; _estOpenCats = new Set(); _estShowEmpty = new Set(); _estHelp = false;   // 🕯 v6.66 — the folds start shut
   const c = _portalIdx.clients[i];
   toast('⏳ Opening the estimates…');
@@ -13825,6 +13911,7 @@ function rcptLights(e) {
 }
 async function openRcptReview(i) {
   if (portalGuard && portalGuard()) return;
+  if (CREW_NAME) { toast('🧾 The receipts to approve are Eric\'s — the money stays on his phone', false); return; }   // 🏢 v7.09
   const c = (((_portalIdx || {}).clients) || [])[i];
   if (!c) return;
   _rcptIdx = i; _rcptSel = new Set();
@@ -15552,7 +15639,8 @@ async function matBoardRead(c) {
 }
 async function openMaterials(i) {
   if (portalGuard()) return;
-  if (CREW_NAME) { toast('📋 The board is coming to office phones next — it lives in Eric\'s Dropbox and needs its own copy out here first', false); return; }
+  // 🏢 v7.09 — Eric: "he should be able to click on Plans, Build List, and Journal." The board's files were always under
+  // portalRoot() — the shared folder — so an office phone works the same board Eric does. (Field crew stop at portalGuard.)
   _matIdx = i; _matEdit = ''; _matWhoFor = ''; _matRmTools = -1; _matHelp = false; _matDirty = false; _matArm = ''; _matTagF = ''; _matStageF = ''; _matPaste = false; _matPasteRows = null; _matPasteText = '';
   const c = _portalIdx.clients[i];
   toast('⏳ Loading the board…');
@@ -15653,7 +15741,9 @@ function matMgrItem(ri, it) {
   const ready = kids.length && kids.every(k => k.ok);
   const editing = false, inSheet = _matEdit === it.id;   // ✎ v6.91 — the editor is its own window (matEditSheetHtml); the row never turns into a form
   const itDone = matItemDone(it);   // 📋 v6.89 — a thing to buy is done when it is INSTALLED
-  const open = _matItOpen.has(it.id);
+  // 🎛 v7.09 — Eric: "I don't think anything needs to fold because this will be really simple, especially with the edit
+  // window that opens for all details." A row is its name line and its lights line, always; nothing opens under it. The
+  // steps, the client's remarks and picture, and the pocket all live in the edit window (a tap or a hold on the name).
   const glyph = matLampGlyph(it), word = matRowWord(it), first = matIsFirst(it);   // v6.91 — the lamp wears the icon of the furthest light that is lit
   const openN = kids.filter(k => !k.ok).length;
   const pktN = ((it.pkt || {}).docs || []).length + ((it.pkt || {}).notes ? 1 : 0);
@@ -15666,52 +15756,13 @@ function matMgrItem(ri, it) {
           style="flex: 1; min-width: 0; font-weight: 800; font-size: 15px; padding: 7px 10px;"
           onchange="matSet('${escq(it.id)}', 'n', this.value)"
           onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></span>` :
-      `<span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap to ${open ? 'fold' : 'open'} · hold for the works">${open ? '▾' : '▸'} <b>${esc(it.n)}</b>
+      `<span role="button" class="mat-nm" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap or hold: the edit window — every detail is in there"><b>${esc(it.n)}</b>
         <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${matIsBuy(it) && matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${it.src === 'grinder' ? ' · ⚙ from the grinder' : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
       ${editing ? '' : matQuickHtml(it)}
     </div>
     <div class="mat-line2">${matStripHtml(it)}${matRowBtnsHtml(it)}${matSelHtml(it)}</div>
     ${_matWhoFor === it.id && !matIsBuy(it) ? matWhoPickHtml(it) : ''}
-    ${open && !editing && matIsHm(it) ? matConvoHtml(it) : ''}
-    ${open && kids.length && !editing ? (() => {
-      const okN = kids.filter(k => k.ok).length;
-      const spct = Math.round(okN / kids.length * 100);
-      const showClr = _kidClrShow.has(it.id);
-      const clrN = kids.filter(k => k.clr).length;
-      return `<div class="mat-steps"><span class="mt-trunk2" aria-hidden="true"><i style="height: ${spct}%;"></i></span>
-      ${clrN ? `<div class="mat-note" style="cursor: pointer;" onclick="matKidClrToggle('${escq(it.id)}')" role="button">${showClr ? '▾' : '▸'} ${clrN} checked & cleared — tap to ${showClr ? 'tuck away' : 'see'}</div>` : ''}
-      ${kids.map((k, ki) => k.clr && !showClr ? '' : `<div class="mat-step${k.ok ? ' ok' : ''}">
-        ${_kidEdit === it.id + ':' + ki
-          ? `<input type="text" id="kidEd-${escq(it.id)}-${ki}" value="${esc(k.n)}" style="width: calc(100% - 20px); font-size: 12.5px; padding: 4px 8px;"
-              onkeydown="if(event.key==='Enter'){event.preventDefault();matKidRename('${escq(it.id)}', ${ki}, this.value);}"
-              onblur="matKidRename('${escq(it.id)}', ${ki}, this.value)">`
-          : `<button type="button" class="pick-chip${k.ok ? ' sel' : ''}${k.cv ? ' cv-step' : ''}" onclick="matKidTap('${escq(it.id)}', ${ki})" aria-pressed="${!!k.ok}"
-              onpointerdown="matKidHoldStart('${escq(it.id)}', ${ki})" onpointerup="matKidHoldEnd()" onpointerleave="matKidHoldEnd()"
-              oncontextmenu="event.preventDefault()" title="tap for the step menu · hold = edit the words">${k.ok ? '☑' : '☐'} ${esc(k.n)}${k.cv ? ' <b style="color: var(--client-blue);">🏠</b>' : ''}${k.flag ? ` <b style="color: var(--err, #b3452f);">🚩 ${k.flag === 'owner' ? 'OWNER' : 'CONTRACTOR'} DECISION</b>` : ''}</button>`}
-        ${_kidMenu === it.id + ':' + ki ? `<div class="chips-row" style="margin: 4px 0 2px 12px; display: flex; flex-wrap: wrap; gap: 4px;">
-          <button type="button" class="pick-chip sel" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="matKidMenuCheck('${escq(it.id)}', ${ki})">${k.ok ? '↩ Un-check it' : '✓ Check it — stays on the list'}</button>
-          ${k.ok ? '' : `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="matKidClear('${escq(it.id)}', ${ki})">✓ Check & CLEAR off the list</button>`}
-          <button type="button" class="pick-chip${k.cv ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px; ${k.cv ? '' : 'box-shadow: inset 0 0 0 1.5px var(--client-blue);'}" onclick="matKidCv('${escq(it.id)}', ${ki}); _kidMenu = ''; renderMatMgr()">${k.cv ? '🏠 Remove from client page' : '🏠 Send to client page'}</button>
-          <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="_kidSubAdd = '${escq(it.id)}:${ki}'; _kidMenu = ''; renderMatMgr(); setTimeout(() => { const b = $('kidSub-${escq(it.id)}-${ki}'); if (b) b.focus(); }, 60)">➕ Add sub-checkbox</button>
-          <button type="button" class="pick-chip${k.flag === 'owner' ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="matKidFlag('${escq(it.id)}', ${ki}, 'owner')">🚩 Owner decision</button>
-          <button type="button" class="pick-chip${k.flag === 'contractor' ? ' sel' : ''}" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="matKidFlag('${escq(it.id)}', ${ki}, 'contractor')">🚩 Contractor decision</button>
-          <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="_kidMenu = ''; renderMatMgr()">✕</button>
-        </div>` : ''}
-        ${_kidSubAdd === it.id + ':' + ki ? `<div class="frow" style="gap: 5px; margin: 3px 0 2px 12px;">
-          <input type="text" id="kidSub-${escq(it.id)}-${ki}" placeholder="the sub-box — what's blocking, what has to happen…" style="flex: 1; font-size: 12px; padding: 5px 8px;"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();matKidSubAdd('${escq(it.id)}', ${ki});}">
-          <button type="button" class="btn-ghost req-x" onclick="matKidSubAdd('${escq(it.id)}', ${ki})">➕</button>
-        </div>` : ''}
-        ${(k.subs || []).map((sb, si) => `<div class="mat-note" style="margin-left: 24px; cursor: pointer;" onclick="matKidSubOk('${escq(it.id)}', ${ki}, ${si})" role="button" aria-pressed="${!!sb.ok}">${sb.ok ? '☑' : '☐'} ${esc(sb.n)}</div>`).join('')}
-        ${k.note ? `<div class="mat-note">${esc(k.note)}</div>` : ''}
-      </div>`).join('')}</div>`; })() : ''}
-    ${open && (it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0 34px;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
-    ${open && matPktChip(it) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px; flex-wrap: wrap;">
-      ${matPktChip(it)}
-    </div>${matPktBody(it)}` : ''}
-    ${open && !editing && !matIsHm(it) ? matConvoHtml(it) : ''}
-    ${open && !editing ? matLampRowMgr(it) : ''}
-  </div>`;
+  </div>`;   // 🎛 v7.09 — no fold: the steps (with their menu), the client's remarks and the pocket that used to open under the row are in the edit window now. — Eric: "Pick Needed · Picked · Ordered · Arrived … get rid of the rest because we already have that in the new buttons on top." The bottom lamp strip (matLampRowMgr) is no longer drawn: the lights are the P·O·R·S·I boxes, ⇄ is on the row, ✎ and ✕ are on the name line.
 }
 function matEditSheetHtml(it) {
   const id = escq(it.id);
@@ -15745,6 +15796,7 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
   const stepsHtml = `<div class="field" style="flex: 1 1 100%;"><label>Sub-items — ${hm ? 'every piece confirmed = READY TO ORDER' : 'all checked = the main box opens'}</label>
       ${(it.kids || []).map((k, ki) => `<div style="margin: 3px 0 7px;">
         <div class="frow" style="gap: 5px; align-items: center; flex-wrap: nowrap;">
+          <button type="button" class="pick-chip${k.ok ? ' sel' : ''}" style="flex: none; font-size: 15px; padding: 2px 8px; min-height: 30px;" onclick="matKidOk('${id}', ${ki})" aria-pressed="${!!k.ok}" aria-label="${k.ok ? 'done — tap to un-check' : 'not done — tap to check it off'}" title="${k.ok ? 'done — tap to un-check' : 'check it off'}">${k.ok ? '☑' : '☐'}</button>
           <button type="button" class="pick-chip${k.cv ? ' sel' : ''}" style="flex: none; font-size: 10.5px; padding: 4px 7px; min-height: 26px;" onclick="matKidCv('${id}', ${ki})" aria-pressed="${!!k.cv}"
             title="whether the client sees this step under the item on their page">${k.cv ? '🏠 client sees' : '🏢 office only'}</button>
           <input type="text" value="${esc(k.n)}" style="flex: 1; min-width: 60px; font-size: 12.5px; padding: 5px 8px;" onchange="matKidRename('${id}', ${ki}, this.value)">
@@ -15843,7 +15895,7 @@ async function matAddPhotos(id, files) {
     const path = `${portalRoot()}/mat-photos-${c.code}/${it.id} ${clean}`;
     try {
       const r = await dbxUpload(path, f, true); // keepBoth: a same-named photo autorenames
-      it.phs.push(r.path_display || path);
+      it.phs.push(canonPath(r.path_display || path));   // 🗺 v7.09 — stored the way Eric's phone sees the folder
       if (!first) first = { f, pi: it.phs.length - 1 };
       matLog(`📷 photo "${clean}" onto ${it.n}`);
     } catch (e) { toast(`⚠ ${clean} didn't make it — check the connection`, false); }
@@ -15902,8 +15954,13 @@ function matSelDone(id, keep) {
 function matEdPhotosHtml(it, mk) {
   const id = escq(it.id), phs = it.phs || [], rd = it.phRead;
   phs.forEach((p, i) => setTimeout(() => matThumb(p, `msPh-${it.id}-${i}`), 20));
-  return `<div class="ms-sec ms-photos"><span class="ms-h">📷 Photos${phs.length ? ` · ${phs.length}` : ''}</span>
+  // 🏠 v7.09 — the client's own picture (it.cph) sits first, marked 🏠, with 🔮 What is it — the opened row used to show it
+  const cph = it.cph ? portalRoot() + '/' + it.cph : '';
+  if (cph) setTimeout(() => matThumb(cph, `msPh-${it.id}-c`), 20);
+  return `<div class="ms-sec ms-photos"><span class="ms-h">📷 Photos${phs.length + (cph ? 1 : 0) ? ` · ${phs.length + (cph ? 1 : 0)}` : ''}</span>
     <div class="ms-phs">
+      ${cph ? `<span class="ms-phwrap"><button type="button" class="ms-ph" onclick="showPhoto('${escq(cph)}')" aria-label="the homeowner's picture — tap to look" title="🏠 the homeowner's picture — tap to look"><img id="msPh-${esc(it.id)}-c" alt="the homeowner's picture"></button>
+        <span class="ms-phbtns"><span class="hint" style="margin: 0; font-size: 11px; align-self: center;">🏠</span><button type="button" class="btn-ghost req-x" onclick="matWhatIs('${id}')" aria-label="the Wizard says what the homeowner's picture is" title="🔮 What is it?">🔮</button></span></span>` : ''}
       ${phs.map((p, i) => `<span class="ms-phwrap"><button type="button" class="ms-ph" onclick="showPhoto('${escq(p)}')" aria-label="photo ${i + 1} — tap to look" title="tap to look"><img id="msPh-${esc(it.id)}-${i}" alt="photo ${i + 1}"></button>
         <span class="ms-phbtns"><button type="button" class="btn-ghost req-x" onclick="matPhotoRead('${id}', ${i})" aria-label="the Wizard reads photo ${i + 1} — the SKU and the price" title="🧙 read it — SKU and price">🧙</button><button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelPhoto('${id}', ${i})" aria-label="take photo ${i + 1} off this item" title="take it off this item — the file stays in Dropbox">✕</button></span></span>`).join('')}
       <div class="ms-phdrop" id="matDrop-${esc(it.id)}" role="button" tabindex="0" onclick="$('matPh-${id}').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"
@@ -15923,6 +15980,7 @@ function matReadCardHtml(rd, mk) {
 // the small pictures in the edit window (Dropbox makes the thumbnail; kept for the session)
 const _matThumbs = {};
 async function matThumb(path, elId) {
+  path = localPath(path);   // 🗺 v7.09
   const put = () => { const el = $(elId); if (el && _matThumbs[path]) el.src = _matThumbs[path]; };
   if (_matThumbs[path]) return put();
   try {
@@ -15958,7 +16016,7 @@ async function matPhotoRead(id, pi, file) {
   const it = matFindItem(id); if (!it) return;
   const say = t => { const o = $('msRead-' + id); if (o) o.textContent = t; };
   if (!aiKey()) { toast('🧙 The Wizard needs the Claude key on this phone to read it — ⚙ Setup → Ask Claude', false); return; }
-  const path = (it.phs || [])[pi] || '';
+  const path = localPath((it.phs || [])[pi] || '');   // 🗺 v7.09
   busyShow('🧙 THE WIZARD IS READING THE PHOTO…'); say('🧙 reading the photo…');
   try {
     let b64;
@@ -16079,7 +16137,7 @@ async function matAddDocs(id, files) {
     const path = `${portalRoot()}/mat-files-${c.code}/${it.id} ${clean}`;
     try {
       const r = await dbxUpload(path, f, true);
-      it.pkt.docs.push({ path: r.path_display || path, name: clean });
+      it.pkt.docs.push({ path: canonPath(r.path_display || path), name: clean });   // 🗺 v7.09
       matLog(`📁 "${clean}" into the pocket of ${it.n}`);
     } catch (e) { toast(`⚠ ${clean} didn't make it — check the connection`, false); }
   }
@@ -16109,6 +16167,7 @@ function matPktNotes(id, v) {
 // 📄 open a pocket paper INSIDE the app: images ride the photo lightbox; a PDF is fetched
 // whole and shown in the client-preview frame as a blob — no external tab, ever (PWA rule).
 async function matOpenDoc(path) {
+  path = localPath(path);   // 🗺 v7.09
   if (/\.(jpe?g|png|gif|webp|heic)$/i.test(path)) return showPhoto(path);
   try {
     toast('⏳ Opening the paper…');
@@ -16226,6 +16285,7 @@ async function matReplySend(id) {
 // the What-is-it chip, one clean box, big buttons. The board's per-item window wears it now.
 const _cvImgCache = {};
 async function matConvoImg(path, elId) {
+  path = localPath(path);   // 🗺 v7.09
   if (_cvImgCache[path]) { const el = $(elId); if (el) el.src = _cvImgCache[path]; return; }
   try {
     const t = await getToken();
@@ -16239,7 +16299,7 @@ async function matConvoImg(path, elId) {
 }
 async function matWhatIs(id) {
   const it = matFindItem(id);
-  const ph = it && (it.cph ? portalRoot() + '/' + it.cph : (it.phs || [])[0]);
+  const ph = it && (it.cph ? portalRoot() + '/' + it.cph : localPath((it.phs || [])[0]));   // 🗺 v7.09
   const out = $('cvAI-' + id);
   if (!it || !ph || !aiKey()) { toast(!aiKey() ? 'Needs the Claude key (⚙ Setup → Ask Claude)' : 'No picture on this one', false); return; }
   if (out) out.textContent = '🔮 reading the picture…';
@@ -16276,10 +16336,7 @@ function matConvoHtml(it) {
     ${ph ? `<button type="button" class="pick-chip" style="font-size: 12px; margin: 6px 0;" onclick="matWhatIs('${escq(it.id)}')">🔮 What is it? — details + suggestions</button>
     <div class="hint" id="cvAI-${escq(it.id)}" style="margin: 2px 0 6px; white-space: pre-wrap;"></div>` : ''}
     ${(it.remarks || []).slice(-8).map(rm => `<div class="hint" style="margin: 3px 0;">${rm.from === 'client' ? '👤 client' : '✍ you'}: ${esc(rm.text)}</div>`).join('')}
-    ${talk ? `<div class="hint" style="margin: 8px 0 4px;">✍ Reply — goes straight onto their page</div>
-    <textarea id="cvR-${escq(it.id)}" rows="2" class="grow" style="width: 100%; font-size: 13px;" placeholder="type it and hit 💬 Reply…"></textarea>
-    <button type="button" class="btn-primary" style="width: 100%; margin-top: 6px; font-weight: 800;" onclick="matReplySend('${escq(it.id)}')">💬 Reply</button>` : ''}
-  </div>`;
+  </div>`;   // ✍ v7.09 — Eric: "there's a box that says 'Reply: Go straight onto their page.' I want that reply box gone." (matReplySend stays a function; the thread still reads here)
 }
 // 🎚 v5.71 — the step tools Eric asked for: arrows to rearrange, a client-sees flag, and a
 // tap-menu with a dead-end kit — add a sub-box under a step, or fly a 🚩 so the next man
@@ -16413,7 +16470,7 @@ function matItemHoldEnd() { clearTimeout(_itTimer); }
 // the works. The tap that trails a fired hold is swallowed, same habit as the steps.
 function matItRowTap(id) {
   if (_itHeld) { _itHeld = false; return; }
-  matItToggle(id);
+  matEditOpen(id);   // 🎛 v7.09 — a tap on the name is the edit window too (it used to open/fold the row; nothing folds now)
 }
 // ➕ v5.61 — one step at a time, the way Eric asked: type it, ➕, it lands with a checkbox
 function matAddKid(id) {
@@ -19372,6 +19429,23 @@ function portalRoot() {
   if (!CREW_NAME) return DBX_ROOT + PORTAL_DIR;   // Eric's own phone
   return _portalRoot || (DBX_ROOT + PORTAL_DIR);  // an office phone, once the share is found
 }
+// 🗺 v7.09 — ONE FOLDER, TWO NAMES. The Client Portal folder is Eric's "/Clore DayLog/App Data/Client Portal"; on Phil's
+// phone the same folder is mounted as whatever he accepted the share as ("/Client Portal"). A path written into a shared
+// file (a Build List photo, a plan set, a pocket paper) is stored the way ERIC's phone sees it — canonPath — and turned
+// into this phone's own name when it is opened — localPath. Eric's crew-folder photos get the same treatment
+// ("/Clore DayLog/Crew/Phil/photos/…" is "<his mount>/photos/…" on Phil's phone). On Eric's phone both are no-ops.
+const PORTAL_CANON = '/Clore DayLog' + PORTAL_DIR;
+function swapPrefix(p, from, to) {
+  p = String(p || ''); if (!from || !to || from.toLowerCase() === to.toLowerCase()) return p;
+  const low = p.toLowerCase(), f = from.toLowerCase();
+  return low === f || low.startsWith(f + '/') ? to + p.slice(from.length) : p;
+}
+function canonPath(p) { return CREW_NAME && _portalRoot ? swapPrefix(p, _portalRoot, PORTAL_CANON) : String(p || ''); }
+function localPath(p) {
+  if (!CREW_NAME) return String(p || '');
+  let q = _portalRoot ? swapPrefix(p, PORTAL_CANON, _portalRoot) : String(p || '');
+  return swapPrefix(q, CREW_DIR + '/' + cleanName(CREW_NAME), DBX_ROOT);
+}
 // hunt for the shared folder once, then remember it — whatever he accepted the share as.
 let _rootHunted = false;
 async function findPortalRoot(force) {
@@ -20575,7 +20649,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.08';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.09';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

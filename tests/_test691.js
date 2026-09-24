@@ -69,9 +69,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const it = _it('Test winch'), row = _row('Test winch').textContent;
     const after = !it.buy && it.s === 'todo' && !/pick needed/.test(row) && _lights('Test winch').length === 3 && flip('Test winch').textContent.replace(/\s+/g, '') === '⇄buy';
     const gone = !!flip('Garage door') && !!flip('Garage paint') && !!flip('Pendants x2');   // v6.98 — Eric: "yes make it show on every row all the time"
-    _row('Garage door').querySelector('[role="button"]').click();   // open the row: the flip lives there too
-    const inRow = [..._row('Garage door').querySelectorAll('.chips-row button')].some(b => /⇄ make it a checklist item/.test(b.textContent));
-    _row('Garage door').querySelector('[role="button"]').click();
+    const inRow = !!flip('Garage door');   // v7.09 — nothing folds any more; the ⇄ on the row IS where the flip lives
     return before && after && gone && inRow;
   }));
 
@@ -133,8 +131,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   const ed = await page.evaluate(async () => {
     const rowTop = () => Math.round(_row('Loft railing').getBoundingClientRect().top), rowH = () => Math.round(_row('Loft railing').getBoundingClientRect().height);
     const t0 = rowTop(), h0 = rowH(), scroll0 = $('revModal').scrollTop;
-    _row('Loft railing').querySelector('[role="button"]').click();                         // open the row…
-    _row('Loft railing').querySelector('.mat-quick .mat-q-ed').click();   // …and ✎ edit (v7.08: it sits on every row's name line now, no need to open the row)
+    _row('Loft railing').querySelector('.mat-quick .mat-q-ed').click();   // ✎ edit (v7.08: it sits on every row's name line; v7.09: nothing folds)
     const sheet = $('matSheet'), it = _it('Loft railing');
     const secs = sheet ? [...sheet.querySelectorAll('.ms-h, .ms-fold')].map(x => x.textContent.replace(/\s+/g, ' ').trim()) : [];
     const r = { open: !!sheet && sheet.parentNode.id === 'matSheetHost' && !$('revBox').contains(sheet), z: sheet ? +getComputedStyle(sheet).zIndex : 0,
@@ -163,8 +160,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     [...document.querySelectorAll('#matSheet .mat-sheet-foot button')].find(b => /DONE/.test(b.textContent)).click();
     r.closed = !$('matSheet') && $('matSheetHost').innerHTML === '' && _matEdit === '';
     r.saved = it.n === 'Loft railing (cable)' && it.sel === 'Yes to a railing — cable, black posts' && it.est === 2400 && /cable, black posts/.test(_row('Loft railing (cable)').textContent) && /est \$2,400/.test(_row('Loft railing (cable)').textContent);
-    _row('Loft railing (cable)').querySelector('[role="button"]').click();   // fold the row again
-    r.noJump = Math.abs($('revModal').scrollTop - scroll0) <= 1;
+    r.noJump = Math.abs($('revModal').scrollTop - scroll0) <= 1;   // v7.09 — there is no row to fold again
     return r;
   });
   ok('✎ edit opens its OWN window over the board — drawn outside the scrolling board, above it and under the toast — and the row behind it never turns into a form', ed.open && ed.z > 80 && ed.z < 90 && ed.rowStill, JSON.stringify(ed));
