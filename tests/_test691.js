@@ -134,7 +134,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const rowTop = () => Math.round(_row('Loft railing').getBoundingClientRect().top), rowH = () => Math.round(_row('Loft railing').getBoundingClientRect().height);
     const t0 = rowTop(), h0 = rowH(), scroll0 = $('revModal').scrollTop;
     _row('Loft railing').querySelector('[role="button"]').click();                         // open the row…
-    [..._row('Loft railing').querySelectorAll('.chips-row button')].find(b => /✎ edit/.test(b.textContent)).click();   // …and ✎ edit
+    _row('Loft railing').querySelector('.mat-quick .mat-q-ed').click();   // …and ✎ edit (v7.08: it sits on every row's name line now, no need to open the row)
     const sheet = $('matSheet'), it = _it('Loft railing');
     const secs = sheet ? [...sheet.querySelectorAll('.ms-h, .ms-fold')].map(x => x.textContent.replace(/\s+/g, ' ').trim()) : [];
     const r = { open: !!sheet && sheet.parentNode.id === 'matSheetHost' && !$('revBox').contains(sheet), z: sheet ? +getComputedStyle(sheet).zIndex : 0,
@@ -168,7 +168,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return r;
   });
   ok('✎ edit opens its OWN window over the board — drawn outside the scrolling board, above it and under the toast — and the row behind it never turns into a form', ed.open && ed.z > 80 && ed.z < 90 && ed.rowStill, JSON.stringify(ed));
-  ok('always the same order: Name · Note · What kind of row · Its lights, then ⚠ FIRST, then the folds — 💵 Money · 🏷 Whose list · 🏠 The homeowner · ☑ Steps · 📷 Photos — every fold shut until he opens it', /^Name \| Note — shows on the row \| What kind of row \| Its lights — tap one \| 💵 Money \| 🏷 Whose list — tags \| 🏠 The homeowner \| ☑ Steps under it \| 📷 Photos$/.test(ed.order) && ed.folded, ed.order);
+  ok('always the same order: Name · Note · What kind of row · Its lights, then ⚠ FIRST, then the folds — 💵 Money · 🏷 Whose list · 🏠 The homeowner · ☑ Steps · 📷 Photos — every fold shut until he opens it', /^Name \| Note — shows on the row \| What kind of row \| Its lights — tap one \| 📷 Photos \| 💵 Money \| 🏷 Whose list — tags \| 🏠 The homeowner \| ☑ Steps under it \| 📁 Pocket$/.test(ed.order) && ed.folded, ed.order);   // v7.08 — 📷 Photos is its own open section above 💵 Money (the Wizard fills the money from a photo); the fold is 📁 Pocket alone
   ok('the name and the note ("decide whether the railing is needed") are right there to edit — the note is a real writing box — and what he types lands on the row; money goes in under its fold', ed.name === 'Loft railing' && ed.note === 'Decide whether the railing is needed' && ed.noteIsBox && ed.saved, JSON.stringify(ed));
   ok('it fits the phone, the footer (✕ Delete · ✓ DONE — it is saved) stays pinned, the ✕ is black on gold, a fold opening keeps the window\'s scroll, and closing it leaves the board exactly where it was', ed.fits && ed.footPinned && /✕ Delete \| ✓ DONE — it is saved/.test(ed.foot) && /rgb\(17, 17, 17\)/.test(ed.closer) && ed.keptScroll && ed.closed && ed.noJump, JSON.stringify(ed));
   ok('the two KIND plates flip the row from inside the window (🛒 Something to buy ↔ ✅ Checklist item) and the lights follow; ⚠ FIRST is one plate', ed.kind0 === 'true,false' && ed.kind1 === 'false,true' && ed.flipped && ed.back && ed.first, JSON.stringify(ed));

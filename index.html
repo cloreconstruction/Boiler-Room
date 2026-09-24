@@ -2223,6 +2223,32 @@
     .mat-item .chips-row .pick-chip { min-height: 34px !important; }
     .mat-sel { flex-basis: 100%; font-size: 13.5px; line-height: 1.4; }
   }
+  /* ✎ v7.08 — Eric: "i want those buttons always open but keep the click and hold for edit as well … the words next to the
+     light up buttons, i want to be able to click and edit … build list just has photo icons to click on." Every row's name
+     line ends in small quick plates — a 📷 per photo, ✎ edit, ✕ delete (two taps) — and the note under the lights turns into
+     a writing box on a tap. The edit window keeps the photos as small thumbnails with the Wizard's reading under them. */
+  .mat-quick { display: inline-flex; gap: 4px; align-items: center; flex: none; margin-left: auto; }
+  .mat-q { min-width: 34px; min-height: 34px; padding: 0 6px; border: 1.5px solid var(--baseline, #8a8177); border-radius: 8px; background: transparent;
+    color: var(--ink-1); font: inherit; font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; gap: 1px; cursor: pointer; margin: 0; }
+  .mat-q small { font-size: 10px; font-weight: 800; }
+  .mat-q-del { color: var(--err, #c0392b); }
+  .mat-q-del.armed { border-width: 2.5px; border-color: var(--err, #c0392b); font-size: 12px; font-weight: 800; }
+  .mat-seltxt { cursor: text; border-radius: 4px; }
+  @media (hover: hover) { .mat-seltxt:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); } }
+  .mat-seledit { display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: 14.5px; line-height: 1.4; padding: 7px 9px; border: 2px solid var(--accent);
+    border-radius: 8px; background: var(--field, var(--surface-1)); color: var(--ink-1); resize: vertical; min-height: 58px; }
+  .mat-sel-hint { display: block; font-size: 11px; color: var(--ink-muted); margin: 2px 0 0; }
+  .ms-phs { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+  .ms-phwrap { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; }
+  .ms-ph { width: 64px; height: 64px; padding: 0; border: 1.5px solid var(--baseline, #8a8177); border-radius: 8px; overflow: hidden; background: var(--surface-1); cursor: pointer; }
+  .ms-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ms-phbtns { display: inline-flex; gap: 3px; }
+  .ms-phbtns .btn-ghost { min-width: 30px; min-height: 30px; padding: 2px 5px; font-size: 13px; }
+  .ms-phdrop { flex: 1 1 170px; min-height: 64px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    padding: 8px 10px; border: 2.5px dashed color-mix(in srgb, var(--accent) 65%, transparent); border-radius: 10px; font-size: 13px; line-height: 1.35; cursor: pointer; }
+  .ms-phdrop small { font-size: 11.5px; color: var(--ink-muted); }
+  .ms-phdrop.over { border-style: solid; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .ms-read { margin-top: 8px; padding: 8px 10px; border: 1.5px solid var(--accent); border-radius: 10px; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
   /* ⏱ v6.99 — CREW HOURS. The four lights are the Build List's light (an icon over its word, lit = the brass plate + a ✓ in
      the corner — never colour alone); a day box is a number or a dot, a box with his note wears a ✎. */
   .ch-door { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
@@ -4107,7 +4133,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.07 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.08 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15467,7 +15493,7 @@ let _matEdOpen = new Set();
 function matEditOpen(id, selectName) {
   const it = matFindItem(id); if (!it) return;
   _matEdit = id; _matWhoFor = '';
-  _matEdOpen = new Set([...(it.est || it.act || it.ec ? ['money'] : []), ...((it.kids || []).length ? ['steps'] : []), ...(it.hm ? ['home'] : [])]);
+  _matEdOpen = new Set([...(it.est || it.act || it.ec || it.sku ? ['money'] : []), ...((it.kids || []).length ? ['steps'] : []), ...(it.hm ? ['home'] : [])]);
   renderMatMgr();
   if (selectName) setTimeout(() => { const b = $('matNm-' + id); if (b) { b.focus(); b.select(); } }, 60);
 }
@@ -15641,9 +15667,10 @@ function matMgrItem(ri, it) {
           onchange="matSet('${escq(it.id)}', 'n', this.value)"
           onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></span>` :
       `<span role="button" aria-expanded="${open}" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap to ${open ? 'fold' : 'open'} · hold for the works">${open ? '▾' : '▸'} <b>${esc(it.n)}</b>
-        <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${matIsBuy(it) && matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${it.src === 'grinder' ? ' · ⚙ from the grinder' : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${(it.phs || []).length ? ` · 📷${it.phs.length}` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
+        <span class="hint" style="margin: 0; white-space: nowrap;">· ${esc(word)}${matIsBuy(it) && matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${it.src === 'grinder' ? ' · ⚙ from the grinder' : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
+      ${editing ? '' : matQuickHtml(it)}
     </div>
-    <div class="mat-line2">${matStripHtml(it)}${matRowBtnsHtml(it)}<span class="mat-sel">${[esc(it.sel || it.pick || ''), matIsBuy(it) && it.schd ? '📅 install ' + esc(it.schd) : '', matCostBits(it), it.ec ? '💰 ' + esc(it.ec) : ''].filter(Boolean).join(' · ')}</span></div>
+    <div class="mat-line2">${matStripHtml(it)}${matRowBtnsHtml(it)}${matSelHtml(it)}</div>
     ${_matWhoFor === it.id && !matIsBuy(it) ? matWhoPickHtml(it) : ''}
     ${open && !editing && matIsHm(it) ? matConvoHtml(it) : ''}
     ${open && kids.length && !editing ? (() => {
@@ -15679,8 +15706,7 @@ function matMgrItem(ri, it) {
         ${k.note ? `<div class="mat-note">${esc(k.note)}</div>` : ''}
       </div>`).join('')}</div>`; })() : ''}
     ${open && (it.pick || it.note) && !editing ? `<div class="hint" style="margin: 3px 0 0 34px;">${it.pick ? '✓ ' + esc(it.pick) : esc(it.note)}</div>` : ''}
-    ${open && ((it.phs || []).length || matPktChip(it)) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px; flex-wrap: wrap;">
-      ${(it.phs || []).map((ph, pi) => `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1}</button>`).join('')}
+    ${open && matPktChip(it) && !editing ? `<div class="chips-row" style="margin: 4px 0 0 34px; display: flex; gap: 5px; flex-wrap: wrap;">
       ${matPktChip(it)}
     </div>${matPktBody(it)}` : ''}
     ${open && !editing && !matIsHm(it) ? matConvoHtml(it) : ''}
@@ -15735,21 +15761,8 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
           onkeydown="if(event.key==='Enter'){event.preventDefault();matAddKid('${id}');}">
         <button type="button" class="btn-ghost" onclick="matAddKid('${id}')">➕ Add sub-item</button>
       </div></div>`;
+  // 📷 v7.08 — the photos left this fold for their own section (matEdPhotosHtml); the fold is the pocket alone
   const filesHtml = `<div class="field" style="flex: 1 1 100%;">
-      <div id="matDrop-${id}" style="border: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; font-size: 12.5px;"
-        onclick="$('matPh-${id}').click()"
-        ondragover="event.preventDefault(); this.style.borderStyle = 'solid';"
-        ondragleave="this.style.borderStyle = 'dashed';"
-        ondrop="event.preventDefault(); this.style.borderStyle = 'dashed'; matAddPhotos('${id}', event.dataTransfer.files)">
-        📷 <b>Add photos</b> — drag them here, or tap to pick${(it.phs || []).length ? ` · ${it.phs.length} on it` : ''}</div>
-      <input type="file" id="matPh-${id}" accept="image/*" multiple style="display: none;" onchange="matAddPhotos('${id}', this.files)">
-      ${(it.phs || []).length ? `<div class="chips-row" style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px;">
-        ${it.phs.map((ph, pi) => `<span style="display: inline-flex; gap: 4px; align-items: center;">
-          <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 9px; min-height: 26px;" onclick="showPhoto('${escq(ph)}')">📷 ${pi + 1} — look</button>
-          <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelPhoto('${id}', ${pi})" aria-label="take photo ${pi + 1} off this item">✕</button></span>`).join('')}
-      </div>` : ''}
-    </div>
-<div class="field" style="flex: 1 1 100%;">
       <div id="matPkt-${id}" style="border: 2px dashed color-mix(in srgb, var(--ink-muted, #8a8177) 60%, transparent); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; font-size: 12.5px;"
         onclick="$('matPd-${id}').click()"
         ondragover="event.preventDefault(); this.style.borderStyle = 'solid';"
@@ -15766,8 +15779,11 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
         placeholder="🗒 standing notes — the rep's name, quote good through, price-match, anything worth keeping…"
         onchange="matPktNotes('${id}', this.value)">${esc((it.pkt || {}).notes || '')}</textarea>
     </div>`;
+  const mk = matMkNow();   // 📷 v7.08 — this job's markup, off its estimates board (20% when it has none)
   const moneyHtml = `<div class="field"><label>Estimate $ · 🏢</label><input type="text" id="matEst-${id}" inputmode="decimal" value="${it.est ? esc(String(it.est)) : ''}" onchange="matSetNum('${id}', 'est', this.value)"></div>
     <div class="field"><label>Actual $ paid · 🏢</label><input type="text" id="matAct-${id}" inputmode="decimal" value="${it.act ? esc(String(it.act)) : ''}" onchange="matSetNum('${id}', 'act', this.value)"></div>
+    <div class="field" style="min-width: 170px; flex: 1 1 100%;"><label>SKU / model · 🏢</label><input type="text" id="matSku-${id}" value="${esc(it.sku || '')}" placeholder="the Wizard fills this from a photo" onchange="matSet('${id}', 'sku', this.value)"></div>
+    ${+it.est > 0 ? `<div class="hint" style="flex: 1 1 100%; margin: 0;">with this job's ${mk}% markup: <b>${fmtMoney(matMkUp(it.est, mk))}</b> · 🏢 office only — the client never sees a markup</div>` : ''}
     <div class="field" style="min-width: 170px; flex: 1 1 100%;"><label>💰 Estimate line it belongs to · 🏢</label>
       <select id="matEc-${id}" onchange="matSet('${id}', 'ec', this.value)"><option value="">— none —</option>${matEcList(it).map(n => `<option${it.ec === n ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>`;
   const pktN = ((it.pkt || {}).docs || []).length + ((it.pkt || {}).notes ? 1 : 0);
@@ -15792,11 +15808,12 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
           <input type="date" id="matSchd-${id}" value="${esc(it.schd || '')}" onchange="matSet('${id}', 'schd', this.value); matSet('${id}', 'sch', this.value ? true : ''); renderMatMgr()"></div></div>
         ${buy ? '' : `<div class="frow" style="gap: 8px; margin-top: 8px;">${tagsHtml}</div>`}</div>
       <div class="ms-sec"><button type="button" class="pick-chip${it.first ? ' sel' : ''}" style="width: 100%; font-weight: 800; min-height: 44px;" onclick="matFirstToggle('${id}')" aria-pressed="${!!it.first}">${it.first ? '✓ ⚠ FIRST — at the top of its category; the rest waits on this' : '⚠ Flag it FIRST — it goes to the top of its category'}</button></div>
-      ${fold('money', '💵 Money', [it.est ? 'est ' + matMoney(it.est) : '', it.act ? 'paid ' + matMoney(it.act) : '', it.ec ? esc(it.ec) : ''].filter(Boolean).join(' · ') || 'nothing yet', moneyHtml)}
+      ${matEdPhotosHtml(it, mk)}
+      ${fold('money', '💵 Money', [it.est ? 'est ' + matMoney(it.est) : '', it.act ? 'paid ' + matMoney(it.act) : '', it.sku ? esc(it.sku) : '', it.ec ? esc(it.ec) : ''].filter(Boolean).join(' · ') || 'nothing yet', moneyHtml)}
       ${buy ? fold('tags', '🏷 Whose list — tags', tags.length ? esc(tags.join(', ')) : 'nobody yet', tagsHtml) : ''}
       ${fold('home', '🏠 The homeowner', hm ? '✓ ON their page' : '🏢 office only', homeHtml)}
       ${fold('steps', '☑ Steps under it', kids.length ? `${kids.filter(k => k.ok).length} of ${kids.length} checked` : 'none', stepsHtml)}
-      ${fold('files', '📷 Photos · 📁 Pocket', `${(it.phs || []).length} photo${(it.phs || []).length === 1 ? '' : 's'} · ${pktN} in the pocket`, filesHtml)}
+      ${fold('files', '📁 Pocket', `${pktN} in the pocket`, filesHtml)}
     </div>
     <div class="mat-sheet-foot">
       <button type="button" class="btn-ghost" style="color: var(--err, #c0392b);" onclick="matDelItem('${id}')">${_matArm === it.id ? '⚠ SURE? tap again' : '✕ Delete'}</button>
@@ -15815,22 +15832,167 @@ async function matAddPhotos(id, files) {
   const imgs = [...files].filter(f => /^image\//.test(f.type)).slice(0, 8);
   if (!imgs.length) { toast('Those weren\'t photos — images only here', false); return; }
   it.phs = it.phs || [];
-  let n = 0;
+  let n = 0, first = null;
   for (const f of imgs) {
     toast(`⏳ Photo ${++n} of ${imgs.length} going up…`);
     busyShow(`📷 UPLOADING PHOTO ${n} OF ${imgs.length}…`);   // ⚙ v6.62
-    const clean = (f.name || 'photo.jpg').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 60);
+    // 📷 v7.08 — a long name is shortened IN FRONT of its ending (cut at 60 it lost it, and a ".jp" is no picture to Dropbox)
+    const raw = (f.name || 'photo.jpg').replace(/[^a-zA-Z0-9._ -]/g, '');
+    const ext = (raw.match(/\.[a-zA-Z0-9]{1,5}$/) || [''])[0] || '.jpg';
+    const clean = ((raw.endsWith(ext) ? raw.slice(0, -ext.length) : raw).slice(0, 60 - ext.length).trim() || 'photo') + ext;
     const path = `${portalRoot()}/mat-photos-${c.code}/${it.id} ${clean}`;
     try {
       const r = await dbxUpload(path, f, true); // keepBoth: a same-named photo autorenames
       it.phs.push(r.path_display || path);
+      if (!first) first = { f, pi: it.phs.length - 1 };
       matLog(`📷 photo "${clean}" onto ${it.n}`);
     } catch (e) { toast(`⚠ ${clean} didn't make it — check the connection`, false); }
   }
   if (busyIs(/UPLOADING/)) busyDone('📷 ✓ PHOTOS UP');   // ⚙ v6.62 — only if this loop lit the band
-  _matDirty = true;
+  _matDirty = true; scheduleMatSave();   // 📷 v7.08 — the board saves itself; the old words said 💾 Save
   renderMatMgr();
-  toast(`📷 ${it.phs.length} photo${it.phs.length > 1 ? 's' : ''} on ${it.n} — 💾 Save makes it stick ✓`);
+  toast(`📷 ${it.phs.length} photo${it.phs.length > 1 ? 's' : ''} on ${it.n} ✓`);
+  // 🧙 v7.08 — Eric: "wizard can read it and pull sku number and price and add markup". With the Claude key on this
+  // phone the first new photo is read straight away; without it the photo is simply on the item.
+  if (first && aiKey()) matPhotoRead(id, first.pi, first.f);
+}
+// ✎ v7.08 — the quick plates at the end of every row's name line, always there (Eric: "i want those buttons always open
+// but keep the click and hold for edit as well"): a 📷 per photo (three, then +n), ✎ edit, ✕ delete — two taps, as ever.
+function matQuickHtml(it) {
+  const id = escq(it.id), phs = it.phs || [], armed = _matArm === it.id;
+  const ph = phs.slice(0, 3).map((p, i) => `<button type="button" class="mat-q mat-q-ph" onclick="event.stopPropagation(); showPhoto('${escq(p)}')" aria-label="photo ${i + 1} of ${phs.length} — tap to look" title="photo ${i + 1} — tap to look">📷${phs.length > 1 ? `<small>${i + 1}</small>` : ''}</button>`).join('')
+    + (phs.length > 3 ? `<button type="button" class="mat-q" onclick="event.stopPropagation(); matEditOpen('${id}')" aria-label="${phs.length - 3} more photos — they are in the edit window" title="${phs.length - 3} more — in the edit window">+${phs.length - 3}</button>` : '');
+  return `<span class="mat-quick">${ph}<button type="button" class="mat-q mat-q-ed" onclick="event.stopPropagation(); matEditOpen('${id}')" aria-label="edit ${esc(it.n)}" title="edit — or hold the name">✎</button><button type="button" class="mat-q mat-q-del${armed ? ' armed' : ''}" onclick="event.stopPropagation(); matDelItem('${id}')" aria-label="${armed ? 'tap again to delete ' + esc(it.n) : 'delete ' + esc(it.n) + ' — two taps'}" title="${armed ? 'tap again — it comes off the board' : 'delete — two taps'}">${armed ? '⚠ SURE?' : '✕'}</button></span>`;
+}
+// ✎ v7.08 — the note under the lights edits IN PLACE on a tap (Eric: "the words next to the light up buttons, i want to be
+// able to click and edit without having to click the edit button … but keep both"). Enter or a tap away keeps it, Esc lets
+// it go; the edit window's Note box is the same note. The install date, money and estimate line after it are not in the box.
+let _matSelEdit = '', _matSelDraft = null;
+function matSelHtml(it) {
+  const id = escq(it.id);
+  const rest = [matIsBuy(it) && it.schd ? '📅 install ' + esc(it.schd) : '', matCostBits(it), it.ec ? '💰 ' + esc(it.ec) : ''].filter(Boolean).join(' · ');
+  if (_matSelEdit === it.id) {
+    const v = _matSelDraft != null ? _matSelDraft : (it.sel || '');
+    return `<span class="mat-sel"><textarea id="matSelIn-${esc(it.id)}" class="mat-seledit" rows="2" aria-label="the note — Enter keeps it, Esc lets it go" placeholder="what was picked, what has to be decided, what to check…"
+      oninput="_matSelDraft = this.value" onkeydown="matSelKey(event, '${id}')" onblur="matSelDone('${id}', true)">${esc(v)}</textarea><span class="mat-sel-hint">Enter keeps it · Esc lets it go · 🏢 office only</span>${rest ? rest : ''}</span>`;
+  }
+  const words = it.sel || it.pick || '';
+  return `<span class="mat-sel">${words ? `<span class="mat-seltxt" role="button" tabindex="0" onclick="event.stopPropagation(); matSelEdit('${id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();matSelEdit('${id}');}" title="tap to change the note">${esc(words)}</span>` : ''}${words && rest ? ' · ' : ''}${rest}</span>`;
+}
+function matSelEdit(id) {
+  if (_matSelEdit && _matSelEdit !== id) matSelDone(_matSelEdit, true);
+  _matSelEdit = id; _matSelDraft = null;
+  renderMatMgr();
+  setTimeout(() => { const b = $('matSelIn-' + id); if (b) { b.focus(); const n = b.value.length; try { b.setSelectionRange(n, n); } catch (e) {} } }, 30);
+}
+function matSelKey(ev, id) {
+  if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); matSelDone(id, true); }
+  else if (ev.key === 'Escape') { ev.preventDefault(); matSelDone(id, false); }
+}
+function matSelDone(id, keep) {
+  if (_matSelEdit !== id) return;   // already closed (a redraw's blur trails the Enter)
+  const b = $('matSelIn-' + id), v = b ? b.value : _matSelDraft;
+  _matSelEdit = ''; _matSelDraft = null;
+  if (keep && v != null) { const it = matFindItem(id); if (it && String(v).trim() !== String(it.sel || '').trim()) matSet(id, 'sel', String(v).slice(0, 600)); }
+  renderMatMgr();
+}
+// 📷 v7.08 — THE PHOTOS in the edit window: small thumbnails to tap and look at, a drop box (or tap to pick), and what the
+// Wizard read off the photo. Eric: "add a photo or two to each item but keep them small and make it clickable … drag and
+// drop and wizard can read it and pull sku number and price and add markup etc. … keep that in the edit window".
+function matEdPhotosHtml(it, mk) {
+  const id = escq(it.id), phs = it.phs || [], rd = it.phRead;
+  phs.forEach((p, i) => setTimeout(() => matThumb(p, `msPh-${it.id}-${i}`), 20));
+  return `<div class="ms-sec ms-photos"><span class="ms-h">📷 Photos${phs.length ? ` · ${phs.length}` : ''}</span>
+    <div class="ms-phs">
+      ${phs.map((p, i) => `<span class="ms-phwrap"><button type="button" class="ms-ph" onclick="showPhoto('${escq(p)}')" aria-label="photo ${i + 1} — tap to look" title="tap to look"><img id="msPh-${esc(it.id)}-${i}" alt="photo ${i + 1}"></button>
+        <span class="ms-phbtns"><button type="button" class="btn-ghost req-x" onclick="matPhotoRead('${id}', ${i})" aria-label="the Wizard reads photo ${i + 1} — the SKU and the price" title="🧙 read it — SKU and price">🧙</button><button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="matDelPhoto('${id}', ${i})" aria-label="take photo ${i + 1} off this item" title="take it off this item — the file stays in Dropbox">✕</button></span></span>`).join('')}
+      <div class="ms-phdrop" id="matDrop-${esc(it.id)}" role="button" tabindex="0" onclick="$('matPh-${id}').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"
+        ondragover="event.preventDefault(); this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault(); this.classList.remove('over'); matAddPhotos('${id}', event.dataTransfer.files)">
+        <span>📷 <b>Add a photo</b> — drag it here or tap to pick</span>
+        <small>${aiKey() ? '🧙 the Wizard reads the SKU and the price off it' : 'with the Claude key on this phone (⚙ Setup) the Wizard reads the SKU and price'}</small></div>
+      <input type="file" id="matPh-${esc(it.id)}" accept="image/*" multiple style="display: none;" onchange="matAddPhotos('${id}', this.files)">
+    </div>
+    ${rd ? matReadCardHtml(rd, mk) : ''}
+    <div id="msRead-${esc(it.id)}" class="hint" style="margin: 4px 0 0;" role="status"></div></div>`;
+}
+function matMkUp(p, mk) { return Math.round(+p * (100 + (+mk || 0))) / 100; }
+function matReadCardHtml(rd, mk) {
+  const bits = [rd.model ? 'model ' + esc(rd.model) : '', rd.sku ? 'SKU ' + esc(rd.sku) : '', rd.item ? 'item # ' + esc(rd.item) : ''].filter(Boolean).join(' · ');
+  return `<div class="ms-read"><b>🧙 From the photo:</b> ${esc(rd.title || 'a product')}${bits ? `<br>${bits}` : ''}${+rd.price > 0 ? `<br>💵 ${fmtMoney(+rd.price)} · <b>with this job's ${mk}% markup ${fmtMoney(matMkUp(rd.price, mk))}</b>` : '<br>no price in the picture'}${rd.store ? ` · ${esc(rd.store)}` : ''}${(rd.filled || []).length ? `<br><span class="hint" style="margin: 0;">✓ put in the empty boxes: ${esc(rd.filled.join(', '))} — nothing you typed was changed</span>` : ''}</div>`;
+}
+// the small pictures in the edit window (Dropbox makes the thumbnail; kept for the session)
+const _matThumbs = {};
+async function matThumb(path, elId) {
+  const put = () => { const el = $(elId); if (el && _matThumbs[path]) el.src = _matThumbs[path]; };
+  if (_matThumbs[path]) return put();
+  try {
+    const t = await getToken();
+    const r = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', { method: 'POST', headers: { Authorization: 'Bearer ' + t,
+      'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w128h128' } }) } });
+    if (!r.ok) return;
+    _matThumbs[path] = URL.createObjectURL(await r.blob()); put();
+  } catch (e) {}
+}
+// this job's markup — its estimates board's 💹 (20% when the board has none), read once per board
+const _matMk = {};
+function matMkNow() {
+  const c = (_portalIdx && _portalIdx.clients || [])[_matIdx]; if (!c) return 20;
+  if (_matMk[c.code] == null) { _matMk[c.code] = 20; matMkLoad(c); }
+  return _matMk[c.code];
+}
+async function matMkLoad(c) {
+  try { const d = JSON.parse(await dbxDownload(portalRoot() + '/estimates-' + c.code + '.json') || 'null'); if (d && +d.mk >= 0 && +d.mk !== _matMk[c.code]) { _matMk[c.code] = +d.mk; if (_matEdit) renderMatMgr(); } } catch (e) {}
+}
+// 🧙 the Wizard reads a product photo or store screenshot: what it is, model, SKU / item #, the price shown. Empty boxes only —
+// what Eric typed is never written over. All of it office-side (the client cut strips sku and phRead).
+const MAT_READ_SYS = 'You read a photo or a store screenshot of a building product for a contractor. Reply with ONLY a JSON object and no other words: {"title": "brand and product in under 90 characters", "brand": "", "model": "the model number", "sku": "the store SKU", "item": "the store item or internet number", "price": the selling price shown as a plain number, "store": "the store name if shown"}. Use null for anything that is not in the picture. Never guess a number that is not printed in the picture.';
+function matReadParse(txt) {
+  const m = String(txt || '').match(/\{[\s\S]*\}/); if (!m) return null;
+  let j; try { j = JSON.parse(m[0]); } catch (e) { return null; }
+  const s = v => { const t = (v == null ? '' : String(v)).trim().slice(0, 90); return /^(null|none|n\/a|unknown|not (shown|visible))$/i.test(t) ? '' : t; };
+  const p = typeof j.price === 'number' ? j.price : parseFloat(String(j.price == null ? '' : j.price).replace(/[^0-9.]/g, ''));
+  const rd = { title: s(j.title), brand: s(j.brand), model: s(j.model), sku: s(j.sku), item: s(j.item), price: isFinite(p) && p > 0 ? Math.round(p * 100) / 100 : 0, store: s(j.store) };
+  return rd.title || rd.model || rd.sku || rd.item || rd.price ? rd : null;
+}
+async function matPhotoRead(id, pi, file) {
+  const it = matFindItem(id); if (!it) return;
+  const say = t => { const o = $('msRead-' + id); if (o) o.textContent = t; };
+  if (!aiKey()) { toast('🧙 The Wizard needs the Claude key on this phone to read it — ⚙ Setup → Ask Claude', false); return; }
+  const path = (it.phs || [])[pi] || '';
+  busyShow('🧙 THE WIZARD IS READING THE PHOTO…'); say('🧙 reading the photo…');
+  try {
+    let b64;
+    if (file) b64 = await shrinkForAi(file);
+    else {
+      if (!path) throw new Error('no photo');
+      const t = await getToken();
+      const r0 = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', { method: 'POST', headers: { Authorization: 'Bearer ' + t,
+        'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w1024h768' } }) } });
+      if (!r0.ok) throw new Error('thumb');
+      const blob = await r0.blob();
+      b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(blob); });
+    }
+    const { r } = await aiCall({ max_tokens: 300, system: MAT_READ_SYS, messages: [{ role: 'user', content: [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }, { type: 'text', text: 'Read this product.' }] }] }, 'photo');
+    if (!r.ok) throw new Error('api ' + r.status);
+    const jj = await r.json();
+    const rd = matReadParse((jj.content || []).map(x => x.text || '').join(''));
+    if (!rd) throw new Error('nothing readable');
+    const it2 = matFindItem(id); if (!it2) return;   // the row may have gone while the Wizard read
+    const filled = [];
+    const code = [rd.model && 'model ' + rd.model, rd.sku && 'SKU ' + rd.sku, rd.item && 'item #' + rd.item].filter(Boolean).join(' · ');
+    if (!it2.sku && code) { it2.sku = code.slice(0, 120); filled.push('SKU'); }
+    if (!(+it2.est > 0) && rd.price > 0) { it2.est = rd.price; filled.push('price'); }
+    if (!it2.sel && rd.title) { it2.sel = rd.title.slice(0, 200); filled.push('note'); }
+    it2.phRead = { ...rd, filled, at: new Date().toISOString(), ph: path };
+    if (filled.length) _matEdOpen.add('money');
+    matLog(`🧙 read the photo on ${it2.n}${filled.length ? ' — put in ' + filled.join(', ') : ''}`);
+    _matDirty = true; scheduleMatSave(); renderMatMgr();
+    busyDone('🧙 ✓ READ IT');
+  } catch (e) {
+    busyDone('⚠ THE WIZARD COULD NOT READ IT');
+    say('⚠ The Wizard could not read that one — check the connection and the key, or type it in yourself.');
+  }
 }
 function matDelPhoto(id, pi) {
   const it = matFindItem(id);
@@ -16036,9 +16198,7 @@ function matLampRowMgr(it) {
         onclick="matLampTap('${escq(it.id)}', '${st}')" aria-pressed="${on}">${armed ? '🔒 lock ' + esc(w) + '?' : esc(w)}</button>`;
     }).join('')}
     ${it.hm ? '' : `<button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px;" onclick="matBuyToggle('${escq(it.id)}')">${matIsBuy(it) ? '⇄ make it a checklist item' : '⇄ make it something to buy'}</button>`}
-    <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px;" onclick="matEditOpen('${escq(it.id)}')">✎ edit</button>
-    <button type="button" class="pick-chip" style="font-size: 11px; padding: 4px 10px; min-height: 26px; color: var(--err, #c0392b);" onclick="matDelItem('${escq(it.id)}')">${_matArm === it.id ? '⚠ SURE?' : '✕ delete'}</button>
-  </div>`;
+  </div>`;   // ✎ v7.08 — ✎ edit and ✕ delete moved up onto every row's name line (matQuickHtml); they were here, only once a row was open
 }
 async function matReplySend(id) {
   const it = matFindItem(id);
@@ -16518,7 +16678,7 @@ async function matSave() {
         .map(x => {
           if (!hm) return x;
           // 🏠 v5.71 — the client sees ONLY the steps flagged 🏠, scrubbed to name/ok/note
-          const { pkt, sel, est, act, ec, first, eid, src, gat, ...rest } = x;   // 📋 v6.89 — his selection notes (suppliers), raw costs and the estimate line NEVER ride to their file · v6.91: nor his ⚠ FIRST flag
+          const { pkt, sel, est, act, ec, first, eid, src, gat, sku, phRead, ...rest } = x;   // 📋 v6.89 — his selection notes (suppliers), raw costs and the estimate line NEVER ride to their file · v6.91: nor his ⚠ FIRST flag · 🧙 v7.08: nor the SKU or what the Wizard read off a photo (the store, the raw price)
           const cvKids = (x.kids || []).filter(k => k.cv).map(k => ({ n: k.n, ok: k.ok || undefined, note: k.note }));
           if (cvKids.length) rest.kids = cvKids; else delete rest.kids;
           return rest;
@@ -20415,7 +20575,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.07';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.08';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
