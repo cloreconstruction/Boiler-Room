@@ -2208,6 +2208,8 @@
   .mat-first-band { font-size: 11.5px; font-weight: 800; letter-spacing: .4px; color: var(--warn, #ffa657); margin: 0 0 4px 2px; }
   .mat-item.mi-editing { outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: 8px; }
   .mat-who { margin: 8px 0 2px; padding: 8px 10px; border: 1.5px solid var(--accent); border-radius: 10px; background: var(--surface-1); }
+  /* 🏗 v7.10 — the WHERE window's construction categories, a heading a phase */
+  .bl-ph-h { font-size: 11.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--accent); margin: 8px 0 5px; padding-left: 8px; border-left: 3px solid var(--accent); }
   /* a category's heading: the name, its counts in plain case, its tools — never floated over the first row again */
   .mat-rm-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
   .mat-rm-head .mat-counts { text-transform: none; letter-spacing: 0; font-size: 12px; line-height: 1.45; }
@@ -4147,7 +4149,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.09 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.10 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6395,8 +6397,13 @@ function blModalOpen() {
     return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="qnBLPick('${escq(r.name)}')" aria-pressed="${on}">${on ? '✓' : '📋'} ${esc(r.name)} <span style="display: block; font-weight: 400; opacity: .8; font-size: 11px;">${r.n} row${r.n === 1 ? '' : 's'}</span></button>`; };
   $('catBox').innerHTML = `<h3>📋 Where on the Build List?
     ${winX('blModalClose()', 'close')}</h3>
-    <div class="hint" style="margin: 0 0 8px;">The <b>${esc(_qnBLJob)}</b> Build List. SEND files the note in your log as always <b>and</b> puts it here as a ✅ checklist item — ⇄ on the row turns it into something to buy. The first line is the row's name; the rest is its note.</div>
-    ${rooms.length ? `<div class="chips-row cat-grid" id="blRoomGrid" style="max-height: 46vh; overflow-y: auto; align-content: flex-start; margin-bottom: 10px;">${rooms.map(chip).join('')}</div>` : `<div class="hint" style="margin: 0 0 8px;">This Build List has no categories yet — name the first one.</div>`}
+    <div class="hint" style="margin: 0 0 8px;">The <b>${esc(_qnBLJob)}</b> Build List. SEND files the note in your log as always <b>and</b> puts it here as a ✅ checklist item — ⇄ on the row turns it into something to buy. The first line is the row's name; the rest is its note. <b>Pick a construction category and a note with a dollar amount goes onto the homeowner's ESTIMATED UPCOMING COSTS too</b> — the job's markup folded in, no stop in the receipts window.</div>
+    <div style="max-height: 52vh; overflow-y: auto; margin-bottom: 10px;">
+    ${rooms.length ? `<div class="bl-ph-h">📋 On this Build List now</div><div class="chips-row cat-grid" id="blRoomGrid" style="align-content: flex-start; margin-bottom: 6px;">${rooms.map(chip).join('')}</div>` : `<div class="hint" style="margin: 0 0 8px;">This Build List has no categories yet — pick a construction category below, or name your own.</div>`}
+    <!-- 🏗 v7.10 — Eric: "I want all the construction categories on there, well organized, so I can just click." The estimates
+         board's 55 categories, by build phase, always — the pick becomes a Build List category (and the row's cost line). -->
+    <div id="blPhases">${EST_PHASES.map(([pid, pname, names]) => `<div class="bl-ph-h">🏗 ${esc(pname)}</div><div class="chips-row cat-grid" style="align-content: flex-start; margin-bottom: 6px;">${names.filter(n => !OVERHEAD_CATS.includes(n) && !rooms.some(r => r.name.toLowerCase() === n.toLowerCase())).map(n => { const on = qnBLRoom.toLowerCase() === n.toLowerCase(); return `<button type="button" class="pick-chip bl-cat${on ? ' sel' : ''}" onclick="qnBLPick('${escq(n)}')" aria-pressed="${on}">${on ? '✓' : '🏗'} ${esc(n)}</button>`; }).join('')}</div>`).join('')}</div>
+    </div>
     <div class="frow" style="gap: 6px; align-items: center;">
       <input type="text" id="blNewRoom" placeholder="➕ a new category — Garage, Punch list, Exterior…" style="flex: 1; min-width: 0;" onkeydown="if(event.key==='Enter'){event.preventDefault();qnBLPick(this.value);}">
       <button type="button" class="btn-ghost" onclick="qnBLPick($('blNewRoom').value)">➕ Use it</button></div>
@@ -7915,7 +7922,7 @@ function saveNoteFrom(boxId, fromPanel) {
   }
   if (!e) e = addEntry('Note', t, noteJob, nExtra);
   // 📋 v6.97 — where on the Build List this one goes (never a personal note, never from a crew phone, never the old Note panel)
-  const _bl = (!fromPanel && qnBL && qnBLRoom && _qnBLJob === noteJob && !e.personal && !isCrew()) ? { job: noteJob, room: qnBLRoom } : null;
+  const _bl = (!fromPanel && qnBL && qnBLRoom && _qnBLJob === noteJob && !e.personal && !isCrew()) ? { job: noteJob, room: qnBLRoom, cat: isBuildCat(qnBLRoom), amt: grindAmtOf(e) } : null;   // 💵 v7.10 — a construction category + a dollar amount = their Upcoming too
   qnBL = false; qnBLRoom = ''; _qnBLJob = '';
   aiRegisterLate(photos, 'entry', e.id);
   ['nText', 'askText'].forEach(id => { if ($(id)) { $(id).value = ''; fitTa(id); } });
@@ -7952,7 +7959,9 @@ function saveNoteFrom(boxId, fromPanel) {
   // ↩ v6.42 — Eric: "no undo where a slip costs you." A plain note is the one he sends fifty
   // times a day and the one a fat thumb loses half of. Nothing was published, so taking it back
   // is honest: the entry goes, and his words and job come back to the box exactly as typed.
+  const toPage = !!(_bl && _bl.cat && _bl.amt > 0);   // 💵 v7.10 — it goes onto the homeowner's page: no undo (a page is "someone", like a routed note)
   if (updated) toast(`📧 Filed · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`);   // 📥 v6.71 — an undo here would delete the email itself
+  else if (toPage) toast(`Note saved · ${noteJob} · 📋 Build List → ${_bl.room} · 💵 → their Upcoming ✓`);
   else if (!routed && !wasAsk && !vis) toastUndo(`Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''}${_bl ? ' · 📋 Build List → ' + _bl.room : ''} ✓`, () => {
     if (_bl) grindBuildListUndo(e, _bl.job);   // 📋 v6.97 — the row comes off the board with the note
     const i = entries.findIndex(x => x.id === e.id);
@@ -7965,6 +7974,27 @@ function saveNoteFrom(boxId, fromPanel) {
   });
   if (photos.length) attachEntryPhotos(e, photos, `Job Notes/${cleanName(noteJob)}`);
   if (_bl) grindToBuildList(e, _bl.job, _bl.room);   // 📋 v6.97
+  // 💵 v7.10 — Eric: "once I click the build list in the category I want 20% added automatically in it goes directly to the
+  // homeowner's upcoming cost page. I don't want it to stop and get sorted again." A construction category is the cost line;
+  // the amount is what the photo read (💵) or the first $ in his words; estQuickUpcoming is the same one-tap road the log's
+  // 🔮 → Upcoming uses — the job's markup folded in, never named, the vendor never on their page. A ROOM (Kitchen) is not a
+  // cost line, so the money stays off their page and he is told (no guessing which line it belongs to).
+  if (_bl && _bl.amt > 0) {
+    if (_bl.cat) { e.category = _bl.room; scheduleSave(); estQuickUpcoming(e.id, null, _bl.amt); }
+    else toast(`💵 $${_bl.amt.toLocaleString()} stays off their page — pick a construction category (Framing, Plumbing…) for it to reach their Upcoming`, false);
+  }
+}
+// 💵 v7.10 — what a grinder note is worth: the photo's read first (💵 $…), else the first $ in the words. A minus is never a cost.
+function grindAmtOf(e) {
+  const p = estBillParse(e); if (p && p.amt > 0) return p.amt;
+  const m = String(e.details || '').match(/(?:^|[^\w-])\$\s?([\d,]{1,9}(?:\.\d{1,2})?)/);
+  const n = m ? parseFloat(m[1].replace(/,/g, '')) : 0;
+  return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
+}
+// a Build List pick that is one of the estimates board's construction categories (never an overhead one)
+function isBuildCat(name) {
+  const k = String(name || '').trim().toLowerCase(); if (!k) return false;
+  return EST_PHASES.some(([, , names]) => names.some(n => n.toLowerCase() === k)) && !OVERHEAD_CATS.some(n => n.toLowerCase() === k);
 }
 // 🗂 v6.03 — Eric: "the whole job is piled in the job note folder, maybe could have receipts,
 // invoices, photos." Inside a job's folder each paper now goes in its own drawer, decided by
@@ -13732,7 +13762,7 @@ async function estBillApprove(id) {
 // It refuses rather than guesses — no category, no dollar read, no client page for the job,
 // and it says which one is missing and opens the board so he can finish it by hand. A
 // personal entry never gets here at all (the lock wins over everything).
-async function estQuickUpcoming(id, ev) {
+async function estQuickUpcoming(id, ev, amt) {   // 💵 v7.10 — `amt`: the grinder's own reading of the note (a $ in the words), when the photo read has none
   if (ev) ev.stopPropagation();
   const e = entries.find(x => x.id === id);
   if (!e || e.personal || (e.tags || []).includes('Personal')) return;
@@ -13742,7 +13772,7 @@ async function estQuickUpcoming(id, ev) {
   if (isOverheadEntry(e)) { toast('🏢 Overhead — tools, fuel, office. Recorded for the books, never billed to a client', false); return; }   // 🏢 v6.35
   if (e.budg) { toast('That one is already on their page', false); return; }
   if (window._qUpBusy) return;
-  const p = estBillParse(e);
+  const p = (+amt > 0) ? { amt: Math.round(+amt * 100) / 100, v: '' } : estBillParse(e);
   if (!p || !(p.amt > 0)) { toast('No dollar amount read off that one — open the budget and type it', false); return; }
   if (!_portalIdx) {
     try { _portalIdx = JSON.parse(await dbxDownload(portalRoot() + '/index.json')); } catch (err) { /* no portal yet */ }
@@ -14716,7 +14746,7 @@ function journalDraft(aj, code) {
 }
 async function openJournal(i) {
   if (portalGuard()) return;
-  const c = _portalIdx.clients[i]; _jrnIdx = i;
+  const c = _portalIdx.clients[i]; _jrnIdx = i; _jrnPhAll = false;   // 📷 v7.10 — six photos first, every open
   const p = journalPrefs(c.code);
   const aj = portalAppJob(c);
   const st = jrnStamped(aj);
@@ -14825,6 +14855,12 @@ function jrnPhotoList(aj) {
   }
   return out;
 }
+// 📷 v7.10 — Eric: "On the client journal edit page, just have the first six photos showing and then the rest folded. I can
+// drop down. The hundreds of photos could add up, and I have to scroll way down." Six tiles, then ONE plate that says how
+// many more; the picked-and-unsent ones are already first in the list, so what is going this week is never behind the fold.
+const JRN_PH_SHOW = 6;
+let _jrnPhAll = false;
+function jrnPhMore() { _jrnPhAll = !_jrnPhAll; renderJrnPhotos(); }
 function renderJrnPhotos() {
   const grid = $('jrnPhGrid');
   if (!grid || _jrnIdx == null) return;
@@ -14832,8 +14868,9 @@ function renderJrnPhotos() {
   const aj = portalAppJob(c);
   const list = jrnPhotoList(aj);
   if (!list.length) { grid.innerHTML = '<span class="hint" style="grid-column: 1 / -1;">No photos on this job in the last 30 days — file some through the Grinder (or ➕ Add photos right here) and they show up.</span>'; }
-  else grid.innerHTML = list.map(it => {
+  else grid.innerHTML = list.map((it, ti) => {
     const e = it.e;
+    const hide = !_jrnPhAll && ti >= JRN_PH_SHOW;   // 📷 v7.10 — behind the fold
     const sel = jrnSelPaths(e).includes(it.path);
     const link = _jrnPhLinks[it.path];
     // ⭐ v6.02 — Eric: "a little star showing that it's already been used in a client journal
@@ -14844,7 +14881,7 @@ function renderJrnPhotos() {
       ? new Date(e.jrnSent + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
     const times = +e.jrnSentN || 0;
     const aria = `${sel ? 'Riding with this week' : 'Not going this week'}${sent ? `. Already sent${sentDay ? ' ' + sentDay : ''}${times > 1 ? `, ${times} times` : ''}` : ''}`;
-    return `<button type="button" data-jph="${e.id}_${it.pi}" onclick="jrnPhotoTog(${e.id}, ${it.pi})" aria-pressed="${sel}" aria-label="${esc(aria)}" title="${esc(aria)}"
+    return `<button type="button" data-jph="${e.id}_${it.pi}"${hide ? ' hidden class="jrn-more"' : ''} onclick="jrnPhotoTog(${e.id}, ${it.pi})" aria-pressed="${sel}" aria-label="${esc(aria)}" title="${esc(aria)}"
       style="position: relative; height: 76px; padding: 0; overflow: hidden; cursor: pointer; background: rgba(0,0,0,0.35);
         border: ${sel ? '3px solid var(--accent)' : '1px solid var(--border)'}; border-radius: 8px;">
       ${link ? `<img src="${esc(link)}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;${sel ? '' : ' opacity: 0.75;'}">` : '<span style="font-size: 22px;">📷</span>'}
@@ -14852,7 +14889,7 @@ function renderJrnPhotos() {
       ${sent ? `<span style="position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.72); color: #f3e0ac;
         font-size: 9.5px; font-weight: 800; letter-spacing: .3px; padding: 1px 3px; white-space: nowrap; overflow: hidden;">⭐ SENT${times > 1 ? ' ' + times + '×' : ''}${sentDay ? ' · ' + esc(sentDay) : ''}</span>` : ''}
     </button>`;
-  }).join('');
+  }).join('') + (list.length > JRN_PH_SHOW ? `<button type="button" class="btn-ghost" id="jrnPhMoreBtn" style="grid-column: 1 / -1; min-height: 44px; font-weight: 800;" onclick="jrnPhMore()" aria-expanded="${_jrnPhAll}">${_jrnPhAll ? `▾ Showing all ${list.length} — tap to tuck the rest away` : `▸ +${list.length - JRN_PH_SHOW} more photos — tap to see them all`}</button>` : '');   // 📷 v7.10
   // the plain-words version of the star, and only when there's a star to explain
   const anySent = list.some(it => it.e.jrnSent);
   const dupes = list.filter(it => it.e.jrnSent && jrnSelPaths(it.e).includes(it.path)).length;
@@ -20649,7 +20686,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.09';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.10';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
