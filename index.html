@@ -2853,6 +2853,11 @@
   .pk-leftrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; margin-top: 5px; }
   .pk-meta { font-size: 12px; color: var(--ink-muted); }
   .pk-acts { display: inline-flex; gap: 5px; margin: 0; }
+  /* 🎒 v7.18 — "send to grinder with the same four unlock it buttons": a line of its own under each pocket row */
+  .pk-sendrow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-top: 8px; }   /* two by two, like ⑤ on the phone */
+  .pk-sendlbl { grid-column: 1 / -1; font-size: 11px; font-weight: 800; letter-spacing: .4px; color: var(--ink-muted); }
+  .pk-mini.pk-send { border-style: dashed; width: 100%; }
+  @media (min-width: 701px) { .pk-sendrow { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 560px; } }   /* four across on a PC */
   .pk-mini { min-width: 48px; min-height: 40px; padding: 3px 6px 2px; margin: 0; border: 1.5px solid var(--baseline, #8a8177); border-radius: 9px; background: var(--raised, transparent); color: var(--ink-1); font: inherit; cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
   .pk-mini span { font-size: 15px; line-height: 1.15; }
   .pk-mini b { font-size: 10px; font-weight: 800; letter-spacing: .2px; line-height: 1.15; white-space: nowrap; }
@@ -4193,7 +4198,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.17 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.18 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7983,6 +7988,28 @@ function saveNoteFrom(boxId, fromPanel) {
     }
     _grindMail = null;
   }
+  // ⚙ v7.18 — a pocket item or pocket note sent from the Summary (pocketToGrinder): the grind finishes it. A pocket NOTE is
+  // updated in place (its words, the job, the tags, the unlock — never a second copy) and is no longer private; a live item leaves
+  // the pocket and the grind makes its note. Only while the box still starts with those words — a fresh note is a new note.
+  let _fromPocket = null;
+  if (_grindPocket) {
+    const g = _grindPocket; _grindPocket = null;
+    if (!e && t.startsWith(g.words.slice(0, 24))) {
+      if (g.kind === 'n') {
+        const m = entries.find(x => x.id === g.id);
+        if (m && m.pocket) {
+          Object.assign(m, nExtra);
+          m.details = t; m.job = noteJob; m.pocket = 'sent'; m.pocketSent = true;
+          if (m.personal) { delete m.vis; delete m.sendTo; delete m.ask; }
+          e = m; updated = 'pocket';
+          scheduleSave(); renderLog(); renderKpis();
+        }
+      } else {
+        const i = pocket().findIndex(x => String(x.id) === g.id);
+        if (i >= 0) { _fromPocket = pocket().splice(i, 1)[0]; renderPocket(); }
+      }
+    }
+  }
   if (!e) e = addEntry('Note', t, noteJob, nExtra);
   // 📋 v6.97 — where on the Build List this one goes (never a personal note, never from a crew phone, never the old Note panel)
   const _bl = (!fromPanel && qnBL && qnBLRoom && _qnBLJob === noteJob && !e.personal && !isCrew()) ? { job: noteJob, room: qnBLRoom, cat: isBuildCat(qnBLRoom), amt: grindAmtOf(e) } : null;   // 💵 v7.10 — a construction category + a dollar amount = their Upcoming too
@@ -8023,10 +8050,12 @@ function saveNoteFrom(boxId, fromPanel) {
   // times a day and the one a fat thumb loses half of. Nothing was published, so taking it back
   // is honest: the entry goes, and his words and job come back to the box exactly as typed.
   const toPage = !!(_bl && _bl.cat && _bl.amt > 0);   // 💵 v7.10 — it goes onto the homeowner's page: no undo (a page is "someone", like a routed note)
-  if (updated) toast(`📧 Filed · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`);   // 📥 v6.71 — an undo here would delete the email itself
+  if (updated === 'pocket') toast(`🎒 From the pocket, through the grinder · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''}${vis ? ' · ' + (vis === 'crew' ? '🔓 all crew' : '📨 ' + vis) : ''} ✓`);   // ⚙ v7.18 — an undo would delete the pocket note itself
+  else if (updated) toast(`📧 Filed · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`);   // 📥 v6.71 — an undo here would delete the email itself
   else if (toPage) toast(`Note saved · ${noteJob} · 📋 Build List → ${_bl.room} · 💵 → their Upcoming ✓`);
   else if (!routed && !wasAsk && !vis) toastUndo(`Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''}${_bl ? ' · 📋 Build List → ' + _bl.room : ''} ✓`, () => {
     if (_bl) grindBuildListUndo(e, _bl.job);   // 📋 v6.97 — the row comes off the board with the note
+    if (_fromPocket) { pocket().unshift(_fromPocket); renderPocket(); }   // ⚙ v7.18 — a pocket item comes back onto the pocket
     const i = entries.findIndex(x => x.id === e.id);
     if (i >= 0) entries.splice(i, 1);
     const box = $(boxId); if (box) { box.value = _undoText; if (typeof fitTa === 'function') fitTa(box); }
@@ -12223,6 +12252,7 @@ function cfPhotoPath(p, folder) {
 }
 function crewFeedTake(name, folder, list) {
   _crewFeed[name] = (Array.isArray(list) ? list : []).filter(e => e && !e.mine && !e.sample && !e.personal && !e.askFlush   // ⤵ v7.16 — "seen" is not a message
+    && !(e.pocket && !e.pocketSent)   // 🎒 v7.18 — his pocket is his, even from a phone that has not loaded v7.18 yet
     && (e.type === 'Note' || e.type === 'Done') && String(e.details || '').trim() && cfForMe(e))
     .slice(0, 120).map(e => ({ e, who: name, folder, key: `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}` }));
 }
@@ -12650,6 +12680,7 @@ async function checkCrewLogs() {
         // reached this file at all; if one ever does (an old build, a hand-edited file),
         // it dies here rather than becoming a review card.
         if (e.mine) return;
+        if (e.pocket && !e.pocketSent) return;   // 🎒 v7.18 — a crew member's pocket is private to his phone (an older app may still send it)
         // Done entries only count when they close one of Eric's assigned to-dos (srcRef)
         if (!['Clock', 'Hours', 'Note', 'Mileage'].includes(e.type) && !(e.type === 'Done' && e.srcRef)) return;
         // ↩ an answer closes the 📢 ask by itself — next sweep clears the card off every phone.
@@ -18780,9 +18811,10 @@ function renderSummary() {
   ];
   // 🎒 POCKET LIST (was TO GET, v6.76) — the pocket as it stands, then what got done
   // 🎒 v7.07 — today's before tomorrow's, as on the pocket card; a done row wears its ✓ once (in the glyph column)
+  // ⚙ v7.18 — every row here and under POCKET — not done: "a send-to-grinder with the same four unlock it buttons" (pocketSendHtml)
   S.get = [
-    ...pocketByDay().map(it => line('🎒', esc(it.t), it.day <= todayD ? 'today' : 'tomorrow')),
-    ...es.filter(e => e.pocket === 'done').map(e => line('✓', esc(String(e.details || '').replace(/^✓\s*/, '').replace(/\s+/g, ' ').slice(0, 110)), when(e))),
+    ...pocketByDay().map(it => line('🎒', esc(it.t), (it.day <= todayD ? 'today' : 'tomorrow') + pocketSendHtml('i', it.id))),
+    ...es.filter(e => e.pocket === 'done').map(e => line('✓', esc(String(e.details || '').replace(/^✓\s*/, '').replace(/\s+/g, ' ').slice(0, 110)), when(e) + pocketSendHtml('n', e.id))),
   ];
   // 🎒 POCKET — not done: what left the pocket unfinished (flushed, overflow, swept by the morning). Eric: "make a
   // category for the pocket list flushes so if i don't get to the item itll go to the summary page and i can then
@@ -18796,7 +18828,7 @@ function renderSummary() {
       <button type="button" class="pk-mini" onclick="pocketBack(${e.id}, 0)" aria-label="back onto today's pocket list" title="back onto today's pocket list"><span aria-hidden="true">↩</span><b>Today</b></button>
       <button type="button" class="pk-mini" onclick="pocketBack(${e.id}, 1)" aria-label="back onto tomorrow's pocket list" title="back onto tomorrow's pocket list"><span aria-hidden="true">➡</span><b>Tomorrow</b></button>
       <button type="button" class="pk-mini pk-ok" onclick="pocketLeftDone(${e.id})" aria-label="it got done — check it off" title="it got done — check it off"><span aria-hidden="true">✓</span><b>Done</b></button>
-      <button type="button" class="pk-mini pk-no" onclick="pocketLeftDrop(${e.id})" aria-label="no longer relevant — clear it" title="no longer relevant — clear it"><span aria-hidden="true">✕</span><b>Not needed</b></button></span></span>`));
+      <button type="button" class="pk-mini pk-no" onclick="pocketLeftDrop(${e.id})" aria-label="no longer relevant — clear it" title="no longer relevant — clear it"><span aria-hidden="true">✕</span><b>Not needed</b></button></span></span>${pocketSendHtml('n', e.id)}`));
   // 📗 SENT TO LOGAN — the bookkeeper tag, shared notes, receipts sent onto a client page
   S.logan = es.filter(e => (e.tags || []).includes('Bookkeeper') || e.shared || e.budg === 'sent').map(e =>
     line(e.budg === 'sent' ? '🏠' : '📗', `<b>${esc(e.job || '—')}</b> — ${words(e)}`, `${e.budg === 'sent' ? 'on their page' : 'to Logan'} · ${when(e)}`));
@@ -18828,6 +18860,49 @@ function renderSummary() {
 
 // 🎒 v6.78 — the words of a pocket note without its stamp, and the way back onto tomorrow's pocket
 function pocketWords(e) { return String(e.details || '').replace(/^🎒 (Flushed|Overflow|Not done) — /, '').trim(); }
+// ⚙ v7.18 — Eric: "Make everyone's pocket list private to their phone. But if we want to get it to the grinder and tag it, you
+// open the summary button, click on Pocket List or Pocket Not Done. Both will have a send-to-grinder with the same four unlock it
+// buttons. Adjust me: just Eric or Phil, or all crew, and needs attention." Under every pocket row on the Summary: the four
+// plates of ⑤ UNLOCK IT, worded for this phone (🔒 Just me · 📨 Just Phil on his phone, Just Eric on a crew phone · 🔓 All crew
+// · ⚠ Needs attention). A tap puts the words in the grinder with that unlock already lit; he picks the job, tags it, SENDs — the
+// grind then finishes the pocket thing (a pocket NOTE is updated in place, never doubled; a live item leaves the pocket).
+let _grindPocket = null;   // { kind: 'i' live item | 'n' pocket note, id, words } — until the next SEND
+function pocketSendHtml(kind, id) {
+  const buddy = visBuddy();
+  const b = (v, ic, w, lbl) => `<button type="button" class="pk-mini pk-send" data-v="${v}" onclick="pocketToGrinder('${kind}', '${escq(String(id))}', '${v}')" aria-label="to the grinder — ${lbl}" title="to the grinder — ${lbl}"><span aria-hidden="true">${ic}</span><b>${w}</b></button>`;
+  return `<span class="pk-sendrow"><span class="pk-sendlbl">⚙ TO THE GRINDER</span>${b('me', '🔒', 'Just me', 'just you')}${buddy ? b('buddy', '📨', 'Just ' + esc(buddy), 'just ' + esc(buddy)) : ''}${b('crew', '🔓', 'All crew', 'all crew')}${b('attn', '⚠', 'Needs attention', 'it needs attention')}</span>`;
+}
+function pocketToGrinder(kind, id, v) {
+  let words = '';
+  if (kind === 'i') { const it = pocket().find(x => String(x.id) === String(id)); words = it ? String(it.t || '') : ''; }
+  else { const e = entries.find(x => String(x.id) === String(id)); words = e ? pocketWords(e).replace(/^✓\s*/, '') : ''; }
+  if (!words) { toast('⚠ That one is not on the pocket any more', false); return; }
+  _grindPocket = { kind, id: kind === 'n' ? +id : String(id), words };
+  closeReview();
+  const box = $('askText'); if (box) { box.value = words; fitTa(box); }
+  const buddy = visBuddy();   // the unlock he picked, exactly as ⑤ would set it
+  if (v === 'me') setVis('');
+  else if (v === 'buddy') setVis(buddy || 'crew');
+  else if (v === 'crew') setVis('crew');
+  else if (v === 'attn') { setVis(buddy || 'crew'); if (!attnOn()) toggleAttn(); }
+  updateStepFlow();
+  const card = document.querySelector('.ask-card'); if (card && card.scrollIntoView) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (box) setTimeout(() => { try { box.focus(); } catch (err) {} }, 200);
+  toast('⚙ In the grinder — pick the job, tag it, SEND. It leaves your pocket when you send');
+}
+// 🎒 v7.18 — PRIVATE TO THE PHONE. On a crew phone the pocket list and the notes it turns into (✓ done, flushed, overflow, not
+// done) are NOT written to the crew folder any more — that folder is Eric's Dropbox, and his phone read every note in it. They
+// live on the phone, on a shelf of their own (localStorage), and a pull from Dropbox puts them back — a pull replaces the whole
+// log with the file's copy, which also used to wipe a crew phone's "🔒 Just me" notes (they were never in the file either, v5.44).
+// Eric's own pocket rides his own Dropbox as before (his phone, PC and iPad are all his) and never travels to a crew phone.
+// A pocket note sent on from the Summary is no longer private (pocketSent) — its unlock decides, like any grinder note.
+const PRIV_SHELF = 'daylog-private';
+function phonePrivate(e) { return !!(e && (e.mine || (e.pocket && !e.pocketSent))); }
+function privShelfSave() {
+  try { if (!CREW_NAME) return; } catch (e) { return; }   // a save that fires while the page is still loading, before CREW_NAME exists
+  try { lsSet(PRIV_SHELF, JSON.stringify({ at: new Date().toISOString(), entries: entries.filter(phonePrivate).map(e => ({ ...e, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts })), pocket: pocket() })); } catch (e) {}
+}
+function privShelfLoad() { try { const j = JSON.parse(lsGet(PRIV_SHELF) || 'null'); return j && typeof j === 'object' ? j : null; } catch (e) { return null; } }
 // 🧹 v6.87 — days: 0 = today's list, anything else = tomorrow's. A FULL pocket refuses in words: the old way let the
 // overflow push the oldest item out as a new leftover, which landed right back under this heading.
 function pocketBack(id, days) {
@@ -19574,7 +19649,7 @@ function renderAskRecent() {
     : (e.photoPath || (e.photoPaths && e.photoPaths.length) || e.type === 'Photo') ? 'photo'
     : e.ask ? 'wiz' : 'grind';
   const GLYPH = { text: '📱', photo: '📷', wiz: '❓', grind: '⚙', fb: '💬', crew: '👷', client: '🏠', mail: '📧', pocket: '🎒' };
-  const POCKET_WORD = { back: 'back on the list', dropped: 'not needed' };   // 🎒 v7.07 — what became of a leftover, in words
+  const POCKET_WORD = { back: 'back on the list', dropped: 'not needed', sent: 'to the grinder' };   // 🎒 v7.07 — what became of a leftover, in words (v7.18: sent on from the Summary)
   const personOf = e => textSender(e);   // ☎ v6.57 — same answer as before, plus the number in the words when the tag is gone
   const pendKind = p => p.kind === 'crew' ? 'crew' : p.kind === 'clientask' ? 'client'
     : p.kind === 'text' ? 'text' : p.kind === 'question' ? 'wiz' : 'grind';
@@ -21168,7 +21243,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.17';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.18';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -21729,12 +21804,13 @@ function livePayload() {
   let askLog;
   if (CREW_NAME) { try { askLog = JSON.parse(lsGet('daylog-asklog') || '[]').slice(0, 30); } catch (e) {} }
   return JSON.stringify({
-    jobs, trucks, crew, prefs,
+    jobs, trucks, crew, prefs: CREW_NAME ? { ...prefs, pocket: [] } : prefs,   // 🎒 v7.18 — a crew phone's pocket list stays on the phone (privShelfSave)
     shiftOpen, askLog,
     // 🔒 v5.44 — a crew note marked "🔒 Just my log" is CUT OUT of the sync here. Not
     // flagged for someone downstream to respect — physically absent from the file that
     // goes to Dropbox, so there is nothing for Eric or anyone else to find or read.
-    entries: entries.filter(e => !e.sample && !(CREW_NAME && e.mine)),
+    // 🎒 v7.18 — and the notes his pocket turns into, the same way (phonePrivate)
+    entries: entries.filter(e => !e.sample && !(CREW_NAME && phonePrivate(e))),
     todos: todos.filter(t => !t.sample)
   }, null, 1);
 }
@@ -21748,6 +21824,17 @@ async function pullRemote() {
     if (j.prefs) { prefs = j.prefs; applySkin(prefs.skin || ''); }
     entries = (j.entries || []).map(e => ({ ...e, ts: new Date(e.ts), synced: true }));
     todos = (j.todos || []).map(t => ({ ...t }));
+    // 🎒 v7.18 — a crew phone's private shelf comes back after the pull (the file never had it): his "🔒 Just me" notes, his
+    // pocket notes and his pocket list — before the id count below, so a new note can never take a private note's number
+    if (CREW_NAME) {
+      const sh = privShelfLoad();
+      if (sh) {
+        const have = new Set(entries.map(e => e.id));
+        (Array.isArray(sh.entries) ? sh.entries : []).forEach(e => { if (e && e.id != null && !have.has(e.id)) { entries.push({ ...e, ts: new Date(e.ts) }); have.add(e.id); } });
+        entries.sort((a, b) => +new Date(b.ts) - +new Date(a.ts));
+        if (Array.isArray(sh.pocket)) prefs.pocket = sh.pocket;
+      }
+    }
     // ✎ v6.86 — Eric: "make shop/admin to say internal/admin" — once, on the phone that holds the book (never a crew
     // phone: their list comes from crew.json). The ✎ in Setup → Jobs changes it again if he wants other words.
     if (!prefs.jobRen686 && !CREW_NAME && jobs.includes('Shop / Admin') && !jobs.includes('Internal / Admin')) { prefs.jobRen686 = true; renameJob('Shop / Admin', 'Internal / Admin'); }
@@ -21795,6 +21882,7 @@ async function pushRemote() {
   setSync('ok');
 }
 function scheduleSave() {
+  privShelfSave();   // 🎒 v7.18 — a crew phone's private shelf, on every change (with or without Dropbox)
   if (!dbx.refreshToken) return;
   dirty = true;
   clearTimeout(saveTimer);
