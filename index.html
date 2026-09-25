@@ -2207,6 +2207,11 @@
   .mat-first-band { font-size: 11.5px; font-weight: 800; letter-spacing: .4px; color: var(--warn, #ffa657); margin: 0 0 4px 2px; }
   .mat-item.mi-editing { outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: 8px; }
   .mat-who { margin: 8px 0 2px; padding: 8px 10px; border: 1.5px solid var(--accent); border-radius: 10px; background: var(--surface-1); }
+  /* 📐 v7.14 — the journal's released weeks: the words wrap in their own column, the two buttons stand in straight columns */
+  .jrn-rel-row { display: grid !important; grid-template-columns: minmax(0, 1fr) 76px 108px; gap: 6px; align-items: center; }
+  .jrn-rel-row .sum-title { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
+  .jrn-rel-row .btn-ghost { width: 100%; margin: 0; min-height: 40px; padding: 6px 4px; white-space: normal; line-height: 1.15; text-align: center; }
+  .jrn-rel-back.armed { color: var(--err, #c0392b); font-weight: 800; border-color: var(--err, #c0392b); }
   /* 🏗 v7.10 — the WHERE window's construction categories, a heading a phase */
   .bl-ph-h { font-size: 11.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--accent); margin: 8px 0 5px; padding-left: 8px; border-left: 3px solid var(--accent); }
   /* a category's heading: the name, its counts in plain case, its tools — never floated over the first row again */
@@ -4165,7 +4170,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.13 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.14 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -12483,13 +12488,12 @@ function renderPortalFold(box, offRoot) {
         ${open ? (off ? `
         <!-- 🏢 v6.07 — an OFFICE phone (Phil) gets a fold of his own. v7.09 — Eric: "I don't want him to have the Project
              Tracker, Receipts, or estimates but he should be able to click on Plans, Build List, and Journal" — and no
-             Rotate / Rename / Remove, no 🎛 they-can-see switches, no ➕ new page. Copy link and View as stay. -->
+             Rotate / Rename / Remove, no 🎛 they-can-see switches, no ➕ new page. v7.14 — Eric: "Phil and crew don't need
+             to see what they look at on the project portal. And not the copy link either." Four plates, two by two. -->
         <div class="pf-acts">
           <button class="btn-ghost" onclick="openPlanRack(${i})">📐 Plans</button>
           <button class="btn-ghost" onclick="openJournal(${i})">📖 Journal</button>
           <button class="btn-ghost" onclick="openMaterials(${i})">📋 Build List</button>
-          <button class="btn-ghost" onclick="portalCopy(${i})">📋 Copy link</button>
-          <button class="btn-ghost" onclick="portalIntel(${i})">📊 What they look at</button>
           <button class="btn-ghost" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
         </div>` : `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>`) : ''}
       </div>`;
@@ -12707,8 +12711,8 @@ async function renderPortalList() {
         <button class="btn-ghost" onclick="openJournal(${i})">📖 Journal</button>
         <button class="btn-ghost" onclick="openMaterials(${i})">📋 Build List</button>
         <button class="btn-ghost${om}" onclick="openEstimates(${i})">💰 Estimates</button>
-        <button class="btn-ghost" onclick="portalCopy(${i})">📋 Copy link</button>
-        <button class="btn-ghost" onclick="portalIntel(${i})">📊 What they look at</button>
+        <button class="btn-ghost${om}" onclick="portalCopy(${i})">📋 Copy link</button>
+        <button class="btn-ghost${om}" onclick="portalIntel(${i})">📊 What they look at</button>
         <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
         <!-- 🧾 v6.30 — beside "view as a client", as Eric asked: the tagged receipts still
              waiting on this job, to check and approve in one sitting. -->
@@ -14863,8 +14867,11 @@ function jrnStamp(id) {
 function jrnStamped(aj) {
   return entries.filter(e => e.jrn && !e.jrnDone && !e.personal && !e.sample && e.job === aj);
 }
+// ✍ v7.14 — the draft pulls the same things every time: ⭐ what he stamped, the week's work notes, and a line about the
+// photos he picked. The four switches (work notes · hours on site · photo count · money moved) are gone from the window
+// (Eric: "it already knows where to pull it from"); the per-job picks they saved in prefs.journalPrefs are no longer read.
 function journalDraft(aj, code) {
-  const p = journalPrefs(code);
+  const p = { notes: true, hours: false, photos: false, money: false };
   const from = new Date(); from.setDate(from.getDate() - 7);
   const win = entries.filter(e => !e.sample && !e.personal && e.job === aj && new Date(e.ts) >= from);
   const lines = [];
@@ -14890,10 +14897,8 @@ function journalDraft(aj, code) {
 async function openJournal(i) {
   if (portalGuard()) return;
   const c = _portalIdx.clients[i]; _jrnIdx = i; _jrnPhAll = false;   // 📷 v7.10 — six photos first, every open
-  const p = journalPrefs(c.code);
   const aj = portalAppJob(c);
   const st = jrnStamped(aj);
-  const chk = (k, lab) => `<button type="button" class="pick-chip${p[k] ? ' sel' : ''}" onclick="jrnFilter('${k}', ${!p[k]})" aria-pressed="${p[k]}">${p[k] ? '✓&nbsp;' : ''}${lab}</button>`;
   const stNotes = st.filter(e => !e.photoPath);
   $('revBox').innerHTML = `<h3>📖 ${esc(c.job)} — this week's journal${winX('closeReview()', 'close the journal')}</h3>
     ${stNotes.length ? `<div class="field" style="margin: 6px 0 2px;"><label>⭐ Stamped notes — what you picked out (✕ to drop one)</label></div>` +
@@ -14910,9 +14915,11 @@ async function openJournal(i) {
     <!-- ✍ v5.84 — Eric: "auto write default off so that i can type myself or make my inclusion
          selections and then ask it to help write if i want suggestions." The box starts EMPTY
          and belongs to him. Chips only choose what ✍ Draft pulls in — they never touch his words. -->
-    <div class="hint" style="margin: 10px 0 0;">What ✍ Draft it pulls in when you ask — the chips never touch what you've written:</div>
-    <div class="frow" style="margin: 8px 0;">${chk('notes', 'work notes')}${chk('hours', 'hours on site')}${chk('photos', 'photo count')}${chk('money', 'money moved')}</div>
-    <button type="button" class="btn-ghost" style="width: 100%; margin: 0 0 8px; font-weight: 800; font-size: 14.5px; padding: 11px; border: 2.5px solid var(--accent); background: var(--surface-1); color: var(--ink);" onclick="jrnDraftGo()">✍ Draft it for me — from my picks (the Wizard polishes it)</button>
+    <!-- ✍ v7.14 — Eric: "On the journals, we have: work notes · hours on site · photo count · money moved. I don't think we need
+         any of that. We only need the draft it for me because it already knows where to pull it from." The four chips are
+         gone; ✍ Draft pulls the week's notes and the picked photos (journalDraft) — never an hours tally, a photo count or
+         raw money, which on a homeowner's page would be an unmarked cost. -->
+    <button type="button" class="btn-ghost" style="width: 100%; margin: 10px 0 8px; font-weight: 800; font-size: 14.5px; padding: 11px; border: 2.5px solid var(--accent); background: var(--surface-1); color: var(--ink);" onclick="jrnDraftGo()">✍ Draft it for me — from this week's notes and picked photos (the Wizard polishes it)</button>
     ${_jrnUndo && _jrnUndo.code === c.code ? `<button type="button" class="btn-ghost" style="width: 100%; margin: 0 0 8px; font-weight: 800; border: 2.5px solid var(--accent); background: var(--surface-1); color: var(--ink);" onclick="jrnUndoBack()">↩ UNDO — bring back what I wrote</button>` : ''}
     <!-- 📖 v6.31 — Eric: "id like the most recent posted one to also be open or some way that
          i can see what was written last… so i can build on each report or step." He asked
@@ -15115,11 +15122,14 @@ async function renderJrnReleased() {
   const js = (d && d.journal) || [];
   renderJrnLast(js);   // 📖 v6.31 — last week's words, above his box
   if (!js.length) { box.innerHTML = '<span class="hint">Nothing released to their page yet.</span>'; return; }
+  // 📐 v7.14 — Eric: "it tells the week, says 'Edited,' and has an edit button and a take back button, but they don't really fit
+  // on there very well. Make sure all the take back buttons are in a line and all the edit buttons are in a line." Each row is
+  // a grid: the week's words in a column that wraps, then two fixed columns — every ✎ Edit and every ↩ Take back stack straight.
   box.innerHTML = `<div class="field" style="margin: 0 0 2px;"><label>📤 On their page now — ✎ edit it or ↩ take it back</label></div>` +
-    js.slice(0, 8).map((j, i) => `<div class="sum-row" style="cursor: default; flex-wrap: wrap;">
+    js.slice(0, 8).map((j, i) => `<div class="sum-row jrn-rel-row" style="cursor: default;">
       <span class="sum-title">📖 Week of ${esc(j.week || '?')}${(j.photos || []).length ? ` · 📷 ${j.photos.length}` : ''}${j.edited ? ' · ✎ edited' : ''}</span>
-      <button class="btn-ghost req-x" onclick="jrnEditRel(${i})">✎ Edit</button>
-      <button class="btn-ghost req-x" ${_jrnRetractArm === i ? 'style="color: var(--err); font-weight: 700;"' : ''} onclick="jrnRetract(${i})">${_jrnRetractArm === i ? '↩ SURE? Tap again' : '↩ Take back'}</button>
+      <button class="btn-ghost req-x jrn-rel-ed" onclick="jrnEditRel(${i})">✎ Edit</button>
+      <button class="btn-ghost req-x jrn-rel-back${_jrnRetractArm === i ? ' armed' : ''}" onclick="jrnRetract(${i})">${_jrnRetractArm === i ? '⚠ SURE? Tap again' : '↩ Take back'}</button>
     </div>`).join('');
 }
 // 📖 v6.31 — WHAT WENT OUT LAST TIME, sitting where he can read it while he writes the next
@@ -18431,7 +18441,9 @@ let _revTab = 'sort', _sumSpan = 'week', _sumSec = null;
 // 🎒 v7.07 — Eric: "When I click Summary, I want the pocket list to be on the top of the page, just underneath [NEEDS] YOU."
 // The pocket's two headings come right after NEEDS YOU — what is on the list (and what got done), then what was left
 // undone — and the page opens on the pocket list when it holds anything (NEEDS YOU keeps its count on its heading).
-const SUM_SECS = [['need', '⚠ NEEDS YOU'], ['get', '🎒 POCKET LIST'], ['pocket', '🎒 POCKET — not done'], ['people', '👥 PEOPLE'], ['money', '💵 MONEY'],
+// 🎒 v7.14 — Eric: "When I click Summary, just under Needs You is the Pocket List, which I like. But instead, I want the pocket
+// not done, just under the needs you." The leftovers lead now; the live list follows them.
+const SUM_SECS = [['need', '⚠ NEEDS YOU'], ['pocket', '🎒 POCKET — not done'], ['get', '🎒 POCKET LIST'], ['people', '👥 PEOPLE'], ['money', '💵 MONEY'],
   ['photos', '📷 PHOTOS'], ['wizard', '🧙 WIZARD'], ['sched', '📅 SCHEDULE'], ['logan', '📗 SENT TO LOGAN'], ['record', '📜 THE RECORD']];
 function revTabsHtml() {
   const n = pendingQueue.length + revRcptRows().n, b = boardLines().length;   // 📋 v6.79 — the third tab wears the open-line count
@@ -18522,7 +18534,7 @@ function renderSummary() {
       notes.map(e => line('·', `<b>${esc(e.job || '—')}</b> ${words(e)}`, '')).join('') + `</div>`;
   });
   const secs = SUM_SECS.map(([key, label]) => ({ key, label, items: S[key] || [] }));
-  if (_sumSec == null) { const f = secs.find(s => ['get', 'pocket'].includes(s.key) && s.items.length) || secs.find(s => s.items.length); _sumSec = f ? f.key : ''; }   // 🎒 v7.07 — the pocket first
+  if (_sumSec == null) { const f = secs.find(s => ['get', 'pocket'].includes(s.key) && s.items.length) || secs.find(s => s.items.length); _sumSec = f ? f.key : ''; }   // 🎒 v7.07 — the pocket first (v7.14: in the new order, the leftovers when there are any)
   box.innerHTML = `<h3>📊 Summary${winX('closeReview()', 'close')}</h3>${revTabsHtml()}
     <div class="chips-row" style="display: flex; gap: 6px; margin: 8px 0 4px;">
       <button type="button" class="pick-chip${_sumSpan === 'today' ? ' sel' : ''}" onclick="sumSpan('today')" aria-pressed="${_sumSpan === 'today'}">${_sumSpan === 'today' ? '✓ ' : ''}TODAY</button>
@@ -20854,7 +20866,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.13';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.14';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

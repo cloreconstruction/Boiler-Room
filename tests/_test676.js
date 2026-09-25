@@ -73,7 +73,7 @@ const { chromium } = require('playwright');
     const h = await secs();
     const t = await page.evaluate(() => $('revBox').textContent);
     // 🎒 v7.07 — Eric: "I want the pocket list to be on the top of the page, just underneath [NEEDS] YOU" — the pocket's two headings moved up
-    return h.map(x => x.key).join(',') === 'need,get,pocket,people,money,photos,wizard,sched,logan,record' && !/dentist/.test(t);
+    return h.map(x => x.key).join(',') === 'need,pocket,get,people,money,photos,wizard,sched,logan,record' && !/dentist/.test(t);
   })());
 
   { const t = await body('need'); ok('NEEDS YOU says what waits, in words, with a way over to the sort tab', /1 waiting/.test(t) && /1 bills/.test(t) && /Open the sort tab/.test(t)); }

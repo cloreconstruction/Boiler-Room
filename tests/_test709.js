@@ -43,7 +43,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   });
   ok('on Eric\'s portal the Estimates, Receipts and Project Tracker plates, Rotate / Rename / Remove, the 🎛 they-can-see block and ➕ Give a job a client page all wear the dashed edge',
     fold.dashed.some(t => /Estimates/.test(t)) && fold.dashed.some(t => /Receipts/.test(t)) && fold.dashed.some(t => /Project Tracker/.test(t)) && fold.dashed.some(t => /Rotate/.test(t)) && fold.dashed.some(t => /Rename/.test(t)) && fold.dashed.some(t => /Remove/.test(t)) && fold.dashed.some(t => /They can see/.test(t)) && fold.dashed.some(t => /Give a job a client/.test(t)) && fold.btnDashed, JSON.stringify(fold));
-  ok('Plans, Journal, Build List, Copy link, What they look at and View as are plain — Phil gets those', fold.plain.join('|') === '📐 Plans|📖 Journal|📋 Build List|📋 Copy link|📊 What they look at|👁 View as this client', fold.plain.join('|'));
+  ok('Plans, Journal, Build List and View as are plain — Phil gets those (v7.14: Copy link and What they look at are only Eric\x27s)', fold.plain.join('|') === '📐 Plans|📖 Journal|📋 Build List|👁 View as this client', fold.plain.join('|'));
   ok('the line at the top says it in words, and names him', /dashed edge means only you see it — Phil does not/.test(fold.key) && fold.keyDashed, fold.key);
   ok('with no office crew there is nothing to keep from anyone: no dashes, no line', await page.evaluate(async () => {
     prefs.office = []; await renderPortalList();
@@ -123,7 +123,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const txt = b => b.textContent.replace(/\s+/g, ' ').trim();
     return { btns: [...document.querySelectorAll('#portalList .pf-acts button')].map(txt), all: txt($('portalList')), meter: txt(document.querySelector('#portalList .jm-word') || { textContent: '' }), dashed: document.querySelectorAll('#portalList .only-me').length };
   });
-  ok('the fold reads Plans · Journal · Build List · Copy link · What they look at · View as — nothing else', pf.btns.join('|') === '📐 Plans|📖 Journal|📋 Build List|📋 Copy link|📊 What they look at|👁 View as this client', pf.btns.join('|'));
+  ok('the fold reads Plans · Journal · Build List · View as — nothing else (v7.14: no Copy link, no What they look at)', pf.btns.join('|') === '📐 Plans|📖 Journal|📋 Build List|👁 View as this client', pf.btns.join('|'));
   ok('no Estimates, Receipts, Project Tracker, Rotate, Rename, Remove, no 🎛 they-can-see switches, no ➕ Give a job a client page — and no dashed edges (there is nothing to mark on his own phone)',
     !/Estimates|Receipts|Project Tracker|Rotate|Rename|Remove|They can see|Give a job a client page/.test(pf.all) && pf.dashed === 0, pf.all.slice(0, 300));
   ok('the journal meter reads the real date off the page (it said NO JOURNAL YET on every job before)', /DAYS? OLD|POSTED TODAY|POST IT NOW/.test(pf.meter) && !/NO JOURNAL YET/.test(pf.meter), pf.meter);

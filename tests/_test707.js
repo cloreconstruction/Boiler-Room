@@ -37,23 +37,25 @@ const path = require('path'), fs = require('fs'), { fileURLToPath } = require('u
 
   // ───────────────────────── the summary ─────────────────────────
   console.log('— 🎒 v7.07 the pocket list at the top of the summary —');
-  ok('the pocket\'s two headings sit right under ⚠ NEEDS YOU: 🎒 POCKET LIST, then 🎒 POCKET — not done, then the rest', await page.evaluate(() => {
+  ok('the pocket\'s two headings sit right under ⚠ NEEDS YOU: 🎒 POCKET — not done, then 🎒 POCKET LIST (v7.14), then the rest', await page.evaluate(() => {
     pendingQueue = [{ id: 'bill:x', kind: 'bill', payload: { who: 'Enstar', amt: 1, due: '2026-10-10', text: 'Pay it' } }];
     openReview('summary');
     const keys = [...document.querySelectorAll('.rev-sec')].map(b => b.dataset.sec).join(',');
     const lab = document.querySelector('.rev-sec[data-sec="get"]').textContent;
-    return keys === 'need,get,pocket,people,money,photos,wizard,sched,logan,record' && /🎒 POCKET LIST/.test(lab) && !/TO GET/.test($('revBox').textContent);
+    return keys === 'need,pocket,get,people,money,photos,wizard,sched,logan,record' && /🎒 POCKET LIST/.test(lab) && !/TO GET/.test($('revBox').textContent);
   }));
-  ok('the page opens ON the pocket list — today\'s, then tomorrow\'s, then what got done — while NEEDS YOU keeps its count on its heading', await page.evaluate(() => {
+  // 🎒 v7.14 — Eric: "I want the pocket not done, just under the needs you." With leftovers waiting the page opens on THEM now;
+  // the POCKET LIST below still reads today's, then tomorrow's, then what got done
+  ok('with leftovers waiting the page opens on POCKET — not done (v7.14); the POCKET LIST still reads today\'s, then tomorrow\'s, then what got done — while NEEDS YOU keeps its count', await page.evaluate(() => {
     const open = [...document.querySelectorAll('.rev-sec-body')].filter(b => !b.hidden).map(b => b.dataset.sec).join();
     const t = document.querySelector('.rev-sec-body[data-sec="get"]').textContent;
-    return open === 'get' && /gravel for the drive/.test(t) && /today/.test(t) && /buy blue tape/.test(t) && /tomorrow/.test(t) && /screws for the deck/.test(t)
+    return open === 'pocket' && /gravel for the drive/.test(t) && /today/.test(t) && /buy blue tape/.test(t) && /tomorrow/.test(t) && /screws for the deck/.test(t)
       && t.indexOf('gravel for the drive') < t.indexOf('buy blue tape') && !/✓\s*✓/.test(t)   // today's first, as on the pocket card; one ✓ a done row
       && /1/.test(document.querySelector('.rev-sec[data-sec="need"]').textContent);
   }));
-  ok('on the phone the pocket list is on the first screen, the heading straight after NEEDS YOU', await page.evaluate(() => {
-    const need = document.querySelector('.rev-sec[data-sec="need"]').getBoundingClientRect(), get = document.querySelector('.rev-sec[data-sec="get"]').getBoundingClientRect();
-    return get.top >= need.bottom - 1 && get.top - need.bottom < 20 && get.bottom < innerHeight;
+  ok('on the phone 🎒 POCKET — not done is on the first screen, the heading straight after NEEDS YOU (v7.14)', await page.evaluate(() => {
+    const need = document.querySelector('.rev-sec[data-sec="need"]').getBoundingClientRect(), pk = document.querySelector('.rev-sec[data-sec="pocket"]').getBoundingClientRect();
+    return pk.top >= need.bottom - 1 && pk.top - need.bottom < 20 && pk.bottom < innerHeight;
   }));
   ok('with nothing on the list but leftovers waiting, it opens on 🎒 POCKET — not done', await page.evaluate(() => {
     closeReview(); const keep = prefs.pocket; prefs.pocket = []; entries = entries.filter(e => e.pocket !== 'done');

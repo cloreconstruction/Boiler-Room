@@ -114,7 +114,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const pk = document.querySelector('.rev-sec-body[data-sec="pocket"]').textContent.replace(/\s+/g, ' ');
     const get = document.querySelector('.rev-sec-body[data-sec="get"]').textContent.replace(/\s+/g, ' ');
     const head = document.querySelector('.rev-sec[data-sec="pocket"]').textContent;
-    return keys.indexOf('pocket') === keys.indexOf('get') + 1 && /POCKET — not done/.test(head) && /3/.test(head) &&
+    return keys.indexOf('pocket') === keys.indexOf('need') + 1 && keys.indexOf('get') === keys.indexOf('pocket') + 1 && /POCKET — not done/.test(head) && /3/.test(head) &&   // 🎒 v7.14 — the leftovers sit right under NEEDS YOU, the list after them
       /call the gravel guy/.test(pk) && /pick up the saw/.test(pk) && /inspector callback/.test(pk) && /flushed/.test(pk) && /overflow/.test(pk) && /not done/.test(pk) &&
       !/screws for Hertz/.test(pk) && /screws for Hertz/.test(get) && !/gravel guy/.test(get) &&
       document.querySelectorAll('.rev-sec-body[data-sec="pocket"] .pk-acts').length === 3;   // v6.87 — four plates a row now, plus the clear-all bar
