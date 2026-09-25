@@ -4193,7 +4193,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.16 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.17 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -18045,9 +18045,14 @@ function askSweep(list, terms, skip, cap) {
     for (const t of terms) if (hay.indexOf(t) >= 0) n++;
     if (n) scored.push({ e, n });
   }
-  scored.sort((a, b) => b.n - a.n);
+  scored.sort((a, b) => b.n - a.n || askChatter(a.e) - askChatter(b.e));   // 📝 v7.17 — at the same score, his own notes before texts and emails
   return scored.slice(0, cap).map(x => x.e);
 }
+// 📝 v7.17 — Eric: "i think notes should be searched first yes." Texts and emails were 3 of every 4 rows the Wizard read first
+// (on 2026-09-25 the newest 140 were 72 texts, 36 emails, 31 notes and a clock punch — two days of chatter), so his own notes
+// were crowded out of every question. His notes and records now come first; texts and emails follow, fewer of them.
+function askChatter(e) { return (e.texted || e.mail || /^Text from /.test(e.details || '')) ? 1 : 0; }
+const ASK_MINE_N = 100, ASK_CHAT_N = 40;
 function buildAskContext(question) {
   const range = askDateRange(question);
   // 🧙 v7.16 — NEWEST BY DATE: the log is kept in the order things were added, and a note filed under an older day (a crew
@@ -18064,7 +18069,7 @@ function buildAskContext(question) {
     // 🔎 v6.17 — inside the range the word-matches go to the FRONT, so the 220 cap can never
     // cut out the one entry he was actually reaching for.
     askSweep(hit, terms, null, 220).forEach(push);
-    hit.slice(0, 220).forEach(push);
+    [...hit.filter(e => !askChatter(e)), ...hit.filter(askChatter)].slice(0, 220).forEach(push);   // 📝 v7.17 — his notes first inside the span too
     live.slice(0, 30).forEach(push);
     // 🧙 v7.16 — it said "all of them are included" even when the span held more than the pool could carry ("last week" on
     // 2026-09-25: 425 in the span, 185 left out) — now it says how many made it, so the Wizard never claims the whole week
@@ -18074,15 +18079,16 @@ function buildAskContext(question) {
         : inPool >= hit.length ? ' (all of them are included in RECENT LOG below, no matter how old)'
         : ` (only ${inPool} of them fit in RECENT LOG below — the word-matches first, then the newest; say plainly that some of the span was left out)`) + '.';
   } else {
-    live.slice(0, 140).forEach(push);
+    live.filter(e => !askChatter(e)).slice(0, ASK_MINE_N).forEach(push);   // 📝 v7.17 — his own notes and records first
+    live.filter(askChatter).slice(0, ASK_CHAT_N).forEach(push);            // …then the newest texts and emails
     const older = askSweep(live, terms, seen, 120);
     older.forEach(push);
     if (older.length) {
       let oldest = '';
       older.forEach(e => { const d = localDay(e.ts); if (!oldest || d < oldest) oldest = d; });
-      sweepLine = `\nWORD SEARCH RAN ON THE WHOLE LOG: no date was named, so all ${live.length} entries on record were scanned for ${JSON.stringify(terms)} — ${older.length} match${older.length === 1 ? '' : 'es'} older than the newest 140 (back as far as ${oldest}) are included in RECENT LOG below. Old entries are NOT out of reach: if something matching is in there, use it and give its date.`;
+      sweepLine = `\nWORD SEARCH RAN ON THE WHOLE LOG: no date was named, so all ${live.length} entries on record were scanned for ${JSON.stringify(terms)} — ${older.length} more match${older.length === 1 ? '' : 'es'} (back as far as ${oldest}, his own notes ahead of texts and emails) are included at the bottom of RECENT LOG below. Old entries are NOT out of reach: if something matching is in there, use it and give its date.`;
     } else if (terms.length) {
-      sweepLine = `\nWORD SEARCH RAN ON THE WHOLE LOG: no date was named, so all ${live.length} entries on record were scanned for ${JSON.stringify(terms)} and nothing outside the newest 140 matched. The whole book HAS been searched — if the answer isn't in RECENT LOG below, say plainly that nothing on record matches, and suggest the words that would find it.`;
+      sweepLine = `\nWORD SEARCH RAN ON THE WHOLE LOG: no date was named, so all ${live.length} entries on record were scanned for ${JSON.stringify(terms)} and nothing outside what RECENT LOG already shows matched. The whole book HAS been searched — if the answer isn't in RECENT LOG below, say plainly that nothing on record matches, and suggest the words that would find it.`;
     }
   }
   const slim = pool.map(e => {
@@ -18180,7 +18186,7 @@ function buildAskContext(question) {
   // 🧙 v7.16 — a pocket leftover already rides in POCKET NOT DONE: on the board list too, it came out twice ("8 items twice", 09-25)
   const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).filter(l => l.k !== 'p' && !(l.src && ['flushed', 'over', 'swept'].includes(l.src.pocket))).slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
   const boardDoneCtx = live.filter(e => e.board && e.board.done && +new Date(e.board.done) >= Date.now() - 7 * 86400000).slice(0, 40).map(e => ({ job: e.job, t: brdWords(e.details), by: e.board.by || 'Eric', day: localDay(new Date(e.board.done)) }));
-  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nLINES ERIC TOOK OFF HIS LISTS (✕ v7.16 — he said each is no longer relevant: leave it, and anything that is plainly the same item, out of summaries, lists and to-dos from now on; talk about one only if he asks about it by name; newest first): ${JSON.stringify((prefs.wizGone || []).slice(0, 60).map(g => g.line))}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
+  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nLINES ERIC TOOK OFF HIS LISTS (✕ v7.16 — he said each is no longer relevant: leave it, and anything that is plainly the same item, out of summaries, lists and to-dos from now on; talk about one only if he asks about it by name; newest first): ${JSON.stringify((prefs.wizGone || []).slice(0, 60).map(g => g.line))}\nRECENT LOG (his own notes and records first, newest first; then the newest texts and emails; then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
 }
 // 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
 // offers their photos, a follow-up within 15 minutes remembers the exchange, and
@@ -18290,7 +18296,7 @@ const WIZ_GONE_T = 'NO LONGER RELEVANT — Eric took this line off the list';
 function wizIsGone(t) { return String(t || '').startsWith(WIZ_GONE_T); }
 function wizLineGone(i) {
   const line = (((_lastAnswer && _lastAnswer.lines) || [])[i] || '').slice(0, 300);
-  if (!line) return;
+  if (!line) { toast('⚠ Could not read that line — close the answer and open it again', false); return; }   // ✕ v7.17 — never a silent tap
   const had = _wizPend.find(f => f.i === i && f.line === line);
   if (had && had.gone) { wizLineDrop(i); toast('↩ Kept — it stays on the list'); return; }
   if (!_wizPend.length || !_wizPendCtx) _wizPendCtx = { key: wizAnsKey(_lastAnswer && (_lastAnswer.md || _lastAnswer.text)), q: String((_lastAnswer && _lastAnswer.q) || ''), srcIds: ((_lastAnswer && _lastAnswer.srcIds) || []).slice(0, 20), keep: (_lastAnswer && _lastAnswer.keep) || '' };
@@ -18312,7 +18318,7 @@ function wizGoneSave(line, ctxQ, keep) {
   const now = new Date().toISOString(), l = String(line || '').slice(0, 300);
   prefs.wizGone = [{ at: now, q: String(ctxQ || '').slice(0, 160), line: l }, ...(prefs.wizGone || []).filter(g => g && g.line !== l)].slice(0, 100);
   wizLineIds(l).forEach(id => { const e = entries.find(x => x.id === id); if (e) e.ai = (((e.ai ? e.ai + '\n' : '') + `ERIC: NO LONGER RELEVANT (re "${l.slice(0, 120)}") — leave it off summaries and lists`)).slice(0, 2000); });
-  wizKeepFix(WIZ_GONE_T, keep, l);
+  if (keep) wizKeepFix(WIZ_GONE_T, keep, l);   // ✕ v7.17 — onto THAT kept answer only (with no keep, wizKeepFix would pick the newest one)
   scheduleSave();
 }
 // 🖥 v7.03 — Eric: "on the phone the edit buttons on the summary works great but on the pc its hard to follow across and
@@ -19701,9 +19707,21 @@ function renderAskRecent() {
     </div>` : '');
   scheduleDbxSearch(q); // 📁 matching Dropbox filenames ride the same search box
 }
+// ✕ v7.17 — Eric: "No longer relevant. Button doesn't light up or do anything." An answer opened again from the running log's 🧙
+// rows came up WITHOUT the app knowing which answer it was (_lastAnswer stayed empty after a reload, or stayed the LAST one asked),
+// so the line plates had no line to mark: ✕ quietly did nothing, and a fix could land on another answer. It now opens the KEPT copy
+// of that same answer when there is one (the same words — exact, the Summary page's own door), and knows the answer either way.
 function reopenAnswer(i) {
   const r = recentAnswers()[i];
-  if (r) showWizFull(r.q, r.a);
+  if (!r) return;
+  const kept = wizLog().find(x => x.q === r.q && x.a === r.a);
+  if (kept) { wizReopen(kept.at); return; }
+  _lastAnswer = { q: r.q, text: r.a, srcIds: [], at: Date.now() };
+  showWizFull(r.q, r.a);
+}
+// whatever answer is on the screen, the app knows it — so ✎ and ✕ always have their lines (✕ v7.17)
+function wizOnScreen(q, md, srcIds) {
+  if (!_lastAnswer || (_lastAnswer.text !== md && _lastAnswer.md !== md)) _lastAnswer = { q: String(q || ''), text: md, srcIds: srcIds || [], at: Date.now() };
 }
 // 🧙 v5.08 — the full-screen answer: nothing else on screen, ‹ Back at the bottom
 // 📎 v6.59 — the Dropbox paths the Wizard's file search turned up, in small letters under the
@@ -19719,6 +19737,7 @@ async function wizCopyPath(p) {
   catch (e) { prompt('Copy this path:', p); }
 }
 function showWizFull(q, md, srcIds, brain, files) {
+  wizOnScreen(q, md, srcIds);   // ✕ v7.17
   const srcs = (srcIds || []).map(id => entries.find(e => e.id === id)).filter(Boolean);
   const phSrcs = srcs.filter(e => e.photoPath || (e.photoPaths && e.photoPaths.length));
   $('wizFullBody').innerHTML = `<div class="wf-q">🧙 ${esc(q)}</div>` + wizLinesHtml(md) +   // ✎ v6.83 — one locked line at a time
@@ -19743,6 +19762,7 @@ let _lastAns = null;
 function showInstantAnswer(q, md, srcIds) {
   // answer lands right in the Wizard card; full screen is one tap away
   _lastAns = { q, md };
+  wizOnScreen(q, md, srcIds);   // ✕ v7.17
   $('aiQ').textContent = q;
   // 🧾 the receipts row: photos behind the answer + the correction pencil
   const srcs = (srcIds || []).map(id => entries.find(e => e.id === id)).filter(Boolean);
@@ -21148,7 +21168,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.16';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.17';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
