@@ -77,13 +77,15 @@ const { chromium } = require('playwright');
 
   console.log('— 🎒 v6.73 the pocket list —');
 
-  ok('the list sits inside the grinder just above ① PICK THE JOB (v6.75, Eric\'s spot): one line, a + button, the cap between − and +, ⤵ Flush, empty words', await page.evaluate(() => {
+  // 🎒 v7.16 — Eric: "The pocket list needs to be separated from the grinder 5 steps. It's in the same bigger window." Its own card now,
+  // right above the grinder's card (still just above ①, his v6.75 spot) — no longer inside the grinder's window.
+  ok('the list is its own card, right above the grinder card and ① PICK THE JOB (v6.75 spot, v7.16 own window): one line, a + button, the cap between − and +, ⤵ Flush, empty words', await page.evaluate(() => {
     prefs.pocketMax = 8; renderPocket();
     const card = $('pocketCard');
     const k = [...document.querySelector('.wrap').children].map(e => e.id).filter(Boolean);
     const step1 = document.querySelector('#qnCard .g-step[data-step="1"]');
     return !!card && !!$('pocketIn') && !!document.querySelector('.pk-add') && $('pocketList').textContent === '' && /think of it, type it, tap \+/.test($('pocketIn').placeholder) &&
-      k.indexOf('qnCard') === k.indexOf('scRow') + 1 && $('qnCard').contains(card) && !!(card.compareDocumentPosition(step1) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+      k.indexOf('pocketCard') === k.indexOf('scRow') + 1 && k.indexOf('qnCard') === k.indexOf('pocketCard') + 1 && !$('qnCard').contains(card) && !!(card.compareDocumentPosition(step1) & Node.DOCUMENT_POSITION_FOLLOWING) &&
       $('pocketCount').textContent === '0/8' && !!document.querySelector('.pk-flush') && document.querySelectorAll('.pk-cap .pk-tiny').length === 2;
   }));
 

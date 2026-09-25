@@ -140,11 +140,12 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   console.log('— 🎒 v6.77 the pocket says POCKET LIST, in its own frame above ① —');
 
-  ok('the pocket is titled POCKET LIST, framed as its own box, inside the grinder card with a gap before ① Pick the job', await page.evaluate(() => {
+  // 🎒 v7.16 — its own card now, OUTSIDE the grinder's window (Eric: "It's in the same bigger window"), still right above it
+  ok('the pocket is titled POCKET LIST, framed as its own card, outside the grinder card with a gap before ① Pick the job', await page.evaluate(() => {
     const pk = $('pocketCard'), t = pk && pk.querySelector('.pk-title');
     const step1 = document.querySelector('#qnCard .g-step[data-step="1"]');
     const cs = pk && getComputedStyle(pk);
-    return !!t && /POCKET LIST/.test(t.textContent) && !!pk.closest('#qnCard') && !!step1 && !!(pk.compareDocumentPosition(step1) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+    return !!t && /POCKET LIST/.test(t.textContent) && !pk.closest('#qnCard') && !!step1 && !!(pk.compareDocumentPosition(step1) & Node.DOCUMENT_POSITION_FOLLOWING) &&
       parseFloat(cs.borderTopWidth) >= 1.5 && parseFloat(cs.borderLeftWidth) >= 1.5 && parseFloat(cs.borderTopLeftRadius) >= 8 &&
       step1.getBoundingClientRect().top - pk.getBoundingClientRect().bottom >= 8;
   }));

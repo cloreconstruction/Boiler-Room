@@ -957,6 +957,20 @@
   .wl-t { flex: 1 1 auto; min-width: 0; opacity: .82; }
   .wl-t p, .wl-t ul, .wl-t ol { margin: 0; }
   .wl-x { flex: 0 0 36px; min-height: 32px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer; }
+  /* ✕ v7.16 — "No longer relevant" / "Delete": the pocket leftovers' icon-over-word plate. The phone shows ✕ over "Delete",
+     a PC "✕ No longer relevant" on one line. A line taken off is struck through and dimmed AND says so in words under it. */
+  .wl-gone { flex: 0 0 auto; min-width: 48px; min-height: 36px; padding: 2px 6px; border: 1.5px dashed var(--border); border-radius: 8px; background: none; color: var(--ink-2); font: inherit; cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; }
+  .wl-gone span { font-size: 14px; line-height: 1.1; }
+  .wl-gone b { font-size: 10px; font-weight: 800; letter-spacing: .2px; line-height: 1.15; white-space: nowrap; }
+  .wl-gone .wl-g-long { display: none; }
+  .wl-gone.is-on { border-style: solid; border-width: 2px; border-color: var(--accent); color: var(--accent); }
+  .wl-line.is-gone .wl-t { text-decoration: line-through; opacity: .45; }
+  .wl-fix.wl-fix-gone { font-weight: 700; }
+  @media (min-width: 701px) {
+    .wl-gone { flex-direction: row; gap: 5px; min-height: 36px; padding: 2px 10px; }
+    .wl-gone b { font-size: 12px; }
+    .wl-gone .wl-g-short { display: none; } .wl-gone .wl-g-long { display: inline; }
+  }
   .wl-fix { margin: 2px 0 6px 12px; padding: 4px 8px; border-left: 3px solid var(--accent); font-size: 13.5px; }
   @media (min-width: 701px) {   /* 🖥 v7.03 — on the PC: the pencil leads the line, the row under the mouse is one lit band, a click anywhere on it opens the fix */
     .wl-list { max-width: 880px; }
@@ -2879,7 +2893,10 @@
   /* 🎒 v6.77 — Eric: "make the pocket say pocket list and make it seperate from the pick the job 1."
      Its own framed box with its name on it, a clear gap before ①; still inside the grinder card so the
      grinder stays first after the plates (v6.12, _test612). */
-  .pk-card { padding: 8px 10px 10px; margin: 0 0 14px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface-1); }
+  /* 🎒 v7.16 — Eric: "The pocket list needs to be separated from the grinder 5 steps. It's in the same bigger window."
+     Its own .card right above the grinder's card, the page's own gap between them (16px, as under the grinder). */
+  .pk-card { padding: 10px 12px 12px; margin: 0 0 16px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface-1); }
+  body.crew-mode #pocketCard { order: 3; }   /* a crew phone's page is flex-ordered: it stays right above the grinder there too */
   .pk-card.pk-flash { outline: 3px solid var(--accent); outline-offset: 3px; }   /* 🎒 v7.07 — "here it is", from the log's 🎒 plate */
   .pk-top { display: flex; align-items: center; gap: 8px; }
   .pk-title { font-weight: 800; font-size: 13px; letter-spacing: .7px; }
@@ -3081,6 +3098,28 @@
        and 🔥 needs-you / 📬 texts / 📌 nudges moved to the foot of the page. 📚 BOOKS UPDATED
        stays up here — it is money, not texts, and it only shows the morning after a QB run. -->
 
+  <!-- 🎒 v6.75 — THE POCKET LIST, where Eric wants it: "put it just above the 1 pick the job
+       window" (v6.73 had it under the grinder; v6.12's one-screen rule got a little more room).
+       "make the pocket with tiny + and - so i can make it hold more or less things and any
+       overflow goes to the grinder so it'll come up in summaries. and the flush button so it
+       clears and sends all to the grinder." Today and tomorrow, ✓ Done and ➡ Tomorrow, the cap
+       between − and +, ⤵ Flush at the right. See pocketAdd / pocketOverflow / pocketFlush.
+       🎒 v7.16 — Eric: "The pocket list needs to be separated from the grinder 5 steps. It's in the
+       same bigger window." Its OWN card now, right above the grinder's card (still just above ①,
+       where he put it) — no longer inside the grinder's window. -->
+  <div class="card pk-card" id="pocketCard">
+    <div class="pk-top">
+      <span class="pk-title">🎒 POCKET LIST</span>
+      <span class="pk-cap"><button type="button" class="pk-tiny" onclick="pocketCapSet(-1)" aria-label="hold one less" title="hold one less">−</button><b id="pocketCount">0/8</b><button type="button" class="pk-tiny" onclick="pocketCapSet(1)" aria-label="hold one more" title="hold one more">+</button></span>
+      <button type="button" class="pk-tiny pk-flush" onclick="pocketFlush()" aria-label="flush: clear the list, everything goes to the grinder's pile" title="clear the list — everything goes to the grinder's pile">⤵ Flush</button>
+    </div>
+    <div class="pk-in">
+      <input type="text" id="pocketIn" placeholder="think of it, type it, tap + · today and tomorrow" title="What is not done by tomorrow goes to the grinder's pile on its own" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();pocketAddFromBox();}">
+      <button type="button" class="pk-add" onclick="pocketAddFromBox()" aria-label="add it to the pocket list">+</button>
+    </div>
+    <div id="pocketList"></div>
+  </div>
+
   <!-- v4.55 — ONE box on top: write a note or ask the Wizard, two buttons decide where it goes -->
   <div class="card ask-card qn-card" id="qnCard">
     <!-- v4.83 — Eric's flow: WRITE first, the two doors under it, the grinder's filing
@@ -3093,24 +3132,6 @@
          important first, might flow better." The job is the thing every note is filed under,
          and picking it first means the wheel is never the thing standing between him and the
          lever after he has already said his piece. -->
-    <!-- 🎒 v6.75 — THE POCKET LIST, where Eric wants it: "put it just above the 1 pick the job
-         window" (v6.73 had it under the grinder; v6.12's one-screen rule got a little more room).
-         "make the pocket with tiny + and - so i can make it hold more or less things and any
-         overflow goes to the grinder so it'll come up in summaries. and the flush button so it
-         clears and sends all to the grinder." Today and tomorrow, ✓ Done and ➡ Tomorrow, the cap
-         between − and +, ⤵ Flush at the right. See pocketAdd / pocketOverflow / pocketFlush. -->
-    <div class="pk-card" id="pocketCard">
-      <div class="pk-top">
-        <span class="pk-title">🎒 POCKET LIST</span>
-        <span class="pk-cap"><button type="button" class="pk-tiny" onclick="pocketCapSet(-1)" aria-label="hold one less" title="hold one less">−</button><b id="pocketCount">0/8</b><button type="button" class="pk-tiny" onclick="pocketCapSet(1)" aria-label="hold one more" title="hold one more">+</button></span>
-        <button type="button" class="pk-tiny pk-flush" onclick="pocketFlush()" aria-label="flush: clear the list, everything goes to the grinder's pile" title="clear the list — everything goes to the grinder's pile">⤵ Flush</button>
-      </div>
-      <div class="pk-in">
-        <input type="text" id="pocketIn" placeholder="think of it, type it, tap + · today and tomorrow" title="What is not done by tomorrow goes to the grinder's pile on its own" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();pocketAddFromBox();}">
-        <button type="button" class="pk-add" onclick="pocketAddFromBox()" aria-label="add it to the pocket list">+</button>
-      </div>
-      <div id="pocketList"></div>
-    </div>
     <div class="g-step" data-step="1">
     <div class="g-step-label"><span class="g-step-num">1</span> PICK THE JOB<span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span><span class="g-step-blank">○ BLANK — files as unfiled</span></div>
     <!-- 👆 v6.42 — Eric: "picking a job is always a spinning wheel." He is on one job all day
@@ -4172,7 +4193,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.15 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.16 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6566,7 +6587,7 @@ function catLearn(job, cat, vendor) {
 function renderCatRow() { ['qnCatRow', 'nCatRow'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; }); }
 let qnJobPick = ''; // v4.66 — the quick-note job pick lives for ONE note, then the wheel resets
 function knownTags() {
-  if (!prefs.tags) prefs.tags = ['Shevaun', 'Logan', 'Home Depot']; // starter set — Eric's own examples; grows as he types names
+  if (!prefs.tags) prefs.tags = CREW_NAME ? [] : ['Shevaun', 'Logan', 'Home Depot']; // starter set — Eric's own examples; grows as he types names (🏷 v7.16 — never on a crew phone: those are Eric's people)
   // 🧹 v5.27 — ONE-TIME scrub: the broken-Shortcut era filled the chips with dates, times
   // and phone numbers. Sweep them out once; the junk guard keeps new ones from getting in.
   if (!prefs.tagScrub1) {
@@ -6590,6 +6611,8 @@ function knownTags() {
     prefs.tagScrub2 = true;
     if (prefs.tags.length !== before2 || swept) { scheduleSave(); setTimeout(() => toast(`🧹 Tag audit: ${swept} number/email/filename tags swept off old entries ✓`), 1400); }
   }
+  // 🏷 v7.16 — a crew phone: his OWN tags, then the tags on the notes Eric actually sent him, then 🔒 Personal (the lock) — never Eric's list
+  if (CREW_NAME) { const own = prefs.tags.filter(Boolean); return [...own, ...crewPushedTags().filter(t => !own.includes(t)), ...(own.includes('Personal') ? [] : ['Personal'])]; }
   return prefs.tags.filter(Boolean);
 }
 function tagToggle(n) { qnSel.has(n) ? qnSel.delete(n) : qnSel.add(n); renderTagChips(); renderVisChips(); }
@@ -7159,7 +7182,24 @@ function tessWorker() {
 async function ocrRead(f) {
   const w = await tessWorker();
   const { data } = await w.recognize(f);
-  return (data.text || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  return ocrClean(data);
+}
+// 📄 v7.16 — Eric: "Phil did a photo entry. And the wizard tried to read it like a receipt and comes up with gibberish. Let's fix
+// that so that if it tries to read it and it's not a receipt, it gets just blank." With no Claude key (Phil's phone) a picture is
+// read by Tesseract right here in the browser, and a jobsite shot came back "NS RY — NR 19 N\ | — J | i NR Na" — drafted into
+// the note as its words, kept on the entry for search, and made the photo's FILE NAME. Tesseract says how sure it is of every
+// word: run on his real pictures (2026-09-25), jobsite and progress shots were 25–31% sure overall with NOT ONE real word it was
+// 80%+ sure of; a bank letter, invoices and receipts had 38 to 123. A reading is kept only when at least OCR_MIN_SURE real words
+// are ones it was sure of — and then only the words it was sure of, line by line (the scrambled lines a good receipt carries fall
+// away too). Anything else reads as nothing: no draft, nothing on the entry, the box stays blank for him to say what it is.
+const OCR_SURE = 80, OCR_MIN_SURE = 8;
+function ocrClean(data) {
+  const words = (data && Array.isArray(data.words)) ? data.words : [];
+  const sure = w => w && +w.confidence >= OCR_SURE && String(w.text || '').trim();
+  if (words.filter(w => sure(w) && /[A-Za-z]{3,}|\d{2,}/.test(String(w.text))).length < OCR_MIN_SURE) return '';
+  const lines = (Array.isArray(data.lines) ? data.lines : []).map(l => (l.words || []).filter(sure).map(w => String(w.text).trim()).join(' ')).filter(Boolean);
+  const text = lines.length ? lines.join('\n') : words.filter(sure).map(w => String(w.text).trim()).join(' ');
+  return text.replace(/[ \t]+/g, ' ').trim();
 }
 // 📝 v4.98 — the machine writes the first draft: once a staged photo is read (📄✓ OCR or
 // 🔮✓ Wizard), a suggested note drops into the empty box. Eric taps ⚙ to approve, edits it,
@@ -11103,6 +11143,26 @@ function renderCrewHours() {
 }
 
 // --- Eric's side: stand up one folder per crew member with the shared config in it ---
+// 🏷 v7.16 — the tags a crew phone is handed: ONLY the tags on the notes Eric sent that man (never 🔒 Personal, never his whole
+// list — "There's no reason he should have any personal tags from me"). crewCfgBody is the one shape of crew.json.
+function crewTagsFor(name) {
+  const out = [];
+  entries.filter(e => e.vis && !e.sample && !isLocked(e) && visFor(e, name)).slice(0, CREW_NOTES_MAX)
+    .forEach(e => (e.tags || []).forEach(t => { if (t && t !== 'Personal' && !out.includes(t)) out.push(t); }));
+  return out;
+}
+function crewCfgBody(name) {
+  return JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: { rates: wageRatesFor(name), catGrades: wageCfg().catGrades || {} }, tags: crewTagsFor(name), mates: crew.filter(c => c !== name), office: isOffice(name) || undefined, pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1);
+}
+// 🏷 v7.16 — ONCE, quietly, on the next sweep: every crew.json is written again, so the old copy carrying Eric's whole tag list
+// stops sitting in their Dropbox folders (Phil's was written 2026-08-13). Its job list comes up to date with it — the same thing
+// ⚙ Setup → Crew → set up crew folders does, without the toasts. The mark is set only when every folder took it.
+async function crewCfgRefreshOnce() {
+  if (CREW_NAME || prefs.crewCfg716 || !dbx.refreshToken || !crew.length) return;
+  let ok = 0;
+  for (const name of crew) { try { await dbxUpload(`${CREW_DIR}/${cleanName(name)}/crew.json`, crewCfgBody(name)); ok++; } catch (e) { /* offline — the next sweep tries again */ } }
+  if (ok === crew.length) { prefs.crewCfg716 = true; scheduleSave(); }
+}
 async function publishCrewFolders() {
   if (CREW_NAME) return; // owner's tool only — belt and suspenders on top of the hidden UI
   if (!dbx.refreshToken) { toast('Connect Dropbox first', false); return; }
@@ -11115,7 +11175,7 @@ async function publishCrewFolders() {
     // 👥 v5.49 — his CREW-MATES ride along (everyone but him). Before this a crew phone had
     // no idea who else was on the job, so the 🔔 route chips were hardcoded to "Phil" — which
     // meant Phil's own phone offered to get Phil's attention. Names come from Eric's roster now.
-    try { await dbxUpload(base + '/crew.json', JSON.stringify({ name, jobs, cats: HOUR_CATS, wage: { rates: wageRatesFor(name), catGrades: wageCfg().catGrades || {} }, tags: knownTags(), mates: crew.filter(c => c !== name), office: isOffice(name) || undefined, pushSecret: prefs.pushSecret || '', updated: new Date().toISOString() }, null, 1)); } catch (e) {}
+    try { await dbxUpload(base + '/crew.json', crewCfgBody(name)); } catch (e) {}
   }
   // 🏠 v5.46 — 📤 is the button Eric already reaches for when a crew phone is missing
   // something, so it pushes the client-page list out too. One tap fixes an empty portal.
@@ -11167,7 +11227,7 @@ async function crewJoin(msgId) {
       lsSet('daylog-crew-name', cfg.name);
       lsSet('daylog-crew-jobs', JSON.stringify(cfg.jobs || []));
       if (cfg.wage) lsSet('daylog-crew-wage', JSON.stringify(cfg.wage));
-      if (Array.isArray(cfg.tags)) lsSet('daylog-crew-tags', JSON.stringify(cfg.tags));
+      // 🏷 v7.16 — Eric's tag list is no longer taken in (crewPushedTags); a phone joining fresh starts clean
       if (Array.isArray(cfg.mates)) lsSet('daylog-crew-mates', JSON.stringify(cfg.mates)); // 👥 v5.49
       lsSet('daylog-crew-office', cfg.office ? '1' : ''); // 🏢 v5.58 — office or field
       if (cfg.pushSecret) lsSet('daylog-push-secret', cfg.pushSecret);
@@ -11183,6 +11243,30 @@ function crewLeave() {
   ['daylog-crew-root', 'daylog-crew-name', 'daylog-crew-jobs'].forEach(k => localStorage.removeItem(k));
   location.reload();
 }
+// 🏷 v7.16 — Eric: "he had all my tags on step 4. Tag it. I think you should have his own tags, right? Or at least only tags that I
+// have tagged and then pushed. All crew are just Phil. There's no reason he should have any personal tags from me." crew.json
+// carried Eric's WHOLE tag list (his family, his cooking, his bookkeeper…) and every crew phone merged it into its own, on joining
+// and on every refresh. Now a crew phone's tags are its OWN (what he typed or used), the tags on the notes Eric actually sent him,
+// and 🔒 Personal — the lock (knownTags). Eric's phone writes only those pushed tags into crew.json (crewTagsFor), and a crew
+// phone sweeps the merged-in list out ONCE: every tag Eric's list handed over goes, unless he used it on one of his own notes.
+function crewPushedTags() {
+  const out = [];
+  (Array.isArray(crewShared) ? crewShared : []).forEach(n => (n && n.tags || []).forEach(t => { if (t && t !== 'Personal' && !out.includes(t)) out.push(t); }));
+  return out;
+}
+function crewTagScrub(fromCfg) {
+  if (!CREW_NAME || prefs.crewTagScrub716) return 0;
+  let handed = [];
+  try { handed = JSON.parse(lsGet('daylog-crew-tags') || '[]'); } catch (e) {}
+  handed = [...new Set([...(Array.isArray(handed) ? handed : []), ...(fromCfg || [])])].filter(Boolean);
+  const used = new Set(); entries.forEach(e => (e.tags || []).forEach(t => used.add(t)));
+  const before = (prefs.tags || []).length;
+  prefs.tags = (prefs.tags || []).filter(t => t && (!handed.includes(t) || used.has(t)));
+  prefs.crewTagScrub716 = true; lsDel('daylog-crew-tags'); scheduleSave();
+  const gone = before - prefs.tags.length;
+  if (typeof renderTagChips === 'function') renderTagChips();
+  return gone;
+}
 // keep a crew phone's job + category lists following Eric's (he republishes, they pick it up)
 async function refreshCrewCfg() {
   if (!CREW_NAME || !dbx.refreshToken) return;
@@ -11197,10 +11281,8 @@ async function refreshCrewCfg() {
       if (had !== JSON.stringify(jobs)) { renderJobSelects(); renderAll(); }
     }
     if (cfg.wage) { lsSet('daylog-crew-wage', JSON.stringify(cfg.wage)); renderWorkCatSel(); renderWageTick(); }
-    if (Array.isArray(cfg.tags) && cfg.tags.length) { // Eric's tags arrive; the crew's own stay too
-      prefs.tags = [...new Set([...cfg.tags, ...knownTags()])];
-      renderTagChips();
-    }
+    // 🏷 v7.16 — Eric's tags no longer arrive (see crewPushedTags): the list a crew.json still carries is only swept OUT, once
+    crewTagScrub(Array.isArray(cfg.tags) ? cfg.tags : []);
     if (cfg.pushSecret) lsSet('daylog-push-secret', cfg.pushSecret);
   } catch (e) { /* quiet */ }
 }
@@ -11421,8 +11503,24 @@ const _crewTrips = {}; // 🚚 v5.51 — truck name → open trip on a crew phon
 const _crewPhCache = {};
 // 🏠 v5.45 — last client-page list written to each crew folder, so a quiet sweep stays quiet
 const _portalCache = {};
+// 📨 v7.16 — how many of Eric's notes ride to each man (his newest), and how many NEW photo copies one sweep makes for him
+const CREW_NOTES_MAX = 300, CREW_PH_COPY_MAX = 25;
+// 📷 v7.16 — what is already in a man's photos folder, listed once a session (lower-cased names). A refused listing is not an
+// answer: nothing is cached and every photo falls back to a copy attempt (a conflict = already there), as before v7.16.
+const _crewPhHave = {};
+async function crewPhotosHave(name) {
+  if (_crewPhHave[name]) return _crewPhHave[name];
+  try {
+    const r = await dbxList({ path: `${CREW_DIR}/${cleanName(name)}/photos` });
+    const set = new Set();
+    if (r && Array.isArray(r.entries)) r.entries.forEach(x => { if (x && x['.tag'] === 'file') set.add(String(x.name || '').toLowerCase()); });
+    else if (!/not_found/.test(String((r && r.error_summary) || ''))) return null;   // refused — look again next sweep
+    return (_crewPhHave[name] = set);
+  } catch (e) { return null; }
+}
 async function publishSharedNotes() {
   if (!dbx.refreshToken || CREW_NAME || !crew.length) return;
+  await crewCfgRefreshOnce();   // 🏷 v7.16 — Eric's old tag list out of every crew folder, once
   // 🏠 v5.46 — BUG FROM v5.45: the client list only went out if Eric happened to have opened
   // ⚙ Setup → Client portal that session, because that's the only thing that filled _portalIdx.
   // If he hadn't, crew phones got an empty portal page. The sweep loads it itself now.
@@ -11431,44 +11529,59 @@ async function publishSharedNotes() {
     catch (e) { /* no portal built yet — the crew list just stays empty, quietly */ }
   }
   // 🔒 personal entries can NEVER travel — even a stray vis flag doesn't override the wall
-  const shared = entries.filter(e => e.vis && !e.sample && !isLocked(e)).slice(0, 120);   // 🔒 v6.53 — flag, tag OR the Personal job
+  // 📨 v7.16 — Eric: "I don't think everything that I send to Phil looks like it's going into his drop box." In his real data
+  // (2026-09-25) everything since 08-14 was there, but the list was the newest 120 unlocked notes FOR THE WHOLE CREW, so the
+  // older ones fell off Phil's phone as new ones came in (16 of the last 45 days already had). Each man now gets HIS newest
+  // CREW_NOTES_MAX, counted after the "is it for him" filter.
+  const shared = entries.filter(e => e.vis && !e.sample && !isLocked(e));   // 🔒 v6.53 — flag, tag OR the Personal job
   for (const name of crew) {
-    const mineFor = shared.filter(e => visFor(e, name)); // v5.26 — arrays of names count too
+    const allFor = shared.filter(e => visFor(e, name)); // v5.26 — arrays of names count too
+    const mineFor = allFor.slice(0, CREW_NOTES_MAX);
     // 📷 v5.43 — the PICTURE travels now, not just the words. Eric: "he needs to be able to
     // open the picture." A crew phone can only see inside its own folder, so the photo gets
     // COPIED into Crew/<name>/photos/ and he opens his own copy. No share links, ever —
     // a link would be a door around the wall, and the wall is the whole point.
+    // 📷 v7.16 — only the newest 40 notes ever carried their picture: on 2026-09-25, 45 of the 68 notes with a photo reached
+    // Phil WITHOUT it — and 44 of those photos were already sitting in his photos folder from earlier sweeps. The folder is
+    // listed once a session (crewPhotosHave), every note points at a copy that is there, and NEW copies are capped per sweep
+    // (CREW_PH_COPY_MAX — the next sweep carries on). A refused copy is no longer counted as done: dbxRpc hands Dropbox's error
+    // object back instead of throwing, so the old catch never saw one — only a conflict (the copy is already there) is.
+    const have = await crewPhotosHave(name);
+    let copies = 0;
     const list = [];
-    for (const e of mineFor.filter(x => !x.ask)) {
+    // 📢 v7.16 — a note Eric sent with ⚠ (a question) rode ONLY in the ask card, and vanished from the man's phone the moment it
+    // was answered. Answered (or seen — crewAskFlush) it joins his FROM ERIC log like any note, marked, so nothing Eric sent is lost.
+    for (const e of mineFor.filter(x => !x.ask || x.askDone)) {
       const row = {
         id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, text: e.details, job: e.job,
         tags: (e.tags && e.tags.length) ? e.tags : undefined, toAll: e.vis === 'crew' || undefined,
         heads: e.heads || undefined, // ⚠ v6.24 — the landmine flag travels with an unlocked note
         // 📨 v5.51 — crew-wide note that is ALSO aimed at this man: his card marks it direct
         direct: (Array.isArray(e.sendTo) && e.sendTo.includes(name)) || undefined,
+        ask: e.ask ? (e.askFlush ? 'seen' : 'answered') : undefined,
         ...brdShareBits(e)   // 📋 v6.79 — the cubes, the sub-lines, and who finished it
       };
       const src = e.photoPath || (e.photoPaths && e.photoPaths[0]);
-      if (src && list.length < 40) {
+      if (src) {
         const ck = name + '|' + src;
-        if (_crewPhCache[ck] !== undefined) { if (_crewPhCache[ck]) row.ph = _crewPhCache[ck]; }
-        else {
-          const file = String(src).split('/').pop().replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80);
-          const dest = `${CREW_DIR}/${cleanName(name)}/photos/${file}`;
+        const file = String(src).split('/').pop().replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80);
+        const dest = `${CREW_DIR}/${cleanName(name)}/photos/${file}`;
+        if (_crewPhCache[ck] === undefined && have && have.has(file.toLowerCase())) _crewPhCache[ck] = dest;   // copied on an earlier sweep
+        if (_crewPhCache[ck] === undefined && copies < CREW_PH_COPY_MAX) {
+          copies++;
           try {
-            await dbxRpc('files/copy_v2', { from_path: src, to_path: dest, autorename: false });
-            _crewPhCache[ck] = dest;
-          } catch (err) {
-            // already copied on an earlier sweep is the common case — treat it as done
-            _crewPhCache[ck] = /conflict/i.test(String(err && err.message)) ? dest : '';
-          }
-          if (_crewPhCache[ck]) row.ph = _crewPhCache[ck];
+            const r = await dbxRpc('files/copy_v2', { from_path: src, to_path: dest, autorename: false });
+            const why = String((r && r.error_summary) || '');
+            if (!why || /conflict/i.test(why)) { _crewPhCache[ck] = dest; if (have) have.add(file.toLowerCase()); }   // copied, or already there
+            else if (!/too_many|rate/i.test(why)) _crewPhCache[ck] = '';   // tried and couldn't; "slow down" = the next sweep tries again
+          } catch (err) { /* offline — the next sweep tries again */ }
         }
+        if (_crewPhCache[ck]) row.ph = _crewPhCache[ck];
       }
       list.push(row);
     }
     // ❓ open asks travel separately and LOUD; an answered ask (askDone) drops off every phone
-    const asks = mineFor.filter(e => e.ask && !e.askDone).slice(0, 10).map(e => ({
+    const asks = allFor.filter(e => e.ask && !e.askDone).slice(0, 10).map(e => ({
       id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, q: e.details, job: e.job,
       toAll: e.vis === 'crew' || undefined
     }));
@@ -11824,7 +11937,7 @@ async function checkSharedNotes() {
     const t = await dbxDownload(DBX_ROOT + '/shared.json');
     if (!t) return;
     const j = JSON.parse(t);
-    crewShared = (j.notes || []).slice(0, 100);
+    crewShared = (j.notes || []).slice(0, CREW_NOTES_MAX);   // 📨 v7.16 — everything Eric sent (was the newest 100 — his side now sends up to 300)
     // 📇 v6.17 — Eric's job cards land on this phone: address, numbers, door codes, per job.
     // Whatever he took off the sweep simply isn't in the file, so this can only ever hold
     // what he meant to send.
@@ -11949,7 +12062,7 @@ function renderAskStrip() {
   const asks = entries.filter(e => e.ask && !e.askSeen && !e.sample).slice(0, 4);
   box.innerHTML = asks.map(e => e.askDone
     ? `<div class="req-strip req-answered"><div class="req-txt">📢 ${esc((e.details || '').slice(0, 70))}</div>
-        <div class="req-stages"><span class="req-st on">✓ SENT</span><span class="req-arrow">→</span><span class="req-st on">★ ANSWERED — it's in your 📥 review pile</span></div>
+        <div class="req-stages"><span class="req-st on">✓ SENT</span><span class="req-arrow">→</span><span class="req-st on">${e.askFlush ? `✓ SEEN by ${esc(e.askFlush)} — no answer needed (⤵ flushed into their log)` : '★ ANSWERED — it\'s in your 📥 review pile'}</span></div>
         <button class="btn-ghost req-x" onclick="dismissAsk('${escq(String(e.id))}')">✕ Got it</button></div>`
     : `<div class="req-strip"><div class="req-txt">📢 ${esc((e.details || '').slice(0, 70))}</div>
         <div class="req-stages"><span class="req-st on">✓ SENT — up on their phones</span><span class="req-arrow">→</span><span class="req-st">· ANSWERED</span></div></div>`).join('');
@@ -11979,7 +12092,22 @@ function renderCrewAsks() {
       <div class="crew-ask-q">${esc(a.q || '')}${a.job ? `<span class="hint" style="margin: 0;"> — ${esc(a.job)}</span>` : ''}</div>
       <textarea id="askAns-${esc(String(a.id))}" rows="2" class="grow" placeholder="answer here — 36 and a half, swings left…"></textarea>
       <button class="btn-primary" style="margin-top: 6px;" onclick="answerAsk('${escq(String(a.id))}', '${escq(a.job || '')}')">↩ Send the answer</button>
+      <button type="button" class="btn-ghost crew-ask-flush" style="margin-top: 6px; width: 100%;" onclick="crewAskFlush('${escq(String(a.id))}', '${escq(a.job || '')}')">⤵ Flush it — no answer needed · it goes in your log</button>
     </div>`).join('');
+}
+// ⤵ v7.16 — Eric: "Under the 'Eric needs an answer,' there can be a 'flush it' or 'log it' button." A note he sent with ⚠ that
+// needs no answer — a heads-up about moving a container (2026-09-25, sent with ⚠ — not a
+// question) — sat on every crew phone with an answer box and no way off but typing an answer. ⤵ Flush it: off this card, into
+// this phone's running log, and Eric's phone hears it (askRef + askFlush, like an answer): his ask closes as "✓ SEEN by Phil —
+// no answer needed" with NO card in his sort pile, it leaves every crew phone, and it lands in the FROM ERIC log, marked.
+function crewAskFlush(id, job) {
+  if (crewPreview) { toast('👁 Preview — on a crew phone this takes it off the card, into their log, and tells you they saw it'); return; }
+  const a = crewAsks.find(x => String(x.id) === String(id));
+  const q = String((a && a.q) || '').trim();
+  addEntry('Note', `⤵ Seen — no answer needed: ${q}`.slice(0, 600), jobs.includes(job) ? job : '—', { askRef: +id || id, askFlush: true });
+  asksAnswered.add(String(id)); lsSet('daylog-asks-answered', JSON.stringify([...asksAnswered].slice(-50)));
+  renderCrewAsks();
+  toast('⤵ Off the card — it is in your log, and Eric sees you got it ✓');
 }
 function answerAsk(id, job) {
   if (crewPreview) { toast('👁 Preview — on a crew phone this sends the answer straight to you'); return; }
@@ -12003,7 +12131,7 @@ function renderCrewShared() {
   if (!card) return;
   // in Eric's 👁 preview, derive the list from his own entries so he sees exactly what would land
   const all = crewPreview
-    ? entries.filter(e => e.vis && !e.sample).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ id: e.id, ts: e.ts, text: e.details, job: e.job, tags: e.tags, toAll: e.vis === 'crew', ph: e.photoPath || (e.photoPaths || [])[0], ...brdShareBits(e) }))
+    ? entries.filter(e => e.vis && !e.sample && (!e.ask || e.askDone)).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ id: e.id, ts: e.ts, text: e.details, job: e.job, tags: e.tags, toAll: e.vis === 'crew', ph: e.photoPath || (e.photoPaths || [])[0], ask: e.ask ? (e.askFlush ? 'seen' : 'answered') : undefined, ...brdShareBits(e) }))
     : crewShared;
   card.style.display = (isCrew() && all.length) ? '' : 'none';
   if (!isCrew() || !all.length) return;
@@ -12047,7 +12175,7 @@ function renderCrewShared() {
     const d = new Date(n.ts);
     const id = escq(String(n.id == null ? '' : n.id));
     return `<div class="sum-row" style="cursor: default; font-size: 14.5px; display: block;">
-      <span>${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${n.board && n.board.p ? `<span class="bd-pri bd-pri--ro" aria-label="priority ${BRD_WORDS[n.board.p]}" title="priority ${BRD_WORDS[n.board.p]}">${brdCubes(n.board.p)}</span> ` : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${(n.tags || []).length ? ' · 🏷 ' + esc(n.tags.join(', ')) : ''}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
+      <span>${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${n.ask ? `<b style="letter-spacing:.5px;">📢 ${n.ask === 'seen' ? 'NO ANSWER NEEDED' : 'ANSWERED'} · </b>` : ''}${n.board && n.board.p ?`<span class="bd-pri bd-pri--ro" aria-label="priority ${BRD_WORDS[n.board.p]}" title="priority ${BRD_WORDS[n.board.p]}">${brdCubes(n.board.p)}</span> ` : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${(n.tags || []).length ? ' · 🏷 ' + esc(n.tags.join(', ')) : ''}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
       ${n.board && n.board.sub && n.board.sub.length ? n.board.sub.map(s => `<div class="bd-sub${s.done ? ' done' : ''}"><span class="bd-t">${s.done ? '✓' : '○'} ${esc(s.t || '')}</span></div>`).join('') : ''}
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${n.ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(n.ph)}')">📷 Open the picture</button>` : ''}
@@ -12094,7 +12222,7 @@ function cfPhotoPath(p, folder) {
   return cut > 0 ? folder + p.slice(cut) : '';
 }
 function crewFeedTake(name, folder, list) {
-  _crewFeed[name] = (Array.isArray(list) ? list : []).filter(e => e && !e.mine && !e.sample && !e.personal
+  _crewFeed[name] = (Array.isArray(list) ? list : []).filter(e => e && !e.mine && !e.sample && !e.personal && !e.askFlush   // ⤵ v7.16 — "seen" is not a message
     && (e.type === 'Note' || e.type === 'Done') && String(e.details || '').trim() && cfForMe(e))
     .slice(0, 120).map(e => ({ e, who: name, folder, key: `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}` }));
 }
@@ -12528,8 +12656,11 @@ async function checkCrewLogs() {
         // (The answer text still lands below as a review card for Eric to read.)
         if (e.type === 'Note' && e.askRef != null) {
           const src = entries.find(x => x.id === e.askRef && x.ask && !x.askDone);
-          if (src) { src.askDone = new Date().toISOString(); scheduleSave(); publishSharedNotes(); renderAskStrip(); }
+          if (src) { src.askDone = new Date().toISOString(); if (e.askFlush) src.askFlush = name; scheduleSave(); publishSharedNotes(); renderAskStrip(); }
         }
+        // ⤵ v7.16 — "seen, no answer needed" (crewAskFlush) closes the ask above and says so on his strip; it is not a message for
+        // his sort pile or his FROM THE CREW card (crewFeedTake leaves it out too)
+        if (e.askFlush) return;
         // 📋 v6.79 — a crew ✓ on a board line: done, by him; the line leaves the board and his phone shows it done
         if (e.type === 'Note' && e.boardRef != null) {
           const src = entries.find(x => String(x.id) === String(e.boardRef));
@@ -17879,7 +18010,11 @@ const ASK_STOP = new Set(('about all also and any are back because been before b
   'off one only other our out over please put remember remind said same say see should show some something take ' +
   'tell than that the their them then there these they thing things think this those time told too two use used ' +
   'very want was way well went were what whats when where wheres which who whos whom why will with would you your ' +
-  'yours yeah okay ok anything everything').split(/\s+/));
+  'yours yeah okay ok anything everything ' +
+  // 🧙 v7.16 — the words of ASKING, not of the thing asked about: "bring up a list of what I need to talk to Logan about this
+  // week" searched the whole log for bring / list / talk / week and pulled in July records that only shared those words
+  'bring list lists talk talked week weeks summary summaries summarize summarise update updates item items stuff open ' +
+  'today yesterday tomorrow last next recent latest happened happening').split(/\s+/));
 function askTerms(q) {
   const raw = String(q || '').toLowerCase().match(/[a-z0-9][a-z0-9'’.\-]*/g) || [];
   const out = [];
@@ -17915,7 +18050,10 @@ function askSweep(list, terms, skip, cap) {
 }
 function buildAskContext(question) {
   const range = askDateRange(question);
-  const live = entries.filter(e => !e.sample && !isLocked(e));   // 🔒 v6.41/v6.53 — the lock wins here too, and the Personal JOB counts
+  // 🧙 v7.16 — NEWEST BY DATE: the log is kept in the order things were added, and a note filed under an older day (a crew
+  // note logged later, a texts catch-up) sits at the top — on 2026-09-25 an Aug 8 note was inside "the newest 140"
+  const tsOf = e => { const t = +new Date(e.ts); return isNaN(t) ? 0 : t; };
+  const live = entries.filter(e => !e.sample && !isLocked(e)).map(e => [tsOf(e), e]).sort((a, b) => b[0] - a[0]).map(x => x[1]);   // 🔒 v6.41/v6.53 — the lock wins here too, and the Personal JOB counts
   const terms = askTerms(question);
   let pool, rangeLine = '', sweepLine = '';
   const seen = new Set();
@@ -17928,8 +18066,13 @@ function buildAskContext(question) {
     askSweep(hit, terms, null, 220).forEach(push);
     hit.slice(0, 220).forEach(push);
     live.slice(0, 30).forEach(push);
+    // 🧙 v7.16 — it said "all of them are included" even when the span held more than the pool could carry ("last week" on
+    // 2026-09-25: 425 in the span, 185 left out) — now it says how many made it, so the Wizard never claims the whole week
+    const inPool = pool.filter(e => { const d = localDay(e.ts); return d >= range[0] && d <= range[1]; }).length;
     rangeLine = `\nDATE RANGE PULLED FOR THIS QUESTION: ${range[0]} → ${range[1]} — ${hit.length} log entries exist in that span` +
-      (hit.length === 0 ? ' (NONE — the log has no records for those dates; say so plainly instead of guessing)' : ' (all of them are included in RECENT LOG below, no matter how old)') + '.';
+      (hit.length === 0 ? ' (NONE — the log has no records for those dates; say so plainly instead of guessing)'
+        : inPool >= hit.length ? ' (all of them are included in RECENT LOG below, no matter how old)'
+        : ` (only ${inPool} of them fit in RECENT LOG below — the word-matches first, then the newest; say plainly that some of the span was left out)`) + '.';
   } else {
     live.slice(0, 140).forEach(push);
     const older = askSweep(live, terms, seen, 120);
@@ -18034,9 +18177,10 @@ function buildAskContext(question) {
   const cut14 = Date.now() - 14 * 86400000;
   const pocketDoneCtx = live.filter(e => e.pocket === 'done' && +new Date(e.ts) >= cut14).slice(0, 40).map(e => ({ t: String(e.details || '').replace(/^✓ /, ''), day: localDay(e.ts) }));
   const pocketLeftCtx = live.filter(e => ['flushed', 'over', 'swept'].includes(e.pocket) && +new Date(e.ts) >= cut14 && !(e.board && e.board.done)).slice(0, 40).map(e => ({ t: brdWords(e.details), day: localDay(e.ts) }));
-  const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).filter(l => l.k !== 'p').slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
+  // 🧙 v7.16 — a pocket leftover already rides in POCKET NOT DONE: on the board list too, it came out twice ("8 items twice", 09-25)
+  const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).filter(l => l.k !== 'p' && !(l.src && ['flushed', 'over', 'swept'].includes(l.src.pocket))).slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
   const boardDoneCtx = live.filter(e => e.board && e.board.done && +new Date(e.board.done) >= Date.now() - 7 * 86400000).slice(0, 40).map(e => ({ job: e.job, t: brdWords(e.details), by: e.board.by || 'Eric', day: localDay(new Date(e.board.done)) }));
-  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
+  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nLINES ERIC TOOK OFF HIS LISTS (✕ v7.16 — he said each is no longer relevant: leave it, and anything that is plainly the same item, out of summaries, lists and to-dos from now on; talk about one only if he asks about it by name; newest first): ${JSON.stringify((prefs.wizGone || []).slice(0, 60).map(g => g.line))}\nRECENT LOG (newest first, then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
 }
 // 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
 // offers their photos, a follow-up within 15 minutes remembers the exchange, and
@@ -18064,12 +18208,17 @@ function wizCorrectStart() {
 function applyCorrection(corr, line, quiet) {   // quiet (v7.02) = one of several fixes saved together: the log gets ONE note for the lot, from wizPendSave
   let touched = 0;
   const tag = line ? `ERIC CORRECTED (re "${line}"): ${corr}` : 'ERIC CORRECTED: ' + corr;
-  if (_lastAnswer && (_lastAnswer.srcIds || []).length) {
-    _lastAnswer.srcIds.forEach(id => {
-      const e = entries.find(x => x.id === id);
-      if (e) { e.ai = (((e.ai ? e.ai + '\n' : '') + tag)).slice(0, 2000); touched++; }
-    });
-  }
+  // 🧙 v7.16 — a fix was written onto EVERY record the answer cited: 56 entries carried fixes that were not theirs (the Chafin
+  // "no longer relevant" sat on the container move and on Kimber's list, 09-25). It now lands only on the records the fixed line
+  // or the fix itself names by number — or on the answer's one record when it cited only one. The list the Wizard reads on
+  // every question (prefs.wizFixes, below) carries every fix either way.
+  const src = (_lastAnswer && _lastAnswer.srcIds) || [];
+  const named = [...new Set([...wizLineIds(line), ...wizLineIds(corr)])];
+  const onto = named.length ? named : src.length === 1 ? src : [];
+  onto.forEach(id => {
+    const e = entries.find(x => x.id === id);
+    if (e) { e.ai = (((e.ai ? e.ai + '\n' : '') + tag)).slice(0, 2000); touched++; }
+  });
   if (!quiet) addEntry('Note', `✎ Correction${line ? ` — re "${String(line).slice(0, 80)}"` : _lastAnswer ? ` — re "${_lastAnswer.q.slice(0, 80)}"` : ''}: ${corr}`, '—', { noSniff: true });   // 📌 v6.81 — a correction has no job of its own
   wizKeepFix(corr, _lastAnswer && _lastAnswer.keep, line);   // 🧙📜 v6.73 — and onto the kept answer it fixes
   // ✎ v6.83 — the durable list the Wizard reads on every question: the note on the record's ai field was getting
@@ -18120,10 +18269,51 @@ function wizLinesHtml(md) {
   const fixes = wizFixesFor(_lastAnswer && _lastAnswer.keep);
   return `<div class="wl-list">` + lines.map((l, i) => {
     const fx = fixes.filter(f => f.line === l), pn = _wizPend.find(f => f.i === i && f.line === l);
-    return `<div class="wl-line${pn ? ' has-pend' : ''}" data-i="${i}" onclick="wizLineTap(${i})"><div class="wl-t">${wizLinkEntries(mdToHtml(l))}</div><button type="button" class="wl-x" onclick="event.stopPropagation(); wizLineFix(${i})" aria-label="${pn ? 'change the fix you kept on this line' : 'correct this line'}" title="${pn ? 'change the fix you kept' : 'correct this line'}">✎</button></div>` +
-      fx.map(f => `<div class="wl-fix">✎ Eric: ${esc(f.t)}</div>`).join('') +
-      (pn ? `<div class="wl-fix pend">✎ KEPT — not saved yet: ${esc(pn.t)}</div>` : '') + `<div class="wl-box" id="wlBox-${i}"></div>`;
+    const goneSaved = fx.some(f => wizIsGone(f.t)), goneKept = !!(pn && pn.gone), gone = goneSaved || goneKept;
+    // ✕ v7.16 — the second plate: ✕ over "Delete" on the phone, "✕ No longer relevant" on a PC (both are his words); on a line
+    // he has already taken off it reads ↩ Keep it (the take-back), and a line taken off and saved wears no plate at all
+    const gp = goneSaved ? '' : `<button type="button" class="wl-gone${goneKept ? ' is-on' : ''}" onclick="event.stopPropagation(); wizLineGone(${i})" aria-pressed="${goneKept}" aria-label="${goneKept ? 'keep this line after all' : 'no longer relevant — take this line off the list'}" title="${goneKept ? 'keep this line after all' : 'no longer relevant — take it off the list'}">${goneKept ? '<span>↩</span><b>Keep it</b>' : '<span>✕</span><b class="wl-g-short">Delete</b><b class="wl-g-long">No longer relevant</b>'}</button>`;
+    return `<div class="wl-line${pn ? ' has-pend' : ''}${gone ? ' is-gone' : ''}" data-i="${i}" onclick="wizLineTap(${i})"><div class="wl-t">${wizLinkEntries(mdToHtml(l))}</div><button type="button" class="wl-x" onclick="event.stopPropagation(); wizLineFix(${i})" aria-label="${pn && !pn.gone ? 'change the fix you kept on this line' : 'correct this line'}" title="${pn && !pn.gone ? 'change the fix you kept' : 'correct this line'}">✎</button>${gp}</div>` +
+      fx.map(f => wizIsGone(f.t) ? `<div class="wl-fix wl-fix-gone">✕ OFF THE LIST — you said it is no longer relevant</div>` : `<div class="wl-fix">✎ Eric: ${esc(f.t)}</div>`).join('') +
+      (pn ? (pn.gone ? `<div class="wl-fix pend wl-fix-gone">✕ OFF THE LIST — not saved yet · the Wizard leaves it out once you save</div>` : `<div class="wl-fix pend">✎ KEPT — not saved yet: ${esc(pn.t)}</div>`) : '') + `<div class="wl-box" id="wlBox-${i}"></div>`;
   }).join('') + `<div class="wl-bar"${_wizPend.length ? '' : ' hidden'}>${wizPendBarInner()}</div></div>`;
+}
+// ✕ v7.16 — Eric: "When I ask the wizard for a summary and it comes up, and I have the little edit pencil on each line, I also
+// need a button that says 'No longer relevant' or 'Delete'. Sometimes things will get on the list that I don't need on there."
+// A second plate on every line. A tap KEEPS it with his fixes (v7.02's way — work through the whole answer, save at the end):
+// the line is struck through, says "✕ OFF THE LIST — not saved yet", and the plate turns to ↩ Keep it. Saved, the line goes
+// on `prefs.wizGone` — its own list, handed to the Wizard on every question as LINES ERIC TOOK OFF HIS LISTS — and onto the
+// kept answer; nothing in his log is deleted. A normal fix is written onto EVERY record the answer came from (applyCorrection)
+// — a "no longer relevant" written that wide could hide good records, so this one lands only on the entries the line itself
+// names by number (entry 3667 — exact, never a guess).
+const WIZ_GONE_T = 'NO LONGER RELEVANT — Eric took this line off the list';
+function wizIsGone(t) { return String(t || '').startsWith(WIZ_GONE_T); }
+function wizLineGone(i) {
+  const line = (((_lastAnswer && _lastAnswer.lines) || [])[i] || '').slice(0, 300);
+  if (!line) return;
+  const had = _wizPend.find(f => f.i === i && f.line === line);
+  if (had && had.gone) { wizLineDrop(i); toast('↩ Kept — it stays on the list'); return; }
+  if (!_wizPend.length || !_wizPendCtx) _wizPendCtx = { key: wizAnsKey(_lastAnswer && (_lastAnswer.md || _lastAnswer.text)), q: String((_lastAnswer && _lastAnswer.q) || ''), srcIds: ((_lastAnswer && _lastAnswer.srcIds) || []).slice(0, 20), keep: (_lastAnswer && _lastAnswer.keep) || '' };
+  _wizPend = _wizPend.filter(f => !(f.i === i && f.line === line)); _wizPend.push({ i, line, t: WIZ_GONE_T, gone: true }); _wizPend.sort((a, b) => a.i - b.i);
+  _wizPendArm = false; wizPendMirror();
+  const box = $('wlBox-' + i); if (box) box.innerHTML = '';
+  wizPendRefresh();
+  toast(`✕ Off the list — kept with your fixes (${_wizPend.length}). Save when you are through · nothing in your log is deleted`);
+}
+function wizLineIds(line) {   // the entries a line names by number — the same reading as wizLinkEntries, only records that exist
+  const ids = [];
+  String(line || '').replace(/\b(entr(?:y|ies))(\s+)((?:#?\d{1,6})(?:(?:\s*,\s*(?:and\s+)?|\s+and\s+|\s*&\s*|\s*,?\s*(?:repeated|also|see)\s+)#?\d{1,6})*)/gi, (m, w, sp, list) => {
+    (list.match(/#?\d{1,6}/g) || []).forEach(n => { const id = +n.replace('#', ''); if (entries.some(e => e.id === id) && !ids.includes(id)) ids.push(id); });
+    return m;
+  });
+  return ids;
+}
+function wizGoneSave(line, ctxQ, keep) {
+  const now = new Date().toISOString(), l = String(line || '').slice(0, 300);
+  prefs.wizGone = [{ at: now, q: String(ctxQ || '').slice(0, 160), line: l }, ...(prefs.wizGone || []).filter(g => g && g.line !== l)].slice(0, 100);
+  wizLineIds(l).forEach(id => { const e = entries.find(x => x.id === id); if (e) e.ai = (((e.ai ? e.ai + '\n' : '') + `ERIC: NO LONGER RELEVANT (re "${l.slice(0, 120)}") — leave it off summaries and lists`)).slice(0, 2000); });
+  wizKeepFix(WIZ_GONE_T, keep, l);
+  scheduleSave();
 }
 // 🖥 v7.03 — Eric: "on the phone the edit buttons on the summary works great but on the pc its hard to follow across and
 // click the right edit pencil as is far apart on the big screen." On a PC the pencil now LEADS its line (right where the eye
@@ -18208,9 +18398,9 @@ function wizPendSave(again, leaving) {
   const list = _wizPend.slice(), ctx = _wizPendCtx; if (!list.length || !ctx) return 0;
   const was = _lastAnswer, mine = was && wizAnsKey(was.md || was.text) === ctx.key;
   if (!mine) _lastAnswer = { q: ctx.q, text: '', srcIds: ctx.srcIds || [], at: Date.now(), keep: ctx.keep };   // the answer these belong to is no longer the one on screen
-  list.forEach(f => applyCorrection(f.t, f.line, true));
-  const n = list.length, q = String(ctx.q || '').slice(0, 80);
-  addEntry('Note', n === 1 ? `✎ Correction — re "${String(list[0].line).slice(0, 80)}": ${list[0].t}` : `✎ ${n} corrections${q ? ` — re "${q}"` : ''}: ` + list.map(f => `"${String(f.line).slice(0, 60)}" → ${f.t}`).join(' · ').slice(0, 1200), '—', { noSniff: true });
+  list.forEach(f => f.gone ? wizGoneSave(f.line, ctx.q, ctx.keep) : applyCorrection(f.t, f.line, true));   // ✕ v7.16 — a line taken off goes on its own list
+  const n = list.length, q = String(ctx.q || '').slice(0, 80), said = f => f.gone ? '✕ no longer relevant — off the list' : f.t;
+  addEntry('Note', n === 1 ? `✎ Correction — re "${String(list[0].line).slice(0, 80)}": ${said(list[0])}` : `✎ ${n} corrections${q ? ` — re "${q}"` : ''}: ` + list.map(f => `"${String(f.line).slice(0, 60)}" → ${said(f)}`).join(' · ').slice(0, 1200), '—', { noSniff: true });
   if (!mine) _lastAnswer = was;
   _wizPend = []; _wizPendCtx = null; _wizPendArm = false; wizPendMirror();
   if (!leaving) wizPendRefresh();
@@ -18264,7 +18454,7 @@ async function askInstant(what) {
     // goes smart. Eric can force either one in ⚙ Setup → the Wizard.
     const { r, model: aiWho, fell: aiFell } = await aiCall({
         max_tokens: 1200,
-        system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 only if Eric SAYS it is urgent — a quick personal reminder ("remind me to…") is pri 1 no matter how old it gets>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Entries carry their weekday next to the date, and a note that said a relative day-word carries "saidDay" — the translation of that word against the NOTE\'S OWN date (a note\'s "tomorrow" is the day after that note, never after today); always trust saidDay over the bare word. Entries flagged "headsUp" are landmines Eric marked ⚠ — things that bite later work; when the question is about upcoming work, a job, or "what do I need to know", surface matching headsUp entries FIRST and mark each with ⚠. Never invent amounts or dates. When your answer relies on specific log entries, end with one final line exactly like: SOURCES: 123, 456 — listing those entries\' "id" values (omit the line entirely if none apply). Numbers read from a photo ("photoText") can be OCR-garbled — when an amount or count comes only from photoText, say it may be worth checking the photo.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
+        system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 only if Eric SAYS it is urgent — a quick personal reminder ("remind me to…") is pri 1 no matter how old it gets>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Entries carry their weekday next to the date, and a note that said a relative day-word carries "saidDay" — the translation of that word against the NOTE\'S OWN date (a note\'s "tomorrow" is the day after that note, never after today); always trust saidDay over the bare word. Entries flagged "headsUp" are landmines Eric marked ⚠ — things that bite later work; when the question is about upcoming work, a job, or "what do I need to know", surface matching headsUp entries FIRST and mark each with ⚠. Never invent amounts or dates. For a SUMMARY or a LIST of what is open: open items only, and each item ONCE — the same thing can sit in the log, the board, the pocket and a to-do, so merge them; leave out anything done, answered, checked off or cleared, and every line in LINES ERIC TOOK OFF HIS LISTS; CORRECTIONS ERIC MADE beat the records; cite only entry ids that appear in RECENT LOG. When your answer relies on specific log entries, end with one final line exactly like: SOURCES: 123, 456 — listing those entries\' "id" values (omit the line entirely if none apply). Numbers read from a photo ("photoText") can be OCR-garbled — when an amount or count comes only from photoText, say it may be worth checking the photo.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
         messages: [{ role: 'user', content: buildAskContext(what) + fileCtx + '\n\nERIC\'S QUESTION: ' + what }]
     }, 'wizard', what);
     if (!r.ok) throw new Error('API ' + r.status);
@@ -19013,6 +19203,9 @@ function boardOn(e) {
   if (['done', 'back', 'dropped'].includes(e.pocket)) return false;                        // 🧹 v6.87 — cleared on the summary (or back on the pocket) = off the board, touched or not
   if (e.board && typeof e.board === 'object') return !e.board.done;                       // touched: stays until ✓
   if (e.type !== 'Note') return false;                                                      // hours, miles, expenses, the clock: records
+  // 👷 v7.16 — a crew member's note logged into his book (✓ Log it, v7.15's ⤵ Flush) is what THEY said — a record, not a thought
+  // of his; a flush of Phil's card was putting every one, "✅ FINISHED" ones too, on the board and in the Wizard's open lines
+  if (e.crewKey || (e.who && e.who !== 'Me' && crew.includes(e.who))) return false;
   if (e.texted || /^Text from /.test(e.details || '')) return false;                       // texts sit under PEOPLE
   if (e.mail) return false;                                                                 // an email is a line only once he grinds it (the hand-off touches it)
   if (e.rcpt || (typeof isRcptEntry === 'function' && isRcptEntry(e))) return false;        // receipts run the money flow
@@ -19307,6 +19500,10 @@ function rlFlip(id) {
   renderAskRecent();
 }
 function rlMore(n) { window._rlN = n ? (window._rlN || 12) + n : 1e9; renderAskRecent(); }
+// ⬆ v7.16 — Eric: "The bottom of the running log says 'A Next 30,' but it needs a button to take 30 back off." Back 30 at a
+// time (from "Show all" too — it counts from what is on the page), never under the first 12; the pager now stays while more
+// than 12 show, so there is always a way back.
+function rlLess(n) { const cur = Math.min(window._rlN || 12, window._rlTotal || 12); window._rlN = Math.max(12, cur - n); renderAskRecent(); }
 // 📜 v5.78 — Eric: "I don't need multiple logs. I just want the full log to record absolutely
 // everything that passes through there and be up there." This renders THE log — every book
 // entry ever captured, plus Wizard answers and the ⏳ waiting pile, one stream, newest first,
@@ -19449,6 +19646,7 @@ function renderAskRecent() {
   if (who) items = items.filter(it => it.who === who);
   items.sort((a, b) => b.ts - a.ts);
   const page = items.slice(0, window._rlN);
+  window._rlTotal = items.length;   // ⬆ v7.16 — what "take 30 back off" counts down from
   // the head count on the divider — the whole book, or how much of it the searches caught
   const cnt = $('rlCount');
   if (cnt) cnt.textContent = (filtersOn || f || who || hide.length) ? `${items.length} showing` : `${items.length} on record`;
@@ -19496,9 +19694,10 @@ function renderAskRecent() {
       const on = it.e ? `rlFlip(${it.e.id})` : it.on;
       return `<div class="ask-recent-row" onclick="${on}">${it.h}<span class="arw">${when}</span></div>`;
     }).join('') : `<div class="hint" style="margin: 4px 0;">${filtersOn ? 'Nothing matches those searches — Clear filters ✕ shows everything again.' : 'Nothing under that filter yet — ✳ All shows everything.'}</div>`) +
-    (items.length > page.length ? `<div style="display: flex; gap: 8px; justify-content: center; margin: 8px 0 2px; flex-wrap: wrap;">
-      <button type="button" class="btn-ghost" onclick="rlMore(30)">${items.length - page.length <= 30 ? `⬇ Next ${items.length - page.length}` : `⬇ Next 30 · ${items.length - page.length} more`}</button>
-      <button type="button" class="btn-ghost" onclick="rlMore(0)">Show all ${items.length}</button>
+    (items.length > page.length || page.length > 12 ? `<div class="rl-pager" style="display: flex; gap: 8px; justify-content: center; margin: 8px 0 2px; flex-wrap: wrap;">
+      ${page.length > 12 ? `<button type="button" class="btn-ghost" onclick="rlLess(30)">${page.length - 30 <= 12 ? '⬆ Back to the first 12' : '⬆ Take 30 back off'}</button>` : ''}
+      ${items.length > page.length ? `<button type="button" class="btn-ghost" onclick="rlMore(30)">${items.length - page.length <= 30 ? `⬇ Next ${items.length - page.length}` : `⬇ Next 30 · ${items.length - page.length} more`}</button>
+      <button type="button" class="btn-ghost" onclick="rlMore(0)">Show all ${items.length}</button>` : ''}
     </div>` : '');
   scheduleDbxSearch(q); // 📁 matching Dropbox filenames ride the same search box
 }
@@ -20949,7 +21148,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.15';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.16';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -21766,7 +21965,7 @@ renderMileFace();
 // v4.65 — crew phones: jobs come from Eric's published crew.json until their first sync refreshes it
 if (CREW_NAME) {
   try { const cj = JSON.parse(lsGet('daylog-crew-jobs') || '[]'); if (cj.length) { jobs = cj.slice(); renderJobSelects(); } } catch (e) {}
-  try { const ct = JSON.parse(lsGet('daylog-crew-tags') || '[]'); if (ct.length) prefs.tags = [...new Set([...ct, ...(prefs.tags || [])])]; } catch (e) {}
+  // 🏷 v7.16 — Eric's tags (daylog-crew-tags) are no longer merged in here; crewTagScrub sweeps the ones that were, once
 }
 applyRole();
 restoreShift(); // a shift that was running when the app closed picks right back up

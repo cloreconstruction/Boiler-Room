@@ -18,9 +18,11 @@ const { chromium } = require('playwright');
   const order = () => page.evaluate(() =>
     [...document.querySelector('.wrap').children].map(e => e.id || e.className.split(' ')[0]).filter(Boolean));
 
-  ok('the grinder box sits directly under the three plates — nothing between', await page.evaluate(() => {
+  // 🎒 v7.16 — the pocket list is its own card now (Eric: "separated from the grinder … It's in the same bigger window"), and it
+  // stays where he put it in v6.75 — just above ① — so it is the ONE thing between the plates and the grinder
+  ok('the grinder box sits right under the three plates — only the pocket list\'s own card between', await page.evaluate(() => {
     const k = [...document.querySelector('.wrap').children].map(e => e.id).filter(Boolean);
-    return k.indexOf('qnCard') === k.indexOf('scRow') + 1;
+    return k.indexOf('pocketCard') === k.indexOf('scRow') + 1 && k.indexOf('qnCard') === k.indexOf('pocketCard') + 1;
   }));
 
   ok('🔥 needs-you, 📬 texts and 📌 nudges are all BELOW the writing box now', await page.evaluate(() => {
