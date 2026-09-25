@@ -94,14 +94,17 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return boxes.length === 5 && boxes.map(b => (b.getAttribute('aria-pressed') === 'true' ? '☒' : '☐') + b.querySelector('b').textContent).join(' ') === '☒P ☐O ☐R ☐S ☐I' && !!boxes[0].querySelector('.mb-ck') && !boxes[1].querySelector('.mb-ck') && boxes.every(b => !!b.querySelector('.mb-i').textContent) && boxes[0].getAttribute('aria-label') === 'Picked — yes' && boxes[4].getAttribute('aria-label') === 'Installed — not yet' &&
       boxes.every(b => b.getBoundingClientRect().width >= 34 && b.getBoundingClientRect().height >= 34) && /Stained wood; Acme Lumber/.test(row.querySelector('.mat-sel').textContent) && /👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed/.test(legend);
   }));
-  ok('tap O and it is ordered (with the date), tap P and the row walks back to nothing, tap I and it is received AND installed — the row reads installed and done; S is its own tick', await page.evaluate(() => {
+  ok('tap O and it is ordered (with the date), tap P and the row walks back to nothing, tap I and it is received AND installed — the row folds to its name and ✓ FINISHED (v7.19), and walks back out when un-ticked; S is its own tick', await page.evaluate(() => {
     const it = _matD.rooms[0].items.find(x => x.n === 'Baseboard throughout'), tap = k => { const row = [...document.querySelectorAll('.mat-item')].find(r => /Baseboard throughout/.test(r.textContent)); [...row.querySelectorAll('.mat-strip:not(.mat-rowbtns) .mat-box')].find(b => b.querySelector('b').textContent === k).click(); };
     tap('O'); const a = it.s === 'ordered' && !!it.odate;
     tap('P'); const b = it.s === 'pick' && !it.ins;
     tap('S'); const c = it.sch === true; tap('S'); const c2 = !it.sch;
     tap('I'); const row = [...document.querySelectorAll('.mat-item')].find(r => /Baseboard throughout/.test(r.textContent));
-    const d = it.s === 'arrived' && !!it.ins && row.classList.contains('mi-done') && /installed/.test(row.textContent) && [...row.querySelectorAll('.mat-strip:not(.mat-rowbtns) .mat-box')].map(x => x.getAttribute('aria-pressed') === 'true' ? '☒' : '☐').join('') === '☒☒☒☐☒';
-    tap('R'); const e = it.s === 'ordered' && !it.ins;
+    // ✓ v7.19 — Eric: "when the item is completed, it should be folded to just the name. And a green light that says 'finished'"
+    const d = it.s === 'arrived' && !!it.ins && row.classList.contains('mi-done') && row.classList.contains('mi-fin') && /✓ FINISHED/.test(row.textContent) && !row.querySelector('.mat-strip');
+    matBoxTap(it.id, 'R');   // its lights live in the edit window now — the same function they call
+    const row2 = [...document.querySelectorAll('.mat-item')].find(r => /Baseboard throughout/.test(r.textContent));
+    const e = it.s === 'ordered' && !it.ins && !row2.classList.contains('mi-fin') && !!row2.querySelector('.mat-strip');
     return a && b && c && c2 && d && e;
   }));
   ok('each category says where it stands in words; the four working lists filter the board — picked-not-ordered shows only those rows and hides the empty categories', await page.evaluate(() => {

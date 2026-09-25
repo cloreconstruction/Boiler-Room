@@ -26,7 +26,8 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— 🎨 v6.85 six picks, the rest in the museum —');
 
   ok('Appearance offers exactly six picks — Calm Brass, four more Calm tones, Steamworks — each with its words and a colour dot, and no Light / dark button', await page.evaluate(() => {
-    const chips = [...document.querySelectorAll('#setAppear .pick-chip')];
+    // v7.19 — the 🔤 Letters row (A–E) shares the Appearance box; the six THEME picks are the #skinChips row
+    const chips = [...document.querySelectorAll('#setAppear #skinChips .pick-chip')];
     return chips.map(c => c.id).join(',') === 'skin-calm,skin-calm-slate,skin-calm-graphite,skin-calm-moss,skin-calm-stone,skin-steam' && chips.every(c => /Calm|Steamworks/.test(c.textContent) && c.querySelector('.skin-dot')) &&
       !$('lightDarkBtn') && Object.keys(SKIN_NAMES).join(',') === 'calm,calm-slate,calm-graphite,calm-moss,calm-stone,steam' && SKIN_NAMES.calm === 'Calm Brass' && SKIN_NAMES.steam === 'Steamworks';
   }));

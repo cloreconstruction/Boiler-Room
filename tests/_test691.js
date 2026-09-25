@@ -38,7 +38,8 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
         { id: 'm5', n: 'Check all vents and airflow', t: 'Misc', s: 'todo', sel: 'Fans on, every vent open' }] },
       { name: 'KITCHEN', items: [{ id: 'm6', n: 'Countertops', t: 'Misc', buy: true, s: 'arrived', ins: '2026-09-01' }, { id: 'm7', n: 'Pendants x2', t: 'Electrical', tg: ['Electrical'], hm: true, s: 'pick' }] }] });
     await openMaterials(0);
-    window._row = n => [...document.querySelectorAll('#revBox .mat-item')].find(r => r.querySelector('b') && r.querySelector('b').textContent === n);
+    window._nm = r => (r.querySelector('.mat-nm b') || r.querySelector('.mat-fin-nm') || {}).textContent;   // ✓ v7.19 — a finished row's name is folded, not bold
+    window._row = n => [...document.querySelectorAll('#revBox .mat-item')].find(r => _nm(r) === n);
     window._lights = n => [..._row(n).querySelectorAll('.mat-strip:not(.mat-rowbtns) .mat-box')];
     window._it = n => _matD.rooms.flatMap(r => r.items).find(x => x.n === n);
   });
@@ -51,7 +52,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const lit = L.map(b => (b.classList.contains('on') ? 1 : 0) + '' + (b.querySelector('.mb-ck') ? 1 : 0) + (b.getAttribute('aria-pressed') === 'true' ? 1 : 0)).join(' ');
     const lamp = n => _row(n).querySelector('.frow > button').textContent.trim();
     return icons === '👆 🛒 📦 📅 🔧' && letters === 'PORSI' && lit === '111 111 000 000 000' && L[1].getAttribute('aria-label') === 'Ordered — yes' && L[2].getAttribute('aria-label') === 'Received — not yet' &&
-      lamp('Garage paint') === '🛒' && lamp('Garage door') === '👆' && lamp('Loft railing') === '○' && lamp('Countertops') === '🔧' && lamp('Check all vents and airflow') === '○';
+      lamp('Garage paint') === '🛒' && lamp('Garage door') === '👆' && lamp('Loft railing') === '○' && lamp('Check all vents and airflow') === '○' &&
+      // ✓ v7.19 — the installed countertops fold to their name and a green ✓ FINISHED (their 🔧 light is in the edit window)
+      [...document.querySelectorAll('#revBox .mat-item.mi-fin')].some(r => /Countertops/.test(r.textContent) && /✓ FINISHED/.test(r.textContent));
   }));
 
   console.log('— ✅ v6.91 the checklist lights —');
@@ -86,8 +89,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const closed = !$('matWho-' + it.id);
     const chip = [...document.querySelectorAll('#revBox .chips-row button')].find(x => /🏷 Phil \(1\)/.test(x.textContent));
     L()[1].click(); const c = it.sch === true && /scheduled/.test(_row('Test winch').textContent) && _row('Test winch').querySelector('.frow > button').textContent.trim() === '📅';
-    L()[2].click(); const d = it.s === 'done' && !!it.ddate && _row('Test winch').classList.contains('mi-done') && _row('Test winch').querySelector('.frow > button').textContent.trim() === '✅';
-    L()[2].click(); const e = it.s === 'todo' && !it.ddate;
+    // ✓ v7.19 — done = FINISHED: the row folds to its name and a green ✓ FINISHED; its ✅ light is in the edit window to take it back
+    L()[2].click(); const fin = [...document.querySelectorAll('#revBox .mat-item.mi-fin')].find(r => /Test winch/.test(r.textContent));
+    const d = it.s === 'done' && !!it.ddate && !!fin && /✓ FINISHED/.test(fin.textContent) && !fin.querySelector('.mat-strip');
+    matBoxTap(it.id, 'D'); const e = it.s === 'todo' && !it.ddate && !!_row('Test winch');
     return offered && a && b && closed && !!chip && c && d && e;
   }));
 
@@ -105,14 +110,14 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const g = [...document.querySelectorAll('#revBox .set-section')].find(s => /GARAGE/.test(s.querySelector('h4').textContent)).querySelector('.mat-counts').textContent.replace(/\s+/g, ' ');
     const chip = [...$('matStageChips').querySelectorAll('button')].find(b => /on nobody's list/.test(b.textContent));
     const n = chip ? +(chip.textContent.match(/\((\d+)\)/) || [])[1] : -1;
-    chip.click(); const rows = [...document.querySelectorAll('#revBox .mat-item')].map(r => r.querySelector('b').textContent); chip.click; _matStageF = ''; renderMatMgr();
+    chip.click(); const rows = [...document.querySelectorAll('#revBox .mat-item')].map(_nm); chip.click; _matStageF = ''; renderMatMgr();
     return /🛒 2\/3 picked · 1 ordered · 0 received · 0 installed/.test(g) && /✅ 0\/2 done · 1 on a list · 1 scheduled/.test(g) && !/^·/.test(g.trim()) && n === 1 && rows.join() === 'Check all vents and airflow';
   }));
 
   console.log('— ⚠ v6.91 FIRST —');
 
   ok('⚠ 1st sends the row to the TOP of its category with the reason in words, the heading counts it, the plate is lit with a ✓; tap again and it goes back where it was; a row that is done no longer rides on top', await page.evaluate(() => {
-    const names = () => [...[...document.querySelectorAll('#revBox .set-section')].find(s => /GARAGE/.test(s.querySelector('h4').textContent)).querySelectorAll('.mat-item')].map(r => r.querySelector('b').textContent);
+    const names = () => [...[...document.querySelectorAll('#revBox .set-section')].find(s => /GARAGE/.test(s.querySelector('h4').textContent)).querySelectorAll('.mat-item')].map(_nm);
     const before = names().join('|');
     const btn = () => _row('Loft railing').querySelector('.mat-firstbtn');
     const plain = btn().getAttribute('aria-pressed') === 'false' && /goes to the top of its category/.test(btn().getAttribute('aria-label')) && !btn().querySelector('.mb-ck');
@@ -121,7 +126,8 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const a = names()[0] === 'Loft railing' && _it('Loft railing').first === true && row.classList.contains('mi-first') && /⚠ FIRST — the rest of this category waits on this/.test(row.textContent) && /⚠ 1 first/.test(head) &&
       btn().getAttribute('aria-pressed') === 'true' && !!btn().querySelector('.mb-ck') && names().slice(1).join('|') === before.split('|').filter(n => n !== 'Loft railing').join('|');
     const it = _it('Loft railing'); it.s = 'arrived'; it.ins = '2026-09-10'; renderMatMgr();
-    const doneDrops = names()[0] !== 'Loft railing' && !_row('Loft railing').classList.contains('mi-first');
+    const doneDrops = names()[0] !== 'Loft railing' && !_row('Loft railing').classList.contains('mi-first') &&
+      names()[names().length - 1] === 'Loft railing' && _row('Loft railing').classList.contains('mi-fin');   // ✓ v7.19 — finished, it sinks to the BOTTOM, folded
     delete it.ins; it.s = 'pick'; renderMatMgr(); btn().click();
     return plain && a && doneDrops && names().join('|') === before && !_it('Loft railing').first;
   }));
@@ -164,7 +170,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return r;
   });
   ok('✎ edit opens its OWN window over the board — drawn outside the scrolling board, above it and under the toast — and the row behind it never turns into a form', ed.open && ed.z > 80 && ed.z < 90 && ed.rowStill, JSON.stringify(ed));
-  ok('always the same order: Name · Note · What kind of row · Its lights, then ⚠ FIRST, then the folds — 💵 Money · 🏷 Whose list · 🏠 The homeowner · ☑ Steps · 📷 Photos — every fold shut until he opens it', /^Name \| Note — shows on the row \| What kind of row \| Its lights — tap one \| 📷 Photos \| 💵 Money \| 🏷 Whose list — tags \| 🏠 The homeowner \| ☑ Steps under it \| 📁 Pocket$/.test(ed.order) && ed.folded, ed.order);   // v7.08 — 📷 Photos is its own open section above 💵 Money (the Wizard fills the money from a photo); the fold is 📁 Pocket alone
+  ok('always the same order: Name · Note · What kind of row · Its lights, then ⚠ FIRST, then the folds — 💵 Money · 🏷 Whose list · 🏠 The homeowner · ☑ Steps · 📷 Photos — every fold shut until he opens it', /^Name \| Note — shows on the row \| What kind of row \| Its lights — tap one \| 📷 Photos \| 💵 Money \| 🏷 Whose list — tags \| 🏠 The homeowner \| ☑ Steps under it \| 📁 Pocket \| 🕘 Changes$/.test(ed.order) && ed.folded, ed.order);   // v7.08 — 📷 Photos is its own open section above 💵 Money (the Wizard fills the money from a photo); the fold is 📁 Pocket alone · 🕘 v7.19 — then the row's changes
   ok('the name and the note ("decide whether the railing is needed") are right there to edit — the note is a real writing box — and what he types lands on the row; money goes in under its fold', ed.name === 'Loft railing' && ed.note === 'Decide whether the railing is needed' && ed.noteIsBox && ed.saved, JSON.stringify(ed));
   ok('it fits the phone, the footer (✕ Delete · ✓ DONE — it is saved) stays pinned, the ✕ is black on gold, a fold opening keeps the window\'s scroll, and closing it leaves the board exactly where it was', ed.fits && ed.footPinned && /✕ Delete \| ✓ DONE — it is saved/.test(ed.foot) && /rgb\(17, 17, 17\)/.test(ed.closer) && ed.keptScroll && ed.closed && ed.noJump, JSON.stringify(ed));
   ok('the two KIND plates flip the row from inside the window (🛒 Something to buy ↔ ✅ Checklist item) and the lights follow; ⚠ FIRST is one plate', ed.kind0 === 'true,false' && ed.kind1 === 'false,true' && ed.flipped && ed.back && ed.first, JSON.stringify(ed));

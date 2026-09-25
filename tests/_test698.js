@@ -40,9 +40,11 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   });
 
   ok('EVERY row wears the ⇄ plate, always in the same place — right after ⚠ 1st — whatever lights are lit: to buy, ordered, installed, checklist, tagged, in work, done, and the 🏠 row', await page.evaluate(() => {
-    const rows = [...document.querySelectorAll('#revBox .mat-item')];
-    return rows.length === 8 && rows.every(r => { const b = [...r.querySelectorAll('.mat-rowbtns .mat-box')]; return b.length === 2 && b[0].classList.contains('mat-firstbtn') && b[1].classList.contains('mat-flip'); }) &&
-      _flip('Plain to buy').textContent.replace(/\s+/g, '') === '⇄list' && _flip('Plain checklist').textContent.replace(/\s+/g, '') === '⇄buy' && _flip('Ordered faucet').textContent.replace(/\s+/g, '') === '⇄list' && _flip('Checklist done').textContent.replace(/\s+/g, '') === '⇄buy';
+    // ✓ v7.19 — a FINISHED row (the installed hood, the checklist done) folds to its name and ✓ FINISHED; its ⇄ is in the edit window
+    const rows = [...document.querySelectorAll('#revBox .mat-item:not(.mi-fin)')], fin = [...document.querySelectorAll('#revBox .mat-item.mi-fin')].map(r => r.textContent);
+    return rows.length === 6 && rows.every(r => { const b = [...r.querySelectorAll('.mat-rowbtns .mat-box')]; return b.length === 2 && b[0].classList.contains('mat-firstbtn') && b[1].classList.contains('mat-flip'); }) &&
+      fin.length === 2 && fin.some(t => /Installed hood/.test(t)) && fin.some(t => /Checklist done/.test(t)) &&
+      _flip('Plain to buy').textContent.replace(/\s+/g, '') === '⇄list' && _flip('Plain checklist').textContent.replace(/\s+/g, '') === '⇄buy' && _flip('Ordered faucet').textContent.replace(/\s+/g, '') === '⇄list';
   }));
 
   ok('a row with nothing to lose flips in ONE tap, both ways — and a tag or a schedule is nothing to lose (both ride across)', await page.evaluate(() => {
@@ -67,9 +69,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('the second tap inside the four seconds does flip it, and its light is carried across as best it fits (ordered → in work)', armed.two.buy === false && armed.two.s === 'work' && armed.two.words === '⇄buy', JSON.stringify(armed.two));
 
   ok('the same guard on a checklist row that is in work or done, and on an installed thing; arming one row disarms nothing else by accident', await page.evaluate(() => {
-    _flip('Checklist done').click(); const a = _it('m7').s === 'done' && !_it('m7').buy && /sure\?/.test(_flip('Checklist done').textContent);
-    _flip('Installed hood').click(); const b = _it('m3').s === 'arrived' && !!_it('m3').ins && /sure\?/.test(_flip('Installed hood').textContent) && !/sure\?/.test(_flip('Checklist done').textContent);
-    _flip('Installed hood').click(); const c = !_it('m3').buy && _it('m3').s === 'done';
+    // ✓ v7.19 — finished rows are folded (no plate on the row), so the guard is driven through the plate's own function
+    matFlipTap('m7'); const a = _it('m7').s === 'done' && !_it('m7').buy && _matFlipArm === 'm7';
+    matFlipTap('m3'); const b = _it('m3').s === 'arrived' && !!_it('m3').ins && _matFlipArm === 'm3';
+    matFlipTap('m3'); const c = !_it('m3').buy && _it('m3').s === 'done';
     return a && b && c;
   }));
 
