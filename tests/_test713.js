@@ -75,17 +75,18 @@ const { chromium } = require('playwright');
     _cfWho = ''; _cfJob = 'Pine Cabin'; renderCrewFeed(); const b = document.querySelectorAll('#crewFeedList .cf-row').length === 2;
     _cfJob = ''; renderCrewFeed(); return a && b;
   }));
-  ok('✓ Log it on a row puts that note in Eric\'s running log under Phil, and its card leaves the sort pile', await page.evaluate(() => {
+  // ⤵ v7.15 — the row's ✓ Log it became ⤵ Flush: into the running log the same way, and off the card
+  ok('⤵ Flush on a row puts that note in Eric\'s running log under Phil, its card leaves the sort pile, and the row leaves this card', await page.evaluate(() => {
     const before = pendingQueue.length;
     const row = [...document.querySelectorAll('#crewFeedList .cf-row')].find(r => /Window order/.test(r.textContent));
-    [...row.querySelectorAll('button')].find(b => /Log it/.test(b.textContent)).click();
+    [...row.querySelectorAll('button')].find(b => /Flush/.test(b.textContent)).click();
     const e = entries.find(x => /Window order for Oak confirmed/.test(x.details || ''));
     const row2 = [...document.querySelectorAll('#crewFeedList .cf-row')].find(r => /Window order/.test(r.textContent));
-    return !!e && e.who === 'Phil' && pendingQueue.length === before - 1 && !/Log it/.test(row2.textContent);
+    return !!e && e.who === 'Phil' && pendingQueue.length === before - 1 && !row2;
   }));
   ok('the "how many" wheel caps it, and the fold says how many wait in words', await page.evaluate(() => {
-    prefs.crewFeedN = '3'; renderCrewFeed(); const a = document.querySelectorAll('#crewFeedList .cf-row').length === 3 && /showing 3 of 5/.test($('cfFoldBtn').textContent);
-    crewFeedFold(); const b = /▸ 👷 FROM THE CREW — 5 notes, tap to open/.test($('cfFoldBtn').textContent) && $('crewFeedList').style.display === 'none';
+    prefs.crewFeedN = '3'; renderCrewFeed(); const a = document.querySelectorAll('#crewFeedList .cf-row').length === 3 && /showing 3 of 4/.test($('cfFoldBtn').textContent);
+    crewFeedFold(); const b = /▸ 👷 FROM THE CREW — 4 notes, tap to open/.test($('cfFoldBtn').textContent) && $('crewFeedList').style.display === 'none';
     crewFeedFold(); prefs.crewFeedN = 'all'; renderCrewFeed(); return a && b;
   }));
   ok('with only Phil sending, it reads FROM PHIL', await page.evaluate(() => {

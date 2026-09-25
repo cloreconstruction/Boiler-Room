@@ -3226,6 +3226,8 @@
     <div class="log-head" style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
       <button type="button" id="cfFoldBtn" class="card-sub" style="margin: 0; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; flex: 1; text-align: left;"
         onclick="crewFeedFold()" aria-expanded="true">👷 FROM THE CREW</button>
+      <!-- ⤵ v7.15 — "a flush like the pocket list does": the pocket's own plate -->
+      <button type="button" id="cfFlushBtn" class="pk-tiny pk-flush" onclick="crewFeedFlushAll()" title="everything this card lists goes into your running log — the card clears">⤵ Flush</button>
       <select id="cfShowN" class="mini-sel" title="How many crew notes show" style="width: auto; min-height: 28px; padding: 2px 8px; font-size: 12px;"
         onchange="prefs.crewFeedN = this.value; scheduleSave(); renderCrewFeed();">
         <option value="3">3</option><option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="all">All</option>
@@ -4170,7 +4172,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.14 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.15 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8902,7 +8904,10 @@ function reviewAct(id, accept) {
       const want = _qbJob[p.id] || (sel ? sel.value : '');
       j = jobs.includes(want) ? want : '—';
       delete _qbJob[p.id];
-    } else j = jobs.includes(pay.job) ? pay.job : (jobs[0] || '—');
+    // ⤵ v7.15 — …except that a crew note does NOT always carry one: in his real data 4 of Phil's 10 notes had no job, or a job
+    // that is not on Eric's list, and every one of them would have filed under jobs[0] (today "Internal / Admin" — the silent
+    // default v6.81 took out everywhere else). A flush logs a pile at once, so a crew note with no job of Eric's is '—' now.
+    } else j = jobs.includes(pay.job) ? pay.job : p.kind === 'crew' ? '—' : (jobs[0] || '—');
     // 🔒 the Personal job carries the Personal lock — see isPersonalJob()
     const jLock = isPersonalJob(j) ? { personal: true } : {};
     if (p.kind === 'todo') {
@@ -9090,6 +9095,7 @@ function reviewAct(id, accept) {
         if (pay.category) extra.category = pay.category;
         if (pay.day && /^\d{4}-\d{2}-\d{2}$/.test(pay.day) && pay.day !== localDay(new Date())) extra.ts = new Date(pay.day + 'T12:00:00');
         extra.noSniff = true;
+        extra.crewKey = p.id;   // ⤵ v7.15 — which crew note this is, so a flush on any of his devices knows it is already in the log (cfInLog)
         addEntry(pay.type === 'Mileage' ? 'Mileage' : pay.type === 'Note' ? 'Note' : 'Hours', `${pay.from}: ${pay.text || (pay.type === 'Mileage' ? 'Trip' : 'Shift')}`, j, extra);
         toast(`${pay.from}'s ${pay.type === 'Mileage' ? 'miles' : pay.type === 'Note' ? 'note' : 'hours'} logged ✓`);
       }
@@ -12092,11 +12098,81 @@ function crewFeedTake(name, folder, list) {
     && (e.type === 'Note' || e.type === 'Done') && String(e.details || '').trim() && cfForMe(e))
     .slice(0, 120).map(e => ({ e, who: name, folder, key: `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}` }));
 }
+// ⤵ v7.15 — Eric: "From phil window needs to have a flush like the pocket list does and it goes into grinder like pocket list".
+// A flushed note goes into his running log the way ✓ Log it always put a crew note there (reviewAct 'log' — under Phil's name,
+// its Sort card cleared) and LEAVES THIS CARD for good: its key is kept in `prefs.crewFeedGone` (synced, so every one of his
+// devices agrees; the newest 800 kept), and the card only ever shows what has not been flushed. A note whose Sort card is not
+// waiting any more (logged or skipped before, on any device) just leaves the card — it is never logged twice.
+function cfGoneList() { return Array.isArray(prefs.crewFeedGone) ? prefs.crewFeedGone : (prefs.crewFeedGone = []); }
 function crewFeedRows() {
-  return Object.values(_crewFeed).flat().sort((a, b) => String(b.e.ts).localeCompare(String(a.e.ts)));
+  const gone = new Set(cfGoneList());
+  return Object.values(_crewFeed).flat().filter(r => !gone.has(r.key)).sort((a, b) => String(b.e.ts).localeCompare(String(a.e.ts)));
 }
 function crewFeedFold() { prefs.crewFeedFold = !prefs.crewFeedFold; scheduleSave(); renderCrewFeed(); }
-function crewFeedLog(key) { reviewAct(key, 'log'); renderCrewFeed(); }
+let _cfShownKeys = [];   // what the card lists right now (the search and the wheels respected) — what ⤵ Flush takes
+// Is it in his running log already? The card's key on the entry (v7.15 on), or — for one logged before — the same name, the
+// exact words and the same day. Exact, never a guess: "done handling it" lives per device (pendDone), so his PC can card a
+// note again that his phone already logged, and a flush there must not put it in twice.
+function cfWords(r) {   // his words without a leading "Phil:" of his own (his answers to a to-do carry one), so the log never reads "Phil: … Phil:"
+  const t = String(r.e.details || '').trim(), pre = r.who.toLowerCase() + ':';
+  return t.toLowerCase().startsWith(pre) ? t.slice(pre.length).trim() : t;
+}
+function cfInLog(r) {
+  const e = r.e, t = String(e.details || '').trim(), d = new Date(e.ts);
+  const days = new Set([String(e.ts).slice(0, 10), isNaN(+d) ? '' : localDay(d)]);
+  const words = [`${r.who}: ${t}`, `${r.who}: ✅ FINISHED: ${cfWords(r)}`];
+  return entries.some(x => x.crewKey === r.key || (!x.crewKey && x.who === r.who && words.includes(String(x.details || '').trim()) && days.has(localDay(new Date(x.ts)))));
+}
+// Will a flush put it in his log? A note whose Sort card waits — or ANY ✅ finished note: its words never reached his log by
+// any road before (one that closes none of his to-dos never gets a Sort card, checkCrewLogs since v5; one that answers a
+// to-do — "No I haven't been paid for Carrick's", 2026-08-08 — only ever checked that to-do off).
+function cfWillLog(r) {
+  if (cfInLog(r)) return false;
+  return r.e.type === 'Done' || pendingQueue.some(p => p.id === r.key);
+}
+function cfCardFor(r) {   // that ✅ note as a note card, worded the way the Sort card words a Done — the same door files it
+  const e = r.e;
+  return { id: r.key, kind: 'crew', source: r.who, payload: { from: r.who, type: 'Note', text: '✅ FINISHED: ' + cfWords(r), job: e.job || '',
+    route: '', urg: '', srcRef: '', day: String(e.ts).slice(0, 10), vis: e.vis || '' } };
+}
+function crewFeedFlushKeys(keys) {
+  const gone = cfGoneList(), have = new Set(gone);
+  const byKey = new Map(Object.values(_crewFeed).flat().map(r => [r.key, r]));
+  const keepToast = window.toast; window.toast = () => {};   // one word at the end, not one per note (the 🧹 sweep's way)
+  _revBulk = true;
+  let logged = 0;
+  try {
+    keys.forEach(k => {
+      const r = byKey.get(k), waiting = pendingQueue.some(p => p.id === k);
+      if (!r) { if (waiting) { reviewAct(k, 'log'); logged++; } }
+      else if (r.e.type === 'Done') {
+        if (waiting) reviewAct(k, 'log');   // checks off the to-do it answers (srcRef), as ✓ on its Sort card always did
+        if (!cfInLog(r)) { pendingQueue.push(cfCardFor(r)); reviewAct(k, 'log'); logged++; }   // …and his words go into the log
+      } else if (waiting) {
+        if (cfInLog(r)) reviewAct(k, false);   // already in his log — its card just closes
+        else { reviewAct(k, 'log'); logged++; }
+      }
+      if (!have.has(k)) { gone.push(k); have.add(k); }
+    });
+  } finally { _revBulk = false; window.toast = keepToast; }
+  if (gone.length > 800) prefs.crewFeedGone = gone.slice(-800);
+  scheduleSave();
+  if (logged) { renderTodos(); renderKpis(); renderLog(); renderPendBanner(); savePendingSoon(); if ($('revModal').classList.contains('show') && _revTab === 'sort') renderReview(); }
+  renderCrewFeed();
+  return logged;
+}
+function crewFeedFlushOne(key) {
+  const n = crewFeedFlushKeys([key]);
+  toast(n ? '⤵ Into your running log — off the card ✓' : '⤵ Off the card ✓ — it was already handled, so it is not logged twice');
+}
+function crewFeedFlushAll() {
+  const keys = _cfShownKeys.slice();
+  if (!keys.length) { toast('⤵ Nothing here to flush', false); return; }
+  const n = crewFeedFlushKeys(keys);
+  _cfWho = ''; _cfJob = ''; _cfQ = ''; renderCrewFeed();   // the card goes back to showing whatever is left
+  toast(`⤵ ${keys.length} off the card — ${n ? n + ' into your running log' : 'all were already handled'}${n && n < keys.length ? `, ${keys.length - n} already handled` : ''} ✓`);
+}
+function crewFeedLog(key) { crewFeedFlushOne(key); }   // v7.13's name
 function crewFeedSearch(v) {
   _cfQ = String(v || '');
   renderCrewFeed();
@@ -12119,6 +12195,13 @@ function renderCrewFeed() {
   if (_cfJob) list = list.filter(r => r.e.job === _cfJob);
   if (q) list = list.filter(r => [r.e.details, r.e.job, r.who, ...(r.e.tags || [])].join(' ').toLowerCase().includes(q));
   const narrowed = !!(_cfWho || _cfJob || q);
+  _cfShownKeys = list.map(r => r.key);   // ⤵ v7.15 — what ⤵ Flush takes: every note the card lists now, past the how-many cap too
+  const fl = $('cfFlushBtn');
+  if (fl) {
+    fl.textContent = narrowed ? `⤵ Flush these ${list.length}` : `⤵ Flush ${list.length}`;
+    fl.disabled = !list.length;
+    fl.setAttribute('aria-label', `flush: ${list.length} note${list.length === 1 ? '' : 's'} go into your running log and off this card`);
+  }
   const nRaw = prefs.crewFeedN == null ? '5' : String(prefs.crewFeedN);
   const cap = nRaw === 'all' ? list.length : Math.max(1, parseInt(nRaw, 10) || 5);
   const sel = $('cfShowN'); if (sel && sel.value !== nRaw) sel.value = nRaw;
@@ -12147,14 +12230,14 @@ function renderCrewFeed() {
     const e = r.e, d = new Date(e.ts);
     const when = isNaN(+d) ? '' : (sameDay(d, new Date()) ? fmtTime(d) : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + fmtTime(d));
     const ph = cfPhotoPath(e.photoPath || (e.photoPaths || [])[0], r.folder);
-    const waiting = pendingQueue.some(p => p.id === r.key);
+    const waiting = cfWillLog(r);   // ⤵ v7.15 — what the flush will do with it, said on its plate
     return `<div class="sum-row cf-row" style="cursor: default; font-size: 14.5px; display: block;">
       <div class="hint" style="margin: 0 0 3px; font-size: 12px;">👷 <b>${esc(r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''} · ${cfForWord(e)}${e.type === 'Done' ? ' · ✅ finished' : ''}${e.route === 'Eric' && e.urg === 'now' ? ' · <b>⚠ NEEDS YOUR ATTENTION</b>' : ''}</div>
       <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${esc(String(e.details || '').slice(0, 600))}</div>
-      ${ph || waiting ? `<div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+      <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(ph)}')">📷 Open the picture</button>` : ''}
-        ${waiting ? `<button type="button" class="pick-chip" onclick="crewFeedLog('${escq(r.key)}')" title="It also waits in Summary → Sort → People; this puts it in your own running log">✓ Log it — into your running log</button>` : ''}
-      </div>` : ''}
+        <button type="button" class="pick-chip cf-flush" onclick="crewFeedFlushOne('${escq(r.key)}')" title="${waiting ? 'Into your running log under ' + esc(r.who) + '\'s name, and off this card' : 'Already handled — it just leaves this card'}">${waiting ? '⤵ Flush — into your log' : '⤵ Flush — off the card'}</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -20866,7 +20949,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.14';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.15';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
