@@ -960,6 +960,8 @@
   .pb-txrow { flex-wrap: wrap; }
   .pb-txrow .pb-txsel { flex: 1 1 150px; min-height: 40px; font-size: 13px; }
   .pb-in { color: var(--good-text, #2e7d32); }
+  .pb-flip.on { border-color: var(--accent); color: var(--accent); font-weight: var(--fw8, 800); }   /* 💳 v7.27 — the account's in/out switch, thrown */
+  .pb-pair { flex: 1 1 100%; font-size: var(--fs12, 12px); padding: 6px 10px; min-height: 36px; text-align: left; white-space: normal; }
   .pb-form .frow { gap: 6px; }
   .pb-form .field { flex: 1 1 130px; min-width: 0; margin: 0; }
   .pb-form .field input, .pb-form .field select { min-width: 0; width: 100%; }
@@ -4276,7 +4278,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.26 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.27 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -19633,6 +19635,15 @@ const PB_CSV_HEADS = {
   amt: /^(amount|transaction amount|amt)$/i, out: /^(debit|debits|withdrawal|withdrawals|money out|paid out)$/i, in: /^(credit|credits|deposit|deposits|money in|paid in)$/i,
   bal: /^(balance|running bal(ance)?\.?|ending balance)$/i, acct: /^(card no\.?|account( number| no\.?)?)$/i, type: /^(type|transaction type)$/i };
 const PB_DESC_RANK = ['description', 'payee', 'merchant', 'name', 'memo', 'narrative', 'transaction', 'details'];   // the words column: the best-named one wins ("Details" is a bank's DEBIT/CREDIT word, not the store)
+// 💳 v7.27 — Eric: "i added my amex statement, when i pay my amex card how will it know those charges were already accounted
+// for?" A card company's file counts a CHARGE as plus and a payment as minus — the other way round from a bank. A file whose
+// heading names give it away (Amex: "Card Member", "Appears On Your Statement As") is flipped on the way in, and every account
+// carries a ⇅ switch he can throw himself when the money reads backwards; the switch is remembered for that account's next
+// file. The payment then shows on BOTH sides — money out of the bank, money into the card — and neither is spending: sort
+// one side as ↔ Transfer and it is remembered by the store's exact name from then on; and when the same money sits on two
+// accounts within a few days (same amount, opposite sign) the line offers "↔ same money on ···1005 — both are a transfer" in
+// one tap. Every sort is remembered now — Income, Transfer and Bill included, money in as well as out.
+const PB_CARD_HEADS = /^(card member|appears on your statement as|extended details)$/i;
 function pbCsvParse(text, fileName) {
   const rows = pbCsvRows(text); if (!rows.length) return { lines: [], why: 'the file is empty' };
   const norm = x => String(x || '').replace(/^\W+|\W+$/g, '').trim();
@@ -19641,6 +19652,7 @@ function pbCsvParse(text, fileName) {
     const c = {}; rows[i].forEach((h, j) => { const w = norm(h); Object.keys(PB_CSV_HEADS).forEach(k => { if (c[k] == null && PB_CSV_HEADS[k].test(w)) c[k] = j; }); const r = PB_DESC_RANK.indexOf(w.toLowerCase()); if (r >= 0 && (c.descR == null || r < c.descR)) { c.desc = j; c.descR = r; } });
     if (c.date != null && (c.amt != null || c.out != null || c.in != null)) { head = i; col = c; break; }
   }
+  const cardFile = head >= 0 && rows[head].some(h => PB_CARD_HEADS.test(norm(h)));   // 💳 v7.27 — a card company's file: a charge reads as plus
   const lines = [];
   if (head < 0) {   // no heading row (some banks): the day, the amount, then the words in the last filled cell
     rows.forEach((r, i) => { const d = pbDateKey(r[0]), a = pbAmtOf(r[1]); if (!d || a == null) return; const words = [...r.slice(2)].reverse().find(x => x && x.trim()) || ''; lines.push({ d, amt: a, desc: pbTxDesc(words), acct: '', bal: null, row: i }); });
@@ -19663,7 +19675,7 @@ function pbCsvParse(text, fileName) {
   lines.forEach(l => { l.acct = acct; });
   const newestFirst = lines.length > 1 && lines[0].d >= lines[lines.length - 1].d;
   const topDay = lines.reduce((m, l) => l.d > m ? l.d : m, ''), onTop = lines.filter(l => l.d === topDay), balRow = newestFirst ? onTop[0] : onTop[onTop.length - 1];
-  return { lines, acct, bal: balRow && balRow.bal != null ? balRow.bal : null, balAt: balRow && balRow.bal != null ? balRow.d : '' };
+  return { lines, acct, bal: balRow && balRow.bal != null ? balRow.bal : null, balAt: balRow && balRow.bal != null ? balRow.d : '', cardFile };
 }
 function pbOfxParse(text) {
   const t = String(text || '');
@@ -19679,22 +19691,49 @@ function pbOfxParse(text) {
   if (!lines.length) return { lines: [], why: 'no transactions in it that I could read' };
   return { lines, acct, bal: bal == null ? null : bal, balAt };
 }
+function pbAcctKey(parsed, fileName) { return parsed.acct || String(fileName || 'account').replace(/\.[a-z0-9]+$/i, '').replace(/\s*\(\d+\)\s*$/, '').replace(/\d+/g, '').replace(/\s+/g, ' ').trim().slice(0, 24) || 'account'; }   // "activity (2).csv" is the same account as "activity.csv"
 function pbStmtImport(parsed, fileName) {
   const p = pb(), had = new Set(p.tx.map(t => t.id)), seen = {}, today = localDay(new Date());
+  const k = pbAcctKey(parsed, fileName), acctRec = p.accts[k] || (p.accts[k] = { last4: parsed.acct || '', bal: null, balAt: '', file: '' });
+  if (parsed.cardFile && acctRec.flip == null) acctRec.flip = true;   // 💳 v7.27 — a card company's file: charges read as plus, so the signs turn
+  const flip = !!acctRec.flip;
   let added = 0, dup = 0, toSort = 0;
   parsed.lines.forEach(l => {
     if (l.d > today) return;   // a bank does not post the future
+    const amt = flip ? -l.amt : l.amt;
     const base = l.fitid ? `${l.acct || '-'}:${l.fitid}` : `${l.d}|${l.amt}|${pbStoreKey(l.desc)}`;
     const n = seen[base] = (seen[base] || 0) + 1, id = l.fitid ? base : `${base}|${n}`;
     if (had.has(id)) { dup++; return; }
-    const cat = l.amt < 0 ? (p.storeCat[pbStoreKey(l.desc)] || '') : '';
-    p.tx.push({ id, d: l.d, amt: l.amt, desc: l.desc, acct: l.acct || '', cat, at: new Date().toISOString() });
+    const cat = p.storeCat[pbStoreKey(l.desc)] || '';   // 💳 v7.27 — every store he has sorted, money in or out
+    p.tx.push({ id, d: l.d, amt, desc: l.desc, acct: l.acct || '', k, cat, at: new Date().toISOString() });
     had.add(id); added++; if (!cat) toSort++;
   });
-  if (parsed.bal != null) { const k = parsed.acct || (fileName ? String(fileName).replace(/\.[a-z0-9]+$/i, '').slice(0, 24) : 'account'); p.accts[k] = { last4: parsed.acct || '', bal: parsed.bal, balAt: parsed.balAt || today, file: String(fileName || '').slice(0, 60) }; }
+  if (parsed.bal != null) { acctRec.bal = parsed.bal; acctRec.balAt = parsed.balAt || today; }
+  if (!acctRec.last4 && parsed.acct) acctRec.last4 = parsed.acct;
+  acctRec.file = String(fileName || '').slice(0, 60);
   p.tx.sort((a, b) => b.d.localeCompare(a.d));
   if (p.tx.length > 3000) p.tx.length = 3000;   // a few years is plenty on a phone
-  return { added, dup, toSort };
+  return { added, dup, toSort, flipped: flip };
+}
+// ⇅ the money reads backwards for this account (a charge as plus): flip every line it has, and remember it for the next file
+function pbAcctFlip(k) {
+  const p = pb(), a = p.accts[k]; if (!a) return;
+  a.flip = !a.flip;
+  p.tx.forEach(t => { if (t.k === k) t.amt = Math.round(-t.amt * 100) / 100; });
+  scheduleSave(); renderBudget();
+  toast(a.flip ? `⇅ ${a.last4 ? '···' + a.last4 : k}: charges now read as money OUT — remembered for its next file` : `⇅ ${a.last4 ? '···' + a.last4 : k}: back the way the file had it`);
+}
+// ↔ the same money on two accounts: one line out, one line in, the same amount, within five days
+function pbTxPair(t) {
+  if (!t || t.cat) return null;
+  const day = x => +new Date(x + 'T12:00:00');
+  return pb().tx.find(u => u.id !== t.id && (u.k || u.acct) !== (t.k || t.acct) && Math.abs(Math.abs(u.amt) - Math.abs(t.amt)) < 0.005 && Math.sign(u.amt) === -Math.sign(t.amt) && Math.abs(day(u.d) - day(t.d)) <= 5 * 864e5) || null;
+}
+function pbTxPairMark(id, otherId) {
+  const p = pb(), t = p.tx.find(x => x.id === id), u = p.tx.find(x => x.id === otherId); if (!t || !u) return;
+  [t, u].forEach(x => { x.cat = 'Transfer'; const key = pbStoreKey(x.desc); if (key) p.storeCat[key] = 'Transfer'; });
+  scheduleSave(); renderBudget();
+  toast('↔ Both sides marked as a transfer — neither counts as spending, and both stores are remembered');
 }
 async function pbStmtFiles(fileList) {
   const files = [...(fileList || [])].filter(f => /\.(csv|txt|tsv|ofx|qfx|qbo)$/i.test(f.name));
@@ -19704,7 +19743,7 @@ async function pbStmtFiles(fileList) {
     const parsed = /<OFX>|<STMTTRN>|OFXHEADER/i.test(text) ? pbOfxParse(text) : pbCsvParse(text, f.name);
     if (!parsed.lines.length) { toast(`⚠ ${f.name}: ${parsed.why || 'nothing in it I could read'}`, false); continue; }
     const r = pbStmtImport(parsed, f.name);
-    toast(`🏦 ${parsed.lines.length} line${parsed.lines.length === 1 ? '' : 's'} read from ${f.name} · ${r.added} new · ${r.dup} already here${r.toSort ? ` · ${r.toSort} to sort` : ''}`);
+    toast(`🏦 ${parsed.lines.length} line${parsed.lines.length === 1 ? '' : 's'} read from ${f.name} · ${r.added} new · ${r.dup} already here${r.toSort ? ` · ${r.toSort} to sort` : ''}${r.flipped ? ' · ⇅ a card file: charges read as money out' : ''}`);
   }
   scheduleSave(); renderBudget();
   const inp = $('pbStmtIn'); if (inp) inp.value = '';
@@ -19714,8 +19753,8 @@ function pbTxCat(id, cat) {
   cat = String(cat || '').trim().slice(0, 30);
   t.cat = cat;
   let more = 0;
-  if (cat && t.amt < 0 && !PB_TX_SPECIAL.includes(cat)) {   // the store is learned by its exact name — every unsorted line of the same store follows
-    const k = pbStoreKey(t.desc); if (k) { p.storeCat[k] = cat; p.tx.forEach(x => { if (x !== t && !x.cat && x.amt < 0 && pbStoreKey(x.desc) === k) { x.cat = cat; more++; } }); }
+  if (cat) {   // the store is learned by its exact name — every unsorted line of the same store follows (💳 v7.27: Income, Transfer and Bill too, money in or out)
+    const k = pbStoreKey(t.desc); if (k) { p.storeCat[k] = cat; p.tx.forEach(x => { if (x !== t && !x.cat && pbStoreKey(x.desc) === k) { x.cat = cat; more++; } }); }
   }
   scheduleSave(); renderBudget();
   if (cat) toast(`✓ ${String(t.desc).replace(/[<>&]/g, '').slice(0, 28)} → ${cat}${more ? ` · ${more} more of the same store followed` : ''}`);
@@ -19742,9 +19781,9 @@ function pbBankCardHtml(p) {
       ondragover="event.preventDefault(); this.classList.add('over');" ondragleave="this.classList.remove('over');" ondrop="event.preventDefault(); this.classList.remove('over'); pbStmtFiles(event.dataTransfer.files);">
       <span>📥 <b>Drop a bank statement here</b> — a CSV or OFX / QFX from your bank's site<br><small>or tap to pick · read on this phone, nothing is sent anywhere · an account is its last four only</small></span></div>
     <input type="file" id="pbStmtIn" accept=".csv,.txt,.tsv,.ofx,.qfx,.qbo" multiple style="display: none;" onchange="pbStmtFiles(this.files)">
-    ${accts.length ? `<div class="pb-h2">ACCOUNTS</div>${accts.map(([k, a]) => `<div class="pb-row"><span class="pb-rn">${a.last4 ? '···' + esc(a.last4) : esc(k)}<span class="pb-meta"> · as of ${esc(a.balAt || '')}</span></span> <b>${pbMoney(a.bal)}</b></div>`).join('')}` : ''}
+    ${accts.length ? `<div class="pb-h2">ACCOUNTS</div>${accts.map(([k, a]) => `<div class="pb-row"><span class="pb-rn">${a.last4 ? '···' + esc(a.last4) : esc(k)}<span class="pb-meta">${a.bal != null ? ' · as of ' + esc(a.balAt || '') : ''}${a.flip ? ' · ⇅ a card — charges read as money out' : ''}</span></span> ${a.bal != null ? `<b>${pbMoney(a.bal)}</b>` : ''}<button type="button" class="pb-x pb-flip${a.flip ? ' on' : ''}" onclick="pbAcctFlip('${esc(k)}')" aria-pressed="${!!a.flip}" aria-label="${a.flip ? 'charges read as money out — tap to put the signs back the way the file had them' : 'the money reads backwards? tap: charges become money out'}" title="${a.flip ? 'charges read as money out — tap to put it back' : 'money reads backwards? tap to flip in and out'}">⇅</button></div>`).join('')}` : ''}
     ${dep ? `<div class="hint" style="margin-top: 6px;">💵 ${pbMoney(dep)} came in this month (the lines you sorted as Income)</div>` : ''}
-    ${unsorted.length ? `<div class="pb-h2">TO SORT <span class="pb-sub">pick what for — the store is remembered</span></div>${unsorted.map(t => `<div class="pb-row pb-txrow"><span class="pb-rn"><b>${esc(t.desc || '(no words)')}</b><span class="pb-meta"> · ${esc(t.d.slice(5))}${t.acct ? ' · ···' + esc(t.acct) : ''}</span></span> <b class="${t.amt > 0 ? 'pb-in' : ''}">${pbMoney(t.amt)}</b>${pbTxWheel(t)}<button type="button" class="pb-x" onclick="pbTxDel('${esc(t.id)}')" aria-label="take this line off" title="take this line off">✕</button></div>`).join('')}${unsortedAll.length > unsorted.length ? `<div class="hint">…and ${unsortedAll.length - unsorted.length} more once these are sorted.</div>` : ''}` : ''}
+    ${unsorted.length ? `<div class="pb-h2">TO SORT <span class="pb-sub">pick what for — the store is remembered</span></div>${unsorted.map(t => `<div class="pb-row pb-txrow"><span class="pb-rn"><b>${esc(t.desc || '(no words)')}</b><span class="pb-meta"> · ${esc(t.d.slice(5))}${t.acct ? ' · ···' + esc(t.acct) : ''}</span></span> <b class="${t.amt > 0 ? 'pb-in' : ''}">${pbMoney(t.amt)}</b>${pbTxWheel(t)}<button type="button" class="pb-x" onclick="pbTxDel('${esc(t.id)}')" aria-label="take this line off" title="take this line off">✕</button>${(pair => pair ? `<button type="button" class="pick-chip pb-pair" onclick="pbTxPairMark('${esc(t.id)}', '${esc(pair.id)}')">↔ Same money on ${pair.acct ? '···' + esc(pair.acct) : esc(pair.k || 'the other account')} (${esc(pair.d.slice(5))}) — both are a transfer</button>` : '')(pbTxPair(t))}</div>`).join('')}${unsortedAll.length > unsorted.length ? `<div class="hint">…and ${unsortedAll.length - unsorted.length} more once these are sorted.</div>` : ''}` : ''}
     ${p.tx.length && !unsortedAll.length ? '<div class="hint" style="margin-top: 6px;">✓ Every line has a category — the sorted ones sit under SPEND with a 🏦.</div>' : ''}
   </div>`;
 }
@@ -21816,7 +21855,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.26';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.27';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
