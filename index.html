@@ -2218,6 +2218,7 @@
   .mat-box.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink, #111); }
   .mat-sel { flex: 1 1 150px; min-width: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.35; overflow-wrap: anywhere; }
   .mat-desc { font-weight: var(--fw7, 700); color: var(--ink-1); cursor: pointer; }   /* 👆 v7.21 — what was picked leads the row's line */
+  .mat-pick2desc.armed { border: 2.5px solid var(--warn, #ffa657); }   /* 👆 v7.23 — ⚠ SURE? before it writes over other words */
   .mat-legend { font-size: var(--fs115, 11.5px); color: var(--ink-muted); margin: 0 0 8px; line-height: 1.5; }
   /* 📋 v6.91 — the Build List, round two. A light is an ICON over its LETTER: lit = the brass plate, the icon in full and a ✓
      in its corner (brightness + glyph + the word in its label — never colour alone); unlit = hollow, the icon dimmed. */
@@ -4255,7 +4256,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.22 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.23 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -16407,7 +16408,7 @@ function matEditSheetHtml(it) {
       <button type="button" class="pick-chip${hm ? ' sel' : ''}" style="width: 100%; font-weight: var(--fw8, 800); letter-spacing: 0.4px;"
         onclick="matHmToggle('${id}')" aria-pressed="${hm}">
         ${hm ? '✓ 🏠 REQUIRES HOMEOWNER INPUT OR CHOICE — on their page, pick lamps' : '🏢 OFFICE ONLY — they never see this · tap if they need to pick or approve it'}</button></div>
-${hm ? `<div class="field" style="flex: 1 1 100%;"><label>Their pick (what's decided)</label><input type="text" value="${esc(it.pick || '')}" onchange="matSet('${id}', 'pick', this.value)"></div>
+${hm ? `<div class="field" style="flex: 1 1 100%;"><label>Their pick (what's decided)</label><input type="text" value="${esc(it.pick || '')}" onchange="matSet('${id}', 'pick', this.value); renderMatMgr()">${matPickToDescBtn(it)}</div>
     <div class="field" style="flex: 1 1 100%;"><label>Link</label><input type="text" value="${esc(it.url || '')}" onchange="matSet('${id}', 'url', this.value)"></div>
     <div class="field" style="flex: 1 1 100%;"><label>Status note to the client ("can't get this one — options below")</label><textarea rows="2" class="grow" onchange="matSet('${id}', 'note', this.value)">${esc(it.note || '')}</textarea></div>
     <div class="field" style="flex: 1 1 100%;"><label>Options for them to pick (one per line: title | link | price)</label><textarea rows="3" class="grow" onchange="matSetOpts('${id}', this.value)">${esc((it.opts || []).map(o => [o.t, o.url || '', o.price || ''].join(' | ').replace(/ \| +$/, '').replace(/ \| $/, '')).join('\n'))}</textarea></div>
@@ -16475,7 +16476,8 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
           onchange="matSet('${id}', 'n', this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></div>
       ${matEdPhotosHtml(it, mk)}
       ${buy ? `<div class="ms-sec"><label class="ms-h" for="matDesc-${id}">👆 Picked — what it is</label>
-        <input type="text" id="matDesc-${id}" value="${esc(it.desc || '')}" placeholder="the model, colour, size — what was picked" style="width: 100%; font-size: 15px; padding: 9px 11px;" onchange="matSet('${id}', 'desc', this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+        <input type="text" id="matDesc-${id}" value="${esc(it.desc || '')}" placeholder="the model, colour, size — what was picked" style="width: 100%; font-size: 15px; padding: 9px 11px;" onchange="matSet('${id}', 'desc', this.value); renderMatMgr()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+        ${!String(it.desc || '').trim() && String(it.pick || '').trim() ? `<div class="hint mat-pick-wait" style="margin: 6px 0 0;">🏠 The homeowner picked "<b>${esc(String(it.pick).trim())}</b>" — it sits in the 🏠 fold below · <button type="button" class="pick-chip" style="font-size: var(--fs115, 11.5px); padding: 4px 9px; min-height: 30px;" onclick="matPickToDesc('${id}')" aria-label="put the homeowner's pick in this box">👆 Use it here</button></div>` : ''}
         <div class="hint" style="margin: 4px 0 0;">🧙 The Wizard fills it from a photo when it is empty · your own notes stay in the Note under it · 🏢 office only</div></div>` : ''}
       <div class="ms-sec"><label class="ms-h" for="matSel-${id}">Note — shows on the row</label>
         <textarea id="matSel-${id}" rows="2" class="grow" style="width: 100%; font: inherit; font-size: 15px; line-height: 1.4; padding: 9px 11px;" placeholder="${buy ? 'what has to be decided, what to check, where it came from…' : 'what was picked, what has to be decided, what to check…'}" onchange="matSet('${id}', 'sel', this.value)">${esc(it.sel || '')}</textarea>
@@ -17218,6 +17220,34 @@ function matCycle(id) {
   matLightDisarm(); matLightDo(it, plan);
 }
 // 🏠↔🏢 flip an item between homeowner-pick and office-task; the lamp maps across sensibly
+// 👆 v7.23 — Eric: "In the build list, I click on 'Edit an item.' The Picked — what it is box is empty. But if I scroll down and
+// unfold the homeowner tab, it has their pick (what's decided). There should be a button down there that says 'send to: Picked
+// — what it is box'." The homeowner's pick (`pick`, their page's word, v6.89) and what it IS (`desc`, office-side, v7.21) are two
+// boxes; this plate copies the one into the other — through matSet, so the 🕘 history writes it down. A box that already holds
+// other words asks ⚠ SURE? first (four seconds). The 👆 box itself says when the homeowner's pick is waiting below.
+let _matPickArm = '', _matPickT = 0;
+function matPickToDesc(id) {
+  const it = matFindItem(id); if (!it || !String(it.pick || '').trim()) return;
+  const pick = String(it.pick).trim().slice(0, 200), have = String(it.desc || '').trim();
+  if (have && have !== pick && _matPickArm !== id) {
+    _matPickArm = id; renderMatMgr();
+    clearTimeout(_matPickT); _matPickT = setTimeout(() => { if (_matPickArm === id) { _matPickArm = ''; renderMatMgr(); } }, 4000);
+    return;
+  }
+  _matPickArm = ''; clearTimeout(_matPickT);
+  if (have === pick) { toast('👆 It is already in the Picked — what it is box'); renderMatMgr(); return; }
+  matSet(id, 'desc', pick);
+  renderMatMgr();
+  toast(`👆 Put in Picked — what it is: "${pick}"`);
+}
+function matPickToDescBtn(it) {
+  const id = escq(it.id), pick = String(it.pick || '').trim();
+  if (!pick) return '';
+  const have = String(it.desc || '').trim(), same = have === pick, armed = _matPickArm === it.id;
+  const w = same ? '✓ In the Picked — what it is box' : armed ? `⚠ SURE? It replaces "${esc(have.slice(0, 40))}${have.length > 40 ? '…' : ''}"` : '👆 Send to "Picked — what it is"';
+  const lbl = same ? 'the homeowner\'s pick is already in the Picked — what it is box' : armed ? 'tap again — it replaces what is in the Picked — what it is box' : 'send the homeowner\'s pick to the Picked — what it is box at the top';
+  return `<button type="button" class="pick-chip mat-pick2desc${same ? ' sel' : ''}${armed ? ' armed' : ''}" style="font-size: var(--fs12, 12px); padding: 6px 10px; min-height: 36px; margin-top: 6px;" onclick="matPickToDesc('${id}')" aria-pressed="${same}" aria-label="${lbl}" title="${lbl}">${w}</button>`;
+}
 function matHmToggle(id) {
   const it = matFindItem(id);
   if (!it) return;
@@ -21532,7 +21562,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.22';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.23';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
