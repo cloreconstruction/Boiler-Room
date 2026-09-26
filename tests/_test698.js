@@ -42,7 +42,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('EVERY row wears the ⇄ plate, always in the same place — right after ⚠ 1st — whatever lights are lit: to buy, ordered, installed, checklist, tagged, in work, done, and the 🏠 row', await page.evaluate(() => {
     // ✓ v7.19 — a FINISHED row (the installed hood, the checklist done) folds to its name and ✓ FINISHED; its ⇄ is in the edit window
     const rows = [...document.querySelectorAll('#revBox .mat-item:not(.mi-fin)')], fin = [...document.querySelectorAll('#revBox .mat-item.mi-fin')].map(r => r.textContent);
-    return rows.length === 6 && rows.every(r => { const b = [...r.querySelectorAll('.mat-rowbtns .mat-box')]; return b.length === 2 && b[0].classList.contains('mat-firstbtn') && b[1].classList.contains('mat-flip'); }) &&
+    return rows.length === 6 && rows.every(r => { const b = [...r.querySelectorAll('.mat-rowbtns .mat-box')]; return b.length === 3 && b[0].classList.contains('mat-firstbtn') && b[1].classList.contains('mat-stuckbtn') && b[2].classList.contains('mat-flip'); }) &&   // 🚧 v7.25 — the stuck plate sits between them
       fin.length === 2 && fin.some(t => /Installed hood/.test(t)) && fin.some(t => /Checklist done/.test(t)) &&
       _flip('Plain to buy').textContent.replace(/\s+/g, '') === '⇄list' && _flip('Plain checklist').textContent.replace(/\s+/g, '') === '⇄buy' && _flip('Ordered faucet').textContent.replace(/\s+/g, '') === '⇄list';
   }));
@@ -85,7 +85,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   ok('all seven plates of a thing to buy still sit on ONE line on the phone, and nothing runs off the board', await page.evaluate(() => {
     const plates = [..._row('Plain to buy').querySelectorAll('.mat-line2 .mat-box')], tops = new Set(plates.map(p => Math.round(p.getBoundingClientRect().top)));
-    return plates.length === 7 && tops.size === 1 && $('revBox').scrollWidth <= $('revBox').clientWidth + 1 && document.documentElement.scrollWidth <= document.documentElement.clientWidth;
+    return plates.length === 8 && tops.size === 1 && $('revBox').scrollWidth <= $('revBox').clientWidth + 1 && document.documentElement.scrollWidth <= document.documentElement.clientWidth;   // 🚧 v7.25 — eight, with the stuck plate
   }));
 
   ok('"? how this works" says it the new way', await page.evaluate(() => { _matHelp = true; renderMatMgr(); const t = ($('matHelpBox') || {}).textContent || ''; _matHelp = false; renderMatMgr(); return /at the end of every row/.test(t) && /asks ⚠ sure\? first/.test(t) && !/while no light is lit/.test(t); }));

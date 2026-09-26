@@ -160,7 +160,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('on the phone nothing runs off the edge, and the five lights + ⚠ 1st + ⇄ still sit on one line', await page.evaluate(() => {
     const box = $('revBox');
     const plates = [..._row('Toilet').querySelectorAll('.mat-line2 .mat-box')].map(b => Math.round(b.getBoundingClientRect().top));
-    return box.scrollWidth <= box.clientWidth + 1 && plates.length === 7 && new Set(plates).size === 1 && [...document.querySelectorAll('#revBox .mat-quick')].every(q => q.getBoundingClientRect().right <= innerWidth);
+    return box.scrollWidth <= box.clientWidth + 1 && plates.length === 8 && new Set(plates).size === 1 && /* 🚧 v7.25 — eight, with the stuck plate */ [...document.querySelectorAll('#revBox .mat-quick')].every(q => q.getBoundingClientRect().right <= innerWidth);
   }));
 
   console.log('— 📷 v7.08 the edit window: photos and the Wizard —');

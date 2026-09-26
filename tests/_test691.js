@@ -206,9 +206,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const plates = [..._row('Loft railing (cable)').querySelectorAll('.mat-line2 .mat-box')], tops = new Set(plates.map(p => Math.round(p.getBoundingClientRect().top)));
     const parts = { shown, more, float: live.float, above: live.above, tt: live.tt, ownLine: live.ownLine,
       n: plates.length, rows: tops.size, sizes: plates.map(p => Math.round(p.getBoundingClientRect().width) + 'x' + Math.round(p.getBoundingClientRect().height)).join(' '), page: document.documentElement.scrollWidth <= document.documentElement.clientWidth, box: $('revBox').scrollWidth <= $('revBox').clientWidth + 1 };
-    return parts.shown === '⋯ ➕ item' && parts.more && parts.float === 'none' && parts.above && parts.tt === 'none' && parts.ownLine && parts.n === 7 && parts.rows === 1 && plates.every(p => p.getBoundingClientRect().width >= 36 && p.getBoundingClientRect().height >= 40) && parts.page && parts.box ? true : JSON.stringify(parts);
+    return parts.shown === '⋯ ➕ item' && parts.more && parts.float === 'none' && parts.above && parts.tt === 'none' && parts.ownLine && parts.n === 8 && parts.rows === 1 && plates.every(p => p.getBoundingClientRect().width >= 34 && p.getBoundingClientRect().height >= 40) && parts.page && parts.box ? true : JSON.stringify(parts);   // 🚧 v7.25 — eight plates, 34px on the phone
   });
-  ok('nothing is floated over the first row any more: the heading is the name, ➕ item and ⋯ (move · fold in · template · delete behind it), the counts in plain case on their own line; all seven plates of a row sit on ONE line', ph === true, ph);
+  ok('nothing is floated over the first row any more: the heading is the name, ➕ item and ⋯ (move · fold in · template · delete behind it), the counts in plain case on their own line; all eight plates of a row sit on ONE line', ph === true, ph);
 
   ok('the top of the board is short: the counts and "? how this works" — the legend and the instructions fold behind it; the title and ✕ no longer fight for a line', await page.evaluate(() => {
     const hint = [...$('revBox').querySelectorAll('.hint')].find(h => h.querySelector('a')), a = hint.querySelector('a');

@@ -2268,8 +2268,9 @@
     .mat-rm-tools .rm-more { display: none; }
     .mat-rm-tools.open .rm-more { display: inline-flex; }
     .mat-rm-tools .rm-dots { display: inline-flex; }
-    .mat-line2 { margin-left: 0; gap: 6px 6px; }
-    .mat-box { min-width: 37px; }
+    .mat-line2 { margin-left: 0; gap: 6px 4px; }
+    .mat-box { min-width: 34px; padding: 2px 2px 1px; }   /* 🚧 v7.25 — eight plates (5 lights · ⚠ · 🚧 · ⇄) on one line at 390px */
+    .mat-rowbtns { margin-left: 2px; }
     .mat-rowbtns { margin-left: 0; }
     .mat-item .chips-row .pick-chip { min-height: 34px !important; }
     .mat-sel { flex-basis: 100%; font-size: 13.5px; line-height: 1.4; }
@@ -2296,6 +2297,18 @@
   /* ⚠ v7.19 — a FOLDED category holding a ⚠ FIRST row lights orange: the edge, the tint, and a plate in words */
   .mat-rm-head.mat-rm-first { border-left: 4px solid var(--warn, #ffa657); background: color-mix(in srgb, var(--warn, #ffa657) 14%, transparent); border-radius: 8px; padding: 6px 6px 6px 8px; }
   .mat-first-lit { display: inline-block; background: var(--warn, #ffa657); color: #1a1208; font-size: var(--fs12, 12px); font-weight: var(--fw8, 800); letter-spacing: .3px; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+  /* 🚧⏳ v7.25 — the STUCK mark (coral: a plate, a band with the needs box, an edge on the row, a pill on a folded heading) and
+     the age cubes (three small cubes + the days in words, never the colour alone) */
+  .mat-stuckbtn .mb-i { filter: none; opacity: .85; }
+  .mat-stuckbtn.on { background: var(--err, #ff8a70); border-color: var(--err, #ff8a70); color: #1a0e0a; }
+  .mat-item.mi-stuck { background: color-mix(in srgb, var(--err, #ff8a70) 8%, transparent); border-radius: 8px; box-shadow: inset 3px 0 0 var(--err, #ff8a70); }
+  .mat-stuck-band { font-size: var(--fs115, 11.5px); font-weight: var(--fw8, 800); letter-spacing: .4px; color: var(--err, #ff8a70); margin: 0 0 4px 2px; }
+  .mat-stuck-band .mat-need { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0; padding: 7px 9px; color: var(--ink-1); }
+  .mat-stuck-lit { display: inline-block; background: var(--err, #ff8a70); color: #1a0e0a; font-size: var(--fs12, 12px); font-weight: var(--fw8, 800); letter-spacing: .3px; border-radius: 999px; padding: 2px 10px; white-space: nowrap; margin-left: 4px; }
+  .mat-age { display: inline-flex; align-items: center; gap: 2px; font-weight: var(--fw7, 700); color: var(--ink-2); white-space: nowrap; vertical-align: middle; }
+  .mat-age i { display: inline-block; width: 7px; height: 7px; border: 1px solid var(--baseline, #8a8177); border-radius: 2px; }
+  .mat-age.c1 i:nth-of-type(-n+1), .mat-age.c2 i:nth-of-type(-n+2), .mat-age.c3 i:nth-of-type(-n+3) { background: var(--warn, #ffa657); border-color: var(--warn, #ffa657); }
+  .mat-age.c3 { color: var(--warn, #ffa657); }
   /* ✓ v7.19 — a FINISHED row folds to its name and a green light, out of the way at the bottom of its category */
   .mat-item.mi-fin { display: flex; align-items: center; gap: 8px; padding: 6px 2px 6px 15px; opacity: .78; }
   .mat-item.mi-fin::before { top: 50%; transform: translateY(-50%); }
@@ -4256,7 +4269,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.24 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.25 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15892,9 +15905,11 @@ function matCostBits(it) {
   return bits.join(' · ');
 }
 function matTotals(items) { return (items || []).reduce((t, x) => { t.est += +x.est || 0; t.act += +x.act || 0; return t; }, { est: 0, act: 0 }); }
-function matRoomCounts(its, firstShown) {   // firstShown (v7.19) = the folded heading already wears the lit ⚠ n FIRST plate
+function matRoomCounts(its, firstShown, stuckShown) {   // firstShown (v7.19) / stuckShown (v7.25) = the folded heading already wears the lit plate
   const buy = its.filter(matIsBuy), work = its.filter(x => !matIsBuy(x)), t = matTotals(its), bits = [];
   const firstN = its.filter(matIsFirst).length; if (firstN && !firstShown) bits.push(`<b>⚠ ${firstN} first</b>`);   // ⚠ v6.91
+  const stuckN = its.filter(matIsStuck).length; if (stuckN && !stuckShown) bits.push(`<b>🚧 ${stuckN} stuck</b>`);   // 🚧 v7.25
+  const oldN = its.filter(matOld).length; if (oldN) bits.push(`<b>⏳ ${oldN} getting old</b>`);   // ⏳ v7.25
   if (buy.length) bits.push(`🛒 ${buy.filter(x => matBoxOn(x, 'P')).length}/${buy.length} picked · ${buy.filter(x => matBoxOn(x, 'O')).length} ordered · ${buy.filter(x => matBoxOn(x, 'R')).length} received · ${buy.filter(x => x.ins).length} installed`);
   if (work.length) bits.push(`✅ ${work.filter(x => x.s === 'done').length}/${work.length} done · ${work.filter(x => matItemTags(x).length).length} on a list · ${work.filter(x => x.sch).length} scheduled`);   // ✅ v6.91 — the checklist rows, counted the way the things to buy are
   if (t.est || t.act) bits.push(`${t.est ? 'est ' + matMoney(t.est) : ''}${t.est && t.act ? ' · ' : ''}${t.act ? 'paid ' + matMoney(t.act) : ''}`);
@@ -15907,7 +15922,9 @@ const MAT_STAGE_F = [
   ['toorder', '🛒 picked, not ordered', it => matIsBuy(it) && it.s === 'picked'],
   ['torecv', '📦 ordered, not here', it => matIsBuy(it) && it.s === 'ordered'],
   ['toinst', '🔧 here, not installed', it => matIsBuy(it) && it.s === 'arrived' && !it.ins],
-  ['nolist', '👷 on nobody\'s list', it => !matIsBuy(it) && !matItemDone(it) && !matItemTags(it).length]];   // ✅ v6.91 — "make sure it's on somebody's list"
+  ['nolist', '👷 on nobody\'s list', it => !matIsBuy(it) && !matItemDone(it) && !matItemTags(it).length],   // ✅ v6.91 — "make sure it's on somebody's list"
+  ['old', '⏳ getting old', it => matOld(it)],   // ⏳ v7.25 — waited on him a week or more
+  ['stuck', '🚧 stuck', it => matIsStuck(it)]];   // 🚧 v7.25 — cannot move until something happens
 function matStageOk(it) { const f = MAT_STAGE_F.find(x => x[0] === _matStageF); return !f || f[2](it); }
 function matTopBarHtml() {
   const all = _matD.rooms.flatMap(r => r.items || []), t = matTotals(all), anyBuy = all.some(matIsBuy);
@@ -16129,6 +16146,61 @@ function matRowWord(it) {
 }
 // ⚠ FIRST — the flag holds until the row is done; a flagged row rides at the top of its category and says why in words.
 const matIsFirst = it => !!(it && it.first && !matItemDone(it));
+// 🚧⏳ v7.25 — Eric: "some kind of timer … show that something's getting old. But … if it's ordered and you're just waiting for
+// it to arrive, it won't notify you" and "one method of making something a top priority in the category, but also have a way
+// to show that there's something ready to be done … can't move forward until it's done … they want tan soffit, and Northstar
+// Metal doesn't have a tan color … somebody needs to go do some research … how do we mark that?" — "yes to 1 and 2."
+// ⏳ GETTING OLD: a row that waits on US — to pick, picked-not-ordered, here-not-installed, a checklist row not done, and an
+// ordered row only once its expected arrival has passed (waiting on a vendor is not on him) — wears three cubes and the days:
+// one cube at 3 days, two at 7, three at 14, counted from the last thing that happened on the row (its 🕘 history, its order /
+// grinder / install date, else the day this build first saw it — `seen`, stamped once). A finished row never.
+// 🚧 STUCK: the second mark beside ⚠ FIRST. ⚠ FIRST answers "which one first?"; 🚧 answers "what is missing?" — a row can wear
+// both. The band reads `🚧 STUCK — needs: …` with a box for what has to happen; the heading counts them, folded it wears a
+// coral plate; a working-list chip finds them. Both are office-side: the homeowner's file never carries them.
+const matIsStuck = it => !!(it && it.stuck && !matItemDone(it));
+function matStuckToggle(id) {
+  const it = matFindItem(id); if (!it) return;
+  if (it.stuck) { delete it.stuck; delete it.need; } else it.stuck = true;
+  matLog(`${it.stuck ? '🚧 stuck' : '✓ no longer stuck'} — ${it.n}`);
+  matChgPush(it, '🚧 stuck', it.stuck ? 'no' : 'yes', it.stuck ? 'yes' : 'no');
+  _matDirty = true; renderMatMgr();
+  if (it.stuck) setTimeout(() => { const b = (_matEdit === id ? $('matNeedS-' + id) : null) || $('matNeed-' + id); if (b) b.focus(); }, 40);
+}
+function matStuckBandHtml(it) {
+  if (!matIsStuck(it)) return '';
+  const id = escq(it.id);
+  return `<div class="mat-stuck-band">🚧 STUCK — needs: <input type="text" id="matNeed-${id}" class="mat-need" value="${esc(it.need || '')}" placeholder="what has to happen before this can move" onclick="event.stopPropagation()" onchange="matSet('${id}', 'need', this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" aria-label="what this row needs before it can move"></div>`;
+}
+function matWaitsOnUs(it) {
+  if (!it || matItemDone(it)) return false;
+  if (!matIsBuy(it)) return true;
+  const st = it.s || 'pick';
+  if (st === 'ordered') return !!(it.eta && String(it.eta) < localDay(new Date()));   // waiting on a vendor — only once its expected arrival has passed
+  return true;
+}
+function matAgeDays(it) {
+  const at = x => { if (!x) return NaN; const v = String(x); return +new Date(/^\d{4}-\d{2}-\d{2}$/.test(v) ? v + 'T12:00:00' : v); };
+  const stamps = [...(it.chg || []).map(c => c.at), it.gat, it.odate, it.ins, it.ddate, it.seen].map(at).filter(n => !isNaN(n));
+  if (!stamps.length) return null;
+  return Math.max(0, Math.floor((Date.now() - Math.max(...stamps)) / 86400000));
+}
+const MAT_AGE_STEPS = [3, 7, 14];
+const matAgeCubes = d => d == null ? 0 : MAT_AGE_STEPS.filter(x => d >= x).length;
+const matOld = it => matWaitsOnUs(it) && (matAgeDays(it) || 0) >= MAT_AGE_STEPS[1];
+const matAgeWord = d => d < 21 ? `${d} days` : `${Math.round(d / 7)} wks`;
+function matAgeHtml(it) {
+  if (!matWaitsOnUs(it)) return '';
+  const d = matAgeDays(it), n = matAgeCubes(d); if (!n) return '';
+  const w = matAgeWord(d);
+  return ` · <span class="mat-age c${n}" title="waiting on you ${w} — nothing has changed on it since" aria-label="waiting on you ${w}">⏳<i></i><i></i><i></i> ${w}</span>`;
+}
+// the day this build first saw a row that carries no date at all — stamped once, so its age is counted from somewhere
+function matSeenStamp() {
+  if (!_matD) return;
+  const today = localDay(new Date()); let n = 0;
+  (_matD.rooms || []).forEach(r => (r.items || []).forEach(it => { if (matAgeDays(it) == null) { it.seen = today; n++; } }));
+  if (n) { _matDirty = true; scheduleMatSave(); }
+}
 function matFirstToggle(id) {
   const it = matFindItem(id); if (!it) return;
   if (it.first) delete it.first; else it.first = true;
@@ -16158,9 +16230,10 @@ function matFlipTap(id) {
 }
 function matRowBtnsHtml(it) {
   const id = escq(it.id), on = !!it.first, buy = matIsBuy(it), armed = _matFlipArm === it.id;
+  const stuck = matIsStuck(it), sw = stuck ? 'STUCK — it needs something before it can move; tap to clear it' : 'mark it STUCK — it cannot move until something happens; say what in its band';   // 🚧 v7.25
   const fw = on ? 'FIRST — it rides at the top of its category; tap to take the flag off' : 'flag it FIRST — it goes to the top of its category, the rest waits on it';
   const xw = it.hm ? 'on the homeowner\'s page — it stays something to buy' : armed ? 'tap again to flip it — its lights are carried across as best they fit' : buy ? 'make it a checklist item — on a list, scheduled, done' : 'make it something to buy — picked, ordered, received, scheduled, installed';
-  return `<span class="mat-strip mat-rowbtns"><button type="button" class="mat-box mat-firstbtn${on ? ' on' : ''}" onclick="event.stopPropagation(); matFirstToggle('${id}')" aria-pressed="${on}" aria-label="${fw}" title="${fw}"><span class="mb-i" aria-hidden="true">⚠</span><b>1st</b>${on ? '<i class="mb-ck" aria-hidden="true">✓</i>' : ''}</button><button type="button" class="mat-box mat-flip${armed ? ' armed' : ''}${it.hm ? ' is-off' : ''}" onclick="event.stopPropagation(); matFlipTap('${id}')" aria-label="${xw}" title="${xw}"${it.hm ? ' aria-disabled="true"' : ''}><span class="mb-i" aria-hidden="true">${armed ? '⚠' : it.hm ? '🏠' : '⇄'}</span><b>${armed ? 'sure?' : buy ? 'list' : 'buy'}</b></button></span>`;
+  return `<span class="mat-strip mat-rowbtns"><button type="button" class="mat-box mat-firstbtn${on ? ' on' : ''}" onclick="event.stopPropagation(); matFirstToggle('${id}')" aria-pressed="${on}" aria-label="${fw}" title="${fw}"><span class="mb-i" aria-hidden="true">⚠</span><b>1st</b>${on ? '<i class="mb-ck" aria-hidden="true">✓</i>' : ''}</button><button type="button" class="mat-box mat-stuckbtn${stuck ? ' on' : ''}" onclick="event.stopPropagation(); matStuckToggle('${id}')" aria-pressed="${stuck}" aria-label="${sw}" title="${sw}"><span class="mb-i" aria-hidden="true">🚧</span><b>stuck</b>${stuck ? '<i class="mb-ck" aria-hidden="true">✓</i>' : ''}</button><button type="button" class="mat-box mat-flip${armed ? ' armed' : ''}${it.hm ? ' is-off' : ''}" onclick="event.stopPropagation(); matFlipTap('${id}')" aria-label="${xw}" title="${xw}"${it.hm ? ' aria-disabled="true"' : ''}><span class="mb-i" aria-hidden="true">${armed ? '⚠' : it.hm ? '🏠' : '⇄'}</span><b>${armed ? 'sure?' : buy ? 'list' : 'buy'}</b></button></span>`;
 }
 // 👷 whose list? A tag IS somebody's list (the 🏷 sort at the top of the board shows it) — the trades, his crew, any name he adds
 function matWhoBank(it) { return [...new Set([...matTagBank(it), ...((typeof crew !== 'undefined' && crew) || [])])]; }
@@ -16257,6 +16330,7 @@ async function openMaterials(i) {
   // scroll way down to a category at the bottom." Every category opens folded — its name, its counts and how many are open;
   // a tap opens the one he wants. A working-list or 🏷 filter unfolds them all (he asked to SEE those rows), ➕ item unfolds its own.
   _matRmShut = new Set((_matD.rooms || []).map((r, i) => i));
+  matSeenStamp();   // ⏳ v7.25 — a row with no date at all is dated today, once, so its age can be counted
   renderMatMgr();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -16278,7 +16352,7 @@ function renderMatMgr() {
       <button type="button" class="btn-ghost req-x x-plate x-small" style="min-width: 44px;" onclick="matClose()" aria-label="close the board" title="close the board">✕</button>
     </span></h3>
     ${_matHistShow ? matHistHtml() : ''}
-    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client · <a href="javascript:void(0)" style="color: var(--accent); font-weight: var(--fw7, 700); text-decoration: none; white-space: nowrap;" onclick="_matHelp = !_matHelp; renderMatMgr()" aria-expanded="${_matHelp}">${_matHelp ? '▾' : '▸'} ? how this works</a>${_matHelp ? `<span id="matHelpBox" style="display: block; margin-top: 6px; line-height: 1.55;">Tap a <b>light</b>, then tap it <b>again</b> — the first tap only asks ⚠ sure? and a line under the row says what will change. Lighting one lights every one before it; turning one off turns off every one after it. Something to buy: 👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed. A checklist item: 👷 on somebody's list · 📅 scheduled · ✅ done — 👷 is a name you pick, so it never lights by itself. A row's <b>steps</b> are in its window — tap the name. <b>⚠ 1st</b> sends a row to the top of its category — the rest waits on it. <b>⇄</b> at the end of every row turns it into a checklist item, or back into something to buy — a row that already has progress asks ⚠ sure? first. Tap a <b>name</b> to open the row; <b>✎ edit</b> (or hold the name) opens its window.</span>` : ''}` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
+    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client · <a href="javascript:void(0)" style="color: var(--accent); font-weight: var(--fw7, 700); text-decoration: none; white-space: nowrap;" onclick="_matHelp = !_matHelp; renderMatMgr()" aria-expanded="${_matHelp}">${_matHelp ? '▾' : '▸'} ? how this works</a>${_matHelp ? `<span id="matHelpBox" style="display: block; margin-top: 6px; line-height: 1.55;">Tap a <b>light</b>, then tap it <b>again</b> — the first tap only asks ⚠ sure? and a line under the row says what will change. Lighting one lights every one before it; turning one off turns off every one after it. Something to buy: 👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed. A checklist item: 👷 on somebody's list · 📅 scheduled · ✅ done — 👷 is a name you pick, so it never lights by itself. A row's <b>steps</b> are in its window — tap the name. <b>⚠ 1st</b> sends a row to the top of its category — the rest waits on it. <b>⇄</b> at the end of every row turns it into a checklist item, or back into something to buy — a row that already has progress asks ⚠ sure? first. Tap a <b>name</b> to open the row; <b>✎ edit</b> (or hold the name) opens its window. <b>🚧 stuck</b> marks a row that cannot move until something happens — say what in its band. <b>⏳</b> cubes count the days a row has waited on you (one at 3 days, two at 7, three at 14) — an ordered row waits quietly until its expected arrival has passed.</span>` : ''}` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
     ${(() => { // 🏷 v5.80 — the sort: tap a tag, see that trade's list (the electrician's list)
       const used = {};
       _matD.rooms.forEach(r => (r.items || []).forEach(x => matItemTags(x).forEach(tg => { used[tg] = (used[tg] || 0) + 1; })));
@@ -16302,10 +16376,12 @@ function renderMatMgr() {
       // up orange, red, or something when the category is folded." Folded with a ⚠ FIRST row inside: an orange edge on the heading
       // and an orange plate that says it in words — the counts line then leaves its own "⚠ n first" out.
       const firstN = its.filter(matIsFirst).length, firstLit = shut && firstN > 0;
+      const stuckN = its.filter(matIsStuck).length, stuckLit = shut && stuckN > 0;   // 🚧 v7.25 — folded, a coral plate says it
       return `<div class="set-section fc-sec" data-ri="${ri}" style="margin-top: 10px;"><h4 class="mat-rm-head${firstLit ? ' mat-rm-first' : ''}">
       <button type="button" style="background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;" onclick="matRmToggle(${ri})" aria-expanded="${!shut}">${shut ? '▸' : '▾'} ${esc(r.name)}</button>
       ${firstLit ? `<span class="mat-first-lit" aria-label="${firstN} marked first — the rest of this category waits on ${firstN > 1 ? 'them' : 'it'}">⚠ ${firstN} FIRST</span>` : ''}
-      ${its.length ? `<span class="hint mat-counts" style="margin: 0; font-weight: 400;">${matRoomCounts(its, firstLit)}${shut && openIts ? ` · <b>${openIts} open</b>` : ''}</span>` : ''}
+      ${stuckLit ? `<span class="mat-stuck-lit" aria-label="${stuckN} stuck — something has to happen before ${stuckN > 1 ? 'they' : 'it'} can move">🚧 ${stuckN} STUCK</span>` : ''}
+      ${its.length ? `<span class="hint mat-counts" style="margin: 0; font-weight: 400;">${matRoomCounts(its, firstLit, stuckLit)}${shut && openIts ? ` · <b>${openIts} open</b>` : ''}</span>` : ''}
       <span class="mat-rm-tools${_matRmTools === ri || _matArm === 'room' + ri ? ' open' : ''}">
         <button type="button" class="btn-ghost req-x rm-dots" style="padding: 5px 9px; min-width: 40px;" onclick="_matRmTools = _matRmTools === ${ri} ? -1 : ${ri}; renderMatMgr()" aria-expanded="${_matRmTools === ri}" aria-label="more for this category — move it, fold it into another, save it as a template, delete it" title="more for this category">⋯</button>
         <button class="btn-ghost req-x mat-grip rm-more" style="padding: 5px 6px; min-width: 26px;" onpointerdown="matRoomDragStart(event, ${ri})" oncontextmenu="event.preventDefault()" aria-label="drag this category onto another to fold it in" title="drag onto another category — its items and steps move over">⠿</button>
@@ -16375,8 +16451,8 @@ function matMgrItem(ri, it) {
     <span role="button" tabindex="0" class="mat-nm mat-fin-nm" onclick="matItRowTap('${escq(it.id)}')" onkeydown="if(event.key==='Enter'){event.preventDefault();matItRowTap('${escq(it.id)}');}" title="finished — tap to open it">${esc(it.n)}</span>
     ${rc ? `<button type="button" class="mat-q mat-q-chg" onclick="event.stopPropagation(); matChgOpen('${escq(it.id)}')" aria-label="changed ${esc(matChgWhen(rc.at))} by ${esc(matChgWho(rc.by))} — tap to see what changed" title="changed ${esc(matChgWhen(rc.at))} by ${esc(matChgWho(rc.by))}">🕘</button>` : ''}
     <span class="mat-fin-lamp" aria-label="finished">✓ FINISHED</span></div>`;
-  return `<div class="mat-item${itDone ? ' mi-done' : ''}${matIsHm(it) ? ' mi-hm' : ''}${first ? ' mi-first' : ''}${inSheet ? ' mi-editing' : ''}" data-id="${esc(it.id)}">
-    ${first ? '<div class="mat-first-band">⚠ FIRST — the rest of this category waits on this</div>' : ''}
+  return `<div class="mat-item${itDone ? ' mi-done' : ''}${matIsHm(it) ? ' mi-hm' : ''}${first ? ' mi-first' : ''}${matIsStuck(it) ? ' mi-stuck' : ''}${inSheet ? ' mi-editing' : ''}" data-id="${esc(it.id)}">
+    ${first ? '<div class="mat-first-band">⚠ FIRST — the rest of this category waits on this</div>' : ''}${matStuckBandHtml(it)}
     <div class="frow" style="align-items: center; gap: 4px; flex-wrap: nowrap;">
       ${editing ? `<span style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px;">▾
         <input type="text" id="matNm-${escq(it.id)}" value="${esc(it.n)}" placeholder="name it — what is this item?"
@@ -16384,7 +16460,7 @@ function matMgrItem(ri, it) {
           onchange="matSet('${escq(it.id)}', 'n', this.value)"
           onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></span>` :
       `<span role="button" class="mat-nm" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap or hold: the edit window — every detail is in there"><b>${esc(it.n)}</b>
-        <span class="hint" style="margin: 0; white-space: normal; overflow-wrap: anywhere;">· ${esc(word)}${matIsBuy(it) && matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${it.src === 'grinder' ? ' · ⚙ from the grinder' : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
+        <span class="hint" style="margin: 0; white-space: normal; overflow-wrap: anywhere;">· ${esc(word)}${matAgeHtml(it)}${matIsBuy(it) && matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${it.src === 'grinder' ? ' · ⚙ from the grinder' : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
       ${editing ? '' : matQuickHtml(it)}
     </div>
     <div class="mat-line2">${matStripHtml(it)}${matRowBtnsHtml(it)}${matSelHtml(it)}</div>
@@ -16494,6 +16570,8 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
           <input type="date" id="matSchd-${id}" value="${esc(it.schd || '')}" onchange="matSet('${id}', 'schd', this.value); matSet('${id}', 'sch', this.value ? true : ''); renderMatMgr()"></div></div>
         ${buy ? '' : `<div class="frow" style="gap: 8px; margin-top: 8px;">${tagsHtml}</div>`}</div>
       <div class="ms-sec"><button type="button" class="pick-chip${it.first ? ' sel' : ''}" style="width: 100%; font-weight: var(--fw8, 800); min-height: 44px;" onclick="matFirstToggle('${id}')" aria-pressed="${!!it.first}">${it.first ? '✓ ⚠ FIRST — at the top of its category; the rest waits on this' : '⚠ Flag it FIRST — it goes to the top of its category'}</button></div>
+      <div class="ms-sec"><button type="button" class="pick-chip${matIsStuck(it) ? ' sel' : ''}" style="width: 100%; font-weight: var(--fw8, 800); min-height: 44px;" onclick="matStuckToggle('${id}')" aria-pressed="${matIsStuck(it)}">${matIsStuck(it) ? '✓ 🚧 STUCK — it cannot move until something happens' : '🚧 Mark it STUCK — it cannot move until something happens'}</button>
+        ${matIsStuck(it) ? `<div class="field" style="flex: 1 1 100%; margin-top: 8px;"><label for="matNeedS-${id}">What has to happen first</label><input type="text" id="matNeedS-${id}" value="${esc(it.need || '')}" placeholder="find a tan soffit, ask the supplier, get their answer…" onchange="matSet('${id}', 'need', this.value); renderMatMgr()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></div>` : ''}</div>
       ${fold('money', '💵 Money', [it.est ? 'est ' + matMoney(it.est) : '', it.act ? 'paid ' + matMoney(it.act) : '', it.sku ? esc(it.sku) : '', it.ec ? esc(it.ec) : ''].filter(Boolean).join(' · ') || 'nothing yet', moneyHtml)}
       ${buy ? fold('tags', '🏷 Whose list — tags', tags.length ? esc(tags.join(', ')) : 'nobody yet', tagsHtml) : ''}
       ${fold('home', '🏠 The homeowner', hm ? '✓ ON their page' : '🏢 office only', homeHtml)}
@@ -17057,7 +17135,7 @@ let _matHistShow = false;
 // words "🕘 changed … by …" in its trail (glyph + word + brightness); a tap opens its changes, newest first, was → now. Office
 // side only: the client cut in matSave strips chg, as it strips the note itself.
 const MAT_CHG_KEEP = 30, MAT_CHG_DAYS = 2;
-const MAT_CHG_WORD = { n: 'name', sel: 'note', desc: 'picked — what it is', pick: 'what was picked', schd: 'install date', est: 'estimate', act: 'paid', sku: 'SKU / model', ec: 'estimate line', t: 'kind of item', due: 'due date' };
+const MAT_CHG_WORD = { n: 'name', sel: 'note', desc: 'picked — what it is', need: 'what it needs', pick: 'what was picked', schd: 'install date', est: 'estimate', act: 'paid', sku: 'SKU / model', ec: 'estimate line', t: 'kind of item', due: 'due date' };
 function matChgPush(it, f, from, to, by) {
   if (!it) return;
   const a = String(from == null ? '' : from).slice(0, 300), b = String(to == null ? '' : to).slice(0, 300);
@@ -17449,7 +17527,7 @@ async function matSave() {
         .map(x => {
           if (!hm) return x;
           // 🏠 v5.71 — the client sees ONLY the steps flagged 🏠, scrubbed to name/ok/note
-          const { pkt, sel, desc, est, act, ec, first, eid, src, gat, sku, phRead, chg, ...rest } = x;   // 📋 v6.89 — his selection notes (suppliers), raw costs and the estimate line NEVER ride to their file · v6.91: nor his ⚠ FIRST flag · 🧙 v7.08: nor the SKU or what the Wizard read off a photo (the store, the raw price) · 🕘 v7.19: nor the changes (the old notes are in them)
+          const { pkt, sel, desc, est, act, ec, first, stuck, need, seen, eid, src, gat, sku, phRead, chg, ...rest } = x;   // 📋 v6.89 — his selection notes (suppliers), raw costs and the estimate line NEVER ride to their file · v6.91: nor his ⚠ FIRST flag · 🧙 v7.08: nor the SKU or what the Wizard read off a photo (the store, the raw price) · 🕘 v7.19: nor the changes (the old notes are in them)
           const cvKids = (x.kids || []).filter(k => k.cv).map(k => ({ n: k.n, ok: k.ok || undefined, note: k.note }));
           if (cvKids.length) rest.kids = cvKids; else delete rest.kids;
           return rest;
@@ -21564,7 +21642,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.24';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.25';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
