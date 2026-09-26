@@ -46,13 +46,13 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   console.log('— 💡 v6.91 a little icon in every light —');
 
-  ok('each light is an ICON over its LETTER with the word in its label; a lit one wears the plate AND a ✓ (never colour alone); the row\'s lamp wears the icon of the furthest light that is lit', await page.evaluate(() => {
+  // 🧹 v7.24 — the round lamp at the front of the row is gone ("my eyes are jumping straight to the yellow cards"); the lights say it all
+  ok('each light is an ICON over its LETTER with the word in its label; a lit one wears the plate AND a ✓ (never colour alone); no round lamp on the row any more', await page.evaluate(() => {
     const L = _lights('Garage paint');
     const icons = L.map(b => b.querySelector('.mb-i').textContent).join(' '), letters = L.map(b => b.querySelector('b').textContent).join('');
     const lit = L.map(b => (b.classList.contains('on') ? 1 : 0) + '' + (b.querySelector('.mb-ck') ? 1 : 0) + (b.getAttribute('aria-pressed') === 'true' ? 1 : 0)).join(' ');
-    const lamp = n => _row(n).querySelector('.frow > button').textContent.trim();
     return icons === '👆 🛒 📦 📅 🔧' && letters === 'PORSI' && lit === '111 111 000 000 000' && L[1].getAttribute('aria-label') === 'Ordered — yes' && L[2].getAttribute('aria-label') === 'Received — not yet' &&
-      lamp('Garage paint') === '🛒' && lamp('Garage door') === '👆' && lamp('Loft railing') === '○' && lamp('Check all vents and airflow') === '○' &&
+      !_row('Garage paint').querySelector('.frow > button') && !_row('Loft railing').querySelector('.frow > button') &&
       // ✓ v7.19 — the installed countertops fold to their name and a green ✓ FINISHED (their 🔧 light is in the edit window)
       [...document.querySelectorAll('#revBox .mat-item.mi-fin')].some(r => /Countertops/.test(r.textContent) && /✓ FINISHED/.test(r.textContent));
   }));
@@ -82,13 +82,13 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const pick = $('matWho-' + it.id), names = pick ? [...pick.querySelectorAll('button')].map(b => b.textContent.trim()) : [];
     const offered = !!pick && names.includes('Electrical') && names.includes('Phil') && names.includes('Nathan');
     [...pick.querySelectorAll('button')].find(b => b.textContent.trim() === 'Phil').click();
-    const a = JSON.stringify(it.tg) === '["Phil"]' && L()[0].classList.contains('on') && /on the Phil list/.test(_row('Test winch').textContent) && _row('Test winch').querySelector('.frow > button').textContent.trim() === '👷';
+    const a = JSON.stringify(it.tg) === '["Phil"]' && L()[0].classList.contains('on') && /on the Phil list/.test(_row('Test winch').textContent);
     $('matWhoNew-' + it.id).value = 'Door sub'; matWhoAdd(it.id);
     const b = it.tg.includes('Door sub') && (prefs.matTags || []).includes('Door sub') && /on the Phil list \+1/.test(_row('Test winch').textContent);
     [...$('matWho-' + it.id).querySelectorAll('button')].find(x => /that's it/.test(x.textContent)).click();
     const closed = !$('matWho-' + it.id);
     const chip = [...document.querySelectorAll('#revBox .chips-row button')].find(x => /🏷 Phil \(1\)/.test(x.textContent));
-    L()[1].click(); L()[1].click(); const c = it.sch === true && /scheduled/.test(_row('Test winch').textContent) && _row('Test winch').querySelector('.frow > button').textContent.trim() === '📅';
+    L()[1].click(); L()[1].click(); const c = it.sch === true && /scheduled/.test(_row('Test winch').textContent);
     // ✓ v7.19 — done = FINISHED: the row folds to its name and a green ✓ FINISHED; its ✅ light is in the edit window to take it back
     L()[2].click(); L()[2].click(); const fin = [...document.querySelectorAll('#revBox .mat-item.mi-fin')].find(r => /Test winch/.test(r.textContent));
     const d = it.s === 'done' && !!it.ddate && !!fin && /✓ FINISHED/.test(fin.textContent) && !fin.querySelector('.mat-strip');

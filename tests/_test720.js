@@ -97,13 +97,11 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return it.s === 'arrived' && it.sch === true && !!it.ins && r.classList.contains('mi-fin') && /✓ FINISHED/.test(r.textContent);
   }));
 
-  ok('the round lamp is two taps too: the first arms it (⚠ on the lamp, the line names the NEXT light), the second lights it — a received hood goes on to 📅, never back to "pick needed"', await page.evaluate(() => {
-    const lamp = () => _rowId('l2').querySelector('.frow > button');
-    const g0 = lamp().textContent.trim(); lamp().click();
-    const armed = lamp().classList.contains('mat-lamp-armed') && lamp().textContent.trim() === '⚠' && /sure\? tap again/.test(lamp().getAttribute('aria-label')) && !_it('l2').sch;
-    const say = _say('l2');
-    lamp().click(); const it = _it('l2');
-    return g0 === '📦' && armed && say === '⚠ SURE? Tap the round lamp again to light 📅 Scheduled — or leave it and nothing changes.' && it.sch === true && it.s === 'arrived' && !it.ins && lamp().textContent.trim() === '📅';
+  // 🧹 v7.24 — the round lamp at the front of the row is gone; the lights are the only controls
+  ok('no round lamp on the row any more — a received hood shows P O R lit and nothing else; 📅 by its own light (two taps) goes on from there, never back to "pick needed"', await page.evaluate(() => {
+    const none = !_rowId('l2').querySelector('.frow > button') && _lit('l2') === '11100';
+    _box('l2', 'S').click(); _box('l2', 'S').click(); const it = _it('l2');
+    return none && it.sch === true && it.s === 'arrived' && !it.ins && _lit('l2') === '11110';
   }));
 
   ok('an old row with only 📅 lit: 👆 Picked lights just itself (nothing before it), and 📅 off leaves Picked lit', await page.evaluate(() => {
@@ -150,11 +148,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     _said.length = 0; _box('c2', 'D').click();
     return _it('c2').s === 'todo' && !_it('c2').sch && !_matLightArm && _marks('c2') === '---' && _said.some(m => m === '🔒 1 step still open — grease it. Check it off first.');
   }));
-  ok('the round lamp on a checklist row: two taps → ⚙ in work, two more → ✅ done (📅 with it)', await page.evaluate(() => {
-    const lamp = () => _rowId('c3').querySelector('.frow > button');
-    lamp().click(); const say = _say('c3'); lamp().click(); const a = _it('c3').s === 'work';
-    lamp().click(); lamp().click(); const it = _it('c3');
-    return say === '⚠ SURE? Tap the round lamp again to mark it ⚙ in work — or leave it and nothing changes.' && a && it.s === 'done' && it.sch === true;
+  ok('a checklist row by its lights: 📅 (two taps) then ✅ (two taps, 📅 stays); matCycle still walks a row for the old suites', await page.evaluate(() => {
+    _box('c3', 'S').click(); _box('c3', 'S').click(); const a = _it('c3').sch === true && _it('c3').s === 'todo';
+    _box('c3', 'D').click(); _box('c3', 'D').click(); const it = _it('c3');
+    return a && it.s === 'done' && it.sch === true && typeof matCycle === 'function';
   }));
 
   ok('armed on a long name at phone width, nothing runs off the side', await page.evaluate(() => {
@@ -165,7 +162,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
   ok('"? how this works" says it: tap, then tap again; a light lights the ones before it and turning one off turns off the ones after it; the steps are in the row\'s window', await page.evaluate(() => {
     _matHelp = true; renderMatMgr(); const t = ($('matHelpBox') || {}).textContent || ''; _matHelp = false; renderMatMgr();
-    return /then tap it again/.test(t) && /Lighting one lights every one before it; turning one off turns off every one after it/.test(t) && /steps are in its window/.test(t) && /round lamp lights the next one — two taps as well/.test(t);
+    return /then tap it again/.test(t) && /Lighting one lights every one before it; turning one off turns off every one after it/.test(t) && /steps are in its window/.test(t) && !/round lamp/.test(t);
   }));
   ok('closing the board lets go of an armed light', await page.evaluate(() => {
     _box('l4', 'R').click(); const a = !!_matLightArm; matClose();
