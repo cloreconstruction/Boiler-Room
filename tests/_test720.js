@@ -46,7 +46,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
         { id: 'c1', n: 'Test vents', t: 'Misc', s: 'todo' },
         { id: 'c2', n: 'Test winch', t: 'Misc', s: 'todo', kids: [{ n: 'grease it' }] },
         { id: 'c3', n: 'Sweep out', t: 'Misc', s: 'todo' }] }] });
-    await openMaterials(0);
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr();
     window._it = id => _matD.rooms.flatMap(r => r.items).find(x => x.id === id);
     window._rowId = id => document.querySelector('#revBox .mat-item[data-id="' + id + '"]');
     window._boxes = (id, host) => [...(host || _rowId(id)).querySelectorAll('.mat-strip:not(.mat-rowbtns) .mat-box')];

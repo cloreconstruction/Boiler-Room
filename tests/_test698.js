@@ -32,7 +32,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
       { id: 'm6', n: 'Checklist in work', t: 'Misc', s: 'work' },
       { id: 'm7', n: 'Checklist done', t: 'Misc', s: 'done' },
       { id: 'm8', n: 'Homeowner pick', t: 'Misc', hm: true, s: 'picked', pick: 'Matte black' }] }] });
-    await openMaterials(0);
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr();
     window._row = n => [...document.querySelectorAll('#revBox .mat-item')].find(r => r.querySelector('b') && r.querySelector('b').textContent === n);
     window._flip = n => _row(n).querySelector('.mat-flip');
     window._it = id => _matD.rooms[0].items.find(x => x.id === id);

@@ -42,7 +42,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— 📋 v6.89 paste a list —');
 
   ok('an empty board offers 📋 Paste a list; the box opens at the top with its words and a Preview plate', await page.evaluate(async () => {
-    await openMaterials(0);
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr();
     const btn = [...$('revBox').querySelectorAll('button')].find(b => /Paste a list/.test(b.textContent)); if (!btn) return false;
     btn.click();
     return !!$('matPasteSec') && !!$('matPasteBox') && /A line on its own names the room/.test($('matPasteSec').textContent) && !![...$('matPasteSec').querySelectorAll('button')].find(b => /Preview/.test(b.textContent)) && !$('matPastePrev');
@@ -203,7 +203,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   ok('nothing runs off the right edge of the board on a phone', await page.evaluate(async () => {
     delete _dbxFiles[portalRoot() + '/materials-office-oak-111aaa.json']; _dbxFiles[portalRoot() + '/materials-office-oak-111aaa.json'] = JSON.stringify({ full: true, rooms: [{ name: 'KITCHEN', items: [{ id: 'm1', n: 'A very long item name that has to wrap inside the row without pushing anything', buy: true, s: 'ordered', sel: 'A long selection note, the model, the colour, the finish, the size and where it is coming from', est: 12500, act: 13100, ec: EST_DEFAULT_CATS[0] }] }] });
-    await openMaterials(0);
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr();
     const b = $('revBox'); const r = b.scrollWidth <= b.clientWidth + 1; matClose(); return r;
   }));
   ok('version bumped — APP_VER and the footer agree', await page.evaluate(() => {

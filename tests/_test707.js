@@ -77,10 +77,11 @@ const path = require('path'), fs = require('fs'), { fileURLToPath } = require('u
   // ───────────────────────── the running log ─────────────────────────
   console.log('— 🎒 v7.07 the running log: a 🎒 Pocket list plate, the 👷 Crew plate off —');
   const plates = () => page.evaluate(() => [...document.querySelectorAll('#askRecent .rl-filters > .pick-chip')].map(b => b.textContent.replace(/\s+/g, ' ').trim()));
-  ok('the top row reads ✳ All · ⚙ Grinder · 🎒 Pocket list, and the 👷 Crew plate is gone', await (async () => {
+  // 👷 v7.21 — Eric: "Where is my 'From Phil' button on the running log?" — the crew plate is back, named after the crew in the log
+  ok('the top row reads ✳ All · ⚙ Grinder · 🎒 Pocket list; the old 👷 Crew plate is gone and 👷 From Ann (v7.21) leads the next row', await (async () => {
     const p = await plates();
     const top = await page.evaluate(() => { const cs = [...document.querySelectorAll('#askRecent .rl-filters > .pick-chip')]; const t0 = Math.round(cs[0].getBoundingClientRect().top); return cs.filter(c => Math.round(c.getBoundingClientRect().top) === t0).map(c => c.textContent.trim()); });
-    return /All/.test(top[0]) && /Grinder/.test(top[1]) && /🎒 Pocket list/.test(top[2]) && top.length === 3 && !p.some(x => /Crew/.test(x)) && p.length === 10;
+    return /All/.test(top[0]) && /Grinder/.test(top[1]) && /🎒 Pocket list/.test(top[2]) && top.length === 3 && !p.some(x => /Crew/.test(x)) && p[3] === '👷 From Ann' && p.length === 11;
   })(), JSON.stringify(await plates()));
   for (const skin of ['calm', 'steam']) {
     ok(`every plate's words fit inside it (${skin})`, await page.evaluate(sk => {
@@ -136,10 +137,14 @@ const path = require('path'), fs = require('fs'), { fileURLToPath } = require('u
     const r = await rows(), p = await plates();
     return !r.some(x => /^🎒/.test(x)) && r.some(x => /framing walls/.test(x)) && p.some(x => /^🚫 🎒 Pocket list/.test(x));
   })());
-  ok('a phone that had 👷 Crew lit (or hidden) lets it go on the next draw — crew traffic is still under ✳ All', await page.evaluate(() => {
-    prefs.rlFilter = 'crew'; prefs.rlHide = ['crew', 'text']; renderAskRecent();
+  // 👷 v7.21 — the crew filter holds again (the plate is back); crew traffic is still under ✳ All too
+  ok('👷 From Ann lit shows only her notes; cleared, crew traffic is still under ✳ All', await page.evaluate(() => {
+    prefs.rlFilter = 'crew'; prefs.rlHide = ['text']; renderAskRecent();
     const r = [...document.querySelectorAll('#askRecent .ask-recent-row')].map(x => x.textContent);
-    return prefs.rlFilter === '' && prefs.rlHide.join() === 'text' && r.some(x => /upper cabinets/.test(x)) && !r.some(x => /running late/.test(x));
+    const only = prefs.rlFilter === 'crew' && r.some(x => /upper cabinets/.test(x)) && !r.some(x => /running late/.test(x)) && !r.some(x => /framing walls/.test(x)) && [...document.querySelectorAll('#askRecent .rl-filters > .pick-chip')].some(b => /✓ 👷 From Ann/.test(b.textContent));
+    prefs.rlFilter = ''; renderAskRecent();
+    const all = [...document.querySelectorAll('#askRecent .ask-recent-row')].map(x => x.textContent);
+    return only && prefs.rlHide.join() === 'text' && all.some(x => /upper cabinets/.test(x)) && !all.some(x => /running late/.test(x));
   }));
 
   ok('no page errors', errs.length === 0, errs.join(' | '));

@@ -2217,6 +2217,7 @@
   .mat-box b { font-size: var(--fs105, 10.5px); font-weight: var(--fw8, 800); letter-spacing: 0; }
   .mat-box.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink, #111); }
   .mat-sel { flex: 1 1 150px; min-width: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.35; overflow-wrap: anywhere; }
+  .mat-desc { font-weight: var(--fw7, 700); color: var(--ink-1); cursor: pointer; }   /* 👆 v7.21 — what was picked leads the row's line */
   .mat-legend { font-size: var(--fs115, 11.5px); color: var(--ink-muted); margin: 0 0 8px; line-height: 1.5; }
   /* 📋 v6.91 — the Build List, round two. A light is an ICON over its LETTER: lit = the brass plate, the icon in full and a ✓
      in its corner (brightness + glyph + the word in its label — never colour alone); unlit = hollow, the icon dimmed. */
@@ -2552,6 +2553,7 @@
      edge. 7px here — the frame still renders (the border-image slice stretches), the word fits. */
   :root[data-skin="steam"] .rl-filters > .pick-chip { border-width: 7px; padding: 4px 2px; }
   .rl-filters > .rl-wide { grid-column: 1 / -1; min-height: 40px; }
+  .rl-filters > .rl-two { grid-column: span 2; min-height: 40px; }   /* 👷 v7.21 — beside 💬 Feedback when the crew plate makes ten */
   .rl-filters > .mini-sel { grid-column: 1 / -1; width: 100%; min-height: 36px; }
   /* the log card's own header: count, 🧾, 🔍 and the link sat on four ragged lines */
   .rl-head { gap: 6px !important; }
@@ -4248,7 +4250,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.20 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.21 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15905,7 +15907,7 @@ function matTopBarHtml() {
   const all = _matD.rooms.flatMap(r => r.items || []), t = matTotals(all), anyBuy = all.some(matIsBuy);
   if (_matStageF && !all.some(matStageOk)) _matStageF = '';
   const chips = MAT_STAGE_F.map(([k, w, fn]) => { const n = all.filter(fn).length; if (!n) return '';
-    return `<button type="button" class="pick-chip${_matStageF === k ? ' sel' : ''}" style="font-size: var(--fs11, 11px); padding: 4px 9px; min-height: 30px;" onclick="_matStageF = _matStageF === '${k}' ? '' : '${k}'; renderMatMgr()" aria-pressed="${_matStageF === k}">${_matStageF === k ? '✓ ' : ''}${w} (${n})</button>`; }).join('');
+    return `<button type="button" class="pick-chip${_matStageF === k ? ' sel' : ''}" style="font-size: var(--fs11, 11px); padding: 4px 9px; min-height: 30px;" onclick="_matStageF = _matStageF === '${k}' ? '' : '${k}'; if (_matStageF) _matRmShut = new Set(); renderMatMgr()" aria-pressed="${_matStageF === k}">${_matStageF === k ? '✓ ' : ''}${w} (${n})</button>`; }).join('');
   const money = t.est || t.act ? ` · whole house: ${t.est ? 'est ' + matMoney(t.est) : ''}${t.est && t.act ? ' · ' : ''}${t.act ? 'paid ' + matMoney(t.act) : ''}${t.est && t.act ? (t.act > t.est ? ` · <b>⚠ over by ${matMoney(t.act - t.est)}</b>` : ` · ✓ under by ${matMoney(t.est - t.act)}`) : ''}` : '';
   return matPasteHtml() +
     (money ? `<div class="mat-legend">${money.replace(' · ', '')}</div>` : '') +   // v6.91 — the legend moved into ? how this works; the whole-house money stays
@@ -16245,6 +16247,10 @@ async function openMaterials(i) {
   matTplLoad();
   _matD = await matBoardRead(c);
   if (_matD._log) { const said = _matD._log; delete _matD._log; said.forEach(t => matLog(t)); }   // 📋 v6.97 — what the read learned from their page goes in the history, and the board saves itself
+  // 📁 v7.21 — Eric: "When I click on the build list, all the categories should be folded. It's immediately overwhelming to
+  // scroll way down to a category at the bottom." Every category opens folded — its name, its counts and how many are open;
+  // a tap opens the one he wants. A working-list or 🏷 filter unfolds them all (he asked to SEE those rows), ➕ item unfolds its own.
+  _matRmShut = new Set((_matD.rooms || []).map((r, i) => i));
   renderMatMgr();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -16275,7 +16281,7 @@ function renderMatMgr() {
       if (!names.length) return '';
       return `<div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px;">
         <button type="button" class="pick-chip${!_matTagF ? ' sel' : ''}" style="font-size: var(--fs11, 11px); padding: 4px 9px; min-height: 26px;" onclick="_matTagF = ''; renderMatMgr()">${!_matTagF ? '✓ ' : ''}✳ whole board</button>
-        ${names.map(tg => `<button type="button" class="pick-chip${_matTagF === tg ? ' sel' : ''}" style="font-size: var(--fs11, 11px); padding: 4px 9px; min-height: 26px;" onclick="_matTagF = _matTagF === '${escq(tg)}' ? '' : '${escq(tg)}'; renderMatMgr()">${_matTagF === tg ? '✓ ' : ''}🏷 ${esc(tg)} (${used[tg]})</button>`).join('')}
+        ${names.map(tg => `<button type="button" class="pick-chip${_matTagF === tg ? ' sel' : ''}" style="font-size: var(--fs11, 11px); padding: 4px 9px; min-height: 26px;" onclick="_matTagF = _matTagF === '${escq(tg)}' ? '' : '${escq(tg)}'; if (_matTagF) _matRmShut = new Set(); renderMatMgr()">${_matTagF === tg ? '✓ ' : ''}🏷 ${esc(tg)} (${used[tg]})</button>`).join('')}
       </div>`; })()}
     ${matTopBarHtml()}
     ${_matD.rooms.map(((r, ri) => {
@@ -16462,8 +16468,12 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
       <div class="ms-sec"><label class="ms-h" for="matNm-${id}">Name</label>
         <input type="text" id="matNm-${id}" value="${esc(it.n)}" placeholder="name it — what is this item?" style="width: 100%; font-weight: var(--fw8, 800); font-size: 16px; padding: 10px 12px;"
           onchange="matSet('${id}', 'n', this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></div>
+      ${matEdPhotosHtml(it, mk)}
+      ${buy ? `<div class="ms-sec"><label class="ms-h" for="matDesc-${id}">👆 Picked — what it is</label>
+        <input type="text" id="matDesc-${id}" value="${esc(it.desc || '')}" placeholder="the model, colour, size — what was picked" style="width: 100%; font-size: 15px; padding: 9px 11px;" onchange="matSet('${id}', 'desc', this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+        <div class="hint" style="margin: 4px 0 0;">🧙 The Wizard fills it from a photo when it is empty · your own notes stay in the Note under it · 🏢 office only</div></div>` : ''}
       <div class="ms-sec"><label class="ms-h" for="matSel-${id}">Note — shows on the row</label>
-        <textarea id="matSel-${id}" rows="2" class="grow" style="width: 100%; font: inherit; font-size: 15px; line-height: 1.4; padding: 9px 11px;" placeholder="what was picked, what has to be decided, what to check…" onchange="matSet('${id}', 'sel', this.value)">${esc(it.sel || '')}</textarea>
+        <textarea id="matSel-${id}" rows="2" class="grow" style="width: 100%; font: inherit; font-size: 15px; line-height: 1.4; padding: 9px 11px;" placeholder="${buy ? 'what has to be decided, what to check, where it came from…' : 'what was picked, what has to be decided, what to check…'}" onchange="matSet('${id}', 'sel', this.value)">${esc(it.sel || '')}</textarea>
         <div class="hint" style="margin: 4px 0 0;">🏢 Office only — never on the homeowner's page.</div></div>
       <div class="ms-sec"><span class="ms-h">What kind of row</span>
         ${hm ? `<div class="hint" style="margin: 0;">🏠 It is on the homeowner's page, so it stays something to buy — picked → ordered → received → scheduled → installed.</div>` : `<div class="ms-kind">
@@ -16475,7 +16485,6 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
           <input type="date" id="matSchd-${id}" value="${esc(it.schd || '')}" onchange="matSet('${id}', 'schd', this.value); matSet('${id}', 'sch', this.value ? true : ''); renderMatMgr()"></div></div>
         ${buy ? '' : `<div class="frow" style="gap: 8px; margin-top: 8px;">${tagsHtml}</div>`}</div>
       <div class="ms-sec"><button type="button" class="pick-chip${it.first ? ' sel' : ''}" style="width: 100%; font-weight: var(--fw8, 800); min-height: 44px;" onclick="matFirstToggle('${id}')" aria-pressed="${!!it.first}">${it.first ? '✓ ⚠ FIRST — at the top of its category; the rest waits on this' : '⚠ Flag it FIRST — it goes to the top of its category'}</button></div>
-      ${matEdPhotosHtml(it, mk)}
       ${fold('money', '💵 Money', [it.est ? 'est ' + matMoney(it.est) : '', it.act ? 'paid ' + matMoney(it.act) : '', it.sku ? esc(it.sku) : '', it.ec ? esc(it.ec) : ''].filter(Boolean).join(' · ') || 'nothing yet', moneyHtml)}
       ${buy ? fold('tags', '🏷 Whose list — tags', tags.length ? esc(tags.join(', ')) : 'nobody yet', tagsHtml) : ''}
       ${fold('home', '🏠 The homeowner', hm ? '✓ ON their page' : '🏢 office only', homeHtml)}
@@ -16546,8 +16555,11 @@ function matSelHtml(it) {
     return `<span class="mat-sel"><textarea id="matSelIn-${esc(it.id)}" class="mat-seledit" rows="2" aria-label="the note — Enter keeps it, Esc lets it go" placeholder="what was picked, what has to be decided, what to check…"
       oninput="_matSelDraft = this.value" onkeydown="matSelKey(event, '${id}')" onblur="matSelDone('${id}', true)">${esc(v)}</textarea><span class="mat-sel-hint">Enter keeps it · Esc lets it go · 🏢 office only</span>${rest ? rest : ''}</span>`;
   }
-  const words = it.sel || it.pick || '';
-  return `<span class="mat-sel">${words ? `<span class="mat-seltxt" role="button" tabindex="0" onclick="event.stopPropagation(); matSelEdit('${id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();matSelEdit('${id}');}" title="tap to change the note">${esc(words)}</span>` : ''}${words && rest ? ' · ' : ''}${rest}</span>`;
+  // 👆 v7.21 — what was PICKED (the Wizard's reading of the photo, or his own words; a 🏠 row's is the homeowner's pick) leads
+  // the line and a tap on it opens the row; the note he keeps changing follows it and still edits in place (v7.08).
+  const picked = it.desc || it.pick || '', words = it.sel || '';
+  const pk = picked ? `<span class="mat-desc" role="button" tabindex="0" onclick="event.stopPropagation(); matEditOpen('${id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();matEditOpen('${id}');}" title="what was picked — tap to open the row">👆 ${esc(picked)}</span>` : '';
+  return `<span class="mat-sel">${pk}${pk && words ? ' · ' : ''}${words ? `<span class="mat-seltxt" role="button" tabindex="0" onclick="event.stopPropagation(); matSelEdit('${id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();matSelEdit('${id}');}" title="tap to change the note">${esc(words)}</span>` : ''}${(pk || words) && rest ? ' · ' : ''}${rest}</span>`;
 }
 function matSelEdit(id) {
   if (_matSelEdit && _matSelEdit !== id) matSelDone(_matSelEdit, true);
@@ -16584,7 +16596,7 @@ function matEdPhotosHtml(it, mk) {
       <div class="ms-phdrop" id="matDrop-${esc(it.id)}" role="button" tabindex="0" onclick="$('matPh-${id}').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"
         ondragover="event.preventDefault(); this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault(); this.classList.remove('over'); matAddPhotos('${id}', event.dataTransfer.files)">
         <span>📷 <b>Add a photo</b> — drag it here or tap to pick</span>
-        <small>${aiKey() ? '🧙 the Wizard reads the SKU and the price off it' : 'with the Claude key on this phone (⚙ Setup) the Wizard reads the SKU and price'}</small></div>
+        <small>${aiKey() ? '🧙 the Wizard reads the SKU and the price off it, and what it is' : 'with the Claude key on this phone (⚙ Setup) the Wizard reads the SKU and price'}</small></div>
       <input type="file" id="matPh-${esc(it.id)}" accept="image/*" multiple style="display: none;" onchange="matAddPhotos('${id}', this.files)">
     </div>
     ${rd ? matReadCardHtml(rd, mk) : ''}
@@ -16657,9 +16669,12 @@ async function matPhotoRead(id, pi, file) {
     const it2 = matFindItem(id); if (!it2) return;   // the row may have gone while the Wizard read
     const filled = [];
     const code = [rd.model && 'model ' + rd.model, rd.sku && 'SKU ' + rd.sku, rd.item && 'item #' + rd.item].filter(Boolean).join(' · ');
-    if (!it2.sku && code) { it2.sku = code.slice(0, 120); filled.push('SKU'); }
-    if (!(+it2.est > 0) && rd.price > 0) { it2.est = rd.price; filled.push('price'); }
-    if (!it2.sel && rd.title) { it2.sel = rd.title.slice(0, 200); filled.push('note'); }
+    if (!it2.sku && code) { it2.sku = code.slice(0, 120); filled.push('SKU'); matChgPush(it2, 'SKU / model', '', it2.sku, 'the Wizard'); }
+    if (!(+it2.est > 0) && rd.price > 0) { it2.est = rd.price; filled.push('price'); matChgPush(it2, 'estimate', '', matMoney(it2.est), 'the Wizard'); }
+    // 👆 v7.21 — Eric: "when I put the photo in and the Wizard reads it and puts the description … that description needs to go at
+    // the top. But I still want the note to be able to have notes in it and be able to be changed and updated." What it IS goes
+    // into its own box (desc), never into his note — and only when that box is empty.
+    if (!it2.desc && rd.title) { it2.desc = rd.title.slice(0, 200); filled.push('what it is'); matChgPush(it2, 'picked — what it is', '', it2.desc, 'the Wizard'); }
     it2.phRead = { ...rd, filled, at: new Date().toISOString(), ph: path };
     if (filled.length) _matEdOpen.add('money');
     matLog(`🧙 read the photo on ${it2.n}${filled.length ? ' — put in ' + filled.join(', ') : ''}`);
@@ -17033,7 +17048,7 @@ let _matHistShow = false;
 // words "🕘 changed … by …" in its trail (glyph + word + brightness); a tap opens its changes, newest first, was → now. Office
 // side only: the client cut in matSave strips chg, as it strips the note itself.
 const MAT_CHG_KEEP = 30, MAT_CHG_DAYS = 2;
-const MAT_CHG_WORD = { n: 'name', sel: 'note', pick: 'what was picked', schd: 'install date', est: 'estimate', act: 'paid', sku: 'SKU / model', ec: 'estimate line', t: 'kind of item', due: 'due date' };
+const MAT_CHG_WORD = { n: 'name', sel: 'note', desc: 'picked — what it is', pick: 'what was picked', schd: 'install date', est: 'estimate', act: 'paid', sku: 'SKU / model', ec: 'estimate line', t: 'kind of item', due: 'due date' };
 function matChgPush(it, f, from, to, by) {
   if (!it) return;
   const a = String(from == null ? '' : from).slice(0, 300), b = String(to == null ? '' : to).slice(0, 300);
@@ -17349,6 +17364,7 @@ function matAddItem(ri) {
   const id = matNextId();
   r.items = r.items || [];
   r.items.push({ id, n: 'New item', t: 'Misc', s: 'todo' }); // office task until the 🏠 button says otherwise
+  _matRmShut.delete(ri);   // 📁 v7.21 — a folded category opens to show the row it just got
   matLog(`➕ item in ${r.name}`);
   _matDirty = true;
   matEditOpen(id, true);   // ✎ v5.79 → v6.91 — the edit window opens with the name selected: just type
@@ -17396,7 +17412,7 @@ async function matSave() {
         .map(x => {
           if (!hm) return x;
           // 🏠 v5.71 — the client sees ONLY the steps flagged 🏠, scrubbed to name/ok/note
-          const { pkt, sel, est, act, ec, first, eid, src, gat, sku, phRead, chg, ...rest } = x;   // 📋 v6.89 — his selection notes (suppliers), raw costs and the estimate line NEVER ride to their file · v6.91: nor his ⚠ FIRST flag · 🧙 v7.08: nor the SKU or what the Wizard read off a photo (the store, the raw price) · 🕘 v7.19: nor the changes (the old notes are in them)
+          const { pkt, sel, desc, est, act, ec, first, eid, src, gat, sku, phRead, chg, ...rest } = x;   // 📋 v6.89 — his selection notes (suppliers), raw costs and the estimate line NEVER ride to their file · v6.91: nor his ⚠ FIRST flag · 🧙 v7.08: nor the SKU or what the Wizard read off a photo (the store, the raw price) · 🕘 v7.19: nor the changes (the old notes are in them)
           const cvKids = (x.kids || []).filter(k => k.cv).map(k => ({ n: k.n, ok: k.ok || undefined, note: k.note }));
           if (cvKids.length) rest.kids = cvKids; else delete rest.kids;
           return rest;
@@ -18029,7 +18045,13 @@ function aiKey() { return lsGet('daylog-aikey') || ''; }
 // If SMART ever fails (outage, bad model name, rate limit) the call falls back to QUICK rather
 // than dying — an answer beats a spinner.
 const AI_FAST = 'claude-haiku-4-5';
-const AI_SMART = 'claude-sonnet-4-5';
+// 🧠 v7.21 — Eric: "sonnet 5 is good to go." Sonnet 5 THINKS by default and its thinking counts against max_tokens, so the
+// Wizard (max_tokens 4000) thinks at medium effort — the v7.17 sizing: about the same cost a question as Sonnet 4.5, better
+// reasoning — while every other smart call (a journal draft, advice, a long paste; max_tokens 300–700) runs with thinking OFF
+// so its answer keeps the whole budget, as Sonnet 4.5 did. The quick brain is untouched. A thinking block in the answer has
+// no text, and every reader in this file joins the TEXT blocks only.
+const AI_SMART = 'claude-sonnet-5';
+const aiShape = (m, kind) => m === AI_SMART ? (kind === 'wizard' ? { output_config: { effort: 'medium' } } : { thinking: { type: 'disabled' } }) : {};
 // the tells that a question needs the smart one: arithmetic, spans of time, judgement, or a wall
 // of pasted text. Everything else is a lookup and the quick one is better at it (it's faster).
 const SMART_HINTS = /\b(how much|how many|how long|total|totals|sum|average|spent|spend|spending|cost|costs|owe|owed|owing|invoiced|profit|margin|compare|comparison|versus|vs|difference|add up|tally|breakdown|break (?:this |it |them )?down|step by step|why|should i|explain|figure out|work out|which one|what's best|best option|recommend|worth it|year to date|ytd|last month|this month|last week|this week|this year|last year|quarter|so far|between|since|each job|every job|per job|all jobs)\b/i;
@@ -18061,7 +18083,7 @@ async function aiCall(body, kind, text) {
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true'
     },
-    body: JSON.stringify(Object.assign({ model: m }, body))
+    body: JSON.stringify(Object.assign({ model: m }, aiShape(m, kind), body))
   });
   let model = pickModel(kind, text), fell = false;
   let r = await post(model);
@@ -18310,6 +18332,31 @@ function askSweep(list, terms, skip, cap) {
 // were crowded out of every question. His notes and records now come first; texts and emails follow, fewer of them.
 function askChatter(e) { return (e.texted || e.mail || /^Text from /.test(e.details || '')) ? 1 : 0; }
 const ASK_MINE_N = 100, ASK_CHAT_N = 40;
+// 🏗 v7.21 — Eric: "When I ask the wizard a question about a particular job, I think it is more focused on keywords than the
+// job, as it brings up items from other jobs. And I did have in the text the job name." (His question named the Josten/Weiser
+// job; the fourth line came off a Mery note that shared the words "shower floor".) A question that names ONE job — by a word
+// of its name that belongs to that job alone, three letters or more, exactly as on his list (a client's name, a unit number),
+// never a word half the list shares (Duplex, Remodel, Roof, Garage, Home…) and never a guess — is answered from THAT job's
+// records (and the unfiled ones) only; every other job's records stay out of the sweep, whatever words they share. Two jobs
+// named = a comparison: both come first, nothing is left out. A job's whole name in the question counts too, always.
+const ASK_JOB_SKIP = new Set('general internal admin personal home house duplex remodel roof garage deck shop project pavilion framing addition little head'.split(' '));
+function askJobWords() {
+  const per = jobs.filter(j => !isPersonalJob(j)).map(j => ({ j, w: [...new Set(String(j).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3 && !ASK_STOP.has(w) && !ASK_JOB_SKIP.has(w)))] }));
+  const count = {}; per.forEach(p => p.w.forEach(w => { count[w] = (count[w] || 0) + 1; }));
+  per.forEach(p => { p.w = p.w.filter(w => count[w] === 1); });   // a word two jobs share picks neither
+  return per;
+}
+function askJobsNamed(q) {
+  const s = String(q || '').toLowerCase().replace(/[’']s\b/g, '');
+  const words = new Set();
+  (s.match(/[a-z0-9]+/g) || []).forEach(w => { words.add(w); if (w.length >= 5 && /s$/.test(w) && !/ss$/.test(w)) words.add(w.slice(0, -1)); });
+  const out = [];
+  for (const p of askJobWords()) {
+    const whole = String(p.j).toLowerCase().replace(/\s+/g, ' ').trim();
+    if ((whole.length >= 3 && s.includes(whole)) || p.w.some(w => words.has(w))) out.push(p.j);
+  }
+  return out;
+}
 function buildAskContext(question) {
   const range = askDateRange(question);
   // 🧙 v7.16 — NEWEST BY DATE: the log is kept in the order things were added, and a note filed under an older day (a crew
@@ -18317,17 +18364,25 @@ function buildAskContext(question) {
   const tsOf = e => { const t = +new Date(e.ts); return isNaN(t) ? 0 : t; };
   const live = entries.filter(e => !e.sample && !isLocked(e)).map(e => [tsOf(e), e]).sort((a, b) => b[0] - a[0]).map(x => x[1]);   // 🔒 v6.41/v6.53 — the lock wins here too, and the Personal JOB counts
   const terms = askTerms(question);
+  // 🏗 v7.21 — the job the question names: one = only its records (and the unfiled ones) are searched; two or more = theirs first
+  const named = askJobsNamed(question), focus = named.length === 1 ? named[0] : '';
+  const unfiled = e => !e.job || e.job === '—';
+  const base = focus ? live.filter(e => e.job === focus || unfiled(e))
+    : named.length ? [...live.filter(e => named.includes(e.job)), ...live.filter(e => !named.includes(e.job))] : live;
+  const jobOk = j => !focus || j === focus || !j || j === '—';   // the open to-dos and the board blocks follow the same rule
+  const jobLine = focus ? `\nJOB NAMED IN THE QUESTION: "${focus}" — every record in RECENT LOG below is from that job (a few may be filed under no job); every OTHER job's records were left out on purpose. Answer about this job only — never bring in another job's work, even when the words match.`
+    : named.length ? `\nJOBS NAMED IN THE QUESTION: ${named.map(j => '"' + j + '"').join(', ')} — their records come first in RECENT LOG below; keep each job's facts under its own name.` : '';
   let pool, rangeLine = '', sweepLine = '';
   const seen = new Set();
   pool = [];
   const push = e => { if (!seen.has(e.id)) { seen.add(e.id); pool.push(e); } };
   if (range) {
-    const hit = live.filter(e => { const d = localDay(e.ts); return d >= range[0] && d <= range[1]; });
+    const hit = base.filter(e => { const d = localDay(e.ts); return d >= range[0] && d <= range[1]; });
     // 🔎 v6.17 — inside the range the word-matches go to the FRONT, so the 220 cap can never
     // cut out the one entry he was actually reaching for.
     askSweep(hit, terms, null, 220).forEach(push);
     [...hit.filter(e => !askChatter(e)), ...hit.filter(askChatter)].slice(0, 220).forEach(push);   // 📝 v7.17 — his notes first inside the span too
-    live.slice(0, 30).forEach(push);
+    base.slice(0, 30).forEach(push);
     // 🧙 v7.16 — it said "all of them are included" even when the span held more than the pool could carry ("last week" on
     // 2026-09-25: 425 in the span, 185 left out) — now it says how many made it, so the Wizard never claims the whole week
     const inPool = pool.filter(e => { const d = localDay(e.ts); return d >= range[0] && d <= range[1]; }).length;
@@ -18336,16 +18391,16 @@ function buildAskContext(question) {
         : inPool >= hit.length ? ' (all of them are included in RECENT LOG below, no matter how old)'
         : ` (only ${inPool} of them fit in RECENT LOG below — the word-matches first, then the newest; say plainly that some of the span was left out)`) + '.';
   } else {
-    live.filter(e => !askChatter(e)).slice(0, ASK_MINE_N).forEach(push);   // 📝 v7.17 — his own notes and records first
-    live.filter(askChatter).slice(0, ASK_CHAT_N).forEach(push);            // …then the newest texts and emails
-    const older = askSweep(live, terms, seen, 120);
+    base.filter(e => !askChatter(e)).slice(0, ASK_MINE_N).forEach(push);   // 📝 v7.17 — his own notes and records first
+    base.filter(askChatter).slice(0, ASK_CHAT_N).forEach(push);            // …then the newest texts and emails
+    const older = askSweep(base, terms, seen, 120);
     older.forEach(push);
     if (older.length) {
       let oldest = '';
       older.forEach(e => { const d = localDay(e.ts); if (!oldest || d < oldest) oldest = d; });
-      sweepLine = `\nWORD SEARCH RAN ON THE WHOLE LOG: no date was named, so all ${live.length} entries on record were scanned for ${JSON.stringify(terms)} — ${older.length} more match${older.length === 1 ? '' : 'es'} (back as far as ${oldest}, his own notes ahead of texts and emails) are included at the bottom of RECENT LOG below. Old entries are NOT out of reach: if something matching is in there, use it and give its date.`;
+      sweepLine = `\nWORD SEARCH RAN ON THE WHOLE LOG: no date was named, so all ${base.length} entries${focus ? ' of that job' : ''} on record were scanned for ${JSON.stringify(terms)} — ${older.length} more match${older.length === 1 ? '' : 'es'} (back as far as ${oldest}, his own notes ahead of texts and emails) are included at the bottom of RECENT LOG below. Old entries are NOT out of reach: if something matching is in there, use it and give its date.`;
     } else if (terms.length) {
-      sweepLine = `\nWORD SEARCH RAN ON THE WHOLE LOG: no date was named, so all ${live.length} entries on record were scanned for ${JSON.stringify(terms)} and nothing outside what RECENT LOG already shows matched. The whole book HAS been searched — if the answer isn't in RECENT LOG below, say plainly that nothing on record matches, and suggest the words that would find it.`;
+      sweepLine = `\nWORD SEARCH RAN ON THE WHOLE LOG: no date was named, so all ${base.length} entries${focus ? ' of that job' : ''} on record were scanned for ${JSON.stringify(terms)} and nothing outside what RECENT LOG already shows matched. The whole book HAS been searched — if the answer isn't in RECENT LOG below, say plainly that nothing on record matches, and suggest the words that would find it.`;
     }
   }
   const slim = pool.map(e => {
@@ -18441,9 +18496,9 @@ function buildAskContext(question) {
   const pocketDoneCtx = live.filter(e => e.pocket === 'done' && +new Date(e.ts) >= cut14).slice(0, 40).map(e => ({ t: String(e.details || '').replace(/^✓ /, ''), day: localDay(e.ts) }));
   const pocketLeftCtx = live.filter(e => ['flushed', 'over', 'swept'].includes(e.pocket) && +new Date(e.ts) >= cut14 && !(e.board && e.board.done)).slice(0, 40).map(e => ({ t: brdWords(e.details), day: localDay(e.ts) }));
   // 🧙 v7.16 — a pocket leftover already rides in POCKET NOT DONE: on the board list too, it came out twice ("8 items twice", 09-25)
-  const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).filter(l => l.k !== 'p' && !(l.src && ['flushed', 'over', 'swept'].includes(l.src.pocket))).slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
-  const boardDoneCtx = live.filter(e => e.board && e.board.done && +new Date(e.board.done) >= Date.now() - 7 * 86400000).slice(0, 40).map(e => ({ job: e.job, t: brdWords(e.details), by: e.board.by || 'Eric', day: localDay(new Date(e.board.done)) }));
-  return `TODAY: ${new Date().toString()}${drefLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos)}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nLINES ERIC TOOK OFF HIS LISTS (✕ v7.16 — he said each is no longer relevant: leave it, and anything that is plainly the same item, out of summaries, lists and to-dos from now on; talk about one only if he asks about it by name; newest first): ${JSON.stringify((prefs.wizGone || []).slice(0, 60).map(g => g.line))}\nRECENT LOG (his own notes and records first, newest first; then the newest texts and emails; then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
+  const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).filter(l => l.k !== 'p' && !(l.src && ['flushed', 'over', 'swept'].includes(l.src.pocket)) && jobOk(l.job)).slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
+  const boardDoneCtx = live.filter(e => jobOk(e.job) && e.board && e.board.done && +new Date(e.board.done) >= Date.now() - 7 * 86400000).slice(0, 40).map(e => ({ job: e.job, t: brdWords(e.details), by: e.board.by || 'Eric', day: localDay(new Date(e.board.done)) }));
+  return `TODAY: ${new Date().toString()}${drefLine}${jobLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos.filter(o => jobOk(o.j)))}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nLINES ERIC TOOK OFF HIS LISTS (✕ v7.16 — he said each is no longer relevant: leave it, and anything that is plainly the same item, out of summaries, lists and to-dos from now on; talk about one only if he asks about it by name; newest first): ${JSON.stringify((prefs.wizGone || []).slice(0, 60).map(g => g.line))}\nRECENT LOG (his own notes and records first, newest first; then the newest texts and emails; then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
 }
 // 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
 // offers their photos, a follow-up within 15 minutes remembers the exchange, and
@@ -18716,7 +18771,7 @@ async function askInstant(what) {
     // lookup and goes quick; "how much did I spend at Spenard year to date" is thinking, and
     // goes smart. Eric can force either one in ⚙ Setup → the Wizard.
     const { r, model: aiWho, fell: aiFell } = await aiCall({
-        max_tokens: 1200,
+        max_tokens: 4000,   // 🧠 v7.21 — Sonnet 5 thinks inside this budget; about 1200 stay for the answer, as before
         system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 only if Eric SAYS it is urgent — a quick personal reminder ("remind me to…") is pri 1 no matter how old it gets>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Entries carry their weekday next to the date, and a note that said a relative day-word carries "saidDay" — the translation of that word against the NOTE\'S OWN date (a note\'s "tomorrow" is the day after that note, never after today); always trust saidDay over the bare word. Entries flagged "headsUp" are landmines Eric marked ⚠ — things that bite later work; when the question is about upcoming work, a job, or "what do I need to know", surface matching headsUp entries FIRST and mark each with ⚠. Never invent amounts or dates. For a SUMMARY or a LIST of what is open: open items only, and each item ONCE — the same thing can sit in the log, the board, the pocket and a to-do, so merge them; leave out anything done, answered, checked off or cleared, and every line in LINES ERIC TOOK OFF HIS LISTS; CORRECTIONS ERIC MADE beat the records; cite only entry ids that appear in RECENT LOG. When your answer relies on specific log entries, end with one final line exactly like: SOURCES: 123, 456 — listing those entries\' "id" values (omit the line entirely if none apply). Numbers read from a photo ("photoText") can be OCR-garbled — when an amount or count comes only from photoText, say it may be worth checking the photo.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
         messages: [{ role: 'user', content: buildAskContext(what) + fileCtx + '\n\nERIC\'S QUESTION: ' + what }]
     }, 'wizard', what);
@@ -19820,9 +19875,11 @@ function renderAskRecent() {
   if (!box) return;
   window._rlN = window._rlN || 12;
   window._rlOpen = window._rlOpen || new Set();
-  // 🎒 v7.07 — Eric: "We can take the crew button off the running log search." A phone that had it lit lets it go.
-  if (prefs.rlFilter === 'crew') prefs.rlFilter = '';
-  if ((prefs.rlHide || []).includes('crew')) prefs.rlHide = prefs.rlHide.filter(x => x !== 'crew');
+  // 👷 v7.21 — Eric: "Where is my 'From Phil' button on the running log?" v7.07 took the 👷 Crew plate off at his ask; the
+  // FROM PHIL card (v7.13) is its own card above the log and empties as he flushes it. The plate is back, named after the
+  // crew whose notes are IN the log — 👷 From Phil with one name, 👷 From the crew with more — never on a crew phone.
+  const crewIn = isCrew() ? [] : [...new Set(entries.filter(e => !e.sample && e.who && e.who !== 'Me' && crew.includes(e.who)).map(e => e.who))].sort();
+  if (prefs.rlFilter === 'crew' && !crewIn.length) prefs.rlFilter = '';   // nothing to show and no plate to clear it with
   const f = prefs.rlFilter || '', who = prefs.rlWho || '', hide = prefs.rlHide || [];
   // ⬇ the searches — the same fields the old full-log panel used, applied to the one log
   const q = (logQuery || '').trim().toLowerCase();
@@ -19981,13 +20038,14 @@ function renderAskRecent() {
       title="${only ? 'tap again: 🚫 hide these' : off ? 'hidden — tap: let them back in' : 'tap: only these · tap tap: hide these'}"
       onclick="rlSet('${v}')">${only ? '✓ ' : off ? '🚫 ' : ''}${w}</button>`;
   };
-  // 🎒 v7.07 — 🎒 Pocket list sits beside ⚙ Grinder in the top row; the 👷 Crew plate is off (crew traffic is still under
-  // ✳ All, and the person wheel picks one man)
+  // 🎒 v7.07 — 🎒 Pocket list sits beside ⚙ Grinder in the top row · 👷 v7.21 — the crew plate leads the second row, and
+  // ➕ Say something fills out 💬 Feedback's row when it is there (ten plates, three across)
+  const crewPlate = crewIn.length ? chip('crew', crewIn.length === 1 ? `👷 From ${esc(crewIn[0])}` : '👷 From the crew') : '';
   // 🧾 v6.86 — with Receipts ON the kind plates fold into ONE line that says so (Eric: "currently still has other things in there like a wizard and photo and grinder")
   box.innerHTML = (window._logRcptOnly ? `<div class="rl-filters"><button type="button" class="pick-chip sel rl-wide" onclick="rlRcptToggle()" title="tap: every kind of entry again">🧾 ✓ RECEIPTS ONLY — every other filter is off · tap to show everything</button></div>` : `<div class="rl-filters">
       <button type="button" class="pick-chip${!f && !who && !hide.length ? ' sel' : ''}" onclick="prefs.rlFilter = ''; prefs.rlWho = ''; prefs.rlHide = []; window._rlN = 12; scheduleSave(); renderAskRecent();">${!f && !who && !hide.length ? '✓ ' : ''}✳ All</button>
-      ${chip('grind', '⚙ Grinder')}${chip('pocket', '🎒 Pocket list')}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('mail', '📧 Emails')}${chip('photo', '📷 Pictures')}${chip('client', '🏠 Client')}${chip('fb', '💬 Feedback')}
-      <button type="button" class="pick-chip rl-wide" onclick="openFeedback()" title="Say what works and what doesn't — it lands right here in the log">➕ 💬 Say something</button>
+      ${chip('grind', '⚙ Grinder')}${chip('pocket', '🎒 Pocket list')}${crewPlate}${chip('wiz', '🧙 Questions')}${chip('text', '📱 Texts')}${chip('mail', '📧 Emails')}${chip('photo', '📷 Pictures')}${chip('client', '🏠 Client')}${chip('fb', '💬 Feedback')}
+      <button type="button" class="pick-chip ${crewPlate ? 'rl-two' : 'rl-wide'}" onclick="openFeedback()" title="Say what works and what doesn't — it lands right here in the log">➕ 💬 Say something</button>
       ${people.length ? `<select class="mini-sel${who ? ' sel-on' : ''}" id="rlWhoSel" style="font-size: var(--fs11, 11px); padding: 2px 6px;" onchange="rlWho(this.value)" title="${who ? 'showing ONLY ' + esc(who) + ' — pick the first line to show everyone again' : 'Just one person\'s traffic'}" aria-label="${who ? 'person filter ON — only ' + esc(who) : 'show just one person'}">
         <option value="">${who ? '✕ everyone — clear this filter' : '👤 person…'}</option>${people.map(pn => `<option value="${esc(pn)}"${who === pn ? ' selected' : ''}>${who === pn ? '✓ ONLY ' : ''}${esc(pn)}</option>`).join('')}</select>` : ''}
     </div>`) +
@@ -21469,7 +21527,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.20';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.21';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

@@ -37,7 +37,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
         { id: 'm4', n: 'Garage paint', t: 'Misc', buy: true, s: 'ordered' },
         { id: 'm5', n: 'Check all vents and airflow', t: 'Misc', s: 'todo', sel: 'Fans on, every vent open' }] },
       { name: 'KITCHEN', items: [{ id: 'm6', n: 'Countertops', t: 'Misc', buy: true, s: 'arrived', ins: '2026-09-01' }, { id: 'm7', n: 'Pendants x2', t: 'Electrical', tg: ['Electrical'], hm: true, s: 'pick' }] }] });
-    await openMaterials(0);
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr();
     window._nm = r => (r.querySelector('.mat-nm b') || r.querySelector('.mat-fin-nm') || {}).textContent;   // ✓ v7.19 — a finished row's name is folded, not bold
     window._row = n => [...document.querySelectorAll('#revBox .mat-item')].find(r => _nm(r) === n);
     window._lights = n => [..._row(n).querySelectorAll('.mat-strip:not(.mat-rowbtns) .mat-box')];
@@ -171,7 +171,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return r;
   });
   ok('✎ edit opens its OWN window over the board — drawn outside the scrolling board, above it and under the toast — and the row behind it never turns into a form', ed.open && ed.z > 80 && ed.z < 90 && ed.rowStill, JSON.stringify(ed));
-  ok('always the same order: Name · Note · What kind of row · Its lights, then ⚠ FIRST, then the folds — 💵 Money · 🏷 Whose list · 🏠 The homeowner · ☑ Steps · 📷 Photos — every fold shut until he opens it', /^Name \| Note — shows on the row \| What kind of row \| Its lights — tap one, then tap it again \| 📷 Photos \| 💵 Money \| 🏷 Whose list — tags \| 🏠 The homeowner \| ☑ Steps under it \| 📁 Pocket \| 🕘 Changes$/.test(ed.order) && ed.folded, ed.order);   // v7.08 — 📷 Photos is its own open section above 💵 Money (the Wizard fills the money from a photo); the fold is 📁 Pocket alone · 🕘 v7.19 — then the row's changes
+  ok('always the same order: Name · Note · What kind of row · Its lights, then ⚠ FIRST, then the folds — 💵 Money · 🏷 Whose list · 🏠 The homeowner · ☑ Steps · 📷 Photos — every fold shut until he opens it', /^Name \| 📷 Photos \| 👆 Picked — what it is \| Note — shows on the row \| What kind of row \| Its lights — tap one, then tap it again \| 💵 Money \| 🏷 Whose list — tags \| 🏠 The homeowner \| ☑ Steps under it \| 📁 Pocket \| 🕘 Changes$/.test(ed.order) && ed.folded, ed.order);   // v7.08 — 📷 Photos is its own open section above 💵 Money (the Wizard fills the money from a photo); the fold is 📁 Pocket alone · 🕘 v7.19 — then the row's changes
   ok('the name and the note ("decide whether the railing is needed") are right there to edit — the note is a real writing box — and what he types lands on the row; money goes in under its fold', ed.name === 'Loft railing' && ed.note === 'Decide whether the railing is needed' && ed.noteIsBox && ed.saved, JSON.stringify(ed));
   ok('it fits the phone, the footer (✕ Delete · ✓ DONE — it is saved) stays pinned, the ✕ is black on gold, a fold opening keeps the window\'s scroll, and closing it leaves the board exactly where it was', ed.fits && ed.footPinned && /✕ Delete \| ✓ DONE — it is saved/.test(ed.foot) && /rgb\(17, 17, 17\)/.test(ed.closer) && ed.keptScroll && ed.closed && ed.noJump, JSON.stringify(ed));
   ok('the two KIND plates flip the row from inside the window (🛒 Something to buy ↔ ✅ Checklist item) and the lights follow; ⚠ FIRST is one plate', ed.kind0 === 'true,false' && ed.kind1 === 'false,true' && ed.flipped && ed.back && ed.first, JSON.stringify(ed));
@@ -186,7 +186,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     matItemHoldStart('m1'); await new Promise(r => setTimeout(r, 650)); matItemHoldEnd();
     const held = _matEdit === 'm1' && !!$('matSheet');
     matClose(); const shut = !$('matSheet') && _matEdit === '';
-    await openMaterials(0);
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr();
     return a && armed && gone && held && shut;
   }));
 

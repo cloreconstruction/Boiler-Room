@@ -133,7 +133,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return _said.filter(s => /the money stays on his phone/.test(s)).length === 2 && !/— estimates/.test(($('revBox') || {}).textContent || '');
   }));
   ok('📋 Build List opens the real board (no "coming to office phones next"), reading the shared folder', await p2.evaluate(async () => {
-    _said.length = 0; await openMaterials(0); await new Promise(r => setTimeout(r, 300));
+    _said.length = 0; await openMaterials(0); _matRmShut = new Set(); renderMatMgr(); await new Promise(r => setTimeout(r, 300));
     return !!_matD && _matD.rooms.length === 1 && /Toilet/.test($('revBox').textContent) && !_said.some(s => /coming to office phones/.test(s));
   }));
   ok('a Build List photo Eric put on (stored under his name for the folder) opens on this phone under Phil\'s', await p2.evaluate(async () => {

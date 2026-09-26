@@ -35,7 +35,7 @@ const { chromium } = require('playwright');
         { id: 'm6', n: 'Check the vents', t: 'Misc', s: 'done' },
         { id: 'm7', n: 'Floor paint', t: 'Misc', buy: true, s: 'pick' }] }] });
     _dbxFiles[portalRoot() + '/materials-oak-111aaa.json'] = JSON.stringify({ rooms: [{ name: 'KITCHEN', items: [{ id: 'm4', n: 'Backsplash tile', hm: true, s: 'picked', pick: 'White subway' }] }] });
-    await openMaterials(0);
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr();
     window._nm = r => (r.querySelector('.mat-nm b') || r.querySelector('.mat-fin-nm') || {}).textContent;
     window._row = n => [...document.querySelectorAll('#revBox .mat-item')].find(r => _nm(r) === n);
     window._it = id => _matD.rooms.flatMap(r => r.items).find(x => x.id === id);
@@ -155,7 +155,7 @@ const { chromium } = require('playwright');
   ok('with the biggest letters on, nothing runs off the side of the phone: the main page, the Summary, the Build List', await page.evaluate(async () => {
     setFont('c'); closePanels(); renderAll(); const main = document.documentElement.scrollWidth <= innerWidth + 1;
     openReview('summary'); const sum = document.documentElement.scrollWidth <= innerWidth + 1 && $('revBox').scrollWidth <= $('revBox').clientWidth + 1; closeReview();
-    await openMaterials(0); const box = $('revBox'); const board = box.scrollWidth <= box.clientWidth + 1; matClose();
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr(); const box = $('revBox'); const board = box.scrollWidth <= box.clientWidth + 1; matClose();
     return main && sum && board;
   }));
   ok('a pull from Dropbox brings his letters with it (another device picked A)', await page.evaluate(() => { applyFont('a'); return !document.documentElement.dataset.font; }) && (await probe()).size === '11px');

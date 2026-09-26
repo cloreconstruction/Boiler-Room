@@ -41,7 +41,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
       { id: 'm4', n: 'Check the vents', t: 'Misc', s: 'todo' },
       { id: 'm5', n: 'Their faucet', t: 'Misc', hm: true, s: 'picked', pick: 'Matte black', sel: 'office words', est: 50, sku: 'SKU 111', phRead: { title: 'x', price: 50 } },
       { id: 'm6', n: 'Delete me', t: 'Misc', s: 'todo' }] }] });
-    await openMaterials(0);
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr();
     window._row = n => [...document.querySelectorAll('#revBox .mat-item')].find(r => r.querySelector('b') && r.querySelector('b').textContent === n);
     window._it = id => _matD.rooms[0].items.find(x => x.id === id);
   }, [P(1), P(2), P(3), P(4), P(5)]);
@@ -164,11 +164,13 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
 
   console.log('— 📷 v7.08 the edit window: photos and the Wizard —');
-  ok('📷 Photos is its own open section, right above 💵 Money; the old fold is now 📁 Pocket alone', await page.evaluate(() => {
+  // 📷 v7.21 — Eric: "I want the photo window to be at the top, just under the name. Then the note next" — so 📷 Photos is the
+  // second section (right under Name), 👆 Picked and the Note follow, 💵 Money is a fold further down
+  ok('📷 Photos is its own open section, right under the Name (v7.21); the old fold is now 📁 Pocket alone', await page.evaluate(() => {
     matEditOpen('m2');
     const secs = [...document.querySelectorAll('#matSheet .ms-h, #matSheet .ms-fold')].map(x => x.textContent.replace(/\s+/g, ' ').trim());
     const iPh = secs.findIndex(s => /^📷 Photos · 2$/.test(s)), iMoney = secs.findIndex(s => /💵 Money/.test(s));
-    return iPh > 0 && iMoney === iPh + 1 && secs.some(s => /^▸ 📁 Pocket/.test(s)) && !secs.some(s => /Photos · 📁 Pocket/.test(s));
+    return iPh === 1 && secs[0] === 'Name' && /^👆 Picked/.test(secs[2]) && /^Note/.test(secs[3]) && iMoney > iPh && secs.some(s => /^▸ 📁 Pocket/.test(s)) && !secs.some(s => /Photos · 📁 Pocket/.test(s));
   }));
   ok('the photos are small thumbnails you tap to look at, each with 🧙 read and ✕', await page.evaluate(async () => {
     await new Promise(r => setTimeout(r, 200));
@@ -194,11 +196,12 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     $('matDrop-m2').dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
     for (let i = 0; i < 40 && !_it('m2').phRead; i++) await new Promise(r => setTimeout(r, 50));
     const it = _it('m2'), up = _ups.find(p => /mat-photos-oak-111aaa\/m2 /.test(p)) || '';
-    return { n: (it.phs || []).length, up, name: up.split('/').pop(), sku: it.sku, est: it.est, sel: it.sel, filled: (it.phRead || {}).filled, kind: _aiKind,
+    return { n: (it.phs || []).length, up, name: up.split('/').pop(), sku: it.sku, est: it.est, sel: it.sel, desc: it.desc, filled: (it.phRead || {}).filled, kind: _aiKind,
       card: ($('matSheet') && $('matSheet').querySelector('.ms-read') || {}).textContent || '', money: document.querySelector('#matSheet .ms-foldsec[data-fold="money"] .ms-foldbody') };
   });
   ok('a photo dropped on the box goes up (a long name keeps its .jpeg ending) and lands on the item', drop.n === 3 && /\.jpeg$/.test(drop.up) && drop.name.replace(/^m2 /, '').length <= 60, JSON.stringify(drop).slice(0, 300));
-  ok('the Wizard reads it at once (the quick brain, a photo): SKU and price go into the EMPTY boxes — the note he wrote is kept', drop.sku === 'model AT-100 · SKU 5550001 · item #99887766' && drop.est === 123.45 && drop.sel === 'Two-piece, white' && JSON.stringify(drop.filled) === '["SKU","price"]' && drop.kind === 'photo', JSON.stringify(drop).slice(0, 300));
+  // 👆 v7.21 — what it IS goes into its own 👆 Picked box, never into his note (which is kept)
+  ok('the Wizard reads it at once (the quick brain, a photo): SKU, price and what it is go into the EMPTY boxes — the note he wrote is kept', drop.sku === 'model AT-100 · SKU 5550001 · item #99887766' && drop.est === 123.45 && drop.sel === 'Two-piece, white' && drop.desc === 'Acme Tall Toilet, white' && JSON.stringify(drop.filled) === '["SKU","price","what it is"]' && drop.kind === 'photo', JSON.stringify(drop).slice(0, 300));
   ok('what it read shows under the photos: the product, model, SKU, the price, and the price with THIS job\'s markup (15%, off its estimates board)', /From the photo/.test(drop.card) && /Acme Tall Toilet/.test(drop.card) && /model AT-100/.test(drop.card) && /\$123\.45/.test(drop.card) && /15% markup \$141\.97/.test(drop.card) && /nothing you typed was changed/.test(drop.card), drop.card);
   ok('💵 Money opens with the SKU box filled and the marked-up price in words — office only', await page.evaluate(() => {
     const body = document.querySelector('#matSheet .ms-foldsec[data-fold="money"] .ms-foldbody');

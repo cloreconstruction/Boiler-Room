@@ -86,6 +86,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const chip = [...document.querySelectorAll('#askRecent .log-meta span')].find(x => /Build List → KITCHEN/.test(x.textContent));
     if (!chip) return 'no chip in the log row';
     chip.click(); await new Promise(r => setTimeout(r, 250));
+    _matRmShut = new Set(); renderMatMgr();   // 📁 v7.21 — the board opens folded; this check looks at the row
     const row = [...document.querySelectorAll('#revBox .mat-item')].find(r => r.querySelector('b') && r.querySelector('b').textContent === 'Order the under-cabinet lights');
     if (!row) return 'no row on the board';
     const t = row.textContent.replace(/\s+/g, ' ');
@@ -157,7 +158,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
 
   ok('THE WALL: a grinder row he later marks 🏠 rides to their file without his note or the grinder\'s ids', await page.evaluate(async () => {
-    await openMaterials(0); const it = _matD.rooms.flatMap(r => r.items).find(x => x.n === 'Order the under-cabinet lights');
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr(); const it = _matD.rooms.flatMap(r => r.items).find(x => x.n === 'Order the under-cabinet lights');
     matHmToggle(it.id); await matSave();
     const cli = JSON.parse(_dbxFiles[_CLI]), c = cli.rooms.flatMap(r => r.items).find(x => x.n === 'Order the under-cabinet lights'), txt = JSON.stringify(cli);
     matHmToggle(it.id); await matAutoSave(); matClose();
@@ -166,7 +167,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   ok('with that job\'s board OPEN on the screen the row lands in it at once (and it saves itself) — and the board still reads the homeowner\'s picks the way it always did', await page.evaluate(async () => {
     _dbxFiles[_CLI] = JSON.stringify({ rooms: [{ name: 'KITCHEN', items: [{ id: 'm2', n: 'Faucet', hm: true, s: 'picked', pick: 'Brushed bronze pull-down' }] }] });
-    await openMaterials(0);
+    await openMaterials(0); _matRmShut = new Set(); renderMatMgr();
     const merged = _matD.rooms[0].items.find(x => x.id === 'm2').pick === 'Brushed bronze pull-down' && (_matD.hist || []).some(h => /client picked "Brushed bronze pull-down"/.test(h.txt));
     const e = addEntry('Note', 'Landed while the board was open', 'Oak House', {});
     await grindToBuildList(e, 'Oak House', 'KITCHEN');
