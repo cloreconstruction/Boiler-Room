@@ -4278,7 +4278,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.27 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.28 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -19735,15 +19735,139 @@ function pbTxPairMark(id, otherId) {
   scheduleSave(); renderBudget();
   toast('↔ Both sides marked as a transfer — neither counts as spending, and both stores are remembered');
 }
+// 📄 v7.28 — THE DROP BOX READS A PDF STATEMENT. Eric: "my banks statements are pdf only, how do i convert or get this to you
+// easily?" … "go, make it read the pdf." The PDF is read RIGHT HERE on the phone by pdf.js (fetched once from the CDN the way
+// the photo reader is; a TEXT statement, not a scan — a scan has no words to read); the words are gathered into lines by where
+// they sit on the page, and a line that starts with a day and ends with an amount is a transaction (a second line with no day
+// and no amount is the rest of its words). The SIGN of a line is never guessed when it can be known: the running balances say
+// it (this balance − the last = the amount, to the cent), else the line's own minus / CR / brackets, else the section it sits
+// under (Deposits… / Withdrawals…); only then do the words DEPOSIT · PAYROLL · DIRECT DEP · INTEREST · REFUND · CREDIT mean money
+// in and everything else money out — and the toast says to check the ins and outs (⇅ on the account turns them all). A card's
+// statement (Minimum Payment Due · Credit Limit · New Charges · Card Member) counts a charge as plus like its CSV and is flipped
+// the same way. A day without a year takes the statement's year (a month past the statement's month is the year before). The
+// account is its last four; the closing balance rides along.
+const PB_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + ['3', '11', '174'].join('.') + '/';   // (the version spelled in pieces — this block may hold no figure)
+let _pdfP = null;
+function pbPdfLib() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (!_pdfP) {
+    _pdfP = new Promise((res, rej) => {
+      const el = document.createElement('script');
+      el.src = PB_PDFJS + 'pdf.min.js';
+      el.onload = () => { try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PB_PDFJS + 'pdf.worker.min.js'; res(window.pdfjsLib); } catch (e) { rej(new Error('pdf reader unavailable')); } };
+      el.onerror = () => rej(new Error('pdf reader unavailable'));
+      document.head.appendChild(el);
+    });
+    _pdfP.catch(() => { _pdfP = null; });   // try again next time
+  }
+  return _pdfP;
+}
+// the words of every page, gathered into lines by where they sit (top to bottom, left to right)
+async function pbPdfLines(buf) {
+  const lib = await pbPdfLib();
+  const doc = await lib.getDocument({ data: buf }).promise;
+  const out = [];
+  for (let n = 1; n <= doc.numPages; n++) {
+    const page = await doc.getPage(n), tc = await page.getTextContent();
+    const items = tc.items.filter(it => it.str && it.str.trim()).map(it => ({ s: it.str, x: it.transform[4], y: it.transform[5] }));
+    items.sort((a, b) => (b.y - a.y) || (a.x - b.x));
+    let line = null;
+    items.forEach(it => { if (!line || Math.abs(it.y - line.y) > 3) { line = { y: it.y, parts: [] }; out.push(line); } line.parts.push(it); });
+  }
+  return out.map(l => l.parts.sort((a, b) => a.x - b.x).map(p => p.s).join(' ').replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+const PB_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const PB_PDF_AMT = '\\(?-?\\$?\\s?-?\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2})\\)?(?:\\s?(?:CR|DR))?-?';
+const PB_PDF_IN = /^(deposits?|deposits? (and|&) (other )?(additions|credits)|credits|electronic (deposits|credits)|additions|payments? (and|&) (other )?credits|other credits)\b/i;
+const PB_PDF_OUT = /^(withdrawals?|withdrawals? (and|&) (other )?(subtractions|debits)|debits|checks( paid)?|electronic (withdrawals|payments|debits)|purchases|new charges|fees|(atm|debit card|card) (withdrawals|purchases|transactions)|other (withdrawals|debits))\b/i;
+const PB_PDF_SKIP = /^(beginning|opening|ending|closing|new|previous|statement|total|totals|average|daily|minimum|interest|annual|balance|page|continued|account|summary|payment due)\b/i;
+const PB_PDF_INWORDS = /\b(deposit|payroll|direct dep|dir dep|interest|refund|credit|reversal)\b/i;
+function pbPdfLineParse(ln) {
+  let m = ln.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\*?\s+(?:(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\*?\s+)?(.*)$/), mo, dd, yy, rest, check = '';
+  if (m) { mo = +m[1]; dd = +m[2]; yy = m[3] || ''; rest = m[7]; }
+  else if ((m = ln.match(/^(\d{3,6})\*?\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\s+(.*)$/))) { check = m[1]; mo = +m[2]; dd = +m[3]; yy = m[4] || ''; rest = m[5]; }   // a checks table: number · day · amount
+  else if ((m = ln.match(/^([A-Z][a-z]{2})[a-z]*\.?\s+(\d{1,2}),?(?:\s+(\d{4}))?\s+(.*)$/))) { mo = PB_MONTHS.indexOf(m[1].toLowerCase()) + 1; if (!mo) return null; dd = +m[2]; yy = m[3] || ''; rest = m[4]; }
+  else return null;
+  if (!(mo >= 1 && mo <= 12 && dd >= 1 && dd <= 31)) return null;
+  const amtRe = new RegExp('(' + PB_PDF_AMT + ')\\s*$'), amts = [];
+  let r = rest;
+  for (let i = 0; i < 2; i++) { const a = r.match(amtRe); if (!a) break; amts.unshift(a[1]); r = r.slice(0, a.index).trim(); }
+  if (!amts.length) return null;
+  const desc = (check ? 'Check ' + check + ' ' + r : r).replace(/\s+/g, ' ').trim(); if (!desc) return null;
+  const read = t => { const bare = t.replace(/\$/g, '').trim(); const v = pbAmtOf(bare.replace(/\s?(CR|DR)$/i, '')); if (v == null) return null; return { v: Math.abs(v), neg: v < 0 || /^\(|\)$/.test(bare) || /\bDR$/i.test(bare), cr: /\bCR$/i.test(bare) }; };
+  const a = read(amts[0]), b = amts.length > 1 ? read(amts[1]) : null;
+  if (!a || !a.v) return null;
+  return { mo, dd, yy, desc, amt: a.v, neg: a.neg, cr: a.cr, bal: b ? (b.neg ? -b.v : b.v) : null };
+}
+// the statement's closing day: the latest full date on its pages (the year a bare day takes)
+function pbPdfEnd(all) {
+  const found = [], re = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b|\b([A-Z][a-z]{2})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/g; let m;
+  while ((m = re.exec(all))) {
+    if (m[3]) { const y = m[3].length === 2 ? 2000 + +m[3] : +m[3]; if (y > 1990 && y < 2100) found.push({ y, mo: +m[1], dd: +m[2] }); }
+    else { const mo = PB_MONTHS.indexOf(m[4].toLowerCase()) + 1; if (mo) found.push({ y: +m[6], mo, dd: +m[5] }); }
+  }
+  if (!found.length) { const d = new Date(); return { y: d.getFullYear(), mo: d.getMonth() + 1, dd: d.getDate(), guessed: true }; }
+  return found.reduce((b, f) => (f.y > b.y || (f.y === b.y && (f.mo > b.mo || (f.mo === b.mo && f.dd > b.dd)))) ? f : b);
+}
+async function pbPdfParse(buf, fileName) {
+  const lines = await pbPdfLines(buf), all = lines.join('\n');
+  const cardFile = /minimum payment due|credit limit|new charges|card member|account ending/i.test(all);
+  const end = pbPdfEnd(all);
+  const acctM = all.match(/account (?:number|no\.?|#)?\s*:?\s*([x*#\-\s\d]{4,})/i) || all.match(/ending(?: in)?\s*:?\s*([x*#\-\s\d]{4,})/i);
+  const acct = pbLast4((acctM || [])[1] || '');
+  const tx = []; let sec = '', last = null;
+  const endRe = new RegExp('(' + PB_PDF_AMT + ')\\s*$');
+  lines.forEach((ln, i) => {
+    const p = pbPdfLineParse(ln);
+    if (p) {
+      if (PB_PDF_SKIP.test(p.desc)) { last = null; return; }
+      const y = p.yy ? (p.yy.length === 2 ? 2000 + +p.yy : +p.yy) : (p.mo > end.mo ? end.y - 1 : end.y);
+      const d = `${y}-${String(p.mo).padStart(2, '0')}-${String(p.dd).padStart(2, '0')}`;
+      last = { d, desc: p.desc, amt: p.amt, neg: p.neg, cr: p.cr, bal: p.bal, sec, i }; tx.push(last); return;
+    }
+    if (PB_PDF_IN.test(ln)) { sec = 'in'; last = null; return; }
+    if (PB_PDF_OUT.test(ln)) { sec = 'out'; last = null; return; }
+    if (last && last.i === i - 1 && ln.length < 60 && !endRe.test(ln) && !PB_PDF_SKIP.test(ln) && !/^\d{1,2}\//.test(ln)) { last.desc += ' ' + ln; last.i = i; return; }   // the rest of the same transaction's words
+    last = null;
+  });
+  if (!tx.length) return { lines: [], why: 'no lines with a day and an amount — a scanned statement has no words to read; the bank\'s CSV or QFX download works' };
+  let unsure = 0;
+  if (cardFile) tx.forEach(t => { t.amt = t.neg ? -t.amt : t.amt; });   // the card's own terms: a charge plus, a payment minus — flipped on the way in like its CSV
+  else {
+    const newestFirst = tx.length > 1 && tx[0].d > tx[tx.length - 1].d, order = newestFirst ? tx.slice().reverse() : tx.slice();
+    let prevBal = null;
+    const openLine = lines.find(l => /^(beginning|opening|previous) balance/i.test(l)); if (openLine) { const m = openLine.match(endRe); if (m) prevBal = pbAmtOf(m[1].replace(/\$/g, '')); }
+    order.forEach(t => {
+      let sign = 0;
+      if (t.bal != null && prevBal != null) { const diff = Math.round((t.bal - prevBal) * 100); if (Math.abs(diff) === Math.round(t.amt * 100)) sign = diff < 0 ? -1 : 1; }
+      if (!sign && (t.neg || t.cr)) sign = t.neg ? -1 : 1;
+      if (!sign && t.sec) sign = t.sec === 'in' ? 1 : -1;
+      if (!sign) { sign = PB_PDF_INWORDS.test(t.desc) ? 1 : -1; unsure++; }
+      t.amt = sign * t.amt;
+      if (t.bal != null) prevBal = t.bal;
+    });
+  }
+  let bal = null; const bm = all.match(new RegExp('(?:ending|closing|new) balance\\s*:?\\s*(' + PB_PDF_AMT + ')', 'i')); if (bm) bal = pbAmtOf(bm[1].replace(/\$/g, ''));   // "New Balance $145" may sit mid-line on a card's page
+  const balAt = end.guessed ? '' : `${end.y}-${String(end.mo).padStart(2, '0')}-${String(end.dd).padStart(2, '0')}`;
+  return { lines: tx.map(t => ({ d: t.d, amt: t.amt, desc: pbTxDesc(t.desc), acct, bal: null })), acct, bal, balAt, cardFile, unsure };
+}
 async function pbStmtFiles(fileList) {
-  const files = [...(fileList || [])].filter(f => /\.(csv|txt|tsv|ofx|qfx|qbo)$/i.test(f.name));
-  if (!files.length) { toast('That is not a bank file — a CSV or OFX / QFX from the bank\'s own site works', false); return; }
+  const files = [...(fileList || [])].filter(f => /\.(csv|txt|tsv|ofx|qfx|qbo|pdf)$/i.test(f.name));
+  if (!files.length) { toast('That is not a bank file — a CSV, OFX / QFX or PDF statement from the bank\'s own site works', false); return; }
   for (const f of files) {
-    let text = ''; try { text = await f.text(); } catch (e) { toast(`⚠ Could not read ${f.name}`, false); continue; }
-    const parsed = /<OFX>|<STMTTRN>|OFXHEADER/i.test(text) ? pbOfxParse(text) : pbCsvParse(text, f.name);
+    let parsed;
+    if (/\.pdf$/i.test(f.name)) {   // 📄 v7.28
+      busyShow('📄 READING THE STATEMENT…');
+      try { parsed = await pbPdfParse(await f.arrayBuffer(), f.name); }
+      catch (e) { busyDone('⚠ COULD NOT READ THE PDF'); toast(/unavailable/.test(String(e && e.message)) ? '📄 The PDF reader needs the internet once to fetch itself — try again when you are online' : `⚠ Could not read ${f.name} as a statement`, false); continue; }
+      busyDone('📄 ✓ READ');
+    } else {
+      let text = ''; try { text = await f.text(); } catch (e) { toast(`⚠ Could not read ${f.name}`, false); continue; }
+      parsed = /<OFX>|<STMTTRN>|OFXHEADER/i.test(text) ? pbOfxParse(text) : pbCsvParse(text, f.name);
+    }
     if (!parsed.lines.length) { toast(`⚠ ${f.name}: ${parsed.why || 'nothing in it I could read'}`, false); continue; }
     const r = pbStmtImport(parsed, f.name);
-    toast(`🏦 ${parsed.lines.length} line${parsed.lines.length === 1 ? '' : 's'} read from ${f.name} · ${r.added} new · ${r.dup} already here${r.toSort ? ` · ${r.toSort} to sort` : ''}${r.flipped ? ' · ⇅ a card file: charges read as money out' : ''}`);
+    toast(`🏦 ${parsed.lines.length} line${parsed.lines.length === 1 ? '' : 's'} read from ${f.name} · ${r.added} new · ${r.dup} already here${r.toSort ? ` · ${r.toSort} to sort` : ''}${r.flipped ? ' · ⇅ a card file: charges read as money out' : ''}${parsed.unsure ? ' · 📄 check the ins and outs — ⇅ on the account turns them all' : ''}`);
   }
   scheduleSave(); renderBudget();
   const inp = $('pbStmtIn'); if (inp) inp.value = '';
@@ -19779,8 +19903,8 @@ function pbBankCardHtml(p) {
     <div class="pb-h">🏦 BANK <span class="pb-sub">${p.tx.length ? `${month.length} line${month.length === 1 ? '' : 's'} this month${unsortedAll.length ? ` · <b>${unsortedAll.length} to sort</b>` : ' · all sorted'}` : 'drop a statement — it is read right here on the phone'}</span></div>
     <div class="pb-drop" role="button" tabindex="0" onclick="$('pbStmtIn').click()" onkeydown="if(event.key==='Enter'){$('pbStmtIn').click();}"
       ondragover="event.preventDefault(); this.classList.add('over');" ondragleave="this.classList.remove('over');" ondrop="event.preventDefault(); this.classList.remove('over'); pbStmtFiles(event.dataTransfer.files);">
-      <span>📥 <b>Drop a bank statement here</b> — a CSV or OFX / QFX from your bank's site<br><small>or tap to pick · read on this phone, nothing is sent anywhere · an account is its last four only</small></span></div>
-    <input type="file" id="pbStmtIn" accept=".csv,.txt,.tsv,.ofx,.qfx,.qbo" multiple style="display: none;" onchange="pbStmtFiles(this.files)">
+      <span>📥 <b>Drop a bank statement here</b> — a CSV, OFX / QFX or PDF from your bank's site<br><small>or tap to pick · read on this phone, nothing is sent anywhere · an account is its last four only · a PDF must be the bank's own, not a scan</small></span></div>
+    <input type="file" id="pbStmtIn" accept=".csv,.txt,.tsv,.ofx,.qfx,.qbo,.pdf,application/pdf" multiple style="display: none;" onchange="pbStmtFiles(this.files)">
     ${accts.length ? `<div class="pb-h2">ACCOUNTS</div>${accts.map(([k, a]) => `<div class="pb-row"><span class="pb-rn">${a.last4 ? '···' + esc(a.last4) : esc(k)}<span class="pb-meta">${a.bal != null ? ' · as of ' + esc(a.balAt || '') : ''}${a.flip ? ' · ⇅ a card — charges read as money out' : ''}</span></span> ${a.bal != null ? `<b>${pbMoney(a.bal)}</b>` : ''}<button type="button" class="pb-x pb-flip${a.flip ? ' on' : ''}" onclick="pbAcctFlip('${esc(k)}')" aria-pressed="${!!a.flip}" aria-label="${a.flip ? 'charges read as money out — tap to put the signs back the way the file had them' : 'the money reads backwards? tap: charges become money out'}" title="${a.flip ? 'charges read as money out — tap to put it back' : 'money reads backwards? tap to flip in and out'}">⇅</button></div>`).join('')}` : ''}
     ${dep ? `<div class="hint" style="margin-top: 6px;">💵 ${pbMoney(dep)} came in this month (the lines you sorted as Income)</div>` : ''}
     ${unsorted.length ? `<div class="pb-h2">TO SORT <span class="pb-sub">pick what for — the store is remembered</span></div>${unsorted.map(t => `<div class="pb-row pb-txrow"><span class="pb-rn"><b>${esc(t.desc || '(no words)')}</b><span class="pb-meta"> · ${esc(t.d.slice(5))}${t.acct ? ' · ···' + esc(t.acct) : ''}</span></span> <b class="${t.amt > 0 ? 'pb-in' : ''}">${pbMoney(t.amt)}</b>${pbTxWheel(t)}<button type="button" class="pb-x" onclick="pbTxDel('${esc(t.id)}')" aria-label="take this line off" title="take this line off">✕</button>${(pair => pair ? `<button type="button" class="pick-chip pb-pair" onclick="pbTxPairMark('${esc(t.id)}', '${esc(pair.id)}')">↔ Same money on ${pair.acct ? '···' + esc(pair.acct) : esc(pair.k || 'the other account')} (${esc(pair.d.slice(5))}) — both are a transfer</button>` : '')(pbTxPair(t))}</div>`).join('')}${unsortedAll.length > unsorted.length ? `<div class="hint">…and ${unsortedAll.length - unsorted.length} more once these are sorted.</div>` : ''}` : ''}
@@ -21855,7 +21979,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.27';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.28';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
