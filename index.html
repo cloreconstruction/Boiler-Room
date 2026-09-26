@@ -2231,6 +2231,14 @@
   .mat-flip { border-style: dashed; }
   .mat-flip.armed { border-style: solid; border-width: 2.5px; border-color: var(--warn, #ffa657); }   /* ⇄ v6.98 — armed: ⚠ sure? for four seconds */
   .mat-flip.is-off { opacity: .5; }
+  /* 🔗 v7.20 — a light change is two taps: the first ARMS the plate (⚠ sure?, a solid orange edge), every plate the second tap
+     would change wears a dashed orange edge, and the line under the row says in words what will light or go off */
+  .mat-box.armed { border: 2.5px solid var(--warn, #ffa657); background: color-mix(in srgb, var(--warn, #ffa657) 18%, transparent); color: var(--ink-1); }
+  .mat-box.armed .mb-i { filter: none; opacity: 1; }
+  .mat-box.will { outline: 2px dashed var(--warn, #ffa657); outline-offset: 1px; }
+  .req-x.mat-lamp-armed { border: 2.5px solid var(--warn, #ffa657) !important; color: var(--warn, #ffa657) !important; background: color-mix(in srgb, var(--warn, #ffa657) 14%, transparent) !important; }
+  .mat-arm-say { margin: 6px 0 2px 40px; padding: 7px 10px; border: 2px solid var(--warn, #ffa657); border-radius: 9px; background: color-mix(in srgb, var(--warn, #ffa657) 10%, transparent); color: var(--ink-1); font-size: 13.5px; line-height: 1.4; overflow-wrap: anywhere; }
+  .ms-sec .mat-arm-say { margin-left: 0; }
   .mat-item.mi-first { background: color-mix(in srgb, var(--warn, #ffa657) 9%, transparent); border-radius: 8px; box-shadow: inset 3px 0 0 var(--warn, #ffa657); }
   .mat-first-band { font-size: var(--fs115, 11.5px); font-weight: var(--fw8, 800); letter-spacing: .4px; color: var(--warn, #ffa657); margin: 0 0 4px 2px; }
   .mat-item.mi-editing { outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: 8px; }
@@ -2936,6 +2944,7 @@
   .pk-card.pk-flash { outline: 3px solid var(--accent); outline-offset: 3px; }   /* 🎒 v7.07 — "here it is", from the log's 🎒 plate */
   .pk-top { display: flex; align-items: center; gap: 8px; }
   .pk-title { font-weight: var(--fw8, 800); font-size: 13px; letter-spacing: .7px; }
+  .g-card-title { font-weight: var(--fw8, 800); font-size: 13px; letter-spacing: .7px; margin: -8px 0 6px; }   /* ⚙ v7.20 — the grinder's name, lettered like 🎒 POCKET LIST; it sits in the card's top padding (as high as the pocket's name sits in its card) so the writing box moves down only a finger's width */
   .pk-cap { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-variant-numeric: tabular-nums; }
   .pk-cap b { font-size: var(--fs12, 12px); min-width: 30px; text-align: center; }
   .pk-tiny { min-width: 30px; min-height: 30px; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--ink-2); font: inherit; font-size: 13px; font-weight: var(--fw8, 800); cursor: pointer; line-height: 1; }
@@ -3158,6 +3167,10 @@
 
   <!-- v4.55 — ONE box on top: write a note or ask the Wizard, two buttons decide where it goes -->
   <div class="card ask-card qn-card" id="qnCard">
+    <!-- ⚙ v7.20 — Eric: "I think the grinder should be labeled like the pocket list window is labeled. The running log is
+         labeled. That will help separate the beginning of the grinder step 1 from everything else, like the pocket list."
+         Its name at the top of its card, in the pocket list's own lettering. -->
+    <div class="g-card-title" id="grinderTitle">⚙️ GRINDER</div>
     <!-- v4.83 — Eric's flow: WRITE first, the two doors under it, the grinder's filing
          options below that. Drag photos from the PC anywhere onto this card. -->
     <!-- 🪜 v6.25 — Eric: "split the grinder into the 5 steps… make them distinguishable,
@@ -4235,7 +4248,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.19 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.20 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15768,36 +15781,101 @@ function matBoxOn(it, k) {
   const i = MAT_BUY_CHAIN.indexOf(it.s || 'pick');
   return k === 'P' ? i >= 1 : k === 'O' ? i >= 2 : k === 'R' ? i >= 3 : k === 'S' ? !!it.sch : !!it.ins;
 }
-// tap a box: P O R walk the one state the homeowner's page also reads (un-ticking one un-ticks what follows it);
-// S and I are their own ticks. Installed means it is here, so it pulls Received along.
+// 🔗 v7.20 — THE LIGHTS ARE ONE CHAIN, AND EVERY CHANGE IS TWO TAPS. Eric: "When you click scheduled, but previous lights
+// were not lit, it should light them all. And it should go both ways. If you advance a light by skipping one, it should light
+// that one up, and if you de-advance it, it should go the other way too. And each light change should be a click and then a
+// second click, because if any lights accidentally get changed, it could be missed or skipped on an order." A thing to buy
+// walks P → O → R → S → I: lighting one lights every one before it, turning one off turns off every one after it (P O R stay
+// the one state the homeowner's page reads, `it.s`; S = `it.sch`, I = `it.ins`). A checklist row walks 📅 → ✅ the same way;
+// 👷 is WHO — a name he picks — so it is never lit for him. The FIRST tap only arms the plate: ⚠ sure? on it, a dashed edge
+// on every plate that would change, and a line under the row saying in words what will light or go off; the second tap
+// within five seconds does it; leave it and nothing changes. The round lamp at the front of the row arms the NEXT light the
+// same way (it no longer wraps an arrived thing back to "pick needed").
+const MAT_LIGHT_ARM_MS = 5000;
+let _matLightArm = null, _matLightT = 0;
+const matBoxWord = (it, k) => { const b = matBoxes(it).find(x => x[0] === k); return b ? `${b[2]} ${b[1]}` : k; };
+function matLitWords(it) {
+  const w = matBoxes(it).filter(b => matBoxOn(it, b[0])).map(b => b[1]);
+  if (!matIsBuy(it) && it.s === 'work') w.push('in work');
+  return w.length ? w.join(' · ') : 'none lit';
+}
+function matStepsOpenWhy(it) {
+  const open = (it.kids || []).filter(x => !x.ok); if (!open.length) return '';
+  return `🔒 ${open.length} step${open.length > 1 ? 's' : ''} still open — ${open.slice(0, 2).map(x => x.n).join(', ')}${open.length > 2 ? '…' : ''}. Check ${open.length > 1 ? 'them' : 'it'} off first.`;
+}
+// what a tap on light k would do: { k, on: [letters to light], off: [letters to turn off], refuse: 'why' }
+function matLightPlan(it, k) {
+  const chain = matBoxes(it).map(b => b[0]).filter(x => x !== 'A');   // 👷 is a name, not a step — never lit for him
+  const at = chain.indexOf(k); if (at < 0) return null;
+  const lit = x => matBoxOn(it, x);
+  if (lit(k)) return { k, on: [], off: chain.slice(at).filter(lit) };
+  const on = chain.slice(0, at + 1).filter(x => !lit(x));
+  if (!matIsBuy(it) && on.includes('D') && matStepsOpenWhy(it)) return { k, on, off: [], refuse: matStepsOpenWhy(it) };   // 🔒 v5.61 — every step first
+  return { k, on, off: [] };
+}
+// the round lamp: the NEXT light — a checklist row goes to do → ⚙ in work → ✅ done
+function matLampPlan(it) {
+  if (matIsBuy(it)) { const nx = matBoxes(it).map(b => b[0]).find(x => !matBoxOn(it, x)); return nx ? matLightPlan(it, nx) : null; }
+  if (it.s === 'done') return null;
+  if (it.s !== 'work') return { k: 'lamp', on: [], off: [], state: 'work' };
+  return matLightPlan(it, 'D');
+}
+function matLightArmSet(id, k) {
+  _matLightArm = { id, k }; clearTimeout(_matLightT);
+  _matLightT = setTimeout(() => { const a = _matLightArm; if (a && a.id === id && a.k === k) { _matLightArm = null; renderMatMgr(); } }, MAT_LIGHT_ARM_MS);
+  renderMatMgr();
+}
+function matLightDisarm() { _matLightArm = null; clearTimeout(_matLightT); }
+const matLightArmed = (id, k) => !!(_matLightArm && _matLightArm.id === id && _matLightArm.k === k);
+function matLightDo(it, plan) {
+  const before = matLitWords(it), buy = matIsBuy(it);
+  const want = new Set(matBoxes(it).map(b => b[0]).filter(x => matBoxOn(it, x)));
+  plan.on.forEach(x => want.add(x)); plan.off.forEach(x => want.delete(x));
+  if (want.has('S')) it.sch = true; else { delete it.sch; delete it.schd; }
+  if (buy) {
+    const lvl = ['P', 'O', 'R'].filter(x => want.has(x)).length;   // always a run from P — the chain keeps it one
+    it.s = MAT_BUY_CHAIN[lvl];
+    if (lvl >= 2 && !it.odate) it.odate = localDay(new Date());
+    if (want.has('I')) { if (!it.ins) it.ins = localDay(new Date()); } else delete it.ins;
+  } else {
+    if (want.has('D')) { if (it.s !== 'done') { it.s = 'done'; it.ddate = localDay(new Date()); } }
+    else if (it.s === 'done') { it.s = 'todo'; delete it.ddate; }
+    if (plan.state) it.s = plan.state;
+  }
+  const w = xs => xs.map(x => (matBoxes(it).find(b => b[0] === x) || [])[1] || x).join(', ');
+  matLog(`${plan.on.length ? '☒ ' + w(plan.on) : ''}${plan.on.length && plan.off.length ? ' · ' : ''}${plan.off.length ? '☐ ' + w(plan.off) : ''}${plan.state === 'work' ? '⚙ in work' : ''} — ${it.n}`);
+  matChgPush(it, 'lights', before, matLitWords(it));   // 🕘 v7.19 — one tap, one line: what was lit → what is lit
+  _matDirty = true; if (it.hm) _matPubDirty = true;
+  renderMatMgr();
+}
 function matBoxTap(id, k) {
   const it = matFindItem(id); if (!it) return;
-  const on = matBoxOn(it, k), word = (matBoxes(it).find(b => b[0] === k) || [])[1] || k;
   if (!matIsBuy(it) && k === 'A') {   // 👷 whose list? the tags — the picker opens under the row (in the edit window the tags are already in front of him)
+    matLightDisarm();
     if (_matEdit === id) { const b = $('matNewTag-' + id); if (b) b.focus(); return; }
     _matWhoFor = _matWhoFor === id ? '' : id; renderMatMgr();
     return;
   }
-  if (!matIsBuy(it) && k === 'D') {
-    if (!on && (it.kids || []).length && !it.kids.every(x => x.ok)) { const open = it.kids.filter(x => !x.ok); toast(`🔒 ${open.length} step${open.length > 1 ? 's' : ''} still open — check ${open.length > 1 ? 'them' : 'it'} off first`, false); return; }
-    if (on) { it.s = 'todo'; delete it.ddate; } else { it.s = 'done'; it.ddate = localDay(new Date()); }
-  }
-  else if (k === 'S') { if (on) { delete it.sch; delete it.schd; } else it.sch = true; }
-  else if (k === 'I') { if (on) delete it.ins; else { it.ins = localDay(new Date()); it.s = 'arrived'; } }
-  else {
-    const at = { P: 1, O: 2, R: 3 }[k];
-    it.s = MAT_BUY_CHAIN[on ? at - 1 : at];
-    if (on) delete it.ins;
-    if (it.s === 'ordered' && !it.odate) it.odate = localDay(new Date());
-  }
-  matLog(`${on ? '☐' : '☒'} ${word} — ${it.n}`);
-  matChgPush(it, `${word} light`, on ? '✓ on' : '○ off', on ? '○ off' : '✓ on');   // 🕘 v7.19
-  _matDirty = true; if (it.hm) _matPubDirty = true;
-  renderMatMgr();
+  const plan = matLightPlan(it, k); if (!plan) return;
+  if (plan.refuse) { const was = !!_matLightArm; matLightDisarm(); if (was) renderMatMgr(); toast(plan.refuse, false); return; }
+  if (!matLightArmed(id, k)) { matLightArmSet(id, k); return; }   // the first tap only arms it
+  matLightDisarm(); matLightDo(it, plan);
+}
+// the line under an armed row: exactly what the second tap will do, in words
+function matArmSayHtml(it) {
+  const a = _matLightArm; if (!a || a.id !== it.id) return '';
+  const plan = a.k === 'lamp' ? matLampPlan(it) : matLightPlan(it, a.k); if (!plan || plan.refuse) return '';
+  const w = xs => xs.map(x => matBoxWord(it, x)).join(' · ');
+  const what = [plan.on.length ? `light <b>${w(plan.on)}</b>` : '', plan.off.length ? `turn off <b>${w(plan.off)}</b>` : '', plan.state === 'work' ? 'mark it <b>⚙ in work</b>' : ''].filter(Boolean).join(' and ');
+  return `<div class="mat-arm-say" role="status">⚠ SURE? Tap ${a.k === 'lamp' ? 'the round lamp' : '<b>' + matBoxWord(it, a.k) + '</b>'} again to ${what} — or leave it and nothing changes.</div>`;
 }
 function matStripHtml(it) {
-  return `<span class="mat-strip" role="group" aria-label="progress of ${esc(it.n)}">${matBoxes(it).map(([k, w, ic]) => { const on = matBoxOn(it, k);
-    return `<button type="button" class="mat-box${on ? ' on' : ''}" onclick="event.stopPropagation(); matBoxTap('${escq(it.id)}', '${k}')" aria-pressed="${on}" aria-label="${w} — ${on ? 'yes' : 'not yet'}" title="${w} — ${on ? 'yes' : 'not yet'}"><span class="mb-i" aria-hidden="true">${ic}</span><b>${k}</b>${on ? '<i class="mb-ck" aria-hidden="true">✓</i>' : ''}</button>`; }).join('')}</span>`;
+  const a = _matLightArm && _matLightArm.id === it.id ? _matLightArm : null;
+  const plan = a ? (a.k === 'lamp' ? matLampPlan(it) : matLightPlan(it, a.k)) : null;
+  const will = new Set(plan && !plan.refuse ? [...plan.on, ...plan.off] : []);
+  return `<span class="mat-strip" role="group" aria-label="progress of ${esc(it.n)}">${matBoxes(it).map(([k, w, ic]) => { const on = matBoxOn(it, k), armed = !!(a && a.k === k);
+    const say = armed ? `${w} — tap again to ${plan && plan.off.length ? 'turn off ' + plan.off.map(x => (matBoxes(it).find(b => b[0] === x) || [])[1]).join(', ') : 'light ' + (plan ? plan.on : []).map(x => (matBoxes(it).find(b => b[0] === x) || [])[1]).join(', ')}` : will.has(k) ? `${w} — ${on ? 'goes off' : 'lights'} with the next tap` : `${w} — ${on ? 'yes' : 'not yet'}`;
+    return `<button type="button" class="mat-box${on ? ' on' : ''}${armed ? ' armed' : ''}${will.has(k) && !armed ? ' will' : ''}" onclick="event.stopPropagation(); matBoxTap('${escq(it.id)}', '${k}')" aria-pressed="${on}" aria-label="${esc(say)}" title="${esc(say)}">${armed ? '<span class="mb-i" aria-hidden="true">⚠</span><b>sure?</b>' : `<span class="mb-i" aria-hidden="true">${ic}</span><b>${k}</b>${on ? '<i class="mb-ck" aria-hidden="true">✓</i>' : ''}`}</button>`; }).join('')}</span>`;
 }
 function matCostBits(it) {
   const e = +it.est || 0, a = +it.act || 0; if (!e && !a) return '';
@@ -16161,7 +16239,7 @@ async function openMaterials(i) {
   if (portalGuard()) return;
   // 🏢 v7.09 — Eric: "he should be able to click on Plans, Build List, and Journal." The board's files were always under
   // portalRoot() — the shared folder — so an office phone works the same board Eric does. (Field crew stop at portalGuard.)
-  _matIdx = i; _matEdit = ''; _matWhoFor = ''; _matRmTools = -1; _matHelp = false; _matDirty = false; _matArm = ''; _matTagF = ''; _matStageF = ''; _matPaste = false; _matPasteRows = null; _matPasteText = '';
+  _matIdx = i; _matEdit = ''; _matWhoFor = ''; _matRmTools = -1; _matHelp = false; _matDirty = false; _matArm = ''; matLightDisarm(); _matTagF = ''; _matStageF = ''; _matPaste = false; _matPasteRows = null; _matPasteText = '';
   const c = _portalIdx.clients[i];
   toast('⏳ Loading the board…');
   matTplLoad();
@@ -16188,7 +16266,7 @@ function renderMatMgr() {
       <button type="button" class="btn-ghost req-x x-plate x-small" style="min-width: 44px;" onclick="matClose()" aria-label="close the board" title="close the board">✕</button>
     </span></h3>
     ${_matHistShow ? matHistHtml() : ''}
-    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client · <a href="javascript:void(0)" style="color: var(--accent); font-weight: var(--fw7, 700); text-decoration: none; white-space: nowrap;" onclick="_matHelp = !_matHelp; renderMatMgr()" aria-expanded="${_matHelp}">${_matHelp ? '▾' : '▸'} ? how this works</a>${_matHelp ? `<span id="matHelpBox" style="display: block; margin-top: 6px; line-height: 1.55;">Tap a <b>light</b> to tick it, tap again to un-tick. Something to buy: 👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed. A checklist item: 👷 on somebody's list · 📅 scheduled · ✅ done. <b>⚠ 1st</b> sends a row to the top of its category — the rest waits on it. <b>⇄</b> at the end of every row turns it into a checklist item, or back into something to buy — a row that already has progress asks ⚠ sure? first. Tap a <b>name</b> to open the row; <b>✎ edit</b> (or hold the name) opens its window. The round lamp steps a row along.</span>` : ''}` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
+    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client · <a href="javascript:void(0)" style="color: var(--accent); font-weight: var(--fw7, 700); text-decoration: none; white-space: nowrap;" onclick="_matHelp = !_matHelp; renderMatMgr()" aria-expanded="${_matHelp}">${_matHelp ? '▾' : '▸'} ? how this works</a>${_matHelp ? `<span id="matHelpBox" style="display: block; margin-top: 6px; line-height: 1.55;">Tap a <b>light</b>, then tap it <b>again</b> — the first tap only asks ⚠ sure? and a line under the row says what will change. Lighting one lights every one before it; turning one off turns off every one after it. Something to buy: 👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed. A checklist item: 👷 on somebody's list · 📅 scheduled · ✅ done — 👷 is a name you pick, so it never lights by itself. A row's <b>steps</b> are in its window — tap the name. <b>⚠ 1st</b> sends a row to the top of its category — the rest waits on it. <b>⇄</b> at the end of every row turns it into a checklist item, or back into something to buy — a row that already has progress asks ⚠ sure? first. Tap a <b>name</b> to open the row; <b>✎ edit</b> (or hold the name) opens its window. The round lamp lights the next one — two taps as well.</span>` : ''}` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
     ${(() => { // 🏷 v5.80 — the sort: tap a tag, see that trade's list (the electrician's list)
       const used = {};
       _matD.rooms.forEach(r => (r.items || []).forEach(x => matItemTags(x).forEach(tg => { used[tg] = (used[tg] || 0) + 1; })));
@@ -16270,6 +16348,7 @@ function matMgrItem(ri, it) {
   // window that opens for all details." A row is its name line and its lights line, always; nothing opens under it. The
   // steps, the client's remarks and picture, and the pocket all live in the edit window (a tap or a hold on the name).
   const glyph = matLampGlyph(it), word = matRowWord(it), first = matIsFirst(it);   // v6.91 — the lamp wears the icon of the furthest light that is lit
+  const lampArmed = matLightArmed(it.id, 'lamp');   // 🔗 v7.20 — the round lamp is two taps too
   const openN = kids.filter(k => !k.ok).length;
   const pktN = ((it.pkt || {}).docs || []).length + ((it.pkt || {}).notes ? 1 : 0);
   const rc = matChgRecent(it);   // 🕘 v7.19 — the words ride in the trail too: never the lit plate alone
@@ -16284,7 +16363,7 @@ function matMgrItem(ri, it) {
   return `<div class="mat-item${itDone ? ' mi-done' : ''}${matIsHm(it) ? ' mi-hm' : ''}${first ? ' mi-first' : ''}${inSheet ? ' mi-editing' : ''}" data-id="${esc(it.id)}">
     ${first ? '<div class="mat-first-band">⚠ FIRST — the rest of this category waits on this</div>' : ''}
     <div class="frow" style="align-items: center; gap: 4px; flex-wrap: nowrap;">
-      <button class="btn-ghost req-x${itDone ? ' mat-lamp-done' : ''}" style="flex: none; min-width: 36px; font-size: 15px; padding: 6px 7px;" onclick="matCycle('${escq(it.id)}')" title="${esc(word)} — tap to advance the light">${glyph}</button>
+      <button class="btn-ghost req-x${itDone ? ' mat-lamp-done' : ''}${lampArmed ? ' mat-lamp-armed' : ''}" style="flex: none; min-width: 36px; font-size: 15px; padding: 6px 7px;" onclick="matCycle('${escq(it.id)}')" title="${lampArmed ? 'sure? tap again — the line under the row says what it does' : esc(word) + ' — tap, then tap again, to light the next one'}" aria-label="${lampArmed ? 'sure? tap again — the line under the row says what it does' : esc(word) + ' — tap, then tap again, to light the next one'}">${lampArmed ? '⚠' : glyph}</button>
       ${editing ? `<span style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px;">▾
         <input type="text" id="matNm-${escq(it.id)}" value="${esc(it.n)}" placeholder="name it — what is this item?"
           style="flex: 1; min-width: 0; font-weight: var(--fw8, 800); font-size: 15px; padding: 7px 10px;"
@@ -16295,6 +16374,7 @@ function matMgrItem(ri, it) {
       ${editing ? '' : matQuickHtml(it)}
     </div>
     <div class="mat-line2">${matStripHtml(it)}${matRowBtnsHtml(it)}${matSelHtml(it)}</div>
+    ${matArmSayHtml(it)}
     ${rc ? `<div class="mat-chg-line" role="button" tabindex="0" onclick="event.stopPropagation(); matChgOpen('${escq(it.id)}')" onkeydown="if(event.key==='Enter'){event.preventDefault();matChgOpen('${escq(it.id)}');}" title="tap to see what changed">🕘 <b>changed ${esc(matChgWhen(rc.at))} by ${esc(matChgWho(rc.by))}</b> · <u>see what changed</u></div>` : ''}
     ${_matWhoFor === it.id && !matIsBuy(it) ? matWhoPickHtml(it) : ''}
   </div>`;   // 🎛 v7.09 — no fold: the steps (with their menu), the client's remarks and the pocket that used to open under the row are in the edit window now. — Eric: "Pick Needed · Picked · Ordered · Arrived … get rid of the rest because we already have that in the new buttons on top." The bottom lamp strip (matLampRowMgr) is no longer drawn: the lights are the P·O·R·S·I boxes, ⇄ is on the row, ✎ and ✕ are on the name line.
@@ -16389,8 +16469,8 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
         ${hm ? `<div class="hint" style="margin: 0;">🏠 It is on the homeowner's page, so it stays something to buy — picked → ordered → received → scheduled → installed.</div>` : `<div class="ms-kind">
           <button type="button" class="pick-chip${buy ? ' sel' : ''}" onclick="${buy ? '' : `matBuyToggle('${id}')`}" aria-pressed="${buy}">${buy ? '✓ ' : ''}🛒 Something to buy<small>picked · ordered · received · scheduled · installed</small></button>
           <button type="button" class="pick-chip${!buy ? ' sel' : ''}" onclick="${!buy ? '' : `matBuyToggle('${id}')`}" aria-pressed="${!buy}">${!buy ? '✓ ' : ''}✅ Checklist item<small>on a list · scheduled · done</small></button></div>`}</div>
-      <div class="ms-sec"><span class="ms-h">Its lights — tap one</span>
-        <div class="mat-line2" style="margin: 0;">${matStripHtml(it)}<span class="mat-sel">${esc(matRowWord(it))}</span></div>
+      <div class="ms-sec"><span class="ms-h">Its lights — tap one, then tap it again</span>
+        <div class="mat-line2" style="margin: 0;">${matStripHtml(it)}<span class="mat-sel">${esc(matRowWord(it))}</span></div>${matArmSayHtml(it)}
         <div class="frow" style="gap: 8px; margin-top: 8px;"><div class="field"><label>${buy ? 'Install scheduled for' : 'Scheduled for'}</label>
           <input type="date" id="matSchd-${id}" value="${esc(it.schd || '')}" onchange="matSet('${id}', 'schd', this.value); matSet('${id}', 'sch', this.value ? true : ''); renderMatMgr()"></div></div>
         ${buy ? '' : `<div class="frow" style="gap: 8px; margin-top: 8px;">${tagsHtml}</div>`}</div>
@@ -17104,25 +17184,18 @@ function matKidOk(id, ki) {
     ? `● ALL CONFIRMED — ${it.n} reads READY TO ORDER on their page (after 💾 Save)`
     : `● every step checked — ${it.n} is open to mark ✅ DONE`);
 }
+// 🔗 v7.20 — the round lamp arms the NEXT light and a second tap lights it (matLampPlan; the lights' own two-tap rule). It no
+// longer wraps round: an arrived faucet used to go back to "pick needed" on one stray tap, with Installed still lit.
+// 🔒 v5.61 — Eric: "once all the sub items are checked, THEN the main one opens for checking off." — the plan refuses ✅
+// while a step is open and says which (matStepsOpenWhy).
 function matCycle(id) {
   const it = matFindItem(id);
   if (!it) return;
-  const order = matChain(it);
-  const at = order.indexOf(it.s || order[0]);
-  const next = order[(at + 1) % order.length];
-  // 🔒 v5.61 — Eric: "once all the sub items are checked, THEN the main one opens for
-  // checking off." A parent with open steps refuses its final lamp and says which ones.
-  if (next === 'done' && (it.kids || []).length && !it.kids.every(k => k.ok)) {
-    const open = it.kids.filter(k => !k.ok);
-    toast(`🔒 ${open.length} step${open.length > 1 ? 's' : ''} still open — ${open.slice(0, 2).map(k => k.n).join(', ')}${open.length > 2 ? '…' : ''}. Check them off first.`, false);
-    return;
-  }
-  matLog(`${matWord(next, matIsBuy(it))} — ${it.n}`);
-  matChgPush(it, 'where it stands', matWord(it.s || order[0], matIsBuy(it)), matWord(next, matIsBuy(it)));   // 🕘 v7.19
-  it.s = next;
-  if (it.s === 'ordered' && !it.odate) it.odate = localDay(new Date());
-  _matDirty = true;
-  renderMatMgr();
+  const plan = matLampPlan(it);
+  if (!plan) { toast('✓ Every light on this row is lit — tap a light to take it back', false); return; }
+  if (plan.refuse) { const was = !!_matLightArm; matLightDisarm(); if (was) renderMatMgr(); toast(plan.refuse, false); return; }
+  if (!matLightArmed(id, 'lamp')) { matLightArmSet(id, 'lamp'); return; }
+  matLightDisarm(); matLightDo(it, plan);
 }
 // 🏠↔🏢 flip an item between homeowner-pick and office-task; the lamp maps across sensibly
 function matHmToggle(id) {
@@ -17351,7 +17424,7 @@ function matClose() {
   // just flushes whatever's pending and goes. Nothing to lose means nothing to warn about.
   clearTimeout(_matSaveT);
   if (_matDirty) matAutoSave();
-  _matArm = ''; _matEdit = ''; _matWhoFor = ''; { const h = $('matSheetHost'); if (h) h.innerHTML = ''; }   // ✎ v6.91 — the edit window goes with the board
+  _matArm = ''; _matEdit = ''; _matWhoFor = ''; matLightDisarm(); { const h = $('matSheetHost'); if (h) h.innerHTML = ''; }   // ✎ v6.91 — the edit window goes with the board
   closeReview();
 }
 // 💬 v5.25 — Eric's actions travel back to the ask on the client's page (the three lamps).
@@ -21396,7 +21469,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.19';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.20';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

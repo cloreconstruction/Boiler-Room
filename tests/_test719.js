@@ -64,9 +64,10 @@ const { chromium } = require('playwright');
     matChgClose();
     return /CHANGES — Kitchen faucet/.test(box.textContent) && /today \d+:\d\d .M · you/.test(t) && /NOTE/.test(t) && /was: “Brushed nickel”/.test(t) && /now: “Matte black”/.test(t) && struck && !document.querySelector('#matChgHost .we-box');
   }), '');
-  ok('a light ticked is written down too (Ordered light: ○ off → ✓ on)', await page.evaluate(() => {
-    matBoxTap('m1', 'O'); const c = _it('m1').chg[_it('m1').chg.length - 1];
-    return c.f === 'Ordered light' && c.from === '○ off' && c.to === '✓ on';
+  // 🔗 v7.20 — a light is two taps, and one tap's change is ONE line: what was lit → what is lit
+  ok('a light ticked is written down too (lights: Picked → Picked · Ordered)', await page.evaluate(() => {
+    matBoxTap('m1', 'O'); matBoxTap('m1', 'O'); const c = _it('m1').chg[_it('m1').chg.length - 1];
+    return c.f === 'lights' && c.from === 'Picked' && c.to === 'Picked · Ordered';
   }));
   ok('a change older than two days does not light the row — but the edit window\'s 🕘 Changes still lists it, with Phil\'s name', await page.evaluate(() => {
     const r = _row('Sink'), dark = !r.querySelector('.mat-q-chg') && !r.querySelector('.mat-chg-line');
@@ -120,9 +121,9 @@ const { chromium } = require('playwright');
     return words === '✓ FINISHED' && edge === 'solid' && open;
   }));
   ok('ticking the last light finishes a row: it folds and drops to the bottom; taking it back brings it out again', await page.evaluate(() => {
-    matBoxTap('m7', 'P'); matBoxTap('m7', 'O'); matBoxTap('m7', 'R'); matBoxTap('m7', 'I');
+    matBoxTap('m7', 'I'); matBoxTap('m7', 'I');   // 🔗 v7.20 — Installed lights every light before it; two taps
     const g = [..._sec('GARAGE').querySelectorAll('.mat-item')].map(_nm), fin = _row('Floor paint').classList.contains('mi-fin');
-    matBoxTap('m7', 'I');
+    matBoxTap('m7', 'I'); matBoxTap('m7', 'I');
     return fin && g[g.length - 1] === 'Floor paint' && !_row('Floor paint').classList.contains('mi-fin');
   }));
   await page.evaluate(() => matClose());

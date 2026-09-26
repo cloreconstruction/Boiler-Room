@@ -76,7 +76,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return before && after && gone && inRow;
   }));
 
-  ok('👷 opens "whose list?" under the row — the trades, his crew, a name of his own; a tap lights the light, the word names the list and the 🏷 sort at the top finds it; 📅 and ✅ tick on their own', await page.evaluate(() => {
+  ok('👷 opens "whose list?" under the row — the trades, his crew, a name of his own; a tap lights the light, the word names the list and the 🏷 sort at the top finds it; 📅 and ✅ tick with two taps (v7.20)', await page.evaluate(() => {
     const L = () => _lights('Test winch'), it = _it('Test winch');
     L()[0].click();
     const pick = $('matWho-' + it.id), names = pick ? [...pick.querySelectorAll('button')].map(b => b.textContent.trim()) : [];
@@ -88,11 +88,11 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     [...$('matWho-' + it.id).querySelectorAll('button')].find(x => /that's it/.test(x.textContent)).click();
     const closed = !$('matWho-' + it.id);
     const chip = [...document.querySelectorAll('#revBox .chips-row button')].find(x => /🏷 Phil \(1\)/.test(x.textContent));
-    L()[1].click(); const c = it.sch === true && /scheduled/.test(_row('Test winch').textContent) && _row('Test winch').querySelector('.frow > button').textContent.trim() === '📅';
+    L()[1].click(); L()[1].click(); const c = it.sch === true && /scheduled/.test(_row('Test winch').textContent) && _row('Test winch').querySelector('.frow > button').textContent.trim() === '📅';
     // ✓ v7.19 — done = FINISHED: the row folds to its name and a green ✓ FINISHED; its ✅ light is in the edit window to take it back
-    L()[2].click(); const fin = [...document.querySelectorAll('#revBox .mat-item.mi-fin')].find(r => /Test winch/.test(r.textContent));
+    L()[2].click(); L()[2].click(); const fin = [...document.querySelectorAll('#revBox .mat-item.mi-fin')].find(r => /Test winch/.test(r.textContent));
     const d = it.s === 'done' && !!it.ddate && !!fin && /✓ FINISHED/.test(fin.textContent) && !fin.querySelector('.mat-strip');
-    matBoxTap(it.id, 'D'); const e = it.s === 'todo' && !it.ddate && !!_row('Test winch');
+    matBoxTap(it.id, 'D'); matBoxTap(it.id, 'D'); const e = it.s === 'todo' && !it.ddate && it.sch === true && !!_row('Test winch');   // ✅ off leaves 📅 lit — only what comes AFTER goes off
     return offered && a && b && closed && !!chip && c && d && e;
   }));
 
@@ -101,9 +101,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     let said = ''; const keep = window.toast; window.toast = m => { said = String(m); };
     _lights('Check all vents and airflow')[2].click();
     const refused = it.s === 'todo' && /1 step still open/.test(said);
-    it.kids[0].ok = true; renderMatMgr(); _lights('Check all vents and airflow')[2].click();
+    const notArmed = !_matLightArm;   // 🔗 v7.20 — a refusal never arms the plate
+    it.kids[0].ok = true; renderMatMgr(); _lights('Check all vents and airflow')[2].click(); _lights('Check all vents and airflow')[2].click();
     window.toast = keep;
-    const r = refused && it.s === 'done'; it.s = 'todo'; delete it.kids; renderMatMgr(); return r;
+    const r = refused && notArmed && it.s === 'done' && it.sch === true; it.s = 'todo'; delete it.sch; delete it.ddate; delete it.kids; renderMatMgr(); return r;
   }));
 
   ok('each category counts its checklist rows the way it counts the things to buy, and "👷 on nobody\'s list" is one of the working lists', await page.evaluate(() => {
@@ -170,7 +171,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return r;
   });
   ok('✎ edit opens its OWN window over the board — drawn outside the scrolling board, above it and under the toast — and the row behind it never turns into a form', ed.open && ed.z > 80 && ed.z < 90 && ed.rowStill, JSON.stringify(ed));
-  ok('always the same order: Name · Note · What kind of row · Its lights, then ⚠ FIRST, then the folds — 💵 Money · 🏷 Whose list · 🏠 The homeowner · ☑ Steps · 📷 Photos — every fold shut until he opens it', /^Name \| Note — shows on the row \| What kind of row \| Its lights — tap one \| 📷 Photos \| 💵 Money \| 🏷 Whose list — tags \| 🏠 The homeowner \| ☑ Steps under it \| 📁 Pocket \| 🕘 Changes$/.test(ed.order) && ed.folded, ed.order);   // v7.08 — 📷 Photos is its own open section above 💵 Money (the Wizard fills the money from a photo); the fold is 📁 Pocket alone · 🕘 v7.19 — then the row's changes
+  ok('always the same order: Name · Note · What kind of row · Its lights, then ⚠ FIRST, then the folds — 💵 Money · 🏷 Whose list · 🏠 The homeowner · ☑ Steps · 📷 Photos — every fold shut until he opens it', /^Name \| Note — shows on the row \| What kind of row \| Its lights — tap one, then tap it again \| 📷 Photos \| 💵 Money \| 🏷 Whose list — tags \| 🏠 The homeowner \| ☑ Steps under it \| 📁 Pocket \| 🕘 Changes$/.test(ed.order) && ed.folded, ed.order);   // v7.08 — 📷 Photos is its own open section above 💵 Money (the Wizard fills the money from a photo); the fold is 📁 Pocket alone · 🕘 v7.19 — then the row's changes
   ok('the name and the note ("decide whether the railing is needed") are right there to edit — the note is a real writing box — and what he types lands on the row; money goes in under its fold', ed.name === 'Loft railing' && ed.note === 'Decide whether the railing is needed' && ed.noteIsBox && ed.saved, JSON.stringify(ed));
   ok('it fits the phone, the footer (✕ Delete · ✓ DONE — it is saved) stays pinned, the ✕ is black on gold, a fold opening keeps the window\'s scroll, and closing it leaves the board exactly where it was', ed.fits && ed.footPinned && /✕ Delete \| ✓ DONE — it is saved/.test(ed.foot) && /rgb\(17, 17, 17\)/.test(ed.closer) && ed.keptScroll && ed.closed && ed.noJump, JSON.stringify(ed));
   ok('the two KIND plates flip the row from inside the window (🛒 Something to buy ↔ ✅ Checklist item) and the lights follow; ⚠ FIRST is one plate', ed.kind0 === 'true,false' && ed.kind1 === 'false,true' && ed.flipped && ed.back && ed.first, JSON.stringify(ed));
