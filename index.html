@@ -2509,6 +2509,10 @@
   body.crew-mode .cap-btn[data-panel="file"],
   body.crew-mode .cap-btn[data-panel="job"], body.crew-mode .cap-btn[data-panel="vault"], body.crew-mode .cap-btn[data-panel="budget"],
   body.crew-mode #coBillRow { display: none !important; }
+  /* ⏱ v7.29 — Eric: "take the hour tracker off phils main page, he uses another hours tracker." A crew phone with no shift
+     running hides the clock, the Hours-this-week card and the ⏱ Hours plate (hoursOffSync); a shift already running keeps
+     its clock on the page until it is punched out, so nobody is left clocked in with no lever. */
+  body.crew-mode.hours-off .clock-card, body.crew-mode.hours-off #weekCard, body.crew-mode.hours-off .cap-btn[data-panel="hours"] { display: none !important; }
   /* v4.95 — 🔥 hot card: thick frame + spelled words + slow breathing, never color alone */
   .hot-card { border: 3px solid var(--err, #b3452f); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px;
     animation: hotBreathe 2.2s ease-in-out infinite; }
@@ -4243,7 +4247,7 @@
   </div>
 
   <div class="grid2">
-    <div class="card">
+    <div class="card" id="weekCard">
       <h2>Hours this week</h2>
       <div class="card-sub" id="weekTotal"></div>
       <div class="chart-wrap">
@@ -4278,7 +4282,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.28 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.29 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5694,7 +5698,7 @@ function toggleClock() {
       toast('Pick the job first — the wheel right above the button', false);
       return;
     }
-    clockedInAt = new Date();
+    clockedInAt = new Date(); hoursOffSync();
     clockJobName = pick;
     renderJobSelects();                                   // now on the clock: the blank drops off
     { const sel = $('clockJob'); if (sel) sel.value = clockJobName; }
@@ -5720,7 +5724,7 @@ function scrapPunch() {
     return;
   }
   _scrapArm = false;
-  clockedInAt = null; clockJobName = null; clockWheelHome();
+  clockedInAt = null; clockJobName = null; clockWheelHome(); hoursOffSync();
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); coCats = new Set(); coJob = ''; shiftNote = '';
   saveShift();
@@ -5824,7 +5828,7 @@ function doJobSwitch() {
   const from = clockJobName;
   addEntry('Clock', note ? `${note} — ${span}` : span, from, extra);
   // fresh segment starts NOW on the new job — dial, breaks and wage bank reset with it
-  clockedInAt = now; clockJobName = _swTo;
+  clockedInAt = now; clockJobName = _swTo; hoursOffSync();
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); if (workCat) shiftCats.add(workCat); shiftNote = '';
   saveShift();
@@ -5854,7 +5858,7 @@ function saveClockOut() {
   const _e = addEntry('Clock', note ? `${note} — ${span}` : span, shiftJob, extra);
   lastShiftUndo = { id: _e.id, at: clockedInAt.toISOString(), job: clockJobName, brM: breakMins, done: Date.now() };
   toast(`Shift logged — ${rounded.toFixed(2)} hrs · ${shiftJob}${edited ? ' · ✎ adjusted' : ''}${coBillable ? '' : ' · not billable'} ✓`);
-  clockedInAt = null; clockJobName = null; clockWheelHome();
+  clockedInAt = null; clockJobName = null; clockWheelHome(); hoursOffSync();
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set(); coCats = new Set(); coJob = ''; shiftNote = '';
   saveShift();
@@ -5973,7 +5977,7 @@ function restoreShift() {
     toast(`⚠ Found an open shift from ${at.toLocaleDateString([], { weekday: 'long' })} that never got clocked out — it was NOT logged. Add it by hand in Hours.`, false);
     return;
   }
-  clockedInAt = at;
+  clockedInAt = at; hoursOffSync();
   clockJobName = j.job || (jobs[0] || '—');
   breakStart = j.brS ? new Date(j.brS) : null;
   breakMins = j.brM || 0;
@@ -6108,7 +6112,7 @@ function undoPunch() {
     return;
   }
   _undoArm = false;
-  clockedInAt = null; clockJobName = null; clockWheelHome();
+  clockedInAt = null; clockJobName = null; clockWheelHome(); hoursOffSync();
   breakStart = null; breakMins = 0;
   wageBankCents = 0; wageSegStartSec = 0; shiftCats = new Set();
   saveShift();
@@ -10501,8 +10505,11 @@ function renderTextDigest() {
 // refined version later — likely living INSIDE the digest, never loose cards on the page).
 function renderTxtNudges() { const box = $('nudgeStrip'); if (box) box.innerHTML = ''; }
 // ============== 👷 CREW MODE (v4.65) ==============
+// ⏱ v7.29 — a crew phone hides its hour tracker (the crew's own time clock keeps the hours) unless a shift is running on it
+function hoursOffSync() { document.body.classList.toggle('hours-off', isCrew() && !clockedInAt); }
 function applyRole() {
   document.body.classList.toggle('crew-mode', isCrew());
+  hoursOffSync();
   visReset(); // 🔒 v5.44 — crew phones rest on 📨 Eric, Eric's phone rests on 🔒 private
   const badge = $('crewBadge');
   if (badge) {
@@ -21979,7 +21986,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.28';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.29';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
