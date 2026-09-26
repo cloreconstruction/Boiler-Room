@@ -953,6 +953,13 @@
   .pb-meta { font-size: var(--fs12, 12px); color: var(--ink-muted); }
   .pb-row > b { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .pb-x { flex: 0 0 40px; min-height: 40px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer; }
+  /* 🏦 v7.26 — the bank statement drop box and the TO SORT rows */
+  .pb-drop { border: 3px dashed var(--line, #3a3226); border-radius: 14px; padding: 18px 12px; min-height: 96px; display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; font-size: 15px; line-height: 1.4; margin: 8px 0; }
+  .pb-drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .pb-drop small { display: block; font-size: var(--fs12, 12px); color: var(--ink-muted); margin-top: 4px; }
+  .pb-txrow { flex-wrap: wrap; }
+  .pb-txrow .pb-txsel { flex: 1 1 150px; min-height: 40px; font-size: 13px; }
+  .pb-in { color: var(--good-text, #2e7d32); }
   .pb-form .frow { gap: 6px; }
   .pb-form .field { flex: 1 1 130px; min-width: 0; margin: 0; }
   .pb-form .field input, .pb-form .field select { min-width: 0; width: 100%; }
@@ -4269,7 +4276,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.25 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.26 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -19371,8 +19378,10 @@ const PB_BILL_CATS = ['Housing', 'Child support', 'Utilities', 'Vehicle', 'Insur
 function pb() {
   if (!prefs.pb || typeof prefs.pb !== 'object') prefs.pb = {};
   const p = prefs.pb;
-  ['inc', 'bills', 'debts', 'goals', 'spend'].forEach(k => { if (!Array.isArray(p[k])) p[k] = []; });
+  ['inc', 'bills', 'debts', 'goals', 'spend', 'tx'].forEach(k => { if (!Array.isArray(p[k])) p[k] = []; });
   if (!p.caps || typeof p.caps !== 'object') p.caps = {};
+  if (!p.accts || typeof p.accts !== 'object') p.accts = {};       // 🏦 v7.26 — the bank accounts by their LAST FOUR: balance, as of
+  if (!p.storeCat || typeof p.storeCat !== 'object') p.storeCat = {};   // 🏦 v7.26 — a store's exact name → the category he gave it
   if (p.extra == null) p.extra = 0;
   if (p.method !== 'avalanche') p.method = 'snowball';
   return p;
@@ -19385,8 +19394,8 @@ function pbPerWord(per) { return (PB_PERS.find(x => x[0] === per) || PB_PERS[0])
 function pbOrd(d) { const n = +d; if (!n) return ''; const r = n % 100; const s = (r >= 11 && r <= 13) ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'; return n + s; }
 function pbMonthKey(d) { const x = d ? new Date(d) : new Date(); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); }
 function pbMonthName(offset) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + offset); return d.toLocaleDateString([], { month: 'short', year: 'numeric' }); }
-function pbSpendThisMonth() { const mk = pbMonthKey(); return pb().spend.filter(s => pbMonthKey(s.ts) === mk); }
-function pbCatList() { const p = pb(); return [...new Set([...PB_CATS, ...Object.keys(p.caps), ...p.spend.map(s => s.cat).filter(Boolean)])]; }
+function pbSpendThisMonth() { const mk = pbMonthKey(); return pbSpendAll().filter(s => pbMonthKey(s.ts) === mk); }   // 🏦 v7.26 — the bank lines he sorted count too
+function pbCatList() { const p = pb(); return [...new Set([...PB_CATS, ...Object.keys(p.caps), ...p.spend.map(s => s.cat).filter(Boolean), ...p.tx.map(t => t.cat).filter(c => c && !PB_TX_SPECIAL.includes(c))])]; }
 function pbCatMatch(name) {   // "dining" → Eating out, "fuel" → Gas, otherwise his own word
   const n = String(name || '').trim(); if (!n) return 'Other';
   const low = n.toLowerCase();
@@ -19462,10 +19471,11 @@ function renderBudget() {
     ${catRows.length ? `<div class="pb-h2">WHERE IT WENT${capTotal ? ' — against the caps' : ''}</div>${pbBars(catRows, 'spending by category this month, against each cap')}` : '<div class="hint">Nothing spent yet this month — add the first one below.</div>'}
     ${capTotal ? `<div class="hint" style="margin-top: 4px;">If every cap holds: ${pbMoney(incM)} in − ${pbMoney(billsM)} bills − ${pbMoney(capTotal)} caps = <b>${planned >= 0 ? '✓ ' + pbMoney(planned) + ' left' : '⚠ ' + pbMoney(planned) + ' short'}</b> a month.</div>` : ''}
   </div>
+  ${pbBankCardHtml(p)}
   <div class="pb-card">
     <div class="pb-h">🧾 SPEND <span class="pb-sub">quick add — amount, what for, done</span></div>
     <div class="pb-add"><input type="text" id="pbAmt" inputmode="decimal" placeholder="$" aria-label="amount"><select id="pbCat" class="mini-sel" aria-label="what for">${pbCatList().map(c => `<option>${esc(c)}</option>`).join('')}</select><input type="text" id="pbNote" placeholder="note (optional)" aria-label="note" onkeydown="if(event.key==='Enter'){event.preventDefault();pbSpendAdd();}"><button type="button" class="bd-plus" onclick="pbSpendAdd()" aria-label="add it">+</button></div>
-    ${sp.slice().sort((a, b) => String(b.ts).localeCompare(String(a.ts))).slice(0, 40).map(x => `<div class="pb-row"><span class="pb-rn">${esc(x.cat || 'Other')}${x.note ? ' — ' + esc(x.note) : ''}<span class="pb-meta"> · ${esc(String(x.ts).slice(5, 10))}</span></span> <b>${pbMoney(x.amt)}</b><button type="button" class="pb-x" onclick="pbSpendDel('${esc(x.id)}')" aria-label="take it off" title="take it off">✕</button></div>`).join('')}
+    ${sp.slice().sort((a, b) => String(b.ts).localeCompare(String(a.ts))).slice(0, 40).map(x => `<div class="pb-row"><span class="pb-rn">${x.bank ? '🏦 ' : ''}${esc(x.cat || 'Other')}${x.note ? ' — ' + esc(x.note) : ''}<span class="pb-meta"> · ${esc(String(x.ts).slice(5, 10))}</span></span> <b>${pbMoney(x.amt)}</b>${x.bank ? `<button type="button" class="pb-x" onclick="pbTxCat('${esc(x.tx)}', '')" aria-label="sort it again" title="sort it again">✎</button>` : `<button type="button" class="pb-x" onclick="pbSpendDel('${esc(x.id)}')" aria-label="take it off" title="take it off">✕</button>`}</div>`).join('')}
   </div>
   <div class="pb-card">
     <div class="pb-h">🎯 SPENDING CAPS <span class="pb-sub">${capTotal ? pbMoney(capTotal) + ' a month if they all hold' : 'the ways to save — a ceiling per category'}</span></div>
@@ -19573,6 +19583,170 @@ function pbSpendDel(id) {
   const gone = p.spend.splice(i, 1)[0];
   scheduleSave(); renderBudget();
   toastUndo(`✕ ${pbMoney(gone.amt)} taken off`, () => { p.spend.splice(Math.min(i, p.spend.length), 0, gone); scheduleSave(); renderBudget(); });
+}
+// 🏦 v7.26 — THE BANK STATEMENT DROP. Eric: "id like to expand on the personal budget part … the biggest question i have is how
+// could we get it to get statements or better daily updated numbers from a bank account? i think after that the budget app
+// would be easy." Three roads were offered (the bank's email alerts · a statement drop · a live bank link); he picked the drop.
+// A CSV, OFX, QFX or QBO file from the bank's own site lands on the box and is read RIGHT HERE on the phone — no AI, nothing
+// sent anywhere; the lines live in prefs.pb.tx (his own Dropbox, like the rest of the page). What the bank calls the store is
+// kept as written (a long run of digits is masked); an account is its LAST FOUR only, never more. A line waits in TO SORT
+// until he gives it a category from the wheel — and the app remembers that store, by its exact name, for every line after
+// (tap-to-learn, never a guess). Bill · Transfer · Income never count as spending; the rest join SPENT and WHERE IT WENT
+// beside the hand-typed lines. A file dropped twice adds nothing: every line has an id — the bank's own FITID, else the day,
+// the amount, the store's words and its place among identical lines in that file.
+const PB_TX_SPECIAL = ['Bill', 'Transfer', 'Income'];   // not spending: a bill already counted under BILLS, money moved, money in
+const pbTxIsSpend = t => t.amt < 0 && !!t.cat && !PB_TX_SPECIAL.includes(t.cat);
+function pbStoreKey(desc) { return String(desc || '').toLowerCase().replace(/[#*]|\d+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40); }
+function pbTxDesc(s) { return String(s || '').replace(/\s+/g, ' ').replace(/\d{8,}/g, '…').trim().slice(0, 80); }   // a card number in the words is never kept
+function pbLast4(s) { const d = String(s || '').replace(/\D/g, ''); return d ? d.slice(-4) : ''; }
+function pbDateKey(s) {
+  const v = String(s || '').trim(); if (!v) return '';
+  let m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/); if (m) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; return `${y}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`; }
+  m = v.match(/^(\d{4})(\d{2})(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;   // the OFX way
+  return '';
+}
+function pbAmtOf(s) {
+  let v = String(s == null ? '' : s).trim(); if (!v) return null;
+  const neg = /^\(.*\)$/.test(v) || /^-|-$/.test(v) || /\bDR\b/i.test(v);
+  v = v.replace(/[^0-9.]/g, ''); if (!v) return null;
+  const n = parseFloat(v); if (!isFinite(n)) return null;
+  return Math.round((neg ? -n : n) * 100) / 100;
+}
+// a CSV the way the banks write them: quotes, commas inside quotes, CRLF; tabs when there are no commas
+function pbCsvRows(text) {
+  const t = String(text || '').replace(/^\uFEFF/, ''), rows = [], sep = t.indexOf(',') < 0 && t.indexOf('\t') >= 0 ? '\t' : ',';
+  let row = [], cell = '', q = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; continue; }
+    if (c === '"') { q = true; continue; }
+    if (c === sep) { row.push(cell); cell = ''; continue; }
+    if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cell); if (row.some(x => x.trim())) rows.push(row); row = []; cell = ''; continue; }
+    cell += c;
+  }
+  row.push(cell); if (row.some(x => x.trim())) rows.push(row);
+  return rows;
+}
+const PB_CSV_HEADS = {
+  date: /^(post(ing|ed)?\s*date|trans(action)?\s*date|date)$/i,
+  amt: /^(amount|transaction amount|amt)$/i, out: /^(debit|debits|withdrawal|withdrawals|money out|paid out)$/i, in: /^(credit|credits|deposit|deposits|money in|paid in)$/i,
+  bal: /^(balance|running bal(ance)?\.?|ending balance)$/i, acct: /^(card no\.?|account( number| no\.?)?)$/i, type: /^(type|transaction type)$/i };
+const PB_DESC_RANK = ['description', 'payee', 'merchant', 'name', 'memo', 'narrative', 'transaction', 'details'];   // the words column: the best-named one wins ("Details" is a bank's DEBIT/CREDIT word, not the store)
+function pbCsvParse(text, fileName) {
+  const rows = pbCsvRows(text); if (!rows.length) return { lines: [], why: 'the file is empty' };
+  const norm = x => String(x || '').replace(/^\W+|\W+$/g, '').trim();
+  let head = -1, col = {};
+  for (let i = 0; i < Math.min(rows.length, 30); i++) {
+    const c = {}; rows[i].forEach((h, j) => { const w = norm(h); Object.keys(PB_CSV_HEADS).forEach(k => { if (c[k] == null && PB_CSV_HEADS[k].test(w)) c[k] = j; }); const r = PB_DESC_RANK.indexOf(w.toLowerCase()); if (r >= 0 && (c.descR == null || r < c.descR)) { c.desc = j; c.descR = r; } });
+    if (c.date != null && (c.amt != null || c.out != null || c.in != null)) { head = i; col = c; break; }
+  }
+  const lines = [];
+  if (head < 0) {   // no heading row (some banks): the day, the amount, then the words in the last filled cell
+    rows.forEach((r, i) => { const d = pbDateKey(r[0]), a = pbAmtOf(r[1]); if (!d || a == null) return; const words = [...r.slice(2)].reverse().find(x => x && x.trim()) || ''; lines.push({ d, amt: a, desc: pbTxDesc(words), acct: '', bal: null, row: i }); });
+    if (!lines.length) return { lines: [], why: 'no day and amount columns I could read — a CSV or OFX from the bank\'s own site works' };
+    return { lines, acct: '', bal: null, balAt: '' };
+  }
+  let acct = '';
+  rows.slice(head + 1).forEach((r, i) => {
+    const d = pbDateKey(r[col.date]); if (!d) return;
+    let a = null;
+    if (col.amt != null) a = pbAmtOf(r[col.amt]);
+    if (a == null && (col.out != null || col.in != null)) { const o = col.out != null ? pbAmtOf(r[col.out]) : null, n = col.in != null ? pbAmtOf(r[col.in]) : null; if (o != null || n != null) a = Math.round(((n || 0) - Math.abs(o || 0)) * 100) / 100; }
+    if (a == null) return;
+    if (col.amt != null && col.type != null && a > 0 && /^(debit|withdrawal|purchase|payment|fee)$/i.test(norm(r[col.type]))) a = -a;   // an unsigned amount with a DEBIT type
+    const desc = pbTxDesc(r[col.desc] != null ? r[col.desc] : (r.find((x, j) => j !== col.date && j !== col.amt && x && !/^[\d.,$\-()]+$/.test(x)) || ''));
+    const bal = col.bal != null ? pbAmtOf(r[col.bal]) : null;
+    if (!acct && col.acct != null) acct = pbLast4(r[col.acct]);
+    lines.push({ d, amt: a, desc, acct: '', bal, row: i });
+  });
+  lines.forEach(l => { l.acct = acct; });
+  const newestFirst = lines.length > 1 && lines[0].d >= lines[lines.length - 1].d;
+  const topDay = lines.reduce((m, l) => l.d > m ? l.d : m, ''), onTop = lines.filter(l => l.d === topDay), balRow = newestFirst ? onTop[0] : onTop[onTop.length - 1];
+  return { lines, acct, bal: balRow && balRow.bal != null ? balRow.bal : null, balAt: balRow && balRow.bal != null ? balRow.d : '' };
+}
+function pbOfxParse(text) {
+  const t = String(text || '');
+  const tag = (src, name) => { const m = src.match(new RegExp('<' + name + '>\\s*([^<\\r\\n]*)', 'i')); return m ? m[1].trim() : ''; };
+  const acct = pbLast4(tag(t, 'ACCTID'));
+  const lines = t.split(/<STMTTRN>/i).slice(1).map(b => b.split(/<\/STMTTRN>/i)[0]).map(b => {
+    const d = pbDateKey(tag(b, 'DTPOSTED')), a = pbAmtOf(tag(b, 'TRNAMT')); if (!d || a == null) return null;
+    const name = tag(b, 'NAME'), memo = tag(b, 'MEMO');
+    return { d, amt: a, desc: pbTxDesc(name && memo && memo !== name ? name + ' — ' + memo : name || memo), acct, fitid: tag(b, 'FITID'), bal: null };
+  }).filter(Boolean);
+  const balBlock = (t.match(/<LEDGERBAL>[\s\S]*?(?=<\/LEDGERBAL>|<AVAILBAL>|$)/i) || [''])[0];
+  const bal = pbAmtOf(tag(balBlock, 'BALAMT')), balAt = pbDateKey(tag(balBlock, 'DTASOF'));
+  if (!lines.length) return { lines: [], why: 'no transactions in it that I could read' };
+  return { lines, acct, bal: bal == null ? null : bal, balAt };
+}
+function pbStmtImport(parsed, fileName) {
+  const p = pb(), had = new Set(p.tx.map(t => t.id)), seen = {}, today = localDay(new Date());
+  let added = 0, dup = 0, toSort = 0;
+  parsed.lines.forEach(l => {
+    if (l.d > today) return;   // a bank does not post the future
+    const base = l.fitid ? `${l.acct || '-'}:${l.fitid}` : `${l.d}|${l.amt}|${pbStoreKey(l.desc)}`;
+    const n = seen[base] = (seen[base] || 0) + 1, id = l.fitid ? base : `${base}|${n}`;
+    if (had.has(id)) { dup++; return; }
+    const cat = l.amt < 0 ? (p.storeCat[pbStoreKey(l.desc)] || '') : '';
+    p.tx.push({ id, d: l.d, amt: l.amt, desc: l.desc, acct: l.acct || '', cat, at: new Date().toISOString() });
+    had.add(id); added++; if (!cat) toSort++;
+  });
+  if (parsed.bal != null) { const k = parsed.acct || (fileName ? String(fileName).replace(/\.[a-z0-9]+$/i, '').slice(0, 24) : 'account'); p.accts[k] = { last4: parsed.acct || '', bal: parsed.bal, balAt: parsed.balAt || today, file: String(fileName || '').slice(0, 60) }; }
+  p.tx.sort((a, b) => b.d.localeCompare(a.d));
+  if (p.tx.length > 3000) p.tx.length = 3000;   // a few years is plenty on a phone
+  return { added, dup, toSort };
+}
+async function pbStmtFiles(fileList) {
+  const files = [...(fileList || [])].filter(f => /\.(csv|txt|tsv|ofx|qfx|qbo)$/i.test(f.name));
+  if (!files.length) { toast('That is not a bank file — a CSV or OFX / QFX from the bank\'s own site works', false); return; }
+  for (const f of files) {
+    let text = ''; try { text = await f.text(); } catch (e) { toast(`⚠ Could not read ${f.name}`, false); continue; }
+    const parsed = /<OFX>|<STMTTRN>|OFXHEADER/i.test(text) ? pbOfxParse(text) : pbCsvParse(text, f.name);
+    if (!parsed.lines.length) { toast(`⚠ ${f.name}: ${parsed.why || 'nothing in it I could read'}`, false); continue; }
+    const r = pbStmtImport(parsed, f.name);
+    toast(`🏦 ${parsed.lines.length} line${parsed.lines.length === 1 ? '' : 's'} read from ${f.name} · ${r.added} new · ${r.dup} already here${r.toSort ? ` · ${r.toSort} to sort` : ''}`);
+  }
+  scheduleSave(); renderBudget();
+  const inp = $('pbStmtIn'); if (inp) inp.value = '';
+}
+function pbTxCat(id, cat) {
+  const p = pb(), t = p.tx.find(x => x.id === id); if (!t) return;
+  cat = String(cat || '').trim().slice(0, 30);
+  t.cat = cat;
+  let more = 0;
+  if (cat && t.amt < 0 && !PB_TX_SPECIAL.includes(cat)) {   // the store is learned by its exact name — every unsorted line of the same store follows
+    const k = pbStoreKey(t.desc); if (k) { p.storeCat[k] = cat; p.tx.forEach(x => { if (x !== t && !x.cat && x.amt < 0 && pbStoreKey(x.desc) === k) { x.cat = cat; more++; } }); }
+  }
+  scheduleSave(); renderBudget();
+  if (cat) toast(`✓ ${String(t.desc).replace(/[<>&]/g, '').slice(0, 28)} → ${cat}${more ? ` · ${more} more of the same store followed` : ''}`);
+}
+function pbTxDel(id) {
+  const p = pb(), i = p.tx.findIndex(x => x.id === id); if (i < 0) return;
+  const gone = p.tx.splice(i, 1)[0]; scheduleSave(); renderBudget();
+  toastUndo(`✕ ${pbMoney(gone.amt)} line taken off`, () => { p.tx.splice(Math.min(i, p.tx.length), 0, gone); scheduleSave(); renderBudget(); });
+}
+function pbTxSpendRows() { return pb().tx.filter(pbTxIsSpend).map(t => ({ id: 'tx:' + t.id, ts: t.d + 'T12:00:00', amt: -t.amt, cat: t.cat, note: t.desc, bank: true, tx: t.id })); }
+function pbSpendAll() { return [...pb().spend, ...pbTxSpendRows()]; }
+function pbTxWheel(t) {
+  const list = pbCatList(), cats = t.amt > 0 ? ['Income', 'Transfer', ...list] : [...list, ...PB_TX_SPECIAL.filter(c => !list.includes(c))];
+  const word = c => c === 'Bill' ? '🏠 Bill — already counted' : c === 'Transfer' ? '↔ Transfer — not spending' : c === 'Income' ? '💵 Income' : esc(c);
+  return `<select class="mini-sel pb-txsel" aria-label="what for" onchange="pbTxCat('${esc(t.id)}', this.value)"><option value="">▾ what for?</option>${cats.map(c => `<option value="${esc(c)}">${word(c)}</option>`).join('')}</select>`;
+}
+function pbBankCardHtml(p) {
+  const mk = pbMonthKey(), month = p.tx.filter(t => pbMonthKey(t.d + 'T12:00:00') === mk), unsortedAll = p.tx.filter(t => !t.cat), unsorted = unsortedAll.slice(0, 30);
+  const dep = month.filter(t => t.cat === 'Income').reduce((s, t) => s + t.amt, 0);
+  const accts = Object.entries(p.accts);
+  return `<div class="pb-card" id="pbBank">
+    <div class="pb-h">🏦 BANK <span class="pb-sub">${p.tx.length ? `${month.length} line${month.length === 1 ? '' : 's'} this month${unsortedAll.length ? ` · <b>${unsortedAll.length} to sort</b>` : ' · all sorted'}` : 'drop a statement — it is read right here on the phone'}</span></div>
+    <div class="pb-drop" role="button" tabindex="0" onclick="$('pbStmtIn').click()" onkeydown="if(event.key==='Enter'){$('pbStmtIn').click();}"
+      ondragover="event.preventDefault(); this.classList.add('over');" ondragleave="this.classList.remove('over');" ondrop="event.preventDefault(); this.classList.remove('over'); pbStmtFiles(event.dataTransfer.files);">
+      <span>📥 <b>Drop a bank statement here</b> — a CSV or OFX / QFX from your bank's site<br><small>or tap to pick · read on this phone, nothing is sent anywhere · an account is its last four only</small></span></div>
+    <input type="file" id="pbStmtIn" accept=".csv,.txt,.tsv,.ofx,.qfx,.qbo" multiple style="display: none;" onchange="pbStmtFiles(this.files)">
+    ${accts.length ? `<div class="pb-h2">ACCOUNTS</div>${accts.map(([k, a]) => `<div class="pb-row"><span class="pb-rn">${a.last4 ? '···' + esc(a.last4) : esc(k)}<span class="pb-meta"> · as of ${esc(a.balAt || '')}</span></span> <b>${pbMoney(a.bal)}</b></div>`).join('')}` : ''}
+    ${dep ? `<div class="hint" style="margin-top: 6px;">💵 ${pbMoney(dep)} came in this month (the lines you sorted as Income)</div>` : ''}
+    ${unsorted.length ? `<div class="pb-h2">TO SORT <span class="pb-sub">pick what for — the store is remembered</span></div>${unsorted.map(t => `<div class="pb-row pb-txrow"><span class="pb-rn"><b>${esc(t.desc || '(no words)')}</b><span class="pb-meta"> · ${esc(t.d.slice(5))}${t.acct ? ' · ···' + esc(t.acct) : ''}</span></span> <b class="${t.amt > 0 ? 'pb-in' : ''}">${pbMoney(t.amt)}</b>${pbTxWheel(t)}<button type="button" class="pb-x" onclick="pbTxDel('${esc(t.id)}')" aria-label="take this line off" title="take this line off">✕</button></div>`).join('')}${unsortedAll.length > unsorted.length ? `<div class="hint">…and ${unsortedAll.length - unsorted.length} more once these are sorted.</div>` : ''}` : ''}
+    ${p.tx.length && !unsortedAll.length ? '<div class="hint" style="margin-top: 6px;">✓ Every line has a category — the sorted ones sit under SPEND with a 🏦.</div>' : ''}
+  </div>`;
 }
 function pbExtraSet(v) { pb().extra = Math.max(0, pbNum(v)); scheduleSave(); renderBudget(); }
 function pbMethod(m) { pb().method = m === 'avalanche' ? 'avalanche' : 'snowball'; scheduleSave(); renderBudget(); }
@@ -21642,7 +21816,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.25';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.26';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
