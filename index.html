@@ -4303,7 +4303,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.35 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.36 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -19161,13 +19161,25 @@ const WIZ_TIMEOUT_MS = () => window._wizTimeoutMs || 180000;
 function wizTextOf(j) { return (((j || {}).content) || []).filter(c => c && c.type !== 'thinking' && c.type !== 'redacted_thinking').map(c => c.text || '').join('').trim(); }
 async function wizApiWhy(r) {   // the API's own reason, when it gave one — 'API 529 Overloaded'
   let msg = '';
-  try { const j = await r.json(); msg = String((j && j.error && (j.error.message || j.error.type)) || ''); } catch (e) {}
-  return 'API ' + r.status + (msg ? ' ' + msg.replace(/\s+/g, ' ').slice(0, 160) : '');
+  try { const j = await r.json(); msg = String((j && j.error && (j.error.message || j.error.type)) || '') + (j && j.error && j.error.details && j.error.details.error_code ? ' [' + j.error.details.error_code + ']' : ''); } catch (e) {}   // 🧙 v7.36 — the error_code too
+  return 'API ' + r.status + (msg ? ' ' + msg.replace(/\s+/g, ' ').slice(0, 400) : '');
+}
+function wizBackOn(m) {   // 🧙 v7.36 — 'You will regain access on 2026-10-01 at 00:00 UTC' → the same moment on his own clock
+  const x = String(m || '').match(/on (\d{4}-\d{2}-\d{2}) at (\d{2}:\d{2}) UTC/i);
+  const d = x ? new Date(x[1] + 'T' + x[2] + ':00Z') : null;
+  return d && !isNaN(d) ? d.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'the first of next month';
 }
 function wizWhy(e) {   // in words, for the band, the toast and the status line
   const m = String((e && e.message) || ''), name = String((e && e.name) || '');
   if (name === 'AbortError') return 'it took more than three minutes. Try again, or ask a smaller question.';
   if (/^API (401|403)/.test(m)) return 'the key was refused. Check the key in ⚙ Setup.';
+  // 🧙 v7.36 — Eric, 2026-09-28: "i bought more usage, but that didn't seem to be the problem? i just asked wizard a question again
+  // and said its at its limits." Anthropic pauses an ACCOUNT two ways, and neither is lifted by buying credits: the monthly spending
+  // cap of its tier (a 429, error_code enforced_spend_limit_reached, no retry-after) and a spend limit set by hand in the Console (a
+  // 400, "You have reached your specified API usage limits"). Both say when access comes back, in UTC — said here on his own clock.
+  // Every call on the key pauses with it: the Wizard, the photo reads, the journal drafts, the cloud mail watcher.
+  if (/reached your specified (workspace )?API usage limits/i.test(m)) return 'Anthropic has paused your account until ' + wizBackOn(m) + ' — the monthly spend limit set in your Anthropic account is used up. Buying credits does not lift it. On platform.claude.com go to Settings, then Billing, then Spend limits, and raise or remove it.';
+  if (/enforced_spend_limit_reached|monthly API usage threshold|reached your API usage limits/i.test(m)) return 'Anthropic has paused your account until ' + wizBackOn(m) + ' — the monthly spending cap for your account tier is used up. Buying credits does not lift it. On platform.claude.com go to Settings, then Limits, and tap Request rate limit increase to lift it sooner.';
   if (/^API 429/.test(m)) return 'too many questions at once (the rate limit). Wait a minute and try again.';
   if (/^API (529|503)/.test(m) || /overloaded/i.test(m)) return 'Anthropic is overloaded right now. Try again in a minute.';
   if (/^API 5\d\d/.test(m)) return 'Anthropic had an error (' + m.slice(4, 7) + '). Try again in a minute.';
@@ -22425,7 +22437,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.35';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.36';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
