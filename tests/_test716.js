@@ -117,7 +117,7 @@ const { chromium } = require('playwright');
     await checkCrewLogs(); renderAskStrip();
     const e = entries.find(x => x.id === 900);
     return !!e.askDone && e.askFlush === 'Phil' && !pendingQueue.some(p => /^crew:Phil:31:/.test(p.id)) && !(_crewFeed.Phil || []).length
-      && /✓ SEEN by Phil — no answer needed/.test($('askStrip').textContent);
+      && $('askStrip').innerHTML === '';   // 📨 v7.32 — the SENT → ANSWERED lamps are off; the fact lives on the entry (askFlush)
   }));
 
   console.log('— ✕ (4) "No longer relevant" on a Wizard line —');

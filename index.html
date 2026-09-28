@@ -452,7 +452,9 @@
   .ask-side > button { flex: 1 1 0; margin: 0; }
   .wiz-side { display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 1px; padding: 6px 10px; border: 2px solid var(--accent); }
-  .wiz-side .cam-ic { height: 40px; }
+  .wiz-side { width: 108px; }   /* 🧙 v7.32 — Eric: "make the ask the wizard button fit better": a narrow plate of its own — the writing box keeps the room, the brass picture fills the plate */
+  .wiz-side .cam-ic { width: 100%; height: auto; max-height: 72px; object-fit: contain; }
+  @media (min-width: 701px) { .wiz-side { width: 150px; } }
   .wiz-side-tx { font-size: var(--fs10, 10px); font-weight: var(--fw8, 800); letter-spacing: 0.6px; line-height: 1; }
   .ask-row textarea {
     flex: 1; background: var(--surface-1); color: var(--ink-1);
@@ -2176,6 +2178,7 @@
     font-size: 13px; padding: 10px; border: none; border-radius: 12px; cursor: pointer;
     background: var(--accent); color: var(--accent-ink); margin-bottom: 12px; font-family: inherit;
   }
+  body.crew-preview::after { content: ''; position: fixed; inset: 0; border: 5px dotted #3fa9ff; pointer-events: none; z-index: 399; }   /* 👁 v7.32 — Eric: "whenever im on 'see as phil' the whole main page should be outlined by a blue dotted line" — the gold banner says PREVIEW in words, the frame says it at a glance */
   #crewRoute { display: none; }   /* ⚠ v7.13 — on a crew phone too: ⚠ Needs attention in UNLOCK IT took its place */
   /* 🔒 v5.44 — Eric: "when the locked button is on, gray out the buttons that are tagging
      someone else or sending to somebody else. You have to click the unlock button and then
@@ -2665,6 +2668,7 @@
     display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 6px;
     --chip-base: 12.5px; --chip-mul: 1;
   }
+  .tag-fixed { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }   /* 🏷 v7.32 — 🔒 Personal · 🧾 Receipt · 📋 Build List: one fixed row, his own tags below it */
   #qnTagChips .pick-chip, #nTagChips .pick-chip, #qnTagChips .mini-sel, #nTagChips .mini-sel {
     width: 100%; margin: 0; min-height: 36px; padding: 4px 6px;
     display: flex; align-items: center; justify-content: center; text-align: center;
@@ -4286,7 +4290,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.31 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.32 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6684,7 +6688,7 @@ function updateStepFlow() {
   // thing is always the lever, job or no job — an unfiled note is allowed and step ① says so.
   // 📷 v6.86 — Eric: "take the photo/file select button and make it step 3 and move tag it to step 4." ③ photo, ④ tags, ⑤ unlock, ⑥ send.
   const next = hasWords ? 6 : (jobPicked ? 2 : 1);
-  const done = { 1: jobPicked, 2: words, 3: photos, 4: !!(qnSel.size || qnHeads || qnRcpt || qnBL), 5: !!(qnVis || qnVisNames.size), 6: false };
+  const done = { 1: jobPicked, 2: words, 3: photos, 4: !!(qnSel.size || qnRcpt || qnBL), 5: !!(qnVis || qnVisNames.size), 6: false };
   renderQnJobChips();
   card.querySelectorAll('.g-step').forEach(el => {
     const n = +el.dataset.step;
@@ -6901,7 +6905,7 @@ function renderTagChips() {
       title="Marks this note as something that bites later work — the Wizard surfaces it first and the job card counts it">${qnHeads ? '⚠ HEADS-UP — ON THE JOB CARD' : '⚠ Heads-up'}</button>`;
   const rcptChip = `<button type="button" class="pick-chip lockchip${qnRcpt ? ' sel is-down' : ''}" onclick="qnRcptToggle()" aria-pressed="${qnRcpt}"
       title="A typed or dictated purchase — opens the category window and files it toward the job's budget pile">${qnRcpt ? (qnCat ? '🧾 ' + esc(qnCat) + ' — tap to change' : '🧾 RECEIPT — tap to pick category') : '🧾 Receipt'}</button>`;
-  const html = headsChip + rcptChip + qnBLChipHtml() + shown.map(t => {   // 📋 v6.97 — the Build List chip
+  const chipOf = t => {   // 📋 v6.97 — the Build List chip · ⚠ v7.32 — Eric: "on tag it, lets take the heads up off and make the needs attention in box 5 the same thing" (headsChip stays built, never drawn)
     if (_tagArm === t) return `<button type="button" class="pick-chip" style="border-color: var(--err, #c0392b); color: var(--err, #c0392b); font-weight: var(--fw8, 800);" onclick="tagDelete('${escq(t)}')">✕ delete ${esc(t)}?</button>`;
     const on = qnSel.has(t);
     const pers = isPersonalTagName(t);
@@ -6910,7 +6914,12 @@ function renderTagChips() {
       onpointerdown="tagHoldStart('${escq(t)}')" onpointerup="tagHoldEnd()" onpointerleave="tagHoldEnd()" oncontextmenu="event.preventDefault()">${on ? `🔒 ${esc(t)} — LOCKED DOWN` : `🔓 ${esc(t)}`}</button>`;
     return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="tagToggle('${escq(t)}')" aria-pressed="${on}"
       onpointerdown="tagHoldStart('${escq(t)}')" onpointerup="tagHoldEnd()" onpointerleave="tagHoldEnd()" oncontextmenu="event.preventDefault()">${on ? '✓' : '🏷'} ${esc(t)}</button>`;
-  }).join('') +
+  };
+  // 🏷 v7.32 — Eric: "make the first 3 locked at the front of the tags in this order from top left to top right: personal: lock, receipt,
+  // build list. all tags below that are the ones that get rearranged and deleted etc." One fixed row of three (.tag-fixed spans the
+  // grid), his own tags start on the row under it; a list with no Personal tag still gets the lock chip first.
+  const lockTag = shown.find(t => t.toLowerCase() === 'personal') || 'Personal', restTags = shown.filter(t => t !== lockTag);   // the 🔒 Personal chip itself — a family name's own lock chip stays down among his tags
+  const html = `<div class="tag-fixed">${chipOf(lockTag)}${rcptChip}${qnBLChipHtml()}</div>` + restTags.map(chipOf).join('') +
     `<div class="chip-bar">
       <button type="button" class="pick-chip" onclick="tagNewInput(this)">➕ tag</button>
       <button type="button" class="pick-chip" onclick="tagArrangeToggle()" title="reorder or clean up the chips">✎ arrange</button>
@@ -8033,7 +8042,7 @@ function saveNoteFrom(boxId, fromPanel) {
   if (aiAll) nExtra.ai = aiAll;
   const tags = [...qnSel];
   if (tags.length) nExtra.tags = tags;
-  if (qnHeads) nExtra.heads = true; // ⚠ v6.24 — the landmine flag rides the entry
+  if (qnHeads || qnAsk) nExtra.heads = true; // ⚠ v6.24 — the landmine flag rides the entry · ⚠ v7.32 — ⚠ Needs attention IS the heads-up now
   // 🔒 v5.52 — a personal tag on the note = personal entry: the publish filter refuses it
   // forever, whatever else was tapped. The vis wipe below makes the lock honest on save too.
   const _pTag = typeof personalTagOn === 'function' && personalTagOn();
@@ -8083,7 +8092,7 @@ function saveNoteFrom(boxId, fromPanel) {
       if (qnRoute && qnRoute !== 'The Grinder') nExtra.route = qnRoute;
       if (qnUrg) nExtra.urg = qnUrg;
     }
-  } else if (qnVis || qnVisNames.size || qnAsk) {
+  } else if (qnVis || qnVisNames.size) {   // ⚠ v7.32 — ⚠ alone no longer unlocks a note
     // 🔓 unlocked — travels to the crew folder(s). v5.26: several names = several phones.
     // v5.51 — crew + names STACK: 'crew' = the whole crew can see it (their Wizards too),
     // sendTo names = it ALSO lands direct 📨 on those phones. Names alone work as before.
@@ -8094,6 +8103,7 @@ function saveNoteFrom(boxId, fromPanel) {
     if (qnAsk) nExtra.ask = true; // ❓ pops up on their phones until somebody answers
   }
   const routed = nExtra.route;
+  if (qnAsk) nExtra.board = { p: 3, sub: [], at: new Date().toISOString() };   // ⚠ v7.32 — "needs attention will just keep it at the top over everyone's list": three cubes = the top of the Board, his own and (unlocked) theirs
   // v4.91 — quick note: blank wheel = honestly unfiled ('—'), never a silent guess
   const noteJob = fromPanel ? curJob : (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : '—';
   // 🧾 v6.24 — a typed/dictated purchase: category rides the entry, the $ gets pulled out
@@ -10515,6 +10525,7 @@ function renderTxtNudges() { const box = $('nudgeStrip'); if (box) box.innerHTML
 function hoursOffSync() { document.body.classList.toggle('hours-off', isCrew() && !clockedInAt); }
 function applyRole() {
   document.body.classList.toggle('crew-mode', isCrew());
+  document.body.classList.toggle('crew-preview', !!crewPreview);   // 👁 v7.32 — the blue dotted frame round the whole page while he looks as Phil
   hoursOffSync();
   visReset(); // 🔒 v5.44 — crew phones rest on 📨 Eric, Eric's phone rests on 🔒 private
   const badge = $('crewBadge');
@@ -11533,18 +11544,24 @@ let qnAsk = false; // v4.90 — ❓ this note is a QUESTION: it pops up on crew 
 // gone. ⚠ on a note nobody can see would be aimed at no one: tapped while 🔒, it picks the everyday person first.
 function visBuddy() { return isCrew() ? 'Eric' : (officeFolks().find(n => crew.includes(n)) || crew[0] || ''); }
 function setVis(v) {
-  if (v === '') { qnVis = ''; qnVisNames.clear(); qnAsk = false; qnRoute = ''; qnUrg = ''; }   // 🔒 nothing sends, so nothing asks
+  if (v === '') { qnVis = ''; qnVisNames.clear(); }   // ⚠ v7.32 — Eric: "even if 'just me' is selected i can still hit needs attention" — 🔒 keeps ⚠ lit: a heads-up for this phone, at the top of the Board
   else if (v === 'crew') { qnVis = 'crew'; qnVisNames.clear(); }
   else { qnVis = ''; qnVisNames = new Set([v]); }
+  attnRouteSync();
   renderVisChips();
 }
-function attnOn() { return isCrew() ? (qnRoute === 'Eric' && qnUrg === 'now') : !!qnAsk; }
+function attnOn() { return !!qnAsk; }   // ⚠ v7.32 — one flag on both phones; a crew phone's route (Eric · now) is derived from it when someone is unlocked
 function toggleAttn() {
-  const on = !attnOn();
-  if (on && !qnVis && !qnVisNames.size) { const b = visBuddy(); if (b) qnVisNames = new Set([b]); else qnVis = 'crew'; }
-  if (isCrew()) { qnRoute = on ? 'Eric' : ''; qnUrg = on ? 'now' : ''; if (typeof renderRouteChips === 'function') renderRouteChips(); }
-  else qnAsk = on;
+  qnAsk = !attnOn();   // ⚠ v7.32 — no longer picks a person by itself: with 🔒 Just me it is a heads-up for this phone; with 📨 / 🔓 it also goes to the top of their list
+  attnRouteSync();
   renderVisChips();
+}
+// ⚠ v7.32 — on a crew phone the old "Send it to Eric · NOW" rides only when the note is unlocked for someone
+function attnRouteSync() {
+  if (!isCrew()) return;
+  const someone = !!(qnVis || qnVisNames.size);
+  qnRoute = qnAsk && someone ? 'Eric' : ''; qnUrg = qnAsk && someone ? 'now' : '';
+  if (typeof renderRouteChips === 'function') renderRouteChips();
 }
 function toggleAsk() { toggleAttn(); }   // the old name for Eric's ⚠
 function renderVisChips() {
@@ -11614,8 +11631,8 @@ function lockGate() {
   // says so, rather than sitting there armed and quietly doing nothing on save.
   const ownerLock = !isCrew() && nobody;
   document.body.classList.toggle('owner-locked', ownerLock);
-  // ⚠ v7.13 — the ⚠ plate is never dead now: tapped while 🔒 it picks the everyday person first (toggleAttn)
-  if (ownerLock && qnAsk) qnAsk = false; // never leave the siren armed behind a lock
+  // ⚠ v7.13 — the ⚠ plate is never dead. ⚠ v7.32 — and it STAYS lit behind 🔒 Just me now: Eric — "even if 'just me' is selected i can
+  // still hit needs attention" — a heads-up for this phone (the flag + three cubes on the Board); it asks the crew only when someone is unlocked
 }
 function visNewInput(btn) {
   btn.outerHTML = `<input type="text" class="mini-sel" id="visNewBox" placeholder="name…"
@@ -12203,6 +12220,7 @@ function reqStageRow(n) {
 function renderMyRequests() {
   const box = $('myReqStrip');
   if (!box) return;
+  box.innerHTML = ''; return;   // 📨 v7.32 — Eric: "i dont think we need these anymore as we have the 'eric needs an answer' and 'from eric'." The SENT → RECEIVED → OPENED → ANSWERED lamps are off (the stamps still flow through setAck for what comes next)
   if (!isCrew()) { box.innerHTML = ''; return; }
   let acks = {}; try { acks = JSON.parse(lsGet('daylog-req-acks') || '{}'); } catch (e) {}
   const dism = new Set(JSON.parse(lsGet('daylog-req-dismissed') || '[]'));
@@ -12226,6 +12244,7 @@ function dismissReq(id) {
 function renderAskStrip() {
   const box = $('askStrip');
   if (!box) return;
+  box.innerHTML = ''; return;   // 📨 v7.32 — Eric's mirror lamps go with the crew's; the answer still lands as a card and on FROM THE CREW
   if (isCrew()) { box.innerHTML = ''; return; }
   const asks = entries.filter(e => e.ask && !e.askSeen && !e.sample).slice(0, 4);
   box.innerHTML = asks.map(e => e.askDone
@@ -22061,7 +22080,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.31';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.32';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

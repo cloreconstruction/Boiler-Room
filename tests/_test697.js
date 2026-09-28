@@ -45,7 +45,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const chips = [...$('qnTagChips').querySelectorAll('button')].map(b => b.textContent.trim());
     const at = chips.findIndex(c => /Build List/.test(c));
     _said.length = 0; await qnBLToggle();
-    return at === 2 && /Heads-up/.test(chips[0]) && /Receipt/.test(chips[1]) && !qnBL && /Pick the job first/.test(_said.join(' ')) && _chip().getAttribute('aria-pressed') === 'false';
+    return at === 2 && /Personal/.test(chips[0]) && /Receipt/.test(chips[1]) && !qnBL   /* 🏷 v7.32 — 🔒 Personal · 🧾 Receipt · 📋 Build List lead ④, fixed */ && /Pick the job first/.test(_said.join(' ')) && _chip().getAttribute('aria-pressed') === 'false';
   }));
 
   ok('a job with no client page says so in words and stays off — nothing is guessed', await page.evaluate(async () => {

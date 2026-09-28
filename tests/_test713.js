@@ -104,20 +104,21 @@ const { chromium } = require('playwright');
     setVis(''); const c = !qnVis && !qnVisNames.size;
     return a && b && c;
   }));
-  ok('⚠ tapped while 🔒 Just me picks Just Phil for it (a note nobody sees cannot need anybody) and lights; the step line says so', await page.evaluate(() => {
+  ok('⚠ tapped while 🔒 Just me lights and STAYS Just me (v7.32 — a heads-up for this phone; before, it picked Just Phil); the step line says so', await page.evaluate(() => {
     setVis(''); toggleAttn(); updateStepFlow();
     const sum = (document.querySelector('.g-step[data-step="5"] .g-step-sum') || {}).textContent || '';
-    return qnAsk && qnVisNames.has('Phil') && /✓ ⚠ Needs attention/.test($('qnVisChips').textContent.replace(/\s+/g, ' ')) && /📨 just Phil · ⚠ needs attention/.test(sum);
+    return qnAsk && !qnVisNames.size && !qnVis && /✓ ⚠ Needs attention/.test($('qnVisChips').textContent.replace(/\s+/g, ' ')) && /🔒 just you · ⚠ needs attention/.test(sum);
   }));
-  ok('SEND: the note goes to Phil and asks — it stays up big on his page until somebody answers (the old ❓)', await page.evaluate(async () => {
+  ok('SEND with 📨 Just Phil: the note goes to Phil and asks — it stays up big on his page until somebody answers (the old ❓)', await page.evaluate(async () => {
+    setVis('Phil');   // ⚠ v7.32 — ⚠ stays lit through the pick
     qnJobPick = 'Oak House'; const s = $('qnJob'); if (s) s.value = 'Oak House';
     $('askText').value = 'Call the inspector back'; saveNoteFrom('askText'); await new Promise(r => setTimeout(r, 50));
     const e = entries.find(x => x.details === 'Call the inspector back');
     return !!e && e.vis === 'Phil' && e.ask === true && !qnAsk && !qnVis && !qnVisNames.size;
   }));
-  ok('Just me turns ⚠ off with it; the words under the plates explain all four', await page.evaluate(() => {
-    setVis('crew'); toggleAttn(); const on = qnAsk; setVis('');
-    return on && !qnAsk && /⚠ stays up big on their page until somebody answers/.test($('visExplain').textContent) && /📨 goes to Phil's phone/.test($('visExplain').textContent);
+  ok('Just me keeps ⚠ lit (v7.32 — it is a heads-up for this phone then); the words under the plates explain all four', await page.evaluate(() => {
+    setVis('crew'); toggleAttn(); const on = qnAsk; setVis(''); const still = qnAsk; toggleAttn();
+    return on && still && !qnAsk && /⚠ stays up big on their page until somebody answers/.test($('visExplain').textContent) && /📨 goes to Phil's phone/.test($('visExplain').textContent);
   }));
   ok('on the phone the four sit two by two (a PC lays them four across)', await page.evaluate(() =>
     getComputedStyle($('qnVisChips')).getPropertyValue('--cols').trim() === '2'));
@@ -129,7 +130,7 @@ const { chromium } = require('playwright');
   const cp = await phil.page.evaluate(() => ({ crew: CREW_NAME, plates: [...document.querySelectorAll('#qnVisChips .pick-chip')].map(b => b.textContent.replace(/\s+/g, ' ').trim()),
     route: getComputedStyle($('crewRoute')).display, req: !!$('myReqStrip') && !$('crewRoute').contains($('myReqStrip')), feed: getComputedStyle($('crewFeedCard')).display }));
   ok('exactly four, from his side: 🔒 Just me · 📨 Just Eric (lit — reporting to Eric is the resting state) · 🔓 All crew · ⚠ Needs attention — no 📨 Kevin', cp.crew === 'Phil' && cp.plates.join('|') === '🔒 Just me|✓ 📨 Just Eric|🔓 All crew|⚠ Needs attention', cp.plates.join('|'));
-  ok('the old "Send it to" and "How soon" rows are gone from his page; his request lamps (SENT → ANSWERED) stay', cp.route === 'none' && cp.req, JSON.stringify(cp));
+  ok('the old "Send it to" and "How soon" rows are gone from his page; the request-lamp box sits outside them (empty since v7.32)', cp.route === 'none' && cp.req, JSON.stringify(cp));
   ok('no FROM THE CREW card on a crew phone', cp.feed === 'none');
   ok('⚠ on his phone = needs Eric\'s attention NOW: SEND makes the note routed to Eric, urgent, and unlocked for him', await phil.page.evaluate(async () => {
     window.scheduleSave = () => {}; toggleAttn();

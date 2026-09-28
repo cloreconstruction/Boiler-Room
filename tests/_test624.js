@@ -69,11 +69,11 @@ const { chromium } = require('playwright');
 
   console.log('— ⚠ v6.24 heads-up —');
 
-  ok('the ⚠ chip is built into the tag row, first thing', await page.evaluate(() => {
+  ok('the ⚠ Heads-up chip is OFF the tag row (v7.32 — ⚠ Needs attention in ⑤ is the heads-up now); 🧾 Receipt leads', await page.evaluate(() => {
     renderTagChips();
     const first = document.querySelector('#qnTagChips .pick-chip');
-    return first && /Heads-up/.test(first.textContent);
-  }));
+    return first && /Personal/.test(first.textContent) && !/Heads-up/.test($('qnTagChips').textContent);   // 🏷 v7.32 — 🔒 Personal · 🧾 Receipt · 📋 Build List lead, fixed
+  }), await page.evaluate(() => JSON.stringify({ first: (document.querySelector('#qnTagChips .pick-chip') || {}).textContent, txt: $('qnTagChips').textContent.replace(/s+/g, ' ').slice(0, 200) })));
 
   ok('tapped ⚠ + saved note = heads flag on the entry, then the chip resets', await page.evaluate(() => {
     entries = []; nextId = 1; qnHeads = false; qnHeadsToggle();
