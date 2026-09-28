@@ -2668,7 +2668,7 @@
     display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 6px;
     --chip-base: 12.5px; --chip-mul: 1;
   }
-  .tag-fixed { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }   /* 🏷 v7.32 — 🔒 Personal · 🧾 Receipt · 📋 Build List: one fixed row, his own tags below it */
+  .tag-fixed { grid-column: 1 / -1; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }   /* 🏷 v7.32 — one fixed row, his own tags below it · 🔒 v7.35 — 🧾 Receipt · 📋 Build List (the Personal chip is off ④); the row shares itself among whatever chips it holds */
   #qnTagChips .pick-chip, #nTagChips .pick-chip, #qnTagChips .mini-sel, #nTagChips .mini-sel {
     width: 100%; margin: 0; min-height: 36px; padding: 4px 6px;
     display: flex; align-items: center; justify-content: center; text-align: center;
@@ -3009,6 +3009,8 @@
   .pk-row { display: flex; align-items: center; gap: 5px; padding: 4px 0; border-top: 1px solid var(--grid); flex-wrap: wrap; }   /* 🎒 v6.84 — a touch smaller (Eric) */
   .pk-t { flex: 1 1 140px; min-width: 0; font-size: 14px; line-height: 1.3; cursor: pointer; }
   .pk-edit { flex: 1 1 140px; min-width: 0; min-height: 34px; font-size: 16px; }
+  .pk-edw { margin-left: 4px; vertical-align: middle; }   /* ✎ v7.35 — the edit plate after the words on a Summary pocket row */
+  .sum-m input.pk-edit { width: 100%; display: block; margin: 2px 0 4px; }
   .pk-btn { flex: 0 0 auto; min-height: 34px; padding: 4px 8px; border-radius: 8px; border: none; background: var(--btn-bg); color: var(--btn-ink); font: inherit; font-size: var(--fs12, 12px); font-weight: var(--fw8, 800); cursor: pointer; }
   .pk-btn.pk-ghost { background: none; border: 1px solid var(--border); color: var(--ink-2); font-weight: 600; }
   .rev-kind { font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); letter-spacing: .08em; color: var(--ink-muted); text-transform: uppercase; }
@@ -4301,7 +4303,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.34 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.35 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6929,8 +6931,13 @@ function renderTagChips() {
   // 🏷 v7.32 — Eric: "make the first 3 locked at the front of the tags in this order from top left to top right: personal: lock, receipt,
   // build list. all tags below that are the ones that get rearranged and deleted etc." One fixed row of three (.tag-fixed spans the
   // grid), his own tags start on the row under it; a list with no Personal tag still gets the lock chip first.
-  const lockTag = shown.find(t => t.toLowerCase() === 'personal') || 'Personal', restTags = shown.filter(t => t !== lockTag);   // the 🔒 Personal chip itself — a family name's own lock chip stays down among his tags
-  const html = `<div class="tag-fixed">${chipOf(lockTag)}${rcptChip}${qnBLChipHtml()}</div>` + restTags.map(chipOf).join('') +
+  // 🔒 v7.35 — Eric: "we no longer need the personal lock in tag it as its already defaulted as locked in unlock it." The fixed row
+  // is 🧾 Receipt · 📋 Build List now; the tag named Personal is not drawn in ④ at all. (A family name's own lock chip stays among
+  // his tags, and isLocked still honours a Personal tag or the Personal job wherever one is set — the lock itself is untouched.)
+  // Told him the difference: 🔒 Just me keeps a note from the crew; the Personal lock also kept it off Dropbox, the Wizard and
+  // the summaries. His call.
+  const restTags = shown.filter(t => t.toLowerCase() !== 'personal');
+  const html = `<div class="tag-fixed">${rcptChip}${qnBLChipHtml()}</div>` + restTags.map(chipOf).join('') +
     `<div class="chip-bar">
       <button type="button" class="pick-chip" onclick="tagNewInput(this)">➕ tag</button>
       <button type="button" class="pick-chip" onclick="tagArrangeToggle()" title="reorder or clean up the chips">✎ arrange</button>
@@ -18463,14 +18470,14 @@ function pickModel(kind, text) {
   // 🧠 v5.78 — Eric: "the wizard doesn't seem very bright lately." It was — short questions
   // without money-words were riding the ⚡ quick brain. The Wizard is where he ASKS things,
   // so every Wizard question gets the 🧠 smart brain now. Photos stay quick.
-  if (kind === 'wizard') return AI_SMART;
+  if (kind === 'wizard' || kind === 'wizard-plain') return AI_SMART;   // 🧙 v7.35 — wizard-plain: the same brain, thinking OFF (the second try when thinking ate the whole ceiling)
   const t = String(text || '');
   return (t.length > 220 || SMART_HINTS.test(t)) ? AI_SMART : AI_FAST;
 }
 // brightness/word/glyph, never colour: the brain is always spelled out
 function brainWord(model) { return model === AI_SMART ? '🧠 smart brain' : '⚡ quick brain'; }
 // one door for every Claude call in the app. Hand it a body WITHOUT a model and it picks one.
-async function aiCall(body, kind, text) {
+async function aiCall(body, kind, text, opts) {   // 🧙 v7.35 — opts.signal: the Wizard's clock
   const post = m => fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -18479,7 +18486,8 @@ async function aiCall(body, kind, text) {
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true'
     },
-    body: JSON.stringify(Object.assign({ model: m }, aiShape(m, kind), body))
+    body: JSON.stringify(Object.assign({ model: m }, aiShape(m, kind), body)),
+    signal: opts && opts.signal
   });
   let model = pickModel(kind, text), fell = false;
   let r = await post(model);
@@ -18506,11 +18514,11 @@ function busyShow(word) {
   clearTimeout(_busyT); _busyT = null;
   b.textContent = word; b.classList.remove('done'); b.hidden = false;
 }
-function busyDone(word) {
+function busyDone(word, ms) {   // 🧙 v7.35 — ms: how long the word stays (a failure stays 6 s)
   const b = $('busyBand'); if (!b) return;
   clearTimeout(_busyT);
   b.textContent = word || '✓ DONE'; b.classList.add('done'); b.hidden = false;
-  _busyT = setTimeout(() => { b.hidden = true; b.classList.remove('done'); }, 1100);
+  _busyT = setTimeout(() => { b.hidden = true; b.classList.remove('done'); }, ms || 1100);
 }
 function busyIs(re) { const b = $('busyBand'); return !!(b && !b.hidden && re.test(b.textContent)); }
 // the ASK plate under his thumb says THINKING… and will not take a second tap until it is done
@@ -18519,9 +18527,28 @@ function wizBtnBusy(on) {
   btn.classList.toggle('busy', !!on); btn.disabled = !!on;
   const tx = btn.querySelector('.wiz-side-tx'); if (tx) tx.textContent = on ? 'THINKING…' : 'ASK';
 }
+// 🧙 v7.35 — the band counts the seconds while the Wizard works (a long think reads as work, not a hang); a second try says so;
+// a failure is said on the band and STAYS long enough to read (6 s), never '✓ DONE'
+let _wizTick = null, _wizT0 = 0, _wizBand = '', _wizFail = '';
+function wizTickStop() { if (_wizTick) { clearInterval(_wizTick); _wizTick = null; } }
+function wizTickStart(word) {
+  if (!_wizTick) _wizT0 = Date.now();   // the second try keeps the same clock
+  _wizBand = word; busyShow(word);
+  wizTickStop();
+  _wizTick = setInterval(() => {
+    const b = $('busyBand'); if (!b || b.hidden || !/THINKING/.test(b.textContent)) { wizTickStop(); return; }
+    const s = Math.round((Date.now() - _wizT0) / 1000); b.textContent = _wizBand + (s >= 2 ? ' ' + s + ' s' : '');
+  }, 1000);
+}
 function busyWiz(state) {
-  if (state === 'thinking') { busyShow('🧙 THE WIZARD IS THINKING…'); wizBtnBusy(true); return; }
-  if (busyIs(/WIZARD/)) busyDone(state === 'sent' ? '🧙 ✓ SENT — the answer rides the hourly check' : '🧙 ✓ DONE');
+  if (state === 'thinking') { wizTickStart('🧙 THE WIZARD IS THINKING…'); wizBtnBusy(true); return; }
+  if (state === 'again') { wizTickStart('🧙 THINKING AGAIN — PLAINER THIS TIME…'); return; }
+  wizTickStop();
+  if (busyIs(/WIZARD|THINKING/)) {
+    if (_wizFail) busyDone('⚠ THE WIZARD DID NOT ANSWER — ' + _wizFail.split('. ')[0].replace(/\.$/, '').toUpperCase(), 6000);
+    else busyDone(state === 'sent' ? '🧙 ✓ SENT — the answer rides the hourly check' : '🧙 ✓ DONE');
+  }
+  _wizFail = '';
   wizBtnBusy(false);
 }
 // the grinder plate wears the upload count while pictures go up, and takes no tap meanwhile
@@ -19122,6 +19149,34 @@ function wizPendSave(again, leaving) {
   if (again && !leaving && ctx.q && typeof aiKey === 'function' && aiKey()) { closeWizFull(); askInstant(ctx.q); }
   return n;
 }
+// 🧙 v7.35 — THE WIZARD SAYS WHY. Eric, 2026-09-28: "i asked the wizard a question and it had the wizard is thinking banner but
+// then no popup or anything came up in the running log." His 8:17 question ("make a list for this week by project") failed on the
+// instant path and fell to the hourly request file with a whisper on the status line — and the hourly check is a road nobody
+// walks any more. Sonnet 5 bills its thinking INSIDE max_tokens: the Wizard's ceiling was 4000 (v7.21), a list question thought
+// the whole of it away and answered nothing → 'empty' → silence. Now: a 12000 ceiling; a second try with thinking OFF when the
+// first came back empty at the ceiling; the band counts the seconds; a three-minute clock; and a failure is SAID — the band, a
+// toast and the status line, in words, with why — while his question stays in the box for one more tap.
+const WIZ_MAX_TOKENS = 12000;
+const WIZ_TIMEOUT_MS = () => window._wizTimeoutMs || 180000;
+function wizTextOf(j) { return (((j || {}).content) || []).filter(c => c && c.type !== 'thinking' && c.type !== 'redacted_thinking').map(c => c.text || '').join('').trim(); }
+async function wizApiWhy(r) {   // the API's own reason, when it gave one — 'API 529 Overloaded'
+  let msg = '';
+  try { const j = await r.json(); msg = String((j && j.error && (j.error.message || j.error.type)) || ''); } catch (e) {}
+  return 'API ' + r.status + (msg ? ' ' + msg.replace(/\s+/g, ' ').slice(0, 160) : '');
+}
+function wizWhy(e) {   // in words, for the band, the toast and the status line
+  const m = String((e && e.message) || ''), name = String((e && e.name) || '');
+  if (name === 'AbortError') return 'it took more than three minutes. Try again, or ask a smaller question.';
+  if (/^API (401|403)/.test(m)) return 'the key was refused. Check the key in ⚙ Setup.';
+  if (/^API 429/.test(m)) return 'too many questions at once (the rate limit). Wait a minute and try again.';
+  if (/^API (529|503)/.test(m) || /overloaded/i.test(m)) return 'Anthropic is overloaded right now. Try again in a minute.';
+  if (/^API 5\d\d/.test(m)) return 'Anthropic had an error (' + m.slice(4, 7) + '). Try again in a minute.';
+  if (/^API 4\d\d/.test(m)) return 'the request was refused (' + m + ').';
+  if (m === 'empty') return 'it came back with no words at all. Try again.';
+  if (m === 'declined') return 'it declined to answer this one.';
+  if (name === 'TypeError' || /fetch|load failed|network/i.test(m)) return 'the connection dropped. Keep the app open while it thinks, then try again.';
+  return (m || 'something went wrong') + '. Try again.';
+}
 async function askInstant(what) {
   const st = $('askStatus');
   // ✎ a correction never goes to the model — it goes to the RECORD
@@ -19136,6 +19191,8 @@ async function askInstant(what) {
   st.dataset.busy = '1';
   st.textContent = '⚙ Asking the Wizard…';
   setWizLamp('thinking');
+  // 🧙 v7.35 — the clock: three minutes, then it is said in words (an answer that never came used to be a silent hourly fallback)
+  const wizAc = new AbortController(), wizClock = setTimeout(() => wizAc.abort(), WIZ_TIMEOUT_MS());
   // 📊 v5.09 — crew phones remember what they asked (question only, never the answer),
   // so Eric can see what info the crew keep hunting for and get ahead of it
   if (CREW_NAME) {
@@ -19166,15 +19223,24 @@ async function askInstant(what) {
     // 🧠 v5.42 — the router reads the question and picks. "where's the Chafin invoice" is a
     // lookup and goes quick; "how much did I spend at Spenard year to date" is thinking, and
     // goes smart. Eric can force either one in ⚙ Setup → the Wizard.
-    const { r, model: aiWho, fell: aiFell } = await aiCall({
-        max_tokens: 4000,   // 🧠 v7.21 — Sonnet 5 thinks inside this budget; about 1200 stay for the answer, as before
+    const askBody = {
+        max_tokens: WIZ_MAX_TOKENS,   // 🧙 v7.35 — 12000 (was 4000, v7.21): Sonnet 5 bills its THINKING inside this ceiling, and a list question thought the whole 4000 away and answered nothing
         system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 only if Eric SAYS it is urgent — a quick personal reminder ("remind me to…") is pri 1 no matter how old it gets>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Entries carry their weekday next to the date, and a note that said a relative day-word carries "saidDay" — the translation of that word against the NOTE\'S OWN date (a note\'s "tomorrow" is the day after that note, never after today); always trust saidDay over the bare word. Entries flagged "headsUp" are landmines Eric marked ⚠ — things that bite later work; when the question is about upcoming work, a job, or "what do I need to know", surface matching headsUp entries FIRST and mark each with ⚠. Never invent amounts or dates. For a SUMMARY or a LIST of what is open: open items only, and each item ONCE — the same thing can sit in the log, the board, the pocket and a to-do, so merge them; leave out anything done, answered, checked off or cleared, and every line in LINES ERIC TOOK OFF HIS LISTS; CORRECTIONS ERIC MADE beat the records; cite only entry ids that appear in RECENT LOG. When your answer relies on specific log entries, end with one final line exactly like: SOURCES: 123, 456 — listing those entries\' "id" values (omit the line entirely if none apply). Numbers read from a photo ("photoText") can be OCR-garbled — when an amount or count comes only from photoText, say it may be worth checking the photo.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
         messages: [{ role: 'user', content: buildAskContext(what) + fileCtx + '\n\nERIC\'S QUESTION: ' + what }]
-    }, 'wizard', what);
-    if (!r.ok) throw new Error('API ' + r.status);
-    const j = await r.json();
-    const text = (j.content || []).map(c => c.text || '').join('').trim();
-    if (!text) throw new Error('empty');
+    };
+    let { r, model: aiWho, fell: aiFell } = await aiCall(askBody, 'wizard', what, { signal: wizAc.signal });
+    if (!r.ok) throw new Error(await wizApiWhy(r));
+    let j = await r.json(), text = wizTextOf(j);
+    if (!text && j.stop_reason === 'max_tokens') {
+      // 🧙 v7.35 — the thinking ate the whole ceiling and not one word came back (Eric's "make a list for this week by project",
+      // 2026-09-28 08:17): ask ONCE more — the same smart brain, thinking OFF, so the whole budget is the answer
+      busyWiz('again');
+      ({ r, model: aiWho, fell: aiFell } = await aiCall(Object.assign({}, askBody, { max_tokens: 4000 }), 'wizard-plain', what, { signal: wizAc.signal }));
+      if (!r.ok) throw new Error(await wizApiWhy(r));
+      j = await r.json(); text = wizTextOf(j);
+    }
+    if (!text) throw new Error(j.stop_reason === 'refusal' ? 'declined' : 'empty');
+    const cutShort = j.stop_reason === 'max_tokens';   // words came, but not all of them — said under the answer
     // command? Claude returns bare JSON for "make a to-do…" style asks
     let cmd = null;
     if (text.startsWith('{')) { try { cmd = JSON.parse(text.split('\n')[0]); } catch (e) {} }
@@ -19233,15 +19299,21 @@ async function askInstant(what) {
     let clean = text, srcIds = [];
     const sm = text.match(/\n?\s*SOURCES?:\s*([\d,\s]+)\s*$/i);
     if (sm) { clean = text.slice(0, sm.index).trim(); srcIds = sm[1].split(/[\s,]+/).map(Number).filter(Boolean); }
+    if (cutShort) clean += '\n\n⚠ The answer was cut short — ask again, or ask a smaller question.';   // 🧙 v7.35 — words came, but not all of them
     _lastAnswer = { q: what, text: clean, srcIds, files: wizFiles, at: Date.now() };
     showWizFull(what, clean, srcIds, brainWord(aiWho) + (aiFell ? ' — the smart one was busy, so the quick one took it' : ''), wizFiles); // v5.08 — straight to full screen: the answer, nothing else
     saveRecentAnswer(what, clean);
     _lastAnswer.keep = wizKeep(what, clean, srcIds, brainWord(aiWho)).at;   // 🧙📜 v6.73 — kept, in Dropbox
   } catch (e) {
-    delete st.dataset.busy; wizIdleLamp();
-    st.textContent = '⚠ Instant answer failed (' + (e.message || 'connection') + ') — sent to the hourly check instead.';
-    await askViaFlag(what, true);
-  }
+    // 🧙 v7.35 — SAID, not whispered: why, in words, on the band (6 s), a toast and the status line; his question stays in the box
+    // so one tap asks again. Nothing goes to the hourly request file from here any more (that road promised an answer that never came).
+    const why = wizWhy(e);
+    delete st.dataset.busy;
+    _wizFail = why; wizIdleLamp();
+    st.textContent = '⚠ The Wizard did not answer — ' + why + ' Your question is still in the box — tap ASK to try again.';
+    const box = $('askText'); if (box && !box.value.trim()) { box.value = what; fitTa('askText'); }
+    toast('⚠ The Wizard did not answer — ' + why, false);
+  } finally { clearTimeout(wizClock); }
 }
 // 🧙📜 v6.73 — KEEP THE WIZARD. Eric: "look through the things ive asked the wizard and see if
 // there are patterns" — there was nothing to look through: a question was thrown away the moment
@@ -19499,9 +19571,10 @@ function renderSummary() {
   // 🎒 POCKET LIST (was TO GET, v6.76) — the pocket as it stands, then what got done
   // 🎒 v7.07 — today's before tomorrow's, as on the pocket card; a done row wears its ✓ once (in the glyph column)
   // ⚙ v7.18 — every row here and under POCKET — not done: "a send-to-grinder with the same four unlock it buttons" (pocketSendHtml)
+  const edw = (kind, id) => `<button type="button" class="pk-tiny pk-edw" onclick="pocketWordsEdit('${kind}', '${escq(String(id))}', this)" aria-label="edit the words" title="edit the words — reword it before it goes on to the grinder">✎</button>`;   // ✎ v7.35
   S.get = [
-    ...pocketByDay().map(it => line('🎒', esc(it.t), (it.day <= todayD ? 'today' : 'tomorrow') + pocketSendHtml('i', it.id))),
-    ...es.filter(e => e.pocket === 'done').map(e => line('✓', esc(String(e.details || '').replace(/^✓\s*/, '').replace(/\s+/g, ' ').slice(0, 110)), when(e) + pocketSendHtml('n', e.id))),
+    ...pocketByDay().map(it => line('🎒', `<span class="pk-w">${esc(it.t)}</span> ${edw('i', it.id)}`, (it.day <= todayD ? 'today' : 'tomorrow') + pocketSendHtml('i', it.id))),
+    ...es.filter(e => e.pocket === 'done').map(e => line('✓', `<span class="pk-w">${esc(String(e.details || '').replace(/^✓\s*/, '').replace(/\s+/g, ' ').slice(0, 110))}</span> ${edw('n', e.id)}`, when(e) + pocketSendHtml('n', e.id))),
   ];
   // 🎒 POCKET — not done: what left the pocket unfinished (flushed, overflow, swept by the morning). Eric: "make a
   // category for the pocket list flushes so if i don't get to the item itll go to the summary page and i can then
@@ -19511,7 +19584,7 @@ function renderSummary() {
   // check them as done or no longer relevant." Four plates on every row, and ✓ All done / ✕ None needed on top (two taps).
   // The list no longer follows TODAY / THIS WEEK: a leftover stays here until HE clears it (or it is 14 days old).
   S.pocket = pocketLeftList().sort((a, b) => +new Date(b.ts) - +new Date(a.ts)).map(e =>
-    line('🎒', `<b>${esc(pocketWords(e))}</b>`, `<span class="pk-leftrow"><span class="pk-meta">${e.pocket === 'flushed' ? 'flushed' : e.pocket === 'over' ? 'overflow' : 'not done'} · ${when(e)}</span><span class="pk-acts">
+    line('🎒', `<b class="pk-w">${esc(pocketWords(e))}</b> ${edw('n', e.id)}`, `<span class="pk-leftrow"><span class="pk-meta">${e.pocket === 'flushed' ? 'flushed' : e.pocket === 'over' ? 'overflow' : 'not done'} · ${when(e)}</span><span class="pk-acts">
       <button type="button" class="pk-mini" onclick="pocketBack(${e.id}, 0)" aria-label="back onto today's pocket list" title="back onto today's pocket list"><span aria-hidden="true">↩</span><b>Today</b></button>
       <button type="button" class="pk-mini" onclick="pocketBack(${e.id}, 1)" aria-label="back onto tomorrow's pocket list" title="back onto tomorrow's pocket list"><span aria-hidden="true">➡</span><b>Tomorrow</b></button>
       <button type="button" class="pk-mini pk-ok" onclick="pocketLeftDone(${e.id})" aria-label="it got done — check it off" title="it got done — check it off"><span aria-hidden="true">✓</span><b>Done</b></button>
@@ -19547,6 +19620,40 @@ function renderSummary() {
 
 // 🎒 v6.78 — the words of a pocket note without its stamp, and the way back onto tomorrow's pocket
 function pocketWords(e) { return String(e.details || '').replace(/^🎒 (Flushed|Overflow|Not done) — /, '').trim(); }
+// ✎ v7.35 — Eric: "on the pocket list both in the not done and done i think it needs an edit text button as i often word things
+// very differently for myself and would want to add or correct it before making it a phil or crew task and sending it onto them."
+// A ✎ after the words on every pocket row of the Summary (the live list, ✓ done, and POCKET — not done): the words become a box
+// right there; Enter or a tap away keeps them, Esc lets go. A live item's words change on the pocket card too; a pocket NOTE keeps
+// its stamp (🎒 Flushed — · 🎒 Not done — · ✓) and only the words change — on the log, the board and the Wizard alike — so what
+// ⚙ TO THE GRINDER sends on is the reworded thing.
+function pocketWordsEdit(kind, id, btn) {
+  const row = btn && btn.closest ? btn.closest('.sum-line') : null, w = row && row.querySelector('.pk-w');
+  if (!row || !w || row.querySelector('input.pk-edit')) return;
+  let cur = '';
+  if (kind === 'i') { const it = pocket().find(x => String(x.id) === String(id)); if (!it) return; cur = String(it.t || ''); }
+  else { const e = entries.find(x => String(x.id) === String(id)); if (!e) return; cur = pocketWords(e).replace(/^✓\s*/, ''); }
+  const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'pk-edit'; inp.value = cur; inp.maxLength = 300; inp.setAttribute('aria-label', 'the words');
+  let done = false;
+  const keep = () => { if (done) return; done = true; if (kind === 'i') pocketItemWordsSave(id, inp.value); else pocketNoteWordsSave(id, inp.value); };
+  inp.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); keep(); } else if (ev.key === 'Escape') { done = true; renderReview(); } };
+  inp.onblur = keep;
+  w.replaceWith(inp); if (btn) btn.hidden = true;
+  try { inp.focus(); inp.select(); } catch (e) {}
+}
+function pocketItemWordsSave(id, v) {
+  const it = pocket().find(x => String(x.id) === String(id)), t = String(v || '').trim().slice(0, 140);
+  if (it && t && t !== it.t) { it.t = t; scheduleSave(); renderPocket(); toast('✎ Kept ✓'); }
+  renderReview();
+}
+function pocketNoteWordsSave(id, v) {
+  const e = entries.find(x => String(x.id) === String(id)), t = String(v || '').trim().slice(0, 300);
+  if (e && t && t !== pocketWords(e).replace(/^✓\s*/, '')) {
+    const stamp = (String(e.details || '').match(/^(🎒 (?:Flushed|Overflow|Not done) — |✓ )/) || [''])[0];   // the stamp stays, the words change
+    e.details = stamp + t;
+    scheduleSave(); renderLog(); toast('✎ Kept — the new words go wherever it goes next ✓');
+  }
+  renderReview();
+}
 // ⚙ v7.18 — Eric: "Make everyone's pocket list private to their phone. But if we want to get it to the grinder and tag it, you
 // open the summary button, click on Pocket List or Pocket Not Done. Both will have a send-to-grinder with the same four unlock it
 // buttons. Adjust me: just Eric or Phil, or all crew, and needs attention." Under every pocket row on the Summary: the four
@@ -22318,7 +22425,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.34';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.35';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

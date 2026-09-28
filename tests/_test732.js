@@ -27,15 +27,15 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   const eric = await open();
   await eric.page.evaluate(() => { window.scheduleSave = () => {}; window.savePendingSoon = () => {}; window.publishSharedNotes = async () => {}; entries = []; todos = []; jobs = ['Oak House']; crew = ['Phil']; prefs.office = ['Phil']; renderJobSelects(); closePanels(); renderAll(); renderTagChips(); renderVisChips(); });
   ok('④ TAG IT no longer has a ⚠ Heads-up chip', await eric.page.evaluate(() => !/Heads-up/i.test($('qnTagChips').textContent)), await eric.page.evaluate(() => $('qnTagChips').textContent.replace(/\s+/g, ' ')));
-  ok('④ TAG IT: the first three sit fixed in one row, left to right 🔒 Personal · 🧾 Receipt · 📋 Build List, spanning the full width; his own tags start on the row under it', await eric.page.evaluate(() => {
+  ok('④ TAG IT: the fixed row is 🧾 Receipt · 📋 Build List (v7.35 — the 🔒 Personal chip is off ④ on Eric\'s word), one row, the full width; his own tags start on the row under it', await eric.page.evaluate(() => {
     prefs.tags = ['Home Depot', 'Personal', 'Spenard', 'Logan', 'Phil']; prefs.tagRows = 2; renderTagChips(); window._gOpen = { 4: true }; updateStepFlow();
     const fx = $('qnTagChips').querySelector('.tag-fixed'); if (!fx) return false;
     const chips = [...fx.querySelectorAll('.pick-chip')], c = chips.map(b => b.textContent.trim()), tops = chips.map(b => Math.round(b.getBoundingClientRect().top));
     const firstTag = $('qnTagChips').querySelector(':scope > .pick-chip');
-    return c.length === 3 && /Personal/.test(c[0]) && /Receipt/.test(c[1]) && /Build List/.test(c[2]) && tops.every(t => Math.abs(t - tops[0]) <= 2) &&
+    return c.length === 2 && /Receipt/.test(c[0]) && /Build List/.test(c[1]) && tops.every(t => Math.abs(t - tops[0]) <= 2) &&
       Math.abs(fx.getBoundingClientRect().width - $('qnTagChips').getBoundingClientRect().width) <= 2 && !!firstTag && /Home Depot/.test(firstTag.textContent) && firstTag.getBoundingClientRect().top > tops[0] + 20;
   }), await eric.page.evaluate(() => JSON.stringify([...$('qnTagChips').querySelectorAll('.pick-chip')].map(b => [b.textContent.trim(), Math.round(b.getBoundingClientRect().top), Math.round(b.getBoundingClientRect().left)]))));
-  ok('a tag list with no Personal tag still gets the 🔒 Personal lock chip first', await eric.page.evaluate(() => { prefs.tags = ['Home Depot']; renderTagChips(); const c = [...$('qnTagChips').querySelectorAll('.tag-fixed .pick-chip')].map(b => b.textContent.trim()); return c.length === 3 && /Personal/.test(c[0]) && /Receipt/.test(c[1]); }));
+  ok('the tag named Personal is never drawn in ④ (v7.35), whether or not his list has it', await eric.page.evaluate(() => { prefs.tags = ['Home Depot', 'Personal']; renderTagChips(); const c = [...$('qnTagChips').querySelectorAll('.tag-fixed .pick-chip')].map(b => b.textContent.trim()); return c.length === 2 && /Receipt/.test(c[0]) && !/Personal/.test($('qnTagChips').textContent); }));
   ok('the ASK plate fits: a narrow plate at phone width (under 120px), the brass picture inside it, the writing box keeping most of the row', await eric.page.evaluate(() => {
     const btn = $('wizSideBtn'), b = btn.getBoundingClientRect(), img = btn.querySelector('.cam-ic'), i = img ? img.getBoundingClientRect() : b, ta = $('askText').getBoundingClientRect(), row = $('askText').parentElement.getBoundingClientRect();
     return b.width <= 120 && i.right <= b.right + 1 && i.left >= b.left - 1 && i.bottom <= b.bottom + 1 && i.top >= b.top - 1 && ta.width >= row.width * 0.55;

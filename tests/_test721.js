@@ -148,7 +148,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await askInstant('what happened this week');
     await new Promise(r => setTimeout(r, 300));
     const lines = [...document.querySelectorAll('.wl-line .wl-t')].map(x => x.textContent.replace(/\s+/g, ' ').trim());
-    const b = _reqs.find(x => x.max_tokens === 4000) || {};
+    const b = _reqs.find(x => x.max_tokens === WIZ_MAX_TOKENS) || {};   // 🧙 v7.35 — the Wizard's ceiling is 12000 now (4000 thought itself empty on a list question)
     return b.model === 'claude-sonnet-5' && JSON.stringify(b.output_config) === '{"effort":"medium"}' && lines.some(l => /Two things happened/.test(l)) && lines.some(l => /paint is picked/.test(l)) && /smart brain/.test(document.body.textContent);
   }), await page.evaluate(() => [...document.querySelectorAll('.wl-line .wl-t')].map(x => x.textContent).join(' | ').slice(0, 300)));
   await page.evaluate(() => { lsSet('daylog-aikey', ''); if (typeof hideInlineAnswer === 'function') try { hideInlineAnswer(); } catch (e) {} });

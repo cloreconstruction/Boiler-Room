@@ -72,7 +72,7 @@ const { chromium } = require('playwright');
   ok('the ⚠ Heads-up chip is OFF the tag row (v7.32 — ⚠ Needs attention in ⑤ is the heads-up now); 🧾 Receipt leads', await page.evaluate(() => {
     renderTagChips();
     const first = document.querySelector('#qnTagChips .pick-chip');
-    return first && /Personal/.test(first.textContent) && !/Heads-up/.test($('qnTagChips').textContent);   // 🏷 v7.32 — 🔒 Personal · 🧾 Receipt · 📋 Build List lead, fixed
+    return first && /Receipt/.test(first.textContent) && !/Heads-up/.test($('qnTagChips').textContent);   // 🏷 v7.32 — the fixed row leads · 🔒 v7.35 — 🧾 Receipt first (the Personal chip is off ④)
   }), await page.evaluate(() => JSON.stringify({ first: (document.querySelector('#qnTagChips .pick-chip') || {}).textContent, txt: $('qnTagChips').textContent.replace(/s+/g, ' ').slice(0, 200) })));
 
   ok('tapped ⚠ + saved note = heads flag on the entry, then the chip resets', await page.evaluate(() => {
