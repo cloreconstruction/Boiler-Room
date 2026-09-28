@@ -56,7 +56,7 @@ const { chromium } = require('playwright');
     const r = x => x.getBoundingClientRect();
     return { shown: getComputedStyle(card).display !== 'none', title: $('cfFoldBtn').textContent.trim(), under: r(card).top >= r(qn).bottom - 1 && r(card).bottom <= r(log).top + 1 };
   });
-  ok('the card shows on Eric\'s page right under the grinder and above the running log, titled FROM THE CREW (two people sent things)', feed.shown && /👷 FROM THE CREW — showing 5 of 5/.test(feed.title) && feed.under, JSON.stringify(feed));
+  ok('the card shows on Eric\'s page right under the grinder and above the running log, titled FROM THE CREW (two people sent things)', feed.shown && /👷 WITH THE CREW — showing 5 of 5/.test(feed.title) && feed.under   /* 💬 v7.33 — both directions live here */, JSON.stringify(feed));
   const rows = await rowsOf();
   ok('newest first, and only what was unlocked for Eric or for everyone: a note for Kevin alone, a 🔒 locked note and a clock punch are not in it', rows.length === 5 && /Inspector is here now/.test(rows[0]) && /Window order/.test(rows[1]) && /Tarped the lumber/.test(rows[2]) && !rows.some(t => /long ladder|private reminder|Clocked in/.test(t)), JSON.stringify(rows.map(t => t.slice(0, 40))));
   ok('each row says who, when, the job and who it was for in words — 📨 for you · 🔓 for everyone · ✅ finished · ⚠ NEEDS YOUR ATTENTION', /👷 Phil ·.*Oak House · 📨 for you · ⚠ NEEDS YOUR ATTENTION/.test(rows[0]) && /👷 Kevin ·.*Pine Cabin · 🔓 for everyone/.test(rows[2]) && rows.some(t => /✓ DONE: set the forms/.test(t) && /✅ finished/.test(t)), JSON.stringify(rows.map(t => t.slice(0, 90))));
@@ -86,12 +86,12 @@ const { chromium } = require('playwright');
   }));
   ok('the "how many" wheel caps it, and the fold says how many wait in words', await page.evaluate(() => {
     prefs.crewFeedN = '3'; renderCrewFeed(); const a = document.querySelectorAll('#crewFeedList .cf-row').length === 3 && /showing 3 of 4/.test($('cfFoldBtn').textContent);
-    crewFeedFold(); const b = /▸ 👷 FROM THE CREW — 4 notes, tap to open/.test($('cfFoldBtn').textContent) && $('crewFeedList').style.display === 'none';
+    crewFeedFold(); const b = /▸ 👷 WITH THE CREW — 4 notes, tap to open/.test($('cfFoldBtn').textContent) && $('crewFeedList').style.display === 'none';
     crewFeedFold(); prefs.crewFeedN = 'all'; renderCrewFeed(); return a && b;
   }));
   ok('with only Phil sending, it reads FROM PHIL', await page.evaluate(() => {
     const k = _crewFeed.Kevin; delete _crewFeed.Kevin; renderCrewFeed(); const t = $('cfFoldBtn').textContent; _crewFeed.Kevin = k; renderCrewFeed();
-    return /👷 FROM PHIL — /.test(t);
+    return /👷 WITH PHIL — /.test(t);
   }));
 
   console.log('— ⚠ v7.13 four plates on Eric\'s unlocker —');

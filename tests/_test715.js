@@ -40,7 +40,7 @@ const { chromium } = require('playwright');
   const head = await page.evaluate(() => ({ btn: ($('cfFlushBtn') || {}).textContent, sameStyle: $('cfFlushBtn').classList.contains('pk-flush') && $('cfFlushBtn').classList.contains('pk-tiny'),
     rowBtns: [...document.querySelectorAll('#crewFeedList .cf-flush')].map(b => b.textContent.trim()) }));
   ok('the card\'s head wears the pocket\'s own ⤵ Flush plate, with the count it will take: ⤵ Flush 4', head.btn === '⤵ Flush 4' && head.sameStyle, JSON.stringify(head));
-  ok('every row has its own ⤵ Flush: "into your log" while its Sort card waits, "off the card" once it was handled', head.rowBtns.filter(t => t === '⤵ Flush — into your log').length === 3 && head.rowBtns.filter(t => t === '⤵ Flush — off the card').length === 1, JSON.stringify(head.rowBtns));
+  ok('every row has its own ⤵ Flush: "into your log" while its Sort card waits, "off the card" once it was handled', head.rowBtns.filter(t => t === '⤵ Flush to the grinder').length === 3 && head.rowBtns.filter(t => t === '⤵ Flush — off the card').length === 1   /* 💬 v7.33 — Eric's words */, JSON.stringify(head.rowBtns));
 
   ok('narrowed by the search ("dumpster") the plate says ⤵ Flush these 1 — and flushing takes only that one', await page.evaluate(() => {
     _cfQ = 'dumpster'; renderCrewFeed();
@@ -95,7 +95,7 @@ const { chromium } = require('playwright');
     const plate = document.querySelector('#crewFeedList .cf-flush').textContent.trim();
     document.querySelector('#crewFeedList .cf-flush').click();
     const e = entries.find(x => /Siding done on the north wall/.test(x.details || ''));
-    return noCard && plate === '⤵ Flush — into your log' && !!e && e.who === 'Phil' && e.type === 'Note' && e.details === 'Phil: ✅ FINISHED: Siding done on the north wall'
+    return noCard && plate === '⤵ Flush to the grinder' && !!e && e.who === 'Phil' && e.type === 'Note' && e.details === 'Phil: ✅ FINISHED: Siding done on the north wall'
       && e.job === 'Oak House' && !pendingQueue.some(p => /crew:Phil:18:/.test(p.id)) && pendDone.has(e.crewKey);
   }));
   ok('a note his OTHER device already logged (its card came back on this one) is NOT logged twice — old entries matched by name, exact words and day', await page.evaluate(async () => {
@@ -122,7 +122,7 @@ const { chromium } = require('playwright');
     const plate = [...document.querySelectorAll('#crewFeedList .cf-row')].map(r => r.textContent.replace(/\s+/g, ' ')).find(t => /Not paid for the deck/.test(t)) || '';
     $('cfFlushBtn').click();
     const e = entries.find(x => /Not paid for the deck yet/.test(x.details || ''));
-    return carded && /Flush — into your log/.test(plate) && todos[0].done === true && !!e && e.details === 'Phil: ✅ FINISHED: Not paid for the deck yet' && e.who === 'Phil'
+    return carded && /Flush to the grinder/.test(plate) && todos[0].done === true && !!e && e.details === 'Phil: ✅ FINISHED: Not paid for the deck yet' && e.who === 'Phil'
       && !pendingQueue.some(p => /crew:Phil:21:/.test(p.id));
   }));
   ok('the key is on every crew note the flush logs, so the next check is exact', await page.evaluate(() => {

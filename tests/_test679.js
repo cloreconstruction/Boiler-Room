@@ -217,23 +217,24 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   const errs2 = []; p2.on('pageerror', e => { if (!/Failed to fetch/.test(e.message)) errs2.push(e.message); });
   await p2.addInitScript(() => { try { localStorage.setItem('daylog-crew-name', 'Phil'); localStorage.removeItem('daylog-board-done'); } catch (e) {} });
   await p2.goto(appUrl); await p2.waitForTimeout(700);
-  ok('FROM ERIC shows the line with its cubes and sub-line, and a ✓ Done — tell Eric he can touch', await p2.evaluate(() => {
+  ok('WITH ERIC shows the line with its cubes and sub-line; 💬 Respond on a Board line opens with a ✓ Done chip, a plain note\'s box has none (💬 v7.33)', await p2.evaluate(() => {
     window.scheduleSave = () => {}; entries = []; nextId = 1; jobs = ['Mery']; curJob = 'Mery';
     crewShared = [{ id: 5, ts: new Date().toISOString(), text: 'frame the deck by Friday', job: 'Mery', direct: true, toAll: false, board: { p: 2, sub: [{ t: 'get the 2x6s', done: false }] } },
       { id: 6, ts: new Date().toISOString(), text: 'a plain note from Eric', job: 'Mery', direct: true }];
     renderCrewShared();
-    const card = $('crewSharedCard'), t = $('crewSharedList').textContent;
+    const card = $('crewSharedCard');
     const rowFive = [...$('crewSharedList').querySelectorAll('.sum-row')].find(r => /frame the deck/.test(r.textContent));
     const rowSix = [...$('crewSharedList').querySelectorAll('.sum-row')].find(r => /plain note/.test(r.textContent));
+    [...rowFive.querySelectorAll('button')].find(b => /💬 Respond/.test(b.textContent)).click();
+    [...rowSix.querySelectorAll('button')].find(b => /💬 Respond/.test(b.textContent)).click();
     return CREW_NAME === 'Phil' && card.style.display !== 'none' && !!rowFive && rowFive.querySelectorAll('.bd-cube.on').length === 2 && /get the 2x6s/.test(rowFive.textContent) &&
-      !![...rowFive.querySelectorAll('button')].find(b => /✓ Done — tell Eric/.test(b.textContent)) && !!rowSix && ![...rowSix.querySelectorAll('button')].find(b => /tell Eric/.test(b.textContent));
+      !!document.querySelector('#thBox-Eric-5 .th-done') && !document.querySelector('#thBox-Eric-6 .th-done') && ![...rowFive.querySelectorAll('button')].find(b => /tell Eric/.test(b.textContent));
   }));
-  ok('his ✓ writes a note for Eric carrying the line\'s id, and the chip turns to ✓ DONE', await p2.evaluate(() => {
-    const rowFive = [...$('crewSharedList').querySelectorAll('.sum-row')].find(r => /frame the deck/.test(r.textContent));
-    [...rowFive.querySelectorAll('button')].find(b => /tell Eric/.test(b.textContent)).click();
+  ok('his ✓ Done (inside Respond) writes a note for Eric carrying the line\'s id, and the row shows ✓ DONE', await p2.evaluate(() => {
+    document.querySelector('#thBox-Eric-5 .th-done').click();
     const e = entries[0];
     const row2 = [...$('crewSharedList').querySelectorAll('.sum-row')].find(r => /frame the deck/.test(r.textContent));
-    return !!e && /^✓ DONE: frame the deck/.test(e.details) && String(e.boardRef) === '5' && e.vis === 'Eric' && e.job === 'Mery' && /✓ DONE/.test(row2.textContent) && ![...row2.querySelectorAll('button')].find(b => /tell Eric/.test(b.textContent));
+    return !!e && /^↩ ✓ Done/.test(e.details) && String(e.boardRef) === '5' && e.re && e.re.owner === 'Eric' && e.vis === 'Eric' && e.job === 'Mery' && /✓ DONE/.test(row2.textContent) && ![...row2.querySelectorAll('button')].find(b => /tell Eric/.test(b.textContent));
   }));
   ok('a line Eric marked done shows ✓ DONE — Eric on the crew phone, no button', await p2.evaluate(() => {
     crewShared = [{ id: 9, ts: new Date().toISOString(), text: 'hang the door', job: 'Mery', direct: true, board: { p: 1, sub: [] }, boardDone: 'Eric' }];

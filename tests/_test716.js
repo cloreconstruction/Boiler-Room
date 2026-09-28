@@ -70,13 +70,13 @@ const { chromium } = require('playwright');
   });
   await page.evaluate(() => publishSharedNotes());
   const sh = await page.evaluate(() => { const j = JSON.parse(_up['/Clore DayLog/Crew/Phil/shared.json'] || '{}'); return { n: (j.notes || []).length, notes: j.notes || [], asks: j.asks || [], copies: _copies.slice() }; });
-  ok('Phil gets every note for him — 199 (the 200 less the one still open as a question); the list was the newest 120 for the WHOLE crew', sh.n === 199, 'notes: ' + sh.n);
+  ok('Phil gets every note for him — all 200 (💬 v7.33: the one still open as a question rides in the notes too, first on his card); the list was the newest 120 for the WHOLE crew', sh.n === 200, 'notes: ' + sh.n);
   const row = id => sh.notes.find(n => n.id === id) || {};
   const philCopies = re => sh.copies.filter(p => /\/Crew\/Phil\/photos\//.test(p) && re.test(p));   // Kevin's folder gets its own copies
   ok('a note past the 40th points at the copy already in his photos folder — no second copy made', row(4900).ph === '/Clore DayLog/Crew/Phil/photos/old.jpg' && !philCopies(/old\.jpg$/).length, JSON.stringify(row(4900)));
   ok('a new photo is copied once and pointed at', row(4995).ph === '/Clore DayLog/Crew/Phil/photos/new.jpg' && philCopies(/new\.jpg$/).length === 1);
   ok('a copy Dropbox REFUSED is not counted as done (no dead picture link); "already there" is', !row(4994).ph && row(4993).ph === '/Clore DayLog/Crew/Phil/photos/dup.jpg');
-  ok('an ANSWERED question joins his FROM ERIC log, marked; an open one rides only on the 📢 card', row(4997).ask === 'answered' && !sh.notes.some(n => n.id === 4996) && sh.asks.some(a => a.id === 4996));
+  ok('an ANSWERED question joins his FROM ERIC log, marked; an open one rides only on the 📢 card', row(4997).ask === 'answered' && sh.notes.some(n => n.id === 4996 && n.ask === 'open') && sh.asks.some(a => a.id === 4996));   // 💬 v7.33 — an open one rides in the notes too (first on WITH ERIC, with the Respond box)
   ok('new copies are capped per sweep (25), the next sweep carries on', await page.evaluate(async () => {
     for (let i = 0; i < 40; i++) entries[20 + i].photoPath = `/Clore DayLog/Job Notes/Oak House/Photos/p${i}.jpg`;
     _copies = []; for (const k in _sharedCache) delete _sharedCache[k];
@@ -295,19 +295,19 @@ const { chromium } = require('playwright');
     await refreshCrewCfg();
     return !knownTags().some(t => ['Grandma', 'Fishing', 'Tilly'].includes(t));
   }));
-  console.log('— 📢 (3) ⤵ Flush it on his "ERIC NEEDS AN ANSWER" card —');
-  ok('under the answer box: "⤵ Flush it — no answer needed · it goes in your log"', await phil.page.evaluate(() => {
-    crewAsks = [{ id: 900, q: 'The owner okayed moving the trailer', job: 'Oak House' }];
-    renderCrewAsks();
-    const b = document.querySelector('#crewAskCard .crew-ask-flush');
-    return !!b && /⤵ Flush it — no answer needed · it goes in your log/.test(b.textContent) && $('crewAskCard').style.display !== 'none';
+  console.log('— 💬 (3) an open ⚠ note sits first on WITH ERIC with ⤵ Flush to the grinder (the 📢 card is folded in, v7.33) —');
+  ok('the open ⚠ note is first on his WITH ERIC card, marked ⚠ NEEDS YOUR ATTENTION, with ⤵ Flush to the grinder and 💬 Respond; the old 📢 card draws nothing', await phil.page.evaluate(() => {
+    crewShared = [{ id: 7, ts: new Date(Date.now() - 3600000).toISOString(), text: 'Did the trim come?', job: 'Oak House', toAll: true, ask: 'answered' }, { id: 900, ts: new Date().toISOString(), text: 'The owner okayed moving the trailer', job: 'Oak House', ask: 'open' }];
+    crewAsks = [{ id: 900, q: 'The owner okayed moving the trailer', job: 'Oak House' }]; renderCrewAsks(); prefs.crewFold = false; renderCrewShared();
+    const rows = [...$('crewSharedList').querySelectorAll('.sum-row')];
+    return $('crewAskCard').style.display === 'none' && rows.length === 2 && /⚠ NEEDS YOUR ATTENTION · The owner okayed/.test(rows[0].textContent.replace(/\s+/g, ' ')) && !![...rows[0].querySelectorAll('button')].find(b => /Flush to the grinder/.test(b.textContent)) && !![...rows[0].querySelectorAll('button')].find(b => /💬 Respond/.test(b.textContent));
   }));
-  ok('a tap: into his running log (the words, the job), off the card, and the note to Eric says it was seen — no answer box to fill', await phil.page.evaluate(() => {
-    document.querySelector('#crewAskCard .crew-ask-flush').click();
-    const e = entries.find(x => x.askRef === 900);
-    return !!e && e.askFlush === true && e.job === 'Oak House' && /^⤵ Seen — no answer needed: The owner okayed moving the trailer/.test(e.details) && !e.mine && $('crewAskCard').style.display === 'none';
+  ok('a tap on ⤵ Flush: into his running log (the words, the job, "Eric:" in front), the copy carries sharedRef so Eric\'s phone reads it as seen — no answer box to fill; the ⚠ item stays until Eric flushes it too', await phil.page.evaluate(() => {
+    [...$('crewSharedList').querySelectorAll('.sum-row')][0].querySelector('.th-flush').click();
+    const e = entries.find(x => x.sharedRef === 900);
+    return !!e && e.job === 'Oak House' && /^Eric: The owner okayed moving the trailer/.test(e.details) && !e.mine && /⤵ flushed by you ✓/.test($('crewSharedList').textContent);
   }));
-  ok('an answered question sits in his FROM ERIC log marked "📢 ANSWERED"', await phil.page.evaluate(() => {
+  ok('an answered question sits in his WITH ERIC log marked "📢 ANSWERED"', await phil.page.evaluate(() => {
     crewShared = [{ id: 7, ts: new Date().toISOString(), text: 'Did the trim come?', job: 'Oak House', toAll: true, ask: 'answered' }];
     prefs.crewFold = false; renderCrewShared();
     return /📢 ANSWERED · Did the trim come\?/.test($('crewSharedList').textContent.replace(/\s+/g, ' '));

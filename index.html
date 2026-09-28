@@ -2904,6 +2904,17 @@
   .bd-pri--ro { min-width: 0; min-height: 0; padding: 2px 4px; border: none; vertical-align: middle; }
   .bd-cube { display: inline-block; width: 9px; height: 9px; border: 1.5px solid var(--accent); border-radius: 2px; background: transparent; }
   .bd-cube.on { background: var(--accent); }
+  /* 💬 v7.33 — the thread: the back-and-forth under an item, and its two cube lights (words ride with both) */
+  .th-lines { margin: 6px 0 0 8px; padding-left: 8px; border-left: 2px solid var(--border); }
+  .th-line { font-size: 13.5px; margin: 3px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .th-line.mine b { color: var(--accent); }
+  .th-cubes { display: inline-flex; align-items: center; gap: 4px; margin: 6px 0 0; font-size: var(--fs11, 11px); color: var(--ink-2); }
+  .th-cube { display: inline-block; width: 10px; height: 10px; border: 1.5px solid var(--accent); border-radius: 2px; background: transparent; }
+  .th-cube.lit { background: var(--accent); }
+  .th-cube.pulse { animation: thPulse 1.2s ease-in-out infinite; }
+  .th-word { margin-left: 4px; }
+  @keyframes thPulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .th-cube.pulse { animation: none; outline: 2px solid var(--accent); outline-offset: 1px; } }
   .bd-t { flex: 1 1 auto; min-width: 0; font-size: 15px; line-height: 1.35; cursor: pointer; overflow-wrap: anywhere; }
   .bd-t .bd-meta { font-size: var(--fs12, 12px); color: var(--ink-muted); }
   .bd-ck { flex: 0 0 44px; min-height: 44px; border: 2px solid var(--accent); border-radius: 10px; background: var(--surface-1); color: var(--ink); font: inherit; font-size: 18px; font-weight: var(--fw8, 800); cursor: pointer; }
@@ -4290,7 +4301,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.32 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.33 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9310,7 +9321,8 @@ function reviewAct(id, accept) {
         extra.crewKey = p.id;   // ⤵ v7.15 — which crew note this is, so a flush on any of his devices knows it is already in the log (cfInLog)
         if (pay.ph) { extra.photoPath = pay.ph; if (pay.phs && pay.phs.length > 1) extra.photoPaths = pay.phs; }   // 📷 v7.31 — Eric: "when i flush it into my log it'll be ready for summaries and journals and wizard right?" — the picture comes along (the copy in Eric's own Dropbox)
         if (pay.jrn) extra.jrn = true;   // 📖 v7.31 — a 📖 Journal photos note he stamped on HIS phone lands stamped here too: picked in that client's journal window
-        addEntry(pay.type === 'Mileage' ? 'Mileage' : pay.type === 'Note' ? 'Note' : 'Hours', `${pay.from}: ${pay.text || (pay.type === 'Mileage' ? 'Trip' : 'Shift')}`, j, extra);
+        const thr = pay.type === 'Note' ? thLines(pay.from, String(p.id).split(':')[2]) : '';   // 💬 v7.33 — the flushed thread is ONE entry with both sides' words
+        addEntry(pay.type === 'Mileage' ? 'Mileage' : pay.type === 'Note' ? 'Note' : 'Hours', `${pay.from}: ${pay.text || (pay.type === 'Mileage' ? 'Trip' : 'Shift')}${thr ? '\n' + thr : ''}`, j, extra);
         toast(`${pay.from}'s ${pay.type === 'Mileage' ? 'miles' : pay.type === 'Note' ? 'note' : 'hours'} logged ✓`);
       }
     } else if (p.kind === 'question') {
@@ -11736,14 +11748,15 @@ async function publishSharedNotes() {
     const list = [];
     // 📢 v7.16 — a note Eric sent with ⚠ (a question) rode ONLY in the ask card, and vanished from the man's phone the moment it
     // was answered. Answered (or seen — crewAskFlush) it joins his FROM ERIC log like any note, marked, so nothing Eric sent is lost.
-    for (const e of mineFor.filter(x => !x.ask || x.askDone)) {
+    for (const e of mineFor) {   // 💬 v7.33 — an open ⚠ note rides here too (ask: 'open'): first on his card, with the Respond box
       const row = {
         id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, text: e.details, job: e.job,
         tags: (e.tags && e.tags.length) ? e.tags : undefined, toAll: e.vis === 'crew' || undefined,
         heads: e.heads || undefined, // ⚠ v6.24 — the landmine flag travels with an unlocked note
         // 📨 v5.51 — crew-wide note that is ALSO aimed at this man: his card marks it direct
         direct: (Array.isArray(e.sendTo) && e.sendTo.includes(name)) || undefined,
-        ask: e.ask ? (e.askFlush ? 'seen' : 'answered') : undefined,
+        ask: e.ask ? (!e.askDone ? 'open' : e.askFlush ? 'seen' : 'answered') : undefined,
+        re: e.re || undefined, done: e.threadDone || undefined,   // 💬 v7.33 — a response rides attached to its item; done = Eric flushed his own
         ...brdShareBits(e)   // 📋 v6.79 — the cubes, the sub-lines, and who finished it
       };
       const src = e.photoPath || (e.photoPaths && e.photoPaths[0]);
@@ -11775,6 +11788,10 @@ async function publishSharedNotes() {
     Object.entries(prefs.crewAcks || {}).forEach(([k, v]) => {
       if (k.startsWith(name + ':')) acks[k.slice(name.length + 1)] = v;
     });
+    // 💬 v7.33 — his items Eric flushed (the crewKey copy in Eric's log, or a card closed off the WITH card): his second cube
+    const seen = {};
+    entries.forEach(e => { const k = String(e.crewKey || ''); if (k.startsWith('crew:' + name + ':')) seen[k.split(':')[2]] = e.ts instanceof Date ? e.ts.toISOString() : String(e.ts); });
+    cfGoneList().forEach(k => { if (k.startsWith('crew:' + name + ':')) { const id = k.split(':')[2]; if (!seen[id]) seen[id] = '1'; } });
     // v4.89 — to-dos with their name on them travel too: they land straight on that
     // person's list, already assigned. Eric marks one done (or reassigns) → it leaves
     // their phone on the next sweep. Crew never triage; they just see their orders.
@@ -11812,8 +11829,8 @@ async function publishSharedNotes() {
     // 📇 v6.17 — the job cards ride out with everything else: addresses, numbers, door codes.
     // A card Eric marked 🔒 is not filtered downstream, it is never written into this file.
     const cards = cardBook();
-    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, unlocks, trucks: truckBook, cards }, null, 1);
-    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(unlocks) + ':' + JSON.stringify(truckBook) + ':' + JSON.stringify(cards);
+    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, seen, unlocks, trucks: truckBook, cards }, null, 1);
+    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(seen) + ':' + JSON.stringify(unlocks) + ':' + JSON.stringify(truckBook) + ':' + JSON.stringify(cards);
     if (_sharedCache[name] === key) continue; // nothing changed for this person
     try {
       await dbxUpload(`${CREW_DIR}/${cleanName(name)}/shared.json`, body);
@@ -12123,6 +12140,7 @@ async function checkSharedNotes() {
     if (!t) return;
     const j = JSON.parse(t);
     crewShared = (j.notes || []).slice(0, CREW_NOTES_MAX);   // 📨 v7.16 — everything Eric sent (was the newest 100 — his side now sends up to 300)
+    crewSeen = (j.seen && typeof j.seen === 'object' && !Array.isArray(j.seen)) ? j.seen : {};   // 💬 v7.33 — my items Eric flushed
     // 📇 v6.17 — Eric's job cards land on this phone: address, numbers, door codes, per job.
     // Whatever he took off the sweep simply isn't in the file, so this can only ever hold
     // what he meant to send.
@@ -12267,6 +12285,7 @@ const asksAnswered = new Set(JSON.parse(lsGet('daylog-asks-answered') || '[]'));
 function renderCrewAsks() {
   const card = $('crewAskCard');
   if (!card) return;
+  card.style.display = 'none'; card.innerHTML = ''; return;   // 💬 v7.33 — folded into WITH ERIC: an open ⚠ note sits first there with the Respond box
   // in Eric's 👁 preview, derive from his own open asks so he sees exactly what pops up
   const list = (crewPreview
     ? entries.filter(e => e.ask && !e.askDone && e.vis && !e.sample).map(e => ({ id: e.id, q: e.details, job: e.job }))
@@ -12318,8 +12337,8 @@ function renderCrewShared() {
   if (!card) return;
   // in Eric's 👁 preview, derive the list from his own entries so he sees exactly what would land
   const all = crewPreview
-    ? entries.filter(e => e.vis && !e.sample && (!e.ask || e.askDone)).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ id: e.id, ts: e.ts, text: e.details, job: e.job, tags: e.tags, toAll: e.vis === 'crew', ph: e.photoPath || (e.photoPaths || [])[0], ask: e.ask ? (e.askFlush ? 'seen' : 'answered') : undefined, ...brdShareBits(e) }))
-    : crewShared;
+    ? entries.filter(e => e.vis && !e.sample && !e.re && (!e.ask || e.askDone)).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ id: e.id, ts: e.ts, text: e.details, job: e.job, tags: e.tags, toAll: e.vis === 'crew', ph: e.photoPath || (e.photoPaths || [])[0], ask: e.ask ? (e.askFlush ? 'seen' : 'answered') : undefined, ...brdShareBits(e) }))
+    : crewSharedRows();   // 💬 v7.33 — Eric's notes, my own two-sided ones, ⚠ first
   card.style.display = (isCrew() && all.length) ? '' : 'none';
   if (!isCrew() || !all.length) return;
   // 🧭 v5.80 — Eric: "Phil should be able to sort my From Erics by job or by tag."
@@ -12340,8 +12359,8 @@ function renderCrewShared() {
   if (btn) {
     // brightness + glyph + the spelled word: never a bare caret
     btn.textContent = folded
-      ? `▸ 📨 FROM ERIC — ${all.length} note${all.length === 1 ? '' : 's'}, tap to open`
-      : `▾ 📨 FROM ERIC — showing ${Math.min(cap, list.length)} of ${all.length}${sorted ? ' (sorted)' : ''}, tap to fold`;
+      ? `▸ 📨 WITH ERIC — ${all.length} note${all.length === 1 ? '' : 's'}, tap to open`
+      : `▾ 📨 WITH ERIC — showing ${Math.min(cap, list.length)} of ${all.length}${sorted ? ' (sorted)' : ''}, tap to fold`;   // 💬 v7.33 — both directions
     btn.setAttribute('aria-expanded', folded ? 'false' : 'true');
   }
   const bodyEl = $('crewSharedList');
@@ -12361,15 +12380,33 @@ function renderCrewShared() {
   $('crewSharedList').innerHTML = feSort + (list.length ? '' : `<div class="hint" style="margin: 4px 0;">Nothing under that sort — ✳ all brings every note back.</div>`) + list.slice(0, cap).map(n => {
     const d = new Date(n.ts);
     const id = escq(String(n.id == null ? '' : n.id));
-    return `<div class="sum-row" style="cursor: default; font-size: 14.5px; display: block;">
-      <span>${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${n.ask ? `<b style="letter-spacing:.5px;">📢 ${n.ask === 'seen' ? 'NO ANSWER NEEDED' : 'ANSWERED'} · </b>` : ''}${n.board && n.board.p ?`<span class="bd-pri bd-pri--ro" aria-label="priority ${BRD_WORDS[n.board.p]}" title="priority ${BRD_WORDS[n.board.p]}">${brdCubes(n.board.p)}</span> ` : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${(n.tags || []).length ? ' · 🏷 ' + esc(n.tags.join(', ')) : ''}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
-      ${n.board && n.board.sub && n.board.sub.length ? n.board.sub.map(s => `<div class="bd-sub${s.done ? ' done' : ''}"><span class="bd-t">${s.done ? '✓' : '○'} ${esc(s.t || '')}</span></div>`).join('') : ''}
+    if (n.own) {   // 💬 v7.33 — my own note to Eric, two-sided (he responded, or it went ⚠)
+      const st = thState(CREW_NAME, n.id, n.seen, n.done);
+      return `<div class="sum-row th-own" style="cursor: default; font-size: 14.5px; display: block;">
+      <span>📨 <b style="letter-spacing:.5px;">YOU → ERIC · </b>${n.attn ? '<b style="letter-spacing:.5px;">⚠ NEEDS ERIC\'S ATTENTION · </b>' : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
+      ${thLinesHtml(CREW_NAME, n.id)}
+      <div>${thCubesHtml(st, 'Eric')}</div>
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${n.ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(n.ph)}')">📷 Open the picture</button>` : ''}
-        <button type="button" class="pick-chip" onclick="crewNoteReply('${id}')">✎ Add your notes</button>
-        ${n.board ? (n.boardDone || crewBoardDoneSet().has(String(n.id)) ? `<span class="pick-chip sel" aria-disabled="true">✓ DONE${n.boardDone && n.boardDone !== CREW_NAME ? ' — ' + esc(n.boardDone) : ''}</span>` : `<button type="button" class="pick-chip" onclick="crewBoardDone('${id}')">✓ Done — tell Eric</button>`) : ''}
+        ${n.done ? '<span class="pick-chip sel" aria-disabled="true">⤵ flushed by you ✓</span>' : `<button type="button" class="pick-chip th-flush" onclick="thOwnFlush('${id}')" title="done with it — it leaves the card once Eric flushes it too">⤵ Flush — done with it</button>`}
+        <button type="button" class="pick-chip th-respond" onclick="thRespondOpen('${escq(CREW_NAME)}', '${id}', 'Eric')">💬 Respond</button>
       </div>
-      <div id="crRep-${id}"></div>
+      <div id="thBox-${escq(CREW_NAME)}-${id}"></div>
+    </div>`;
+    }
+    const st = thState('Eric', n.id, n.done, thFlushedSet().has(String(n.id)));
+    return `<div class="sum-row" style="cursor: default; font-size: 14.5px; display: block;">
+      <span>${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${n.ask ? `<b style="letter-spacing:.5px;">${n.ask === 'open' ? '⚠ NEEDS YOUR ATTENTION' : n.ask === 'seen' ? '📢 NO ANSWER NEEDED' : '📢 ANSWERED'} · </b>` : ''}${n.board && n.board.p ?`<span class="bd-pri bd-pri--ro" aria-label="priority ${BRD_WORDS[n.board.p]}" title="priority ${BRD_WORDS[n.board.p]}">${brdCubes(n.board.p)}</span> ` : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${(n.tags || []).length ? ' · 🏷 ' + esc(n.tags.join(', ')) : ''}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
+      ${n.board && n.board.sub && n.board.sub.length ? n.board.sub.map(s => `<div class="bd-sub${s.done ? ' done' : ''}"><span class="bd-t">${s.done ? '✓' : '○'} ${esc(s.t || '')}</span></div>`).join('') : ''}
+      ${thLinesHtml('Eric', n.id)}
+      ${st.responded || st.theirFlushed || st.myFlushed ? `<div>${thCubesHtml(st, 'Eric')}</div>` : ''}
+      <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+        ${n.ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(n.ph)}')">📷 Open the picture</button>` : ''}
+        ${st.myFlushed ? '<span class="pick-chip sel" aria-disabled="true">⤵ flushed by you ✓</span>' : `<button type="button" class="pick-chip th-flush" onclick="thSharedFlush('${id}')" title="into your log with the whole back-and-forth; Eric sees you flushed it">⤵ Flush to the grinder</button>`}
+        <button type="button" class="pick-chip th-respond" onclick="thRespondOpen('Eric', '${id}', 'Eric', ${n.board ? 'true' : 'false'})">💬 Respond</button>
+        ${n.board && (n.boardDone || crewBoardDoneSet().has(String(n.id))) ? `<span class="pick-chip sel" aria-disabled="true">✓ DONE${n.boardDone && n.boardDone !== CREW_NAME ? ' — ' + esc(n.boardDone) : ''}</span>` : ''}
+      </div>
+      <div id="thBox-Eric-${id}"></div>
     </div>`;
   }).join('');
 }
@@ -12382,6 +12419,156 @@ function crewSharedFold() {
   prefs.crewFold = !prefs.crewFold;
   scheduleSave();
   renderCrewShared();
+}
+// ================= 💬 v7.33 — THE RESPOND THREAD =================
+// Eric: "on the 'from eric' and 'from phil' should have these buttons: 'open the picture', 'flush to the grinder' instead of
+// 'add to your notes' (notes, log and grinder are the same thing right?), take out 'done tell eric' and instead have a
+// 'respond' button and itll pop up a text box and you type the question or response and hit send and then the item will stay
+// on both from eric and from phil on both pages and the response will come up and it can go back and forth responses. there
+// should be cube lights, first one lights up and pulses when there is a response to the original tagged item then second one
+// is when the other person flushes to grinder so that we know when it's been seen by the other. once both have flushed to
+// grinder it comes off the from eric or from phil" — then "go on the thread, yes to all 4" (a ✓ Done chip inside Respond so a
+// Board line still ticks off · the cards named WITH ERIC / WITH PHIL, since each holds both directions · a flushed thread lands
+// in the log as ONE entry with both sides' words · ⚠ items first).
+// HOW IT WORKS. An ITEM is a note one side sent the other — Eric's (owner 'Eric') or a crew member's (owner = his name) — known
+// by its owner and its id in the owner's own log. A RESPONSE is a plain Note in the responder's OWN log carrying
+// re: { owner, id } (↩ in front of its words), unlocked for the other side; it rides the pipes that already exist — Eric's go
+// out in shared.json like any note (re on the row), a crew member's come back in his entries file like any note (Eric's sweep
+// attaches them instead of carding them). Nothing is stored twice: a thread is COMPUTED on each phone from the two logs it
+// holds (its own entries + what the other side sent). A FLUSH of the OTHER side's item = a copy into your own log with the
+// whole back-and-forth in its words (Eric's copy = the crewKey entry ⤵ always made; a crew phone's copy carries sharedRef);
+// a flush of your OWN item = threadDone stamped on it (your log holds it already). Each side learns the other's flush the same
+// way: Eric reads sharedRef copies and threadDone off the crew file; a crew phone reads `seen` (his items Eric flushed) and
+// `done` (Eric's own) off shared.json. TWO-SIDED = it has a response, or it went ⚠; a two-sided item leaves a card only once
+// BOTH have flushed; a plain one leaves when the reader flushes it, as before. The cube lights: ① lit once the other side
+// has responded, pulsing until you respond or flush after their newest words; ② lit once the other side has flushed. The
+// 📢 ERIC NEEDS AN ANSWER card is folded in: an open ⚠ note sits FIRST on WITH ERIC with the Respond box, and a response (or a
+// flush) closes the ask on Eric's phone. Words ride with every state — the ⚠ line, the cube words, the plates' words — never
+// the colour alone.
+let _crewLog = {};   // crew folder name → his whole recent log as the sweep read it (responses, flush copies and threadDone are read off it)
+let crewSeen = {};   // a crew phone: my items Eric flushed — { id: at } off shared.json
+const thKey = (owner, id) => owner + ':' + id;
+function thMe() { return CREW_NAME || 'Eric'; }
+// every response to the item, both sides, oldest first
+function thResponses(owner, id) {
+  const out = [];
+  const take = (list, by) => (list || []).forEach(e => {
+    if (!e || !e.re || String(e.re.owner) !== String(owner) || String(e.re.id) !== String(id)) return;
+    out.push({ by, at: e.ts instanceof Date ? e.ts.toISOString() : String(e.ts || ''), t: String(e.details || e.text || '').replace(/^↩\s*/, ''), rid: e.id });
+  });
+  take(entries, thMe());
+  if (CREW_NAME) take(crewShared, 'Eric');
+  else Object.entries(_crewLog).forEach(([name, list]) => take(list, name));
+  return out.sort((a, b) => a.at.localeCompare(b.at));
+}
+function thLines(owner, id) { return thResponses(owner, id).map(r => `↩ ${r.by}: ${r.t}`).join('\n'); }
+function thWhen(iso) { const d = new Date(iso); return isNaN(+d) ? '' : (sameDay(d, new Date()) ? fmtTime(d) : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + fmtTime(d)); }
+function thLinesHtml(owner, id) {
+  const rs = thResponses(owner, id); if (!rs.length) return '';
+  return `<div class="th-lines">${rs.map(r => `<div class="th-line${r.by === thMe() ? ' mine' : ''}"><b>↩ ${esc(r.by === thMe() ? 'you' : r.by)}</b> <span class="hint" style="margin: 0;">${esc(thWhen(r.at))}</span> ${esc(r.t)}</div>`).join('')}</div>`;
+}
+// the pulse rests on the last thing I did on the item (my response, my flush) — kept in prefs, so my other devices agree
+function thSeenAt(owner, id) { return ((prefs.thSeen || {})[thKey(owner, id)]) || ''; }
+function thMark(owner, id) {
+  prefs.thSeen = prefs.thSeen || {}; prefs.thSeen[thKey(owner, id)] = new Date().toISOString();
+  const ks = Object.keys(prefs.thSeen); if (ks.length > 400) ks.slice(0, ks.length - 400).forEach(k => delete prefs.thSeen[k]);
+}
+function thState(owner, id, theirFlushed, myFlushed) {
+  const rs = thResponses(owner, id), me = thMe();
+  const theirs = rs.filter(r => r.by !== me), mine = rs.filter(r => r.by === me);
+  const newest = theirs.length ? theirs[theirs.length - 1].at : '';
+  const lastMine = [thSeenAt(owner, id), ...mine.map(r => r.at)].sort().pop() || '';
+  return { responded: theirs.length > 0, pulse: !!newest && newest > lastMine, theirFlushed: !!theirFlushed, myFlushed: !!myFlushed, twoSided: rs.length > 0 };
+}
+function thCubesHtml(st, them) {
+  const w1 = st.responded ? (st.pulse ? `↩ ${them} responded — new` : `↩ ${them} responded`) : 'no response yet';
+  const w2 = st.theirFlushed ? `⤵ ${them} flushed it` : `${them} has not flushed it`;
+  const words = [st.responded ? w1 : '', st.theirFlushed ? w2 : '', st.myFlushed ? '⤵ flushed by you' : ''].filter(Boolean).join(' · ');
+  return `<span class="th-cubes" title="${esc(w1)} · ${esc(w2)}"><span class="th-cube${st.responded ? ' lit' : ''}${st.pulse ? ' pulse' : ''}" aria-label="${esc(w1)}"></span><span class="th-cube${st.theirFlushed ? ' lit' : ''}" aria-label="${esc(w2)}"></span><span class="th-word">${esc(words)}</span></span>`;
+}
+// the item itself: my own note (entries) or the other side's (crewShared on a crew phone, _crewLog on Eric's)
+function thItem(owner, id) {
+  if (owner === thMe()) return entries.find(e => String(e.id) === String(id)) || null;
+  if (CREW_NAME) { const n = (crewShared || []).find(x => String(x.id) === String(id)); return n ? { job: n.job, text: n.text, ph: n.ph, ts: n.ts } : null; }
+  return (_crewLog[owner] || []).find(e => String(e.id) === String(id)) || null;
+}
+// 💬 Respond — one box on both phones. who = the crew member on the other end (Eric's phone); a crew phone always talks to Eric
+function thRespondOpen(owner, id, who, board) {
+  const box = $('thBox-' + owner + '-' + id); if (!box) return;
+  if (box.dataset.open) { box.dataset.open = ''; box.innerHTML = ''; return; }
+  box.dataset.open = '1';
+  box.innerHTML = `<textarea id="thT-${esc(owner)}-${esc(id)}" rows="2" class="grow" style="width: 100%; margin-top: 6px;" placeholder="your response — it stays with this item on both phones"></textarea>
+    <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+      <button type="button" class="btn-primary th-send" style="margin: 0;" onclick="thRespondSend('${escq(owner)}', '${escq(String(id))}', '${escq(who || '')}')">↩ Send</button>
+      ${board && CREW_NAME ? `<button type="button" class="pick-chip th-done" onclick="thRespondSend('${escq(owner)}', '${escq(String(id))}', '${escq(who || '')}', true)" title="says done AND checks the line off Eric's Board">✓ Done</button>` : ''}
+    </div>`;
+  const t = $('thT-' + owner + '-' + id); if (t) t.focus();
+}
+function thRespondSend(owner, id, who, done) {
+  if (crewPreview) { toast('👁 Preview — on a crew phone this sends the response straight to you'); return; }
+  const t = $('thT-' + owner + '-' + id);
+  let txt = ((t && t.value) || '').trim();
+  if (done) txt = txt ? '✓ Done — ' + txt : '✓ Done';
+  if (!txt) { toast('Type the response first', false); if (t) t.focus(); return; }
+  const item = thItem(owner, id), job = item && jobs.includes(item.job) ? item.job : (CREW_NAME && curJob ? curJob : '—');
+  const nid = isNaN(+id) ? id : +id;
+  const extra = { re: { owner, id: nid }, noSniff: true, vis: CREW_NAME ? 'Eric' : (who || owner) };
+  if (done && CREW_NAME) { extra.boardRef = nid; const s = crewBoardDoneSet(); s.add(String(id)); lsSet('daylog-board-done', JSON.stringify([...s].slice(-100))); }   // ✓ Done inside Respond: Eric's Board line ticks off too
+  addEntry('Note', '↩ ' + txt.slice(0, 600), job, extra);
+  thMark(owner, id);
+  const box = $('thBox-' + owner + '-' + id); if (box) { box.dataset.open = ''; box.innerHTML = ''; }
+  if (CREW_NAME) renderCrewShared(); else { publishSharedNotes(); renderCrewFeed(); }
+  toast(CREW_NAME ? '↩ Sent to Eric — it stays with the item on both phones ✓' : `↩ Sent to ${who || owner} — it stays with the item on both phones ✓`);
+}
+// a crew phone flushes Eric's item: a copy into this log — the words of both sides — carrying sharedRef (Eric's sweep reads it as "seen")
+function thFlushedSet() { try { return new Set(JSON.parse(lsGet('daylog-shared-flushed') || '[]')); } catch (e) { return new Set(); } }
+function thSharedFlush(id) {
+  if (crewPreview) { toast('👁 Preview — on a crew phone this puts your note into their log and tells you they flushed it'); return; }
+  const n = (crewShared || []).find(x => String(x.id) === String(id)); if (!n) return;
+  const lines = thLines('Eric', id), nid = isNaN(+id) ? id : +id;
+  addEntry('Note', `Eric: ${String(n.text || '').trim()}${lines ? '\n' + lines : ''}`.slice(0, 2000), jobs.includes(n.job) ? n.job : '—', { sharedRef: nid, noSniff: true, who: 'Eric', ...(n.ph ? { photoPath: n.ph } : {}) });
+  const s = thFlushedSet(); s.add(String(id)); lsSet('daylog-shared-flushed', JSON.stringify([...s].slice(-300)));
+  thMark('Eric', id);
+  renderCrewShared();
+  toast('⤵ Into your log ✓ — Eric sees you flushed it');
+}
+// your OWN item: flushing it = done with it; the thread's words are kept on the entry, and the other side learns of it
+function thOwnFlush(id) {
+  const e = entries.find(x => String(x.id) === String(id)); if (!e) return;
+  e.threadDone = new Date().toISOString();
+  const rs = thResponses(thMe(), id); if (rs.length) e.thread = rs.map(r => ({ by: r.by, at: r.at, t: r.t }));
+  if (e.ask && !e.askDone) { e.askDone = e.threadDone; e.askFlush = 'Eric'; }
+  thMark(thMe(), id);
+  scheduleSave();
+  if (CREW_NAME) renderCrewShared(); else { publishSharedNotes(); renderCrewFeed(); }
+  toast('⤵ Done with it ✓ — it leaves the card once they flush it too');
+}
+// a crew phone's own two-sided notes (Eric responded, or it went ⚠) sit on WITH ERIC beside his
+function crewOwnThreadRows() {
+  if (!CREW_NAME) return [];
+  return entries.filter(e => e.type === 'Note' && !e.re && e.sharedRef == null && !e.mine && !e.personal && !e.sample
+    && (e.vis === 'Eric' || e.vis === 'crew' || (Array.isArray(e.vis) && e.vis.includes('Eric')))
+    && (thResponses(CREW_NAME, e.id).length || (e.route === 'Eric' && e.urg === 'now')) && !(e.threadDone && crewSeen[String(e.id)]))
+    .map(e => ({ own: true, id: e.id, ts: e.ts instanceof Date ? e.ts.toISOString() : String(e.ts || ''), text: e.details, job: e.job, ph: e.photoPath || (e.photoPaths || [])[0], attn: e.route === 'Eric' && e.urg === 'now', done: e.threadDone, seen: crewSeen[String(e.id)] }));
+}
+// what WITH ERIC lists: Eric's notes (his responses ride inside the threads), plus my own two-sided ones; ⚠ first, then newest
+function crewSharedRows() {
+  const flushed = thFlushedSet();
+  const rows = (crewShared || []).filter(n => !n.re).filter(n => {
+    if (!flushed.has(String(n.id))) return true;
+    const two = thResponses('Eric', n.id).length || n.ask === 'open';
+    return two && !n.done;   // a two-sided item stays after my flush until Eric flushes it too
+  });
+  const own = crewOwnThreadRows();
+  const attn = n => n.own ? (n.attn && !n.done ? 1 : 0) : (n.ask === 'open' ? 1 : 0);
+  return [...rows, ...own].sort((a, b) => (attn(b) - attn(a)) || String(b.ts || '').localeCompare(String(a.ts || '')));
+}
+// Eric's own two-sided notes to one man (he responded, or it asks ⚠) sit on WITH PHIL beside Phil's
+function ericOwnThreadRows(name) {
+  if (CREW_NAME) return [];
+  return entries.filter(e => e.type === 'Note' && !e.re && e.sharedRef == null && e.vis && !e.sample && !isLocked(e) && visFor(e, name)
+    && (thResponses('Eric', e.id).length || (e.ask && !e.askDone)) && !(e.threadDone && e.seenBy && e.seenBy[name]))
+    .map(e => ({ own: true, e, who: name, key: 'own:' + e.id, folder: '' }));
 }
 // ================= 👷 v7.13 — FROM THE CREW =================
 // Eric: "The log that Phil has below the Grinder button that says 'From Eric' and it's got a little searchable area is that on
@@ -12409,7 +12596,8 @@ function cfPhotoPath(p, folder) {
   return cut > 0 ? folder + p.slice(cut) : '';
 }
 function crewFeedTake(name, folder, list) {
-  _crewFeed[name] = (Array.isArray(list) ? list : []).filter(e => e && !e.mine && !e.sample && !e.personal && !e.askFlush   // ⤵ v7.16 — "seen" is not a message
+  _crewLog[name] = Array.isArray(list) ? list : [];   // 💬 v7.33 — his whole recent log: responses, flushed copies and threadDone are read off it
+  _crewFeed[name] = (Array.isArray(list) ? list : []).filter(e => e && !e.mine && !e.sample && !e.personal && !e.askFlush && !e.re && e.sharedRef == null   // ⤵ v7.16 — "seen" is not a message · 💬 v7.33 — a response or a flushed copy is thread bookkeeping, not a row
     && !(e.pocket && !e.pocketSent)   // 🎒 v7.18 — his pocket is his, even from a phone that has not loaded v7.18 yet
     && (e.type === 'Note' || e.type === 'Done') && String(e.details || '').trim() && cfForMe(e))
     .slice(0, 120).map(e => ({ e, who: name, folder, key: `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}` }));
@@ -12422,7 +12610,15 @@ function crewFeedTake(name, folder, list) {
 function cfGoneList() { return Array.isArray(prefs.crewFeedGone) ? prefs.crewFeedGone : (prefs.crewFeedGone = []); }
 function crewFeedRows() {
   const gone = new Set(cfGoneList());
-  return Object.values(_crewFeed).flat().filter(r => !gone.has(r.key)).sort((a, b) => String(b.e.ts).localeCompare(String(a.e.ts)));
+  const rows = Object.values(_crewFeed).flat().filter(r => {
+    if (!gone.has(r.key)) return true;
+    const two = thResponses(r.who, r.e.id).length || (r.e.route === 'Eric' && r.e.urg === 'now');   // 💬 v7.33 — a two-sided item stays after my flush until he flushes it too
+    return two && !r.e.threadDone;
+  });
+  const own = crew.flatMap(n => ericOwnThreadRows(n));   // 💬 v7.33 — my own two-sided notes to him sit here too
+  const attn = r => r.own ? (r.e.ask && !r.e.askDone ? 1 : 0) : (r.e.route === 'Eric' && r.e.urg === 'now' ? 1 : 0);
+  const tsOf = r => r.e.ts instanceof Date ? r.e.ts.toISOString() : String(r.e.ts || '');   // my own rows carry a Date, his an ISO string
+  return [...rows, ...own].sort((a, b) => (attn(b) - attn(a)) || tsOf(b).localeCompare(tsOf(a)));   // ⚠ first, then newest
 }
 function crewFeedFold() { prefs.crewFeedFold = !prefs.crewFeedFold; scheduleSave(); renderCrewFeed(); }
 let _cfShownKeys = [];   // what the card lists right now (the search and the wheels respected) — what ⤵ Flush takes
@@ -12459,7 +12655,9 @@ function crewFeedFlushKeys(keys) {
   let logged = 0;
   try {
     keys.forEach(k => {
+      if (k.startsWith('own:')) { thOwnFlush(k.slice(4)); return; }   // 💬 v7.33 — my own two-sided note: done with it
       const r = byKey.get(k), waiting = pendingQueue.some(p => p.id === k);
+      if (r) thMark(r.who, r.e.id);   // 💬 v7.33 — the pulse rests
       if (!r) { if (waiting) { reviewAct(k, 'log'); logged++; } }
       else if (r.e.type === 'Done') {
         if (waiting) reviewAct(k, 'log');   // checks off the to-do it answers (srcRef), as ✓ on its Sort card always did
@@ -12474,6 +12672,7 @@ function crewFeedFlushKeys(keys) {
   if (gone.length > 800) prefs.crewFeedGone = gone.slice(-800);
   scheduleSave();
   if (logged) { renderTodos(); renderKpis(); renderLog(); renderPendBanner(); savePendingSoon(); if ($('revModal').classList.contains('show') && _revTab === 'sort') renderReview(); }
+  publishSharedNotes();   // 💬 v7.33 — "seen" rides out to his phone (his second cube)
   renderCrewFeed();
   return logged;
 }
@@ -12501,7 +12700,7 @@ function renderCrewFeed() {
   card.style.display = all.length ? '' : 'none';
   if (!all.length) return;
   const people = [...new Set(all.map(r => r.who))];
-  const title = people.length === 1 ? `FROM ${people[0].toUpperCase()}` : 'FROM THE CREW';
+  const title = people.length === 1 ? `WITH ${people[0].toUpperCase()}` : 'WITH THE CREW';   // 💬 v7.33 — both directions live here now
   const jobsIn = [...new Set(all.map(r => r.e.job).filter(j => j && j !== '—'))].sort();
   if (_cfWho && !people.includes(_cfWho)) _cfWho = '';
   if (_cfJob && !jobsIn.includes(_cfJob)) _cfJob = '';
@@ -12542,18 +12741,39 @@ function renderCrewFeed() {
         <option value="">📂 every job</option>${jobsIn.map(j => `<option value="${esc(j)}"${_cfJob === j ? ' selected' : ''}>${_cfJob === j ? '✓ ' : ''}${esc(j)}</option>`).join('')}</select>` : ''}
       ${narrowed ? `<button type="button" class="pick-chip" style="font-size: var(--fs11, 11px); padding: 4px 10px; min-height: 28px;" onclick="_cfWho = ''; _cfJob = ''; _cfQ = ''; renderCrewFeed()">✕ clear</button>` : ''}
     </div>`;
+  const gone = new Set(cfGoneList());
   body.innerHTML = find + (list.length ? '' : `<div class="hint" style="margin: 4px 0;">Nothing matches — ✕ clear brings every note back.</div>`) + list.slice(0, cap).map(r => {
     const e = r.e, d = new Date(e.ts);
     const when = isNaN(+d) ? '' : (sameDay(d, new Date()) ? fmtTime(d) : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + fmtTime(d));
     const ph = cfPhotoPath(e.photoPath || (e.photoPaths || [])[0], r.folder);
+    if (r.own) {   // 💬 v7.33 — my own note to him, two-sided (he responded, or it asks ⚠)
+      const st = thState('Eric', e.id, e.seenBy && e.seenBy[r.who], !!e.threadDone);
+      return `<div class="sum-row cf-row th-own" style="cursor: default; font-size: 14.5px; display: block;">
+      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">📨 <b>you → ${esc(r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''}${e.ask && !e.askDone ? ' · <b>⚠ NEEDS THEIR ATTENTION</b>' : ''}</div>
+      <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${esc(String(e.details || '').slice(0, 600))}</div>
+      ${thLinesHtml('Eric', e.id)}
+      <div>${thCubesHtml(st, r.who)}</div>
+      <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+        ${ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(ph)}')">📷 Open the picture</button>` : ''}
+        ${e.threadDone ? '<span class="pick-chip sel" aria-disabled="true">⤵ flushed by you ✓</span>' : `<button type="button" class="pick-chip cf-flush th-flush" onclick="thOwnFlush('${escq(String(e.id))}')" title="done with it — it leaves the card once ${esc(r.who)} flushes it too">⤵ Flush — done with it</button>`}
+        <button type="button" class="pick-chip th-respond" onclick="thRespondOpen('Eric', '${escq(String(e.id))}', '${escq(r.who)}')">💬 Respond</button>
+      </div>
+      <div id="thBox-Eric-${escq(String(e.id))}"></div>
+    </div>`;
+    }
     const waiting = cfWillLog(r);   // ⤵ v7.15 — what the flush will do with it, said on its plate
+    const st = thState(r.who, e.id, !!e.threadDone, gone.has(r.key));
     return `<div class="sum-row cf-row" style="cursor: default; font-size: 14.5px; display: block;">
       <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">👷 <b>${esc(r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''} · ${cfForWord(e)}${e.type === 'Done' ? ' · ✅ finished' : ''}${e.route === 'Eric' && e.urg === 'now' ? ' · <b>⚠ NEEDS YOUR ATTENTION</b>' : ''}</div>
       <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${esc(String(e.details || '').slice(0, 600))}</div>
+      ${thLinesHtml(r.who, e.id)}
+      ${st.responded || st.theirFlushed || st.myFlushed ? `<div>${thCubesHtml(st, r.who)}</div>` : ''}
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(ph)}')">📷 Open the picture</button>` : ''}
-        <button type="button" class="pick-chip cf-flush" onclick="crewFeedFlushOne('${escq(r.key)}')" title="${waiting ? 'Into your running log under ' + esc(r.who) + '\'s name, and off this card' : 'Already handled — it just leaves this card'}">${waiting ? '⤵ Flush — into your log' : '⤵ Flush — off the card'}</button>
+        ${st.myFlushed ? '<span class="pick-chip sel" aria-disabled="true">⤵ flushed by you ✓</span>' : `<button type="button" class="pick-chip cf-flush" onclick="crewFeedFlushOne('${escq(r.key)}')" title="${waiting ? 'Into your running log under ' + esc(r.who) + '\'s name, with the whole back-and-forth' : 'Already in your log — it just leaves this card'}">${waiting ? '⤵ Flush to the grinder' : '⤵ Flush — off the card'}</button>`}
+        <button type="button" class="pick-chip th-respond" onclick="thRespondOpen('${escq(r.who)}', '${escq(String(e.id))}', '${escq(r.who)}')">💬 Respond</button>
       </div>
+      <div id="thBox-${escq(r.who)}-${escq(String(e.id))}"></div>
     </div>`;
   }).join('');
 }
@@ -12854,6 +13074,16 @@ async function checkCrewLogs() {
         if (e.type === 'Note' && e.boardRef != null) {
           const src = entries.find(x => String(x.id) === String(e.boardRef));
           if (src && !(src.board && src.board.done)) { const b = brdTouch(src); b.done = new Date().toISOString(); b.by = name; scheduleSave(); publishSharedNotes(); if ($('revModal').classList.contains('show') && _revTab === 'board') renderReview(); }
+        }
+        // 💬 v7.33 — a flushed copy of one of Eric's notes (sharedRef) = he flushed it: seen; a response (re) closes an open ⚠ ask; neither is a card
+        if (e.sharedRef != null) {
+          const src = entries.find(x => String(x.id) === String(e.sharedRef));
+          if (src && !(src.seenBy && src.seenBy[name])) { src.seenBy = src.seenBy || {}; src.seenBy[name] = String(e.ts || new Date().toISOString()); if (src.ask && !src.askDone) { src.askDone = src.seenBy[name]; src.askFlush = name; } scheduleSave(); publishSharedNotes(); }
+          return;
+        }
+        if (e.re) {
+          if (String(e.re.owner) === 'Eric') { const src = entries.find(x => String(x.id) === String(e.re.id)); if (src && src.ask && !src.askDone) { src.askDone = String(e.ts || new Date().toISOString()); scheduleSave(); publishSharedNotes(); } }
+          return;
         }
         const key = `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}`;
         if (pendDone.has(key) || pendingQueue.some(p => p.id === key)) return;
@@ -22080,7 +22310,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.32';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.33';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
