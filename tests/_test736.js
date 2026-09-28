@@ -35,13 +35,18 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('the monthly CAP (a 429, enforced_spend_limit_reached): the words say Anthropic has paused the account, until WHEN on his own clock (00:00 UTC Oct 1 = 4:00 PM Sep 30 in Alaska), that buying credits does not lift it, and where in the Console it is lifted — Settings → Limits', await page.evaluate(async () => {
     await ask('what is open on Oak House', { status: 429, json: { type: 'error', error: { type: 'rate_limit_error', message: "You have reached your API usage limits: your organization has crossed its monthly API usage threshold, set based on your organization's API tier. You will regain access on 2026-10-01 at 00:00 UTC.", details: { error_code: 'enforced_spend_limit_reached' } } } });
     const st = $('askStatus').textContent, band = (_dones.find(d => /⚠/.test(d.w)) || {}).w || '';
-    return _api.calls === 2 && /Anthropic has paused your account until/.test(st) && /Sep 30/.test(st) && /4:00 PM/.test(st) && /monthly spending cap/.test(st) && /Buying credits does not lift it/.test(st) && /Settings, then Limits/.test(st) &&
-      !/too many questions/.test(st) && _said.some(m => /paused your account/.test(m)) && /ANTHROPIC HAS PAUSED YOUR ACCOUNT UNTIL/.test(band) && $('askText').value === 'what is open on Oak House';
+    return _api.calls === 2 && /Anthropic has paused your API account until/.test(st) && /Sep 30/.test(st) && /4:00 PM/.test(st) && /monthly spending cap/.test(st) && /buying credits does not lift it/.test(st) && /platform\.claude\.com/.test(st) && /claude\.ai/.test(st) && /Settings, then Limits/.test(st) &&
+      !/too many questions/.test(st) && _said.some(m => /paused your API account/.test(m)) && /ANTHROPIC HAS PAUSED YOUR API ACCOUNT UNTIL/.test(band) && $('askText').value === 'what is open on Oak House';
   }), await page.evaluate(() => JSON.stringify({ st: $('askStatus').textContent, dones: _dones, calls: _api.calls })));
   ok('a spend limit he set HIMSELF (a 400, "reached your specified API usage limits"): the words say so and point at Settings → Billing → Spend limits', await page.evaluate(async () => {
     await ask('who is the plumber', { status: 400, json: { type: 'error', error: { type: 'invalid_request_error', message: 'You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC.' } } });
     const st = $('askStatus').textContent;
-    return /Anthropic has paused your account until/.test(st) && /Sep 30/.test(st) && /spend limit set in your Anthropic account/.test(st) && /Buying credits does not lift it/.test(st) && /Settings, then Billing, then Spend limits/.test(st) && !/the request was refused/.test(st);
+    return /Anthropic has paused your API account until/.test(st) && /Sep 30/.test(st) && /monthly spend limit set in that account/.test(st) && /different wallet from the Claude app/.test(st) && /Settings, then Billing, then Spend limits/.test(st) && !/the request was refused/.test(st);
+  }), await page.evaluate(() => $('askStatus').textContent));
+  ok('v7.37 — the API account out of prepaid credit (a 400, "Your credit balance is too low"): the words name the API account at platform.claude.com as a different wallet from the Claude app at claude.ai, and point at Settings → Billing', await page.evaluate(async () => {
+    await ask('what did we spend on framing', { status: 400, json: { type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.' } } });
+    const st = $('askStatus').textContent;
+    return /out of prepaid credit/.test(st) && /platform\.claude\.com/.test(st) && /claude\.ai/.test(st) && /Settings, then Billing/.test(st) && !/the request was refused/.test(st) && $('askText').value === 'what did we spend on framing';
   }), await page.evaluate(() => $('askStatus').textContent));
   ok('a plain per-minute rate limit (a 429 with no cap words) still reads as the rate limit — wait a minute', await page.evaluate(async () => {
     await ask('when is the inspector due', { status: 429, json: { type: 'error', error: { type: 'rate_limit_error', message: 'This request would exceed the rate limit for your organization of 400,000 output tokens per minute.' } } });

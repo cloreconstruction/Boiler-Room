@@ -4303,7 +4303,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.36 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.37 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -19178,8 +19178,11 @@ function wizWhy(e) {   // in words, for the band, the toast and the status line
   // cap of its tier (a 429, error_code enforced_spend_limit_reached, no retry-after) and a spend limit set by hand in the Console (a
   // 400, "You have reached your specified API usage limits"). Both say when access comes back, in UTC — said here on his own clock.
   // Every call on the key pauses with it: the Wizard, the photo reads, the journal drafts, the cloud mail watcher.
-  if (/reached your specified (workspace )?API usage limits/i.test(m)) return 'Anthropic has paused your account until ' + wizBackOn(m) + ' — the monthly spend limit set in your Anthropic account is used up. Buying credits does not lift it. On platform.claude.com go to Settings, then Billing, then Spend limits, and raise or remove it.';
-  if (/enforced_spend_limit_reached|monthly API usage threshold|reached your API usage limits/i.test(m)) return 'Anthropic has paused your account until ' + wizBackOn(m) + ' — the monthly spending cap for your account tier is used up. Buying credits does not lift it. On platform.claude.com go to Settings, then Limits, and tap Request rate limit increase to lift it sooner.';
+  // 🧙 v7.37 — Eric, with a picture of the claude.ai usage page: "i dont understand i turned the limits off and its still saying out of limit."
+  // The key's wallet is the API account at platform.claude.com, not the Claude app's page at claude.ai — every account word says so now.
+  if (/credit balance is too low/i.test(m)) return 'your Anthropic API account is out of prepaid credit. The Wizard runs on the Anthropic API account at platform.claude.com (sign in with the email the key was made with) — a different wallet from the Claude app you pay for at claude.ai, so usage bought there never reaches it. Add credit there under Settings, then Billing, and the Wizard works again at once.';
+  if (/reached your specified (workspace )?API usage limits/i.test(m)) return 'Anthropic has paused your API account until ' + wizBackOn(m) + ' — the monthly spend limit set in that account is used up. The Wizard runs on the Anthropic API account at platform.claude.com (sign in with the email the key was made with) — a different wallet from the Claude app you pay for at claude.ai, so usage bought there never reaches it. Under Settings, then Billing, then Spend limits, raise or remove it.';
+  if (/enforced_spend_limit_reached|monthly API usage threshold|reached your API usage limits/i.test(m)) return 'Anthropic has paused your API account until ' + wizBackOn(m) + ' — the monthly spending cap for that account\'s tier is used up, and buying credits does not lift it. The Wizard runs on the Anthropic API account at platform.claude.com (sign in with the email the key was made with) — a different wallet from the Claude app you pay for at claude.ai, so usage bought there never reaches it. Under Settings, then Limits, tap Request rate limit increase to lift it sooner.';
   if (/^API 429/.test(m)) return 'too many questions at once (the rate limit). Wait a minute and try again.';
   if (/^API (529|503)/.test(m) || /overloaded/i.test(m)) return 'Anthropic is overloaded right now. Try again in a minute.';
   if (/^API 5\d\d/.test(m)) return 'Anthropic had an error (' + m.slice(4, 7) + '). Try again in a minute.';
@@ -22437,7 +22440,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.36';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.37';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
