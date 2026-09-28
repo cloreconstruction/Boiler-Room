@@ -2976,6 +2976,8 @@
   /* 🎒 v7.16 — Eric: "The pocket list needs to be separated from the grinder 5 steps. It's in the same bigger window."
      Its own .card right above the grinder's card, the page's own gap between them (16px, as under the grinder). */
   .pk-card { padding: 10px 12px 12px; margin: 0 0 16px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface-1); }
+  .pk-card.pk-preview .pk-cap, .pk-card.pk-preview .pk-flush, .pk-card.pk-preview .pk-in { display: none !important; }   /* 🎒 v7.31 — the preview: grey words where the crew member's private list sits */
+  .pk-privnote { color: var(--ink-3, #8e8570); font-style: italic; font-size: 14px; line-height: 1.35; padding: 4px 2px 6px; }
   body.crew-mode #pocketCard { order: 3; }   /* a crew phone's page is flex-ordered: it stays right above the grinder there too */
   .pk-card.pk-flash { outline: 3px solid var(--accent); outline-offset: 3px; }   /* 🎒 v7.07 — "here it is", from the log's 🎒 plate */
   .pk-top { display: flex; align-items: center; gap: 8px; }
@@ -4284,7 +4286,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.30 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.31 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -9296,6 +9298,8 @@ function reviewAct(id, accept) {
         if (pay.day && /^\d{4}-\d{2}-\d{2}$/.test(pay.day) && pay.day !== localDay(new Date())) extra.ts = new Date(pay.day + 'T12:00:00');
         extra.noSniff = true;
         extra.crewKey = p.id;   // ⤵ v7.15 — which crew note this is, so a flush on any of his devices knows it is already in the log (cfInLog)
+        if (pay.ph) { extra.photoPath = pay.ph; if (pay.phs && pay.phs.length > 1) extra.photoPaths = pay.phs; }   // 📷 v7.31 — Eric: "when i flush it into my log it'll be ready for summaries and journals and wizard right?" — the picture comes along (the copy in Eric's own Dropbox)
+        if (pay.jrn) extra.jrn = true;   // 📖 v7.31 — a 📖 Journal photos note he stamped on HIS phone lands stamped here too: picked in that client's journal window
         addEntry(pay.type === 'Mileage' ? 'Mileage' : pay.type === 'Note' ? 'Note' : 'Hours', `${pay.from}: ${pay.text || (pay.type === 'Mileage' ? 'Trip' : 'Shift')}`, j, extra);
         toast(`${pay.from}'s ${pay.type === 'Mileage' ? 'miles' : pay.type === 'Note' ? 'note' : 'hours'} logged ✓`);
       }
@@ -10528,6 +10532,7 @@ function applyRole() {
   renderWorkCatSel();
   renderWageTick();
   renderCrewShared();
+  renderPocket();   // 🎒 v7.31 — in the 👁 preview the pocket card shows where the crew member's private list sits, not Eric's own
   renderCrewAsks();
   renderMyRequests();
   renderAskStrip();
@@ -12425,7 +12430,7 @@ function cfWillLog(r) {
 function cfCardFor(r) {   // that ✅ note as a note card, worded the way the Sort card words a Done — the same door files it
   const e = r.e;
   return { id: r.key, kind: 'crew', source: r.who, payload: { from: r.who, type: 'Note', text: '✅ FINISHED: ' + cfWords(r), job: e.job || '',
-    route: '', urg: '', srcRef: '', day: String(e.ts).slice(0, 10), vis: e.vis || '' } };
+    route: '', urg: '', srcRef: '', day: String(e.ts).slice(0, 10), vis: e.vis || '', ph: cfPhotoPath(e.photoPath || (e.photoPaths || [])[0], r.folder), jrn: !!e.jrn } };   // 📷 v7.31
 }
 function crewFeedFlushKeys(keys) {
   const gone = cfGoneList(), have = new Set(gone);
@@ -12839,6 +12844,7 @@ async function checkCrewLogs() {
           miles: e.miles, truck: e.truck || '', odometer: e.odometer, startOdometer: e.startOdometer,
           srcRef: e.srcRef || '', day: String(e.ts).slice(0, 10),
           vis: e.vis || '', // 🔓 v5.44 — "pass this round to everybody" rides in with the note
+          ph: cfPhotoPath(e.photoPath || (e.photoPaths || [])[0], f.path_display || f.path_lower), phs: (e.photoPaths || []).map(p => cfPhotoPath(p, f.path_display || f.path_lower)).filter(Boolean), jrn: !!e.jrn,   // 📷 v7.31 — the picture and the 📖 journal stamp ride to the card, so ⤵ Flush carries them into Eric's log
           // 🔥 v5.09 — a crew note aimed at Eric marked NOW gets the fire-card treatment
           hot: (e.type === 'Note' && e.route === 'Eric' && e.urg === 'now') || undefined } });
         if (e.type === 'Note' && e.route) setAck(name, e.id, 'received'); // 📨 receipt stamp #1
@@ -19135,6 +19141,16 @@ function pocketSweep() {
 }
 function renderPocket() {
   const box = $('pocketList'); if (!box) return;
+  // 🎒 v7.31 — Eric: "phil cant see my pocket list right? when i click on 'see what phil sees' its just showing me mine instead
+  // right? could there be a replacement like greyed out words that say 'here's where phils pocket list shows privately'."
+  // Right on both counts: a crew phone's pocket is private to that phone (v7.18) and Eric's rides only his own Dropbox — so
+  // the 👁 preview draws grey words where the crew member's own list would sit, never Eric's items, and puts the − n/N + ⤵ + box away.
+  const card = $('pocketCard'); if (card) card.classList.toggle('pk-preview', !!crewPreview);
+  if (crewPreview) {
+    const nm = prefs.previewAs || crew[0] || 'the crew member';
+    box.innerHTML = '<div class="pk-privnote">🎒 ' + esc(nm) + '’s pocket list shows here — private to ' + esc(nm) + '’s phone. You never see it, and ' + esc(nm) + ' never sees yours.</div>';
+    return;
+  }
   const today = pocketDay(0), tom = pocketDay(1);
   const items = pocket();
   // 🎒 v6.84 — Eric: "I'd like to keep the size very small, as it is, maybe even slightly smaller. I do want an edit button
@@ -22045,7 +22061,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.30';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.31';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
