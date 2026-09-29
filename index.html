@@ -986,6 +986,25 @@
   .biz-tag.lit { color: var(--warn, #ffa657); }
   .biz-lb { grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; }
   .biz-lb .pick-chip { min-height: 34px; }
+  /* 📈 v7.41 — the menu of doors, the span plates, the source plates, the tiles and the tables of the new windows */
+  .biz-back { width: 100%; margin: 2px 0 10px; min-height: 40px; }
+  .biz-doors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 30px 0 12px; }   /* the first row clears the ✕ in the corner */
+  .biz-doors .btn-ghost { min-height: 64px; white-space: normal; text-align: left; padding: 8px 10px; }
+  .biz-doors .btn-ghost span { display: block; font-weight: 400; font-size: var(--fs11, 11px); color: var(--ink-2); margin-top: 3px; }
+  .biz-doors .wide { grid-column: 1 / -1; }
+  .biz-spans { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+  .biz-spans .pick-chip { flex: 1 1 60px; min-height: 40px; }
+  .biz-srcs { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .biz-srcs .pick-chip { min-height: 38px; white-space: normal; }
+  .biz-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 8px 0 0; }
+  .biz-tile { background: var(--raised, var(--surface-1)); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+  .biz-tile b { display: block; font-size: 17px; overflow-wrap: anywhere; }
+  .biz-tile span { font-size: var(--fs11, 11px); color: var(--ink-2); }
+  .biz-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .biz-tbl th, .biz-tbl td { padding: 6px 4px; border-top: 1px solid var(--grid); text-align: left; vertical-align: top; }
+  .biz-tbl th { font-size: var(--fs11, 11px); color: var(--ink-2); letter-spacing: .3px; }
+  .biz-tbl .n { text-align: right; white-space: nowrap; }
+  .biz-mini { min-height: 30px; padding: 2px 8px; font-size: var(--fs11, 11px); }
   body.crew-mode #scRow .sc-btn:nth-child(5), body.crew-preview #scRow .sc-btn:nth-child(5), body.crew-mode #bizSec { display: none; }   /* 📈 the Business plate and the Setup section are Eric's alone */
   .pb-drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .pb-drop small { display: block; font-size: var(--fs12, 12px); color: var(--ink-muted); margin-top: 4px; }
@@ -3228,7 +3247,7 @@
     <!-- 📊 v6.76 — Eric: "make a button for it up to the right of job cards at the top of main page." The summaries page: the sort tab and the summary tab; the count is what waits to be sorted. -->
     <button type="button" class="sc-btn" onclick="openReview('last')" title="Summary, the board, and the sort tab — opens where you were last">📊 <span>Summary<span class="sc-n" id="scSumN"></span></span></button>
     <!-- 📈 v7.38 — Eric: "i want a button at the top next to summary that has business graphs and charts" — the savings growth chart, the Profit Ticker, the Project Tracker; his phones only -->
-    <button type="button" class="sc-btn sc-biz" onclick="openBusiness()" title="Business charts and numbers — the savings growth chart, the Profit Ticker, the Project Tracker">📈 <span>Business</span></button>
+    <button type="button" class="sc-btn sc-biz" onclick="openBusiness()" title="Business charts and numbers — the Profit Ticker, the Project Tracker, savings growth, truck mileage, money charts">📈 <span>Business</span></button>
   </div>
 
 
@@ -4198,7 +4217,7 @@
           <div class="hint" style="line-height: 1.5;">On Relay: Accounts → Statements → Export → <b>CSV or OFX</b> — a year at a time, every account you like (the savings account is the one the chart reads). Drop the files here; the 📈 Business plate at the top draws the savings growth chart from them, and every new statement carries it on. The files stay in your own Dropbox — nothing here reaches the crew, a client page or the Wizard.</div>
           <div id="bizSetupDrop"></div>
           <div id="bizSetupMsg" class="hint" style="margin-top: 6px;"></div>
-          <button class="btn-ghost" style="margin-top: 8px;" onclick="closePanels(); openBusiness()">📈 Open the Business page</button>
+          <button class="btn-ghost" style="margin-top: 8px;" onclick="closePanels(); openSavings()">🏦 Open the savings chart</button>
         </div>
         <div class="set-section" id="setPrivacy">
       <h4>🔒 Personal people</h4>
@@ -4354,7 +4373,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.40 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.41 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8821,17 +8840,15 @@ function bizChartSvg(ser) {
   return `<svg class="biz-chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}">${grid}${bars}${avgLine}${line}${xl}</svg>`;
 }
 // ---------- the page ----------
-function openBusiness() {
+function openBusiness() {   // 📈 v7.41 — the menu of doors; each chart is a window of its own (openSavings · openMiles · openMoneyCharts)
   if (CREW_NAME || crewPreview) return;
-  _bizHelp = false; _bizAll = false;
+  _bizView = 'menu'; _bizHelp = false; _bizAll = false;
   renderBusiness(true);
   $('revModal').classList.add('show', 'mat-full'); document.body.classList.add('modal-open');
   if (!_bizDirty) bizLoad().then(() => { if ($('bizBox')) renderBusiness(); });
 }
 function bizClose() { if (_bizDirty) bizSaveNow(); closeReview(); }
-function renderBusiness(force) {
-  const box = $('revBox'); if (!box || CREW_NAME) return;
-  if (!force && !$('bizBox')) return;   // only while this page is on the screen
+function bizSavingsHtml() {   // 📈 v7.41 — the v7.38 page, now a window of its own (renderBusiness draws whichever window is up)
   const S = bizStore(), ks = Object.keys(S.accts), k = bizSavAcct(), a = k ? S.accts[k] : null, ser = k ? bizSeries(k, prefs.bizFrom || '') : null;
   const accts = ks.map(key => { const c = S.accts[key], last = c.lines.length ? c.lines[c.lines.length - 1].d : ''; return `<div class="biz-acct"><b>${esc(bizAcctWord(key))}</b><input class="biz-name" value="${esc(c.name || '')}" placeholder="name it — Savings, Receiving…" maxlength="24" aria-label="a name for this account" onchange="bizAcctName('${escq(key)}', this.value)"><span class="hint">${c.lines.length} line${c.lines.length === 1 ? '' : 's'}${last ? ' · through ' + esc(bizDayWord(last)) : ''}${c.bal != null ? ' · ' + esc(bizMoney(c.bal, true)) + ' on ' + esc(bizDayWord(c.balAt)) : ''}</span></div>`; }).join('');
   const wheel = ks.length > 1 ? `<select class="mini-sel" aria-label="which account is the savings" onchange="prefs.bizSav = this.value; scheduleSave(); renderBusiness();">${ks.map(key => `<option value="${esc(key)}"${key === k ? ' selected' : ''}>chart: ${esc(bizAcctWord(key))}</option>`).join('')}</select>` : '';
@@ -8846,8 +8863,7 @@ function renderBusiness(force) {
     const pk = `<button type="button" class="pick-chip${isP ? ' sel' : ''}" aria-pressed="${isP}" onclick="bizMarkSet('${escq(k)}', '${escq(l.id)}', 'parked')" title="parked here for a while, then back out">${isP ? '✓ ' : ''}⇄ Parked — off the bars AND the line${out ? ' until ' + esc(bizDayWord(out.d)) : (isP && m.until ? ' until ' + esc(bizDayWord(m.until)) : '')}</button>`;
     const rt = `<button type="button" class="pick-chip${isR ? ' sel' : ''}" aria-pressed="${isR}" onclick="bizMarkSet('${escq(k)}', '${escq(l.id)}', 'returned')" title="money coming back that went out before">${isR ? '✓ ' : ''}↩ Returned — off the bars only</button>`;
     return `<div class="biz-line"><span class="biz-ld">${esc(bizDayWord(l.d))}</span><b>${esc(bizMoney(l.amt, true))}</b><span class="biz-lw">${esc(String(l.desc || '').slice(0, 60))}</span>${m ? `<span class="biz-tag">${isP ? '⇄ PARKED — off the bars and the line' + (m.until ? ' until ' + esc(bizDayWord(m.until)) : ' — still here') : '↩ RETURNED — off the bars only, the line keeps it'}</span>` : out ? `<span class="biz-tag lit">⚠ LOOKS PARKED — the same money went back out ${esc(bizDayWord(out.d))}</span>` : back ? `<span class="biz-tag lit">⚠ LOOKS RETURNED — the same money went out ${esc(bizDayWord(back.d))}</span>` : ''}<span class="biz-lb">${back && !out ? rt + pk : pk + rt}</span></div>`; };
-  box.innerHTML = `<div id="bizBox"><h3>📈 BUSINESS <span class="hint" style="font-weight: 400; font-size: 13px;">— charts and numbers · yours alone</span>${winX('bizClose()', 'close')}</h3>
-    <div class="rev-row" style="flex-wrap: wrap; gap: 8px; margin: 6px 0 12px;"><button class="btn-ghost" style="flex: 1; min-width: 140px;" onclick="openMoneyPage('ticker')">💰 Profit Ticker</button><button class="btn-ghost" style="flex: 1; min-width: 140px;" onclick="openMoneyPage('tracker')">📊 Project Tracker</button></div>
+  return `${bizHead('🏦 SAVINGS', 'growth, month by month · yours alone')}
     <div class="pb-card biz-card"><div class="biz-title">🏦 SAVINGS GROWTH${k ? ` <span class="hint" style="font-weight: 400;">— ${esc(bizAcctWord(k))}</span>` : ''}</div>
       ${ser ? `<div class="biz-ctl">${wheel}${fromWheel}</div>${bizChartSvg(ser)}<div class="biz-legend"><span><i class="biz-sw bar"></i>added each month, interest in</span><span><i class="biz-sw line"></i>month-end balance</span>${ser.avg != null ? `<span><i class="biz-sw avg"></i>average of the ${ser.fullN} full month${ser.fullN === 1 ? '' : 's'}</span>` : ''}${ser.rows.some(r => r.partial) ? `<span><i>${esc(ser.rows[ser.rows.length - 1].label)}</i> = through the newest line</span>` : ''}</div>` : `<div class="hint">No statements yet — drop Relay's CSV or OFX for the savings account below (the whole history, so the balance line starts where the account did).</div>`}
     </div>
@@ -8855,7 +8871,260 @@ function renderBusiness(force) {
     <div class="pb-card biz-card"><div class="biz-title">📥 STATEMENTS</div>${bizDropHtml('bizFileIn')}${accts || '<div class="hint">Nothing dropped yet.</div>'}${a && deposits.length ? `<button type="button" class="btn-ghost" style="margin-top: 8px; width: 100%;" onclick="_bizAll = !_bizAll; renderBusiness()" aria-expanded="${_bizAll}">${_bizAll ? '▾' : '▸'} every deposit on ${esc(bizAcctWord(k))} (${deposits.length}) — mark one ⇄ parked or ↩ returned</button>${_bizAll ? deposits.map(row).join('') : ''}` : ''}</div>
     <button type="button" class="btn-ghost" style="width: 100%;" onclick="_bizHelp = !_bizHelp; renderBusiness()" aria-expanded="${_bizHelp}">${_bizHelp ? '▾' : '▸'} ? how this works</button>
     ${_bizHelp ? `<div class="hint" style="line-height: 1.5; margin: 6px 2px;">Drop the savings account's statements — the whole history, so the balance line starts where the account did (Relay's Statements page exports a year at a time, CSV or OFX). <b>Bars:</b> what went into the account each month, interest in. <b>Orange line:</b> the balance at each month's end, from the newest balance the statements printed (counted up from the first line when they printed none). <b>Dashed line:</b> the average of the full months shown; the newest month is partial and is labelled by its last day. The chart starts the month the balance last touched zero — the wheel picks another. A deposit whose exact amount goes back out later is pre-lit for your tap: <b>⇄ Parked</b> takes it out of the bars and off the balance line until it leaves; <b>↩ Returned</b> (money coming back) takes it out of the bars only. Every account is its last four. This page is yours alone — never a crew phone, never a client page, never the Wizard. The receiving account shows the other side of the same transfers, so the chart reads one account.</div>` : ''}
-  </div>`;
+  `;
+}
+// ================= 📈 v7.41 — BUSINESS, ROUND TWO: ITS OWN WINDOWS, THE TRUCKS, THE MONEY CHARTS =================
+// Eric, 2026-09-28: "savings growth chart should be its own window and have a button next to profit tracker and project tracker,
+// i also want a truck mileage tracker" and "make the profit tracker be able to have buttons that change the chart to by day week
+// month etc. also want to be able to select or over lay other things like total business income and how much went to each vendor
+// per week month year etc. think of anything useful to make charts and graphs and summaries out of." The 📈 Business plate opens
+// a MENU of doors: 💰 Profit Ticker · 📊 Project Tracker (the books run's pages, as before) · 🏦 Savings growth (v7.38's chart, in a
+// window of its own) · 🚚 Truck mileage · 📈 Money charts. The Profit Ticker page itself is written by the books run from the All
+// Dates Transaction List and cannot be re-cut here by day or week; MONEY CHARTS draws from what IS in his Dropbox as data — the
+// ledger (qb-ledger.json: every invoice with its date, its amount and what is still open), the QuickBooks cost lines (qb-costs.json:
+// vendor, account, amount, from the field era on), the Relay statements (business-bank.json) and the log's own priced receipts —
+// by DAY · WEEK · MONTH · YEAR, any of them laid over one another on ONE axis (one source = bars, more = lines with different
+// marks, never colour alone), the tables behind the chart (by customer, by vendor, by account, by period) and a vendor's own line
+// on a tap. TRUCK MILEAGE reads the mileage log (his trips and the crew's that landed in his book): miles by week, month or year,
+// per truck or all, by job, the odometer now and the miles since the last service note. Every figure is his own, read at open;
+// none sits in this file (the v7.38 suite scans the whole block). Eric's phones only, as the whole Business page has been.
+let _bizView = 'menu';
+const BIZ_SPANS = [['day', 'DAY', 30], ['week', 'WEEK', 16], ['month', 'MONTH', 12], ['year', 'YEAR', 0]];   // key · word · how many back (0 = every one in the data)
+const BIZ_COLORS = [['#3aa6a0', 'circle'], ['var(--warn, #ffa657)', 'square'], ['var(--accent, #f2c66d)', 'triangle'], ['var(--err, #ff8a70)', 'diamond'], ['#6aa7ff', 'circle'], ['#b48cff', 'square']];
+const BIZ_GLYPH = { circle: '●', square: '■', triangle: '▲', diamond: '◆' };
+function bizHead(title, sub) {
+  return `<h3>${title}${sub ? ` <span class="hint" style="font-weight: 400; font-size: 13px;">— ${sub}</span>` : ''}${winX('bizClose()', 'close')}</h3>` +
+    (_bizView !== 'menu' ? `<button type="button" class="btn-ghost biz-back" onclick="openBusiness()">‹ Business — every chart</button>` : '');
+}
+function bizMenuHtml() {
+  return `${bizHead('📈 BUSINESS', 'charts and numbers · yours alone')}
+    <div class="biz-doors">
+      <button type="button" class="btn-ghost" onclick="openMoneyPage('ticker')">💰 Profit Ticker<span>the books run's page — all-time cash, per day</span></button>
+      <button type="button" class="btn-ghost" onclick="openMoneyPage('tracker')">📊 Project Tracker<span>invoiced and paid, job by job</span></button>
+      <button type="button" class="btn-ghost" onclick="openSavings()">🏦 Savings growth<span>the Relay statements, month by month</span></button>
+      <button type="button" class="btn-ghost" onclick="openMiles()">🚚 Truck mileage<span>miles by truck — by week, month, year — and by job</span></button>
+      <button type="button" class="btn-ghost wide" onclick="openMoneyCharts()">📈 Money charts<span>invoiced · still open · costs · the bank · receipts — by day, week, month or year, laid over one another; by customer, by vendor, by account</span></button>
+    </div>`;
+}
+function bizOpenView(v) {
+  if (CREW_NAME || crewPreview) return false;
+  _bizView = v; _bizHelp = false; _bizAll = false;
+  renderBusiness(true);
+  $('revModal').classList.add('show', 'mat-full'); document.body.classList.add('modal-open');
+  return true;
+}
+function openSavings() { if (!bizOpenView('savings')) return; if (!_bizDirty) bizLoad().then(() => { if ($('bizBox')) renderBusiness(); }); }
+function openMiles() { bizOpenView('miles'); }
+function openMoneyCharts() {
+  if (!bizOpenView('money')) return;
+  bizBooksLoad().then(() => { if ($('bizBox')) renderBusiness(); });
+  if (!_bizDirty) bizLoad().then(() => { if ($('bizBox')) renderBusiness(); });
+}
+function renderBusiness(force) {
+  const box = $('revBox'); if (!box || CREW_NAME) return;
+  if (!force && !$('bizBox')) return;   // only while a Business window is on the screen
+  const html = _bizView === 'savings' ? bizSavingsHtml() : _bizView === 'miles' ? bizMilesHtml() : _bizView === 'money' ? bizMoneyHtml() : bizMenuHtml();
+  box.innerHTML = `<div id="bizBox" data-view="${esc(_bizView)}">${html}</div>`;
+}
+// ---------- periods: a day, a week (Monday to Sunday), a month, a year ----------
+function bizDayOf(x) { const s = String(x || ''); if (/^\d{4}-\d\d-\d\d/.test(s)) return s.slice(0, 10); const d = new Date(s); return isNaN(d) ? '' : localDay(d); }
+function bizWeekStart(day) { const d = new Date(day + 'T12:00:00'); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd); return localDay(d); }
+function bizPeriodKey(day, span) { return span === 'day' ? day : span === 'week' ? bizWeekStart(day) : span === 'month' ? day.slice(0, 7) : day.slice(0, 4); }
+function bizPeriodStep(key, span, n) {
+  if (span === 'month') return bizAddMonths(key, n);
+  if (span === 'year') return String(+key + n);
+  const d = new Date(key + 'T12:00:00'); d.setDate(d.getDate() + n * (span === 'week' ? 7 : 1)); return localDay(d);
+}
+function bizPeriodLabel(key, span) {
+  if (span === 'year') return key;
+  if (span === 'month') return bizMonthWord(key, true) + (key.slice(0, 4) !== String(new Date().getFullYear()) ? ' ’' + key.slice(2, 4) : '');   // Oct ’25 — never Oct 25, which reads as a day
+  const d = new Date(key + 'T12:00:00');
+  return span === 'week' ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+}
+function bizPeriodWord(key, span) {
+  if (span === 'year') return key;
+  if (span === 'month') return bizMonthWord(key);
+  if (span === 'week') { const e = new Date(bizPeriodStep(key, 'week', 1) + 'T12:00:00'); e.setDate(e.getDate() - 1); return 'the week of ' + bizDayWord(key) + ' – ' + bizDayWord(localDay(e)); }
+  return bizDayWord(key) + ', ' + key.slice(0, 4);
+}
+function bizPeriods(span, days) {   // the run the chart shows: the newest N ending today, or (YEAR) every one from the first day in the data
+  const today = localDay(new Date()), last = bizPeriodKey(today, span), n = (BIZ_SPANS.find(s => s[0] === span) || BIZ_SPANS[2])[2];
+  let first;
+  if (n) { first = last; for (let i = 1; i < n; i++) first = bizPeriodStep(first, span, -1); }
+  else { const mn = days.length ? days.reduce((a, b) => (a < b ? a : b)) : today; first = bizPeriodKey(mn < today ? mn : today, span); }
+  const keys = []; for (let k = first; k <= last && keys.length < 60; k = bizPeriodStep(k, span, 1)) keys.push(k);
+  return keys;
+}
+function bizBucket(items, span, keys) {   // [{d, v}] → the value per period, in the keys' order
+  const idx = new Map(keys.map((k, i) => [k, i])), out = keys.map(() => 0);
+  items.forEach(it => { const i = idx.get(bizPeriodKey(it.d, span)); if (i != null) out[i] += +it.v || 0; });
+  return out.map(v => Math.round(v * 100) / 100);
+}
+function bizRangeWord(span) { const n = (BIZ_SPANS.find(s => s[0] === span) || [])[2]; return n ? 'the last ' + n + ' ' + span + 's' : 'every year on record'; }
+function bizSpanBtns(cur, fn, spans) {
+  return `<div class="biz-spans">${spans.map(([k, w]) => `<button type="button" class="pick-chip${k === cur ? ' sel' : ''}" aria-pressed="${k === cur}" onclick="${fn}('${k}')">${k === cur ? '✓ ' : ''}${w}</button>`).join('')}</div>`;
+}
+// ---------- one chart for any run of periods: one source = bars with the number on each, more = lines with their own marks ----------
+function bizMarker(shape, cx, cy, color) {
+  const r = 3.6, f = v => (+v).toFixed(1);
+  if (shape === 'square') return `<rect x="${f(cx - r)}" y="${f(cy - r)}" width="${f(2 * r)}" height="${f(2 * r)}" class="biz-mark" style="fill: ${color};"/>`;
+  if (shape === 'triangle') return `<polygon points="${f(cx)},${f(cy - r - 1)} ${f(cx - r - 1)},${f(cy + r)} ${f(cx + r + 1)},${f(cy + r)}" class="biz-mark" style="fill: ${color};"/>`;
+  if (shape === 'diamond') return `<polygon points="${f(cx)},${f(cy - r - 1)} ${f(cx + r + 1)},${f(cy)} ${f(cx)},${f(cy + r + 1)} ${f(cx - r - 1)},${f(cy)}" class="biz-mark" style="fill: ${color};"/>`;
+  return `<circle cx="${f(cx)}" cy="${f(cy)}" r="${r}" class="biz-mark" style="fill: ${color};"/>`;
+}
+function bizMultiSvg(keys, span, series, fmt, axisWord) {
+  const W = 360, H = 232, L = 50, R = 14, T = 20, B = 30, pw = W - L - R, ph = H - T - B, n = keys.length || 1;
+  const maxV = Math.max(0, ...series.flatMap(s => s.vals)), ax = bizNice(maxV || 1);
+  const y = v => T + ph - Math.max(0, Math.min(1, v / ax.top)) * ph, x = i => L + pw * (i + 1 / 2) / n;
+  const f1 = v => (+v).toFixed(1);
+  const grid = [0, 1, 2, 3, 4].map(i => ax.step * i).map(v => `<line x1="${L}" x2="${W - R}" y1="${f1(y(v))}" y2="${f1(y(v))}" stroke="currentColor" stroke-opacity=".18"/><text x="${L - 4}" y="${f1(y(v) + 3)}" text-anchor="end" font-size="9" fill="currentColor">${esc(axisWord(v))}</text>`).join('');
+  const every = n <= 16 ? 1 : n <= 32 ? 2 : Math.ceil(n / 12);
+  const xl = keys.map((k, i) => i % every ? '' : `<text x="${f1(x(i))}" y="${H - B + 14}" text-anchor="middle" font-size="9" fill="currentColor">${esc(bizPeriodLabel(k, span))}</text>`).join('');
+  let body = '';
+  if (series.length === 1) {
+    const s = series[0], bw = Math.min(26, pw / n * 31 / 50);
+    body = s.vals.map((v, i) => `<g><title>${esc(bizPeriodWord(keys[i], span))} — ${esc(s.word)} ${esc(fmt(v))}</title><rect class="biz-bar" x="${f1(x(i) - bw / 2)}" y="${f1(y(v))}" width="${f1(bw)}" height="${f1(Math.max(0, T + ph - y(v)))}" rx="2" style="fill: ${s.color};"/>${n <= 16 && v ? `<text x="${f1(x(i))}" y="${f1(y(v) - 3)}" text-anchor="middle" font-size="8" fill="currentColor">${esc(fmt(v, true))}</text>` : ''}</g>`).join('');
+  } else {
+    body = series.map(s => `<polyline points="${s.vals.map((v, i) => f1(x(i)) + ',' + f1(y(v))).join(' ')}" fill="none" style="stroke: ${s.color};" stroke-width="2.2" stroke-linejoin="round"/>` +
+      s.vals.map((v, i) => `<g><title>${esc(bizPeriodWord(keys[i], span))} — ${esc(s.word)} ${esc(fmt(v))}</title>${bizMarker(s.marker, x(i), y(v), s.color)}</g>`).join('')).join('');
+  }
+  const label = series.map(s => s.word + ': ' + keys.map((k, i) => bizPeriodLabel(k, span) + ' ' + fmt(s.vals[i])).join(', ')).join('; ');
+  return `<svg class="biz-chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label.slice(0, 1500))}">${grid}${body}${xl}</svg>`;
+}
+function bizLegendHtml(series) {
+  return `<div class="biz-legend">${series.map(s => `<span><i class="biz-sw" style="background: ${s.color};"></i>${BIZ_GLYPH[s.marker] || '●'} ${esc(s.word)}</span>`).join('')}</div>`;
+}
+// ---------- 🚚 TRUCK MILEAGE ----------
+let _bizTruck = '', _bizMSpan = 'month';
+function bizMiWord(n) { return Math.round(n).toLocaleString('en-US') + ' mi'; }
+function bizTrips() {
+  return entries.filter(e => e && e.type === 'Mileage' && !e.sample && +e.miles > 0)
+    .map(e => ({ d: bizDayOf(e.ts), v: +e.miles, truck: e.truck || '', job: e.job || '', who: e.who || 'you', odo: e.odometer != null && e.odometer !== '' ? +e.odometer : null, words: String(e.details || '') }))
+    .filter(t => t.d);
+}
+function bizTruckNames(trips) { const s = new Set(trucks.map(t => t.name).filter(Boolean)); trips.forEach(t => { if (t.truck) s.add(t.truck); }); return [...s]; }
+function bizOdoNow(name, trips) {
+  const p = (prefs.lastOdo || {})[name], own = trips.filter(t => t.truck === name && t.odo != null).sort((a, b) => b.d.localeCompare(a.d))[0];
+  if (p && own) return +p.odo >= own.odo ? +p.odo : own.odo;
+  return p ? +p.odo : own ? own.odo : null;
+}
+function bizService(name, trips) {   // the newest trip on this truck whose words say oil / service / tires / brakes, with a reading
+  return trips.filter(t => t.truck === name && t.odo != null && /\b(oil|service|serviced|tires?|brakes?)\b/i.test(t.words)).sort((a, b) => b.d.localeCompare(a.d))[0] || null;
+}
+function bizMilesSpan(k) { _bizMSpan = k; renderBusiness(); }
+function bizMilesHtml() {
+  const all = bizTrips(), names = bizTruckNames(all), truck = names.includes(_bizTruck) ? _bizTruck : '', trips = truck ? all.filter(t => t.truck === truck) : all;
+  const span = _bizMSpan, keys = bizPeriods(span, trips.map(t => t.d)), vals = bizBucket(trips, span, keys), keySet = new Set(keys);
+  const inRange = trips.filter(t => keySet.has(bizPeriodKey(t.d, span)));
+  const today = localDay(new Date()), sum = list => list.reduce((s, t) => s + t.v, 0);
+  const thisMonth = sum(trips.filter(t => t.d.slice(0, 7) === today.slice(0, 7))), thisYear = sum(trips.filter(t => t.d.slice(0, 4) === today.slice(0, 4))), allTime = sum(trips), rangeMi = sum(inRange);
+  const byJob = Object.entries(inRange.reduce((m, t) => { const j = t.job || '—'; m[j] = m[j] || { v: 0, n: 0 }; m[j].v += t.v; m[j].n++; return m; }, {})).sort((a, b) => b[1].v - a[1].v);
+  const byWho = new Set(inRange.map(t => t.who)).size > 1 ? Object.entries(inRange.reduce((m, t) => { m[t.who] = (m[t.who] || 0) + t.v; return m; }, {})).sort((a, b) => b[1] - a[1]) : [];
+  const rangeWord = bizRangeWord(span);
+  const truckTiles = (truck ? [truck] : names).map(nm => { const odo = bizOdoNow(nm, all), svc = bizService(nm, all);
+    return `<div class="biz-tile"><b>${odo != null ? esc(odo.toLocaleString('en-US')) : '—'}</b><span>${esc(nm)} · odometer now${svc && odo != null ? ` · ${esc(bizMiWord(odo - svc.odo))} since the ${esc(bizDayWord(svc.d))} service note` : ' · no service note yet — say "oil change" on a trip and it counts from there'}</span></div>`; }).join('');
+  const series = [{ key: 'mi', word: truck || 'all trucks', color: BIZ_COLORS[0][0], marker: 'circle', vals }];
+  const recent = inRange.slice().sort((a, b) => b.d.localeCompare(a.d)).slice(0, 25);
+  const trips1 = n => n + ' trip' + (n === 1 ? '' : 's');
+  return `${bizHead('🚚 TRUCK MILEAGE', 'from the mileage log · yours alone')}
+    ${!all.length ? '<div class="hint">No trips logged yet — the 🚚 Mileage plate at the bottom starts one.</div>' : `
+    <div class="biz-ctl"><select class="mini-sel" aria-label="which truck" onchange="_bizTruck = this.value; renderBusiness();"><option value=""${!truck ? ' selected' : ''}>all trucks</option>${names.map(nm => `<option value="${esc(nm)}"${nm === truck ? ' selected' : ''}>${esc(nm)}</option>`).join('')}</select></div>
+    ${bizSpanBtns(span, 'bizMilesSpan', BIZ_SPANS.filter(s => s[0] !== 'day'))}
+    <div class="pb-card biz-card"><div class="biz-title">MILES BY ${span.toUpperCase()} <span class="hint" style="font-weight: 400;">— ${esc(rangeWord)}${truck ? ' · ' + esc(truck) : ''}</span></div>
+      ${bizMultiSvg(keys, span, series, (v, short) => short ? String(Math.round(v)) : bizMiWord(v), v => Math.round(v).toLocaleString('en-US'))}
+      <div class="biz-tiles"><div class="biz-tile"><b>${esc(bizMiWord(thisMonth))}</b><span>this month</span></div><div class="biz-tile"><b>${esc(bizMiWord(thisYear))}</b><span>this year</span></div><div class="biz-tile"><b>${esc(bizMiWord(allTime))}</b><span>all time · ${trips1(trips.length)}</span></div><div class="biz-tile"><b>${esc(bizMiWord(rangeMi))}</b><span>${esc(rangeWord)} · ${trips1(inRange.length)}</span></div>${truckTiles}</div>
+    </div>
+    <div class="pb-card biz-card"><div class="biz-title">BY JOB <span class="hint" style="font-weight: 400;">— ${esc(rangeWord)}</span></div>
+      ${byJob.length ? `<table class="biz-tbl"><tr><th>job</th><th class="n">miles</th><th class="n">trips</th><th class="n">share</th></tr>${byJob.map(([j, o]) => `<tr><td>${esc(j)}</td><td class="n">${esc(bizMiWord(o.v))}</td><td class="n">${o.n}</td><td class="n">${rangeMi ? Math.round(o.v / rangeMi * 100) : 0}%</td></tr>`).join('')}</table>` : '<div class="hint">No trips in this span.</div>'}
+      ${byWho.length ? `<div class="biz-title" style="margin-top: 10px;">BY WHO</div><table class="biz-tbl">${byWho.map(([w, v]) => `<tr><td>${esc(w)}</td><td class="n">${esc(bizMiWord(v))}</td></tr>`).join('')}</table>` : ''}
+    </div>
+    <div class="pb-card biz-card"><div class="biz-title">THE TRIPS <span class="hint" style="font-weight: 400;">— newest first, ${recent.length} of ${inRange.length}</span></div>
+      ${recent.map(t => `<div class="biz-line"><span class="biz-ld">${esc(bizDayWord(t.d))}</span><b>${esc(bizMiWord(t.v))}${t.truck ? ' · ' + esc(t.truck) : ''}</b><span class="biz-lw">${esc(t.job || '—')}${t.who !== 'you' ? ' · ' + esc(t.who) : ''}${t.odo != null ? ' · at ' + esc(t.odo.toLocaleString('en-US')) : ''}</span></div>`).join('')}
+    </div>`}`;
+}
+// ---------- 📈 MONEY CHARTS ----------
+let _bizBooks = null, _bizBooksAt = 0, _bizSpan = 'month', _bizSel = null, _bizBankK = '';
+const BIZ_SOURCES = [
+  ['inv', '📤 Invoiced', 'the ledger — every invoice by its date'],
+  ['open', '⏳ Still open', 'of those invoices, what is unpaid today — by the invoice date'],
+  ['cost', '🧾 Costs (QuickBooks)', 'the cost lines the books run keeps, from the field era on'],
+  ['bankin', '🏦 Into the bank', 'every deposit on the account picked below'],
+  ['bankout', '🏦 Out of the bank', 'every withdrawal on it — transfers to your own accounts too'],
+  ['rcpt', '🧾 Receipts (the log)', 'what you photographed and priced in Boiler Room']];
+async function bizBooksLoad(force) {
+  if (CREW_NAME || !dbx.refreshToken) { _bizBooks = _bizBooks || { led: null, costs: null, ledWhy: 'connect Dropbox first (⚙ Setup) — the books live there', costWhy: '' }; return; }
+  if (_bizBooks && _bizBooks.led !== undefined && !force && Date.now() - _bizBooksAt < 10 * 60 * 1000) return;
+  const out = { led: null, costs: null, ledWhy: '', costWhy: '' };
+  try { const j = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/qb-ledger.json') || 'null'); if (j && Array.isArray(j.rows)) out.led = j; else out.ledWhy = 'no ledger in Dropbox yet — the books run writes it'; } catch (e) { out.ledWhy = 'the ledger could not be read'; }
+  try { const j = JSON.parse(await dbxDownload(DBX_ROOT + '/App Data/qb-costs.json') || 'null'); if (j && Array.isArray(j.lines)) out.costs = j; else out.costWhy = 'no QuickBooks cost lines in Dropbox yet — the books run writes them'; } catch (e) { out.costWhy = 'the cost lines could not be read'; }
+  _bizBooks = out; _bizBooksAt = Date.now();
+}
+function bizSel() { if (!_bizSel) _bizSel = new Set(['inv', 'cost']); return _bizSel; }
+function bizRcptVendor(e) { const m = String(e.ai || '').match(/🏪\s*([^\n]+)/); return String(m ? m[1] : (e.vendor || (e.tags || []).find(t => !/receipt|personal/i.test(t)) || '—')).trim().slice(0, 40); }
+function bizBankAcct() {
+  const S = bizStore(), ks = Object.keys(S.accts); if (!ks.length) return '';
+  if (_bizBankK && S.accts[_bizBankK]) return _bizBankK;
+  const sav = bizSavAcct(); return ks.find(k => k !== sav) || sav || ks[0];   // the receiving account is the cash picture; the savings one only when it is all there is
+}
+function bizItems(key) {   // one source → [{d, v, name}]
+  const B = _bizBooks || {}, S = bizStore();
+  if (key === 'inv') return ((B.led || {}).rows || []).map(r => ({ d: bizDayOf(r.d), v: +r.a || 0, name: String(r.n || '') })).filter(x => x.d);
+  if (key === 'open') return ((B.led || {}).rows || []).map(r => ({ d: bizDayOf(r.d), v: +r.o || 0, name: String(r.n || '') })).filter(x => x.d && x.v > 0);
+  if (key === 'cost') return ((B.costs || {}).lines || []).map(l => ({ d: bizDayOf(l.d), v: Math.abs(+l.amt || 0), name: String(l.who || ''), acct: String(l.acct || '') })).filter(x => x.d);
+  if (key === 'bankin' || key === 'bankout') { const a = S.accts[bizBankAcct()]; return a ? a.lines.filter(l => key === 'bankin' ? l.amt > 0 : l.amt < 0).map(l => ({ d: l.d, v: Math.abs(l.amt), name: String(l.desc || '') })) : []; }
+  if (key === 'rcpt') return entries.filter(e => e && !e.sample && !e.personal && +e.amount > 0).map(e => ({ d: bizDayOf(e.ts), v: +e.amount, name: bizRcptVendor(e) })).filter(x => x.d);
+  if (key.startsWith('vend:')) { const w = key.slice(5); return bizItems('cost').filter(x => x.name === w); }
+  return [];
+}
+function bizSrcWord(key) { if (key.startsWith('vend:')) return '🧾 ' + key.slice(5); const s = BIZ_SOURCES.find(x => x[0] === key); return s ? s[1] : key; }
+function bizSrcToggle(key) { const s = bizSel(); if (s.has(key)) { if (s.size > 1) s.delete(key); } else s.add(key); renderBusiness(); }
+function bizMoneySpan(k) { _bizSpan = k; renderBusiness(); }
+function bizTop(items, keyOf, n) { const m = {}; items.forEach(it => { const k = keyOf(it) || '—'; m[k] = m[k] || { v: 0, n: 0 }; m[k].v += it.v; m[k].n++; }); return Object.entries(m).sort((a, b) => b[1].v - a[1].v).slice(0, n); }
+function bizMoneyHtml() {
+  const B = _bizBooks, span = _bizSpan, sel = bizSel(), S = bizStore(), ks = Object.keys(S.accts);
+  if (!B) return `${bizHead('📈 MONEY CHARTS', 'yours alone')}<div class="hint">⏳ reading the books from your Dropbox…</div>`;
+  const keys = bizPeriods(span, [...sel].flatMap(k => bizItems(k).map(x => x.d))), keySet = new Set(keys), inKeys = it => keySet.has(bizPeriodKey(it.d, span));
+  const series = [...sel].map((k, i) => ({ key: k, word: bizSrcWord(k), color: BIZ_COLORS[i % BIZ_COLORS.length][0], marker: BIZ_COLORS[i % BIZ_COLORS.length][1], vals: bizBucket(bizItems(k), span, keys) }));
+  const rangeWord = bizRangeWord(span), today = localDay(new Date()), led = B.led, costs = B.costs;
+  const inv = bizItems('inv'), open = bizItems('open'), cost = bizItems('cost'), rc = bizItems('rcpt');
+  const sum = l => l.reduce((s, x) => s + x.v, 0), tot = s => s.vals.reduce((a, b) => a + b, 0);
+  const tiles = [
+    led ? [bizMoney(sum(inv.filter(x => x.d.slice(0, 7) === today.slice(0, 7)))), 'invoiced this month'] : null,
+    led ? [bizMoney(sum(inv.filter(x => x.d.slice(0, 4) === today.slice(0, 4)))), 'invoiced this year'] : null,
+    led ? [bizMoney(sum(open)), 'still out there — open invoices as of ' + bizDayWord(led.asOf || '')] : null,
+    costs ? [bizMoney(sum(cost.filter(x => x.d.slice(0, 7) === today.slice(0, 7)))), 'QuickBooks costs this month'] : null,
+    ...series.map(s => [bizMoney(tot(s)), s.word + ' · ' + rangeWord + ' · about ' + bizMoney(tot(s) / (keys.length || 1)) + ' a ' + span])
+  ].filter(Boolean);
+  const cov = [];
+  cov.push(led ? `the ledger through ${bizDayWord(led.asOf || '')} (${inv.length} invoices)` : B.ledWhy);
+  cov.push(costs ? `QuickBooks costs from ${bizDayWord(costs.fieldEraStart || (cost[0] || {}).d || '')} on (${cost.length} lines) — earlier costs are not in Dropbox as data` : B.costWhy);
+  cov.push(ks.length ? `the bank: ${bizAcctWord(bizBankAcct())}${ks.length > 1 ? ' (pick another below)' : ''}` : 'no Relay statement dropped yet — 🏦 Savings growth takes them');
+  const srcBtns = `<div class="biz-srcs">${BIZ_SOURCES.map(([k, w, why]) => `<button type="button" class="pick-chip${sel.has(k) ? ' sel' : ''}" aria-pressed="${sel.has(k)}" title="${esc(why)}" onclick="bizSrcToggle('${k}')">${sel.has(k) ? '✓ ' : ''}${w}</button>`).join('')}${[...sel].filter(k => k.startsWith('vend:')).map(k => `<button type="button" class="pick-chip sel" aria-pressed="true" onclick="bizSrcToggle('${escq(k)}')">✓ ${esc(bizSrcWord(k))} — tap to take it off</button>`).join('')}</div>`;
+  const bankWheel = ks.length > 1 ? `<div class="biz-ctl"><select class="mini-sel" aria-label="which bank account" onchange="_bizBankK = this.value; renderBusiness();">${ks.map(k => `<option value="${esc(k)}"${k === bizBankAcct() ? ' selected' : ''}>the bank: ${esc(bizAcctWord(k))}${S.accts[k].name ? ' — ' + esc(S.accts[k].name) : ''}</option>`).join('')}</select></div>` : '';
+  const tbl = (title, rows, cols) => rows.length ? `<div class="pb-card biz-card"><div class="biz-title">${title} <span class="hint" style="font-weight: 400;">— ${esc(rangeWord)}</span></div><table class="biz-tbl"><tr>${cols.map(c => `<th${c.n ? ' class="n"' : ''}>${esc(c.h)}</th>`).join('')}</tr>${rows.join('')}</table></div>` : '';
+  const invR = inv.filter(inKeys), openR = open.filter(inKeys), costR = cost.filter(inKeys), rcR = rc.filter(inKeys);
+  const byCust = bizTop(invR, x => x.name, 10).map(([nm, o]) => { const op = sum(openR.filter(x => x.name === nm)); return `<tr><td>${esc(nm)}</td><td class="n">${esc(bizMoney(o.v))}</td><td class="n">${o.n}</td><td class="n">${op ? esc(bizMoney(op)) : '—'}</td></tr>`; });
+  const byVend = bizTop(costR, x => x.name, 15).map(([nm, o]) => { const k = 'vend:' + nm, on = sel.has(k); return `<tr><td>${esc(nm)}</td><td class="n">${esc(bizMoney(o.v))}</td><td class="n">${o.n}</td><td class="n"><button type="button" class="pick-chip biz-mini${on ? ' sel' : ''}" aria-pressed="${on}" onclick="bizSrcToggle('${escq(k)}')">${on ? '✓ on the chart' : '▲ chart it'}</button></td></tr>`; });
+  const byAcct = bizTop(costR, x => x.acct, 12).map(([nm, o]) => `<tr><td>${esc(nm)}</td><td class="n">${esc(bizMoney(o.v))}</td><td class="n">${o.n}</td></tr>`);
+  const byRc = bizTop(rcR, x => x.name, 10).map(([nm, o]) => `<tr><td>${esc(nm)}</td><td class="n">${esc(bizMoney(o.v))}</td><td class="n">${o.n}</td></tr>`);
+  const byPeriod = keys.map((k, i) => ({ k, i })).reverse().map(({ k, i }) => `<tr><td>${esc(bizPeriodLabel(k, span))}</td>${series.map(s => `<td class="n">${esc(bizMoney(s.vals[i]))}</td>`).join('')}</tr>`);
+  return `${bizHead('📈 MONEY CHARTS', 'yours alone')}
+    ${bizSpanBtns(span, 'bizMoneySpan', BIZ_SPANS)}
+    ${srcBtns}
+    ${bankWheel}
+    <div class="pb-card biz-card"><div class="biz-title">BY ${span.toUpperCase()} <span class="hint" style="font-weight: 400;">— ${esc(rangeWord)}</span></div>
+      ${bizMultiSvg(keys, span, series, (v, short) => short ? bizAxisWord(v) : bizMoney(v), bizAxisWord)}
+      ${bizLegendHtml(series)}
+      <div class="biz-tiles">${tiles.map(([b, w]) => `<div class="biz-tile"><b>${esc(b)}</b><span>${esc(w)}</span></div>`).join('')}</div>
+      <div class="hint" style="margin: 8px 0 0;">${cov.map(esc).join(' · ')}</div>
+    </div>
+    ${tbl('BY CUSTOMER', byCust, [{ h: 'customer' }, { h: 'invoiced', n: 1 }, { h: 'invoices', n: 1 }, { h: 'still open', n: 1 }])}
+    ${tbl('BY VENDOR — QuickBooks', byVend, [{ h: 'vendor' }, { h: 'paid', n: 1 }, { h: 'lines', n: 1 }, { h: '', n: 1 }])}
+    ${tbl('BY ACCOUNT — QuickBooks', byAcct, [{ h: 'account' }, { h: 'paid', n: 1 }, { h: 'lines', n: 1 }])}
+    ${tbl('BY VENDOR — the log\'s receipts', byRc, [{ h: 'vendor' }, { h: 'amount', n: 1 }, { h: 'receipts', n: 1 }])}
+    ${tbl('THE NUMBERS BEHIND THE CHART', byPeriod, [{ h: span }, ...series.map(s => ({ h: s.word, n: 1 }))])}
+    <button type="button" class="btn-ghost" style="width: 100%;" onclick="_bizHelp = !_bizHelp; renderBusiness()" aria-expanded="${_bizHelp}">${_bizHelp ? '▾' : '▸'} ? how this works</button>
+    ${_bizHelp ? `<div class="hint" style="line-height: 1.5; margin: 6px 2px;">📤 Invoiced is every invoice on the ledger by its date (the books run rewrites the ledger each week). ⏳ Still open is, of those, what is unpaid today — by the invoice's date, so an old bar is an old bill. 🧾 Costs are the QuickBooks cost lines the run keeps, from the field era on; earlier costs are not in Dropbox as data. 🏦 Into / out of the bank is the Relay account picked here, every line — transfers between your own accounts too, so "out" is not all spending. 🧾 Receipts are what you priced in Boiler Room. One axis for everything: one source draws bars with the number on each, two or more draw lines with different marks. DAY shows the last 30 days, WEEK the last 16 weeks (Monday to Sunday), MONTH the last 12 months, YEAR every year on record. ▲ chart it on a vendor lays that vendor's QuickBooks lines over the chart. The Profit Ticker's own all-time cash figures come from the All Dates Transaction List, which the books run does not keep as data — so they stay on that page.</div>` : ''}`;
 }
 setTimeout(() => { try { bizSetupWord(); } catch (e) {} }, 0);
 async function openMoneyPage(which) {
@@ -22825,7 +23094,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.40';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.41';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

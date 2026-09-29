@@ -34,9 +34,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const vis = [...document.querySelectorAll('#scRow .sc-btn')].filter(b => getComputedStyle(b).display !== 'none'), tops = new Set(vis.map(b => Math.round(b.getBoundingClientRect().top)));
     return vis.length === 4 && tops.size === 1 && /Business/.test(vis[3].textContent) && !vis.some(b => /Summary/.test(b.textContent)) && document.documentElement.scrollWidth <= document.documentElement.clientWidth;
   }), await page.evaluate(() => [...document.querySelectorAll('#scRow .sc-btn')].map(b => b.textContent.trim() + ':' + getComputedStyle(b).display).join(' | ')));
-  ok('the page opens with nothing yet: the two old money pages as doors, the drop box, and no chart', await page.evaluate(() => {
-    openBusiness(); const t = $('revBox').textContent;
-    return $('revModal').classList.contains('show') && /Profit Ticker/.test(t) && /Project Tracker/.test(t) && /SAVINGS GROWTH/.test(t) && /No statements yet/.test(t) && !!$('bizFileIn') && !document.querySelector('.biz-chart');
+  ok('the page is a menu of five doors (📈 v7.41); 🏦 Savings growth opens its own window with nothing yet: the drop box, and no chart', await page.evaluate(() => {
+    openBusiness(); const menu = $('revBox').textContent; const doors = /Profit Ticker/.test(menu) && /Project Tracker/.test(menu) && /Savings growth/.test(menu) && /Truck mileage/.test(menu) && /Money charts/.test(menu) && !document.querySelector('.biz-chart');
+    openSavings(); const t = $('revBox').textContent;
+    return doors && $('revModal').classList.contains('show') && /SAVINGS GROWTH/.test(t) && /No statements yet/.test(t) && !!$('bizFileIn') && !document.querySelector('.biz-chart');
   }));
   ok('two Relay CSVs dropped at once land as two accounts, each its last four from the file name (never the whole number); the chart reads the SAVINGS one; the file is written to App Data/business-bank.json', await page.evaluate(async () => {
     await bizStmtFiles([file(SAV, 'Business Savings - 1234 - 2026.csv'), file(RCV, 'Receiving - 5678 - 2026.csv')]);
@@ -95,7 +96,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }), await page.evaluate(() => JSON.stringify({ n: bizStore().accts['1234'].lines.length, said: _said })));
   ok('the ⚙ Setup section carries the same drop box and says what is in: two accounts, their lines, through when', await page.evaluate(() => {
     bizSetupWord(); const sec = $('bizSec'), t = $('bizSetupMsg').textContent;
-    return !!sec && !!$('bizFileInSet') && /···1234: 11 lines through May 10/.test(t) && /···5678: 3 lines through Mar 5/.test(t) && /Open the Business page/.test(sec.textContent);
+    return !!sec && !!$('bizFileInSet') && /···1234: 11 lines through May 10/.test(t) && /···5678: 3 lines through Mar 5/.test(t) && /Open the savings chart/.test(sec.textContent)   /* 📈 v7.41 */;
   }), await page.evaluate(() => $('bizSetupMsg').textContent));
   ok('THE WALL: the Wizard never sees a business line; the personal budget never gains one; the store rides only as App Data/business-bank.json', await page.evaluate(() => {
     const ctx = buildAskContext('how is the savings doing');
