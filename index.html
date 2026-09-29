@@ -1670,6 +1670,11 @@
   .est-num.mute { opacity: .5; font-weight: 500; }
   .est-sub { margin: 2px 0 0 !important; white-space: normal !important; }
   .est-row[hidden] { display: none !important; }
+  /* 🗂 v7.48 — the Build List's tags: every construction category under its phase, in a box that scrolls; what the row wears on top */
+  .mat-tagbox { max-height: 44vh; overflow-y: auto; border: 1px solid var(--grid, #3a3120); border-radius: 10px; padding: 4px 8px 8px; }
+  .mat-tagbox .bl-ph-h:first-child { margin-top: 4px; }
+  .mat-tagrow { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 4px; }
+  .mat-tags-on { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin: 0 0 6px; }
   .est-empty-fold { width: 100%; text-align: left; margin-top: 4px; border-style: dashed !important; }
   .est-help-btn { width: 100%; text-align: left; margin: 0 0 6px; }
   :root[data-skin="calm"] .est-board .set-section.est-row { background: transparent; border: 0; border-bottom: 1px solid var(--grid); border-radius: 0; padding: 8px 4px !important; margin-top: 0 !important; min-height: 48px; box-shadow: none; }
@@ -2855,12 +2860,12 @@
   /* 🔲 v6.33 — the 🧾 category window: same-size plates, three across (Eric's ask). A long
      name like "Drywall, Mud and Texture" wraps inside its plate instead of stretching it. */
   .cat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .cat-grid .pick-chip { width: 100%; min-height: 56px; border-radius: 12px; padding: 8px 6px;
+  .cat-grid .pick-chip { width: 100%; min-height: 64px; border-radius: 12px; padding: 8px 6px;
     font-size: 12.5px; line-height: 1.25; white-space: normal; text-align: center;
     display: flex; align-items: center; justify-content: center; overflow-wrap: anywhere; }
   /* 🎨 v6.85 — Calm Brass is the default now, and its chip rule (40px, 8px 12px, 13px) outranked the plate above, so
      a long name made its plate taller than the rest. Same-size plates in Calm too. */
-  :root[data-skin="calm"] .cat-grid .pick-chip { min-height: 56px; padding: 8px 6px; font-size: 12.5px; border-radius: 12px; }
+  :root[data-skin="calm"] .cat-grid .pick-chip { min-height: 64px; padding: 8px 6px; font-size: 12.5px; border-radius: 12px; }   /* 🗂 v7.48 — 64, so a three-line name ("Well line, sewerline to house") is the same plate as the rest: in build order it sits in the first row */
   /* ✨ v5.31 — the gold plate IS the standard chip on every skin; picked = BRIGHT + banded.
      v5.32 — smaller letters so a Scritchfield-length word fits a plate in one piece. */
   .pick-chip {
@@ -4421,7 +4426,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.47 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.48 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5613,7 +5618,44 @@ function isOverheadEntry(e) {
 }
 // the File Cabinet keeps its old names too — Dropbox folders already carry them — but
 // Eric's budget categories are now pickable everywhere a category is picked
-const FC_CATS = ['—', ...new Set([...FILE_CATS.slice(1), ...RCPT_CATS])];
+// 🕯 v6.66 — THE BUILD PHASES: a fixed, readable table (never a guess). A category Eric adds
+// himself lands under OTHER COSTS. Ids carry no & or quotes so they can ride an onclick.
+// 🗂 v7.48 — ONE ORDER, EVERYWHERE (the table moved up here from the estimates block, so every list below can stand on it).
+// Eric: "When I edit a build list item, the tags in there need to have all of the construction categories that we normally use.
+// Look through everywhere that there is a full list of construction categories and make sure they're always in the same order."
+// THE order is the build: the five phases — site, shell, mechanical, interior finish, other costs — and inside a phase HIS OWN
+// list's order (EST_DEFAULT_CATS above, verbatim — the table's rows follow it, and a suite asserts they do). Everything that shows
+// the whole list reads it from here: the estimates board, the 🧾 cost window (it was A → Z), the grinder's Build List window, the
+// Build List's tags and its estimate-line wheel, the bills strip's wheels, the log's category wheel. A name the list does not know
+// (a category of his own, an old tag) comes after the ones it does, in the order it was given.
+const EST_PHASES = [
+  ['site', 'Site & utilities', ['Demo', 'Well line, sewerline to house', 'Septic', 'Dirt work', 'Enstar', 'HEA', 'Temporary Electric', 'Well', 'Helical Piers', 'Inspections / Permit', 'Engineering', 'Surveying']],
+  ['shell', 'Foundation & shell', ['Concrete and foundation', 'ICF Walls', 'Window Wells', 'Framing', 'Trusses', 'Roofing', 'Windows', 'Exterior Doors', 'Siding', 'Decks', 'Ext Painting', 'Garage Doors', 'Gutters']],
+  ['mech', 'Mechanical', ['Plumbing', 'Heating', 'Air', 'Water Softener', 'Electrical', 'Insulation', 'Urethane', 'Woodstove or fireplace']],
+  ['finish', 'Interior finish', ['Gypcrete', 'Drywall, Mud and Texture', 'Interior Paint', 'Kitchen cabinets', 'Countertops', 'Vanities and sinks', 'Bathrooms', 'Int Doors', 'Trim', 'Drop ceiling', 'Tile (floors)', 'Tile (Showers)', 'Flooring', 'Carpet', 'Closet Interiors', 'Appliances']],
+  ['other', 'Other costs', ['Winter costs', 'Snow Plowing', 'Trash / Construction Debris', 'Misc', 'Contingency', 'Add ons']],
+];
+const EST_PHASE_OF = {}, EST_PHASE_NAME = {}, CAT_RANK = {};
+EST_PHASES.forEach(([id, name, names]) => { EST_PHASE_NAME[id] = name; names.forEach(n => { EST_PHASE_OF[n.toLowerCase()] = id; }); });
+const CATS_IN_ORDER = EST_PHASES.flatMap(p => p[2]);   // the construction categories, in the one order
+CATS_IN_ORDER.forEach((n, i) => { CAT_RANK[n.toLowerCase()] = i; });
+function estPhaseOf(n) { return EST_PHASE_OF[String(n || '').trim().toLowerCase()] || 'other'; }
+const CAT_UNKNOWN = 1e6;
+function catRank(n) { const r = CAT_RANK[String(n || '').trim().toLowerCase()]; return r == null ? CAT_UNKNOWN : r; }
+function catKnown(n) { return catRank(n) < CAT_UNKNOWN; }
+function catSort(list) { return (list || []).map((n, i) => [n, i]).sort((a, b) => (catRank(a[0]) - catRank(b[0])) || (a[1] - b[1])).map(x => x[0]); }
+function catGroups(list) {   // → [[phase id, phase name, [names]]] in build order — only the phases that hold something
+  const by = {}; EST_PHASES.forEach(p => { by[p[0]] = []; });
+  catSort(list).forEach(n => by[estPhaseOf(n)].push(n));
+  return EST_PHASES.map(p => [p[0], p[1], by[p[0]]]).filter(g => g[2].length);
+}
+// a wheel's <option>s under their phases — the wheel itself says which phase a name belongs to
+function catOptionsHtml(list, sel, valOf) {
+  return catGroups(list).map(([, name, names]) => `<optgroup label="${esc(name)}">${names.map(n => `<option value="${esc(String(valOf ? valOf(n) : n))}"${n === sel ? ' selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('');
+}
+// the File Cabinet's and the log wheel's list: the construction categories in the one order, then the money buckets, then the old
+// File Cabinet names nothing else carries
+const FC_CATS = ['—', ...new Set([...CATS_IN_ORDER, ...RCPT_CATS, ...FILE_CATS.slice(1)])];
 let prefs = {};          // {lastJob, lastTruck}
 let entries = [];        // {id, ts, type, details, job, miles?, amount?, hours?, truck?, odometer?, filedTo, synced, sample?}
 let todos = [];          // {id, text, job, done, sample?}
@@ -6686,7 +6728,9 @@ function catModalOpen() {
   const job = (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : curJob;
   const learned = ((prefs.jobCats || {})[jobCatKey(job)] || []).filter(c => RCPT_CATS.includes(c));
   // 🏢 v6.35 — overhead gets its own group with its own words; the A → Z list is project costs only
-  const all = RCPT_CATS.filter(c => !OVERHEAD_CATS.includes(c)).sort((a, b) => a.localeCompare(b)); // 🅰 alphabetical — Eric: easier to find
+  // 🗂 v7.48 — in THE order (the build, phase by phase), as every other list of them is. It was A → Z (his word then: "easier to find");
+  // his word now: "make sure they're always in the same order" — the phase headings do the finding.
+  const groups = catGroups(RCPT_CATS.filter(c => !OVERHEAD_CATS.includes(c)));
   // 🔲 v6.33 — Eric: "all those cards needs to be the same size so its 3 across or whatever
   // fits best." Same-size plates in a three-wide grid (.cat-grid), instead of pills of every
   // length wrapping wherever they fell. No inline sizing here so the grid rule can win.
@@ -6695,13 +6739,12 @@ function catModalOpen() {
     ${winX('catModalClose()', 'close')}</h3>
     <div class="hint" style="margin: 0 0 8px;">Filing under <b>${esc(job && job !== '—' ? job : 'no job yet — pick one after')}</b>. The pick rides the receipt to the budget pile pre-sorted, and it's remembered for next time.</div>
     ${learned.length ? `<div style="font-weight: var(--fw8, 800); font-size: var(--fs115, 11.5px); letter-spacing: .4px; margin: 6px 0 4px;">⭐ USED ON THIS JOB</div>
-      <div class="chips-row cat-grid" style="margin-bottom: 8px;">${learned.map(c => chip(c, true)).join('')}</div>
-      <div style="font-weight: var(--fw8, 800); font-size: var(--fs115, 11.5px); letter-spacing: .4px; margin: 6px 0 4px;">🅰 THE WHOLE LIST, A → Z</div>` : ''}
+      <div class="chips-row cat-grid" style="margin-bottom: 8px;">${learned.map(c => chip(c, true)).join('')}</div>` : ''}
     <div style="font-weight: var(--fw8, 800); font-size: var(--fs115, 11.5px); letter-spacing: .4px; margin: 6px 0 4px;">🏢 OVERHEAD — recorded for the books, never billed to a client</div>
     <div class="chips-row cat-grid" style="margin-bottom: 4px;">${OVERHEAD_CATS.map(c => chip(c, false)).join('')}</div>
     ${catTrucks().length ? '<div class="hint" style="margin: 0 0 8px;">⛽ Fuel and 🔧 Truck maintenance ask which truck next.</div>' : ''}
-    ${learned.length ? '' : `<div style="font-weight: var(--fw8, 800); font-size: var(--fs115, 11.5px); letter-spacing: .4px; margin: 6px 0 4px;">🅰 PROJECT COSTS, A → Z</div>`}
-    <div class="chips-row cat-grid" style="max-height: 40vh; overflow-y: auto; align-content: flex-start;">${all.map(c => chip(c, false)).join('')}</div>
+    <div style="font-weight: var(--fw8, 800); font-size: var(--fs115, 11.5px); letter-spacing: .4px; margin: 6px 0 4px;">🏗 PROJECT COSTS — in build order</div>
+    <div id="catPhases" style="max-height: 40vh; overflow-y: auto;">${groups.map(([pid, pname, names]) => `<div class="bl-ph-h" data-ph="${pid}">🏗 ${esc(pname)}</div><div class="chips-row cat-grid" style="align-content: flex-start; margin-bottom: 6px;">${names.map(c => chip(c, false)).join('')}</div>`).join('')}</div>
     <div class="frow" style="gap: 8px; margin-top: 12px;">
       <button type="button" class="btn-ghost" style="flex: 1;" onclick="catModalClose()">⏭ Skip — pick it at the budget later</button>
       <button type="button" class="btn-ghost" style="flex: 1; color: var(--err, #c0392b);" onclick="qnRcpt = false; qnCat = ''; qnTruck = ''; catModalClose(); renderTagChips(); renderCatRow();">✕ Not a receipt</button>
@@ -15243,22 +15286,16 @@ function estAutoClear() {
   });
   return n;
 }
-// 🕯 v6.66 — THE BUILD PHASES: a fixed, readable table (never a guess). A category Eric adds
-// himself lands under OTHER COSTS. Ids carry no & or quotes so they can ride an onclick.
-const EST_PHASES = [
-  ['site', 'Site & utilities', ['Demo', 'Well line, sewerline to house', 'Septic', 'Dirt work', 'Enstar', 'HEA', 'Temporary Electric', 'Well', 'Helical Piers', 'Surveying', 'Engineering', 'Inspections / Permit']],
-  ['shell', 'Foundation & shell', ['Concrete and foundation', 'ICF Walls', 'Window Wells', 'Framing', 'Trusses', 'Roofing', 'Windows', 'Exterior Doors', 'Siding', 'Decks', 'Ext Painting', 'Gutters', 'Garage Doors']],
-  ['mech', 'Mechanical', ['Plumbing', 'Heating', 'Air', 'Water Softener', 'Electrical', 'Insulation', 'Urethane', 'Woodstove or fireplace']],
-  ['finish', 'Interior finish', ['Gypcrete', 'Drywall, Mud and Texture', 'Interior Paint', 'Kitchen cabinets', 'Countertops', 'Vanities and sinks', 'Bathrooms', 'Int Doors', 'Trim', 'Drop ceiling', 'Tile (floors)', 'Tile (Showers)', 'Flooring', 'Carpet', 'Closet Interiors', 'Appliances']],
-  ['other', 'Other costs', ['Winter costs', 'Snow Plowing', 'Trash / Construction Debris', 'Misc', 'Contingency', 'Add ons']],
-];
-const EST_PHASE_OF = {}, EST_PHASE_NAME = {};
-EST_PHASES.forEach(([id, name, names]) => { EST_PHASE_NAME[id] = name; names.forEach(n => { EST_PHASE_OF[n.toLowerCase()] = id; }); });
-function estPhaseOf(n) { return EST_PHASE_OF[String(n || '').trim().toLowerCase()] || 'other'; }
+// 🗂 v7.48 — the build phases table (EST_PHASES, estPhaseOf) lives at the top of the file now, with the one order every list reads
 // the folds of the v6.66 layout — reset every time the board opens
 let _estHelp = false, _estShowEmpty = new Set();
 function estHelp() { _estHelp = !_estHelp; renderEstimates(); }
 function estShowEmpty(ph) { _estShowEmpty.has(ph) ? _estShowEmpty.delete(ph) : _estShowEmpty.add(ph); renderEstimates(); }
+// 🗂 v7.48 — the board's own categories as a wheel: in the one order, under their phases; the value is still the row's place on the board
+function estCatOptions(selIdx) {
+  const idx = {}; _estD.cats.forEach((x, i) => { if (!(x.n in idx)) idx[x.n] = i; });
+  return catGroups(_estD.cats.map(x => x.n)).map(([, name, names]) => `<optgroup label="${esc(name)}">${names.map(n => `<option value="${idx[n]}"${idx[n] === selIdx ? ' selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('');
+}
 function renderEstimates() {
   const c = _portalIdx.clients[_estIdx];
   if (!c || !_estD) return;
@@ -15301,7 +15338,7 @@ function renderEstimates() {
         return `<div class="frow" style="gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px;">
         <span style="font-weight: var(--fw7, 700); flex: 1; min-width: 130px;">🏪 ${esc(p.v || 'Unknown vendor')}${p.d ? ` <span class="hint" style="margin: 0;">📅 ${esc(p.d)}</span>` : ''}${e.photoPath ? ` <span style="cursor: pointer;" title="see the invoice" onclick="openEntryPhoto(${e.id}, event)">📷</span>` : ''}${toLogan ? ' <span class="hint" style="margin: 0;">📗 with Logan</span>' : ''}</span>
         <div class="field" style="margin: 0; width: 100px;"><label style="font-size: var(--fs10, 10px);">Amount</label><input id="estBillA-${e.id}" inputmode="decimal" value="${p.amt || ''}" style="font-weight: var(--fw8, 800);"></div>
-        <div class="field" style="margin: 0; min-width: 150px; flex: 1;"><label style="font-size: var(--fs10, 10px);">Budget category</label><select id="estBillC-${e.id}">${_estD.cats.map((x, i) => `<option value="${i}"${i === gi ? ' selected' : ''}>${esc(x.n)}</option>`).join('')}</select></div>
+        <div class="field" style="margin: 0; min-width: 150px; flex: 1;"><label style="font-size: var(--fs10, 10px);">Budget category</label><select id="estBillC-${e.id}">${estCatOptions(gi)}</select></div>
         <button type="button" class="pick-chip${inc ? '' : ' sel'}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;" onclick="estBillIncFlip(${e.id})">${inc ? '✓ markup already in' : '+' + estMk() + '% rides on top'}</button>
         <button type="button" class="pick-chip sel" style="font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); min-height: 30px;" onclick="estBillApprove(${e.id})">✓ ONTO THEIR PAGE</button>
         <button type="button" class="btn-ghost req-x" onclick="estBillSkip(${e.id})">🏢 not budget</button>
@@ -15309,7 +15346,7 @@ function renderEstimates() {
       <div class="frow" style="gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px;">
         <div class="field" style="margin: 0; flex: 1; min-width: 110px;"><label style="font-size: var(--fs10, 10px);">Vendor (stays office)</label><input id="estHandV" placeholder="who billed you…"></div>
         <div class="field" style="margin: 0; width: 100px;"><label style="font-size: var(--fs10, 10px);">Amount</label><input id="estHandA" inputmode="decimal" placeholder="$"></div>
-        <div class="field" style="margin: 0; min-width: 140px; flex: 1;"><label style="font-size: var(--fs10, 10px);">Budget category</label><select id="estHandC">${_estD.cats.map((x, i) => `<option value="${i}">${esc(x.n)}</option>`).join('')}</select></div>
+        <div class="field" style="margin: 0; min-width: 140px; flex: 1;"><label style="font-size: var(--fs10, 10px);">Budget category</label><select id="estHandC">${estCatOptions(-1)}</select></div>
         <button type="button" class="pick-chip${window._estHandInc ? '' : ' sel'}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;" onclick="estHandIncFlip()">${window._estHandInc ? '✓ markup already in' : '+' + estMk() + '% rides on top'}</button>
         <button type="button" class="pick-chip sel" style="font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); min-height: 30px;" onclick="estBillHand()">➕ ADD BILL BY HAND</button>
       </div>
@@ -15421,6 +15458,10 @@ function renderEstimates() {
         if (!byPh.has(ph)) byPh.set(ph, []);
         byPh.get(ph).push(ci);
       });
+      // 🗂 v7.48 — inside a phase the rows follow THE order (a board made before a category joined the list had it at the bottom;
+      // a category of his own comes after the list's, in the order he added it)
+      const byRank = (a, b) => (catRank(_estD.cats[a].n) - catRank(_estD.cats[b].n)) || (a - b);
+      needs.sort(byRank); byPh.forEach(list => list.sort(byRank));
       let out = '';
       const gOnly = _estGuessOnly, isG = ci => estIsGuess(_estD.cats[ci]);   // ≈ v7.45 — "only the best guesses": the same rows, the same sections, the rest left out
       const needsShown = gOnly ? needs.filter(isG) : needs;
@@ -17106,7 +17147,18 @@ let _matTagF = '';
 function matItemTags(it) { return it.tg || (it.t && it.t !== 'Misc' ? [it.t] : []); }
 function matTagBank(it) {
   const inBoard = ((_matD && _matD.rooms) || []).flatMap(r => (r.items || []).flatMap(x => matItemTags(x)));
-  return [...new Set([...MAT_TRADES.filter(t => t !== 'Misc'), ...(prefs.matTags || []), ...inBoard, ...(it ? matItemTags(it) : [])])];
+  // 🗂 v7.48 — Eric: "the tags in there need to have all of the construction categories that we normally use." Every one of them,
+  // in the one order; then whatever else is in use — a tag of his own, an old trade tag a row still wears.
+  return [...new Set([...CATS_IN_ORDER, ...(prefs.matTags || []), ...inBoard, ...(it ? matItemTags(it) : [])])];
+}
+// the tags as plates: what the row WEARS first (so it is seen without a scroll), then the construction categories under their
+// phases in a box that scrolls, then his own tags (and, for "whose list", the crew)
+function matTagPlatesHtml(it, bank, chipOf, people) {
+  const mine = matItemTags(it), crewNames = (people || []).filter(n => !catKnown(n));
+  const cats = bank.filter(catKnown), own = bank.filter(t => !catKnown(t) && !crewNames.includes(t));
+  const row = (title, list, cls) => list.length ? `<div class="bl-ph-h${cls ? ' ' + cls : ''}">${title}</div><div class="mat-tagrow">${list.map(chipOf).join('')}</div>` : '';
+  return `${mine.length ? `<div class="mat-tags-on"><span class="hint" style="margin: 0;">On this row:</span> ${mine.map(chipOf).join('')}</div>` : ''}
+    <div class="mat-tagbox">${row('👷 The crew', crewNames, 'mat-tg-crew')}${catGroups(cats).map(([pid, pname, names]) => row('🏗 ' + esc(pname), names, 'mat-tg-' + pid)).join('')}${row('🏷 Your own tags', own, 'mat-tg-own')}</div>`;
 }
 function matItTagToggle(id, tg) {
   const it = matFindItem(id);
@@ -17598,8 +17650,8 @@ function matWhoBank(it) { return [...new Set([...matTagBank(it), ...((typeof cre
 function matWhoPickHtml(it) {
   const id = escq(it.id);
   return `<div class="mat-who" id="matWho-${id}"><div class="hint" style="margin: 0 0 5px;">👷 Whose list is it on? Tap a trade or a name — 🏷 at the top of the board sorts by it.</div>
-    <div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
-      ${matWhoBank(it).map(tg => { const on = matItemTags(it).includes(tg); return `<button type="button" class="pick-chip${on ? ' sel' : ''}" style="font-size: var(--fs12, 12px); padding: 6px 10px; min-height: 36px;" onclick="matItTagToggle('${id}', '${escq(tg)}')" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(tg)}</button>`; }).join('')}
+    ${matTagPlatesHtml(it, matWhoBank(it), tg => { const on = matItemTags(it).includes(tg); return `<button type="button" class="pick-chip${on ? ' sel' : ''}" style="font-size: var(--fs12, 12px); padding: 6px 10px; min-height: 36px;" onclick="matItTagToggle('${id}', '${escq(tg)}')" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(tg)}</button>`; }, (typeof crew !== 'undefined' && crew) || [])}
+    <div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 6px;">
       <input type="text" id="matWhoNew-${id}" placeholder="➕ a name" style="width: 104px; font-size: 13px; padding: 7px 8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();matWhoAdd('${id}');}">
       <button type="button" class="btn-ghost req-x" onclick="matWhoAdd('${id}')" aria-label="add the name">➕</button>
       <button type="button" class="pick-chip" style="font-size: var(--fs12, 12px); padding: 6px 10px; min-height: 36px; font-weight: var(--fw8, 800);" onclick="_matWhoFor = ''; renderMatMgr()">✓ that's it</button>
@@ -17714,7 +17766,7 @@ function renderMatMgr() {
     ${(() => { // 🏷 v5.80 — the sort: tap a tag, see that trade's list (the electrician's list)
       const used = {};
       _matD.rooms.forEach(r => (r.items || []).forEach(x => matItemTags(x).forEach(tg => { used[tg] = (used[tg] || 0) + 1; })));
-      const names = Object.keys(used).sort();
+      const names = catSort(Object.keys(used).sort());   // 🗂 v7.48 — the construction categories in the one order, then the other tags A → Z
       if (_matTagF && !used[_matTagF]) _matTagF = '';
       if (!names.length) return '';
       return `<div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px;">
@@ -17835,8 +17887,8 @@ function matEditSheetHtml(it) {
       <button type="button" class="ms-fold" onclick="matEdFold('${k}')" aria-expanded="${openF(k)}">${openF(k) ? '▾' : '▸'} ${title}${sum ? ` <span class="ms-sum">· ${sum}</span>` : ''}</button>
       <div class="ms-foldbody frow" style="gap: 8px;"${openF(k) ? '' : ' hidden'}>${body}</div></div>`;
   const tagsHtml = `<div class="field" style="flex: 1 1 100%;"><label>🏷 Tags — who needs to see this item on their list (tap to light · ➕ your own)</label>
-      <div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
-        ${matTagBank(it).map(tg => { const on = matItemTags(it).includes(tg); return `<button type="button" class="pick-chip${on ? ' sel' : ''}" style="font-size: var(--fs115, 11.5px); padding: 5px 10px; min-height: 30px;" onclick="matItTagToggle('${id}', '${escq(tg)}')" aria-pressed="${on}">${on ? '✓ ' : ''}🏷 ${esc(tg)}</button>`; }).join('')}
+      ${matTagPlatesHtml(it, matTagBank(it), tg => { const on = matItemTags(it).includes(tg); return `<button type="button" class="pick-chip${on ? ' sel' : ''}" style="font-size: var(--fs115, 11.5px); padding: 5px 10px; min-height: 34px;" onclick="matItTagToggle('${id}', '${escq(tg)}')" aria-pressed="${on}">${on ? '✓ ' : ''}🏷 ${esc(tg)}</button>`; })}
+      <div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 6px;">
         <input type="text" id="matNewTag-${id}" placeholder="➕ new tag" style="width: 96px; font-size: var(--fs12, 12px); padding: 6px 8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();matItTagAdd('${id}');}">
         <button type="button" class="btn-ghost req-x" onclick="matItTagAdd('${id}')" aria-label="add the tag">➕</button>
       </div></div>`;
@@ -17900,7 +17952,7 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
     <div class="field" style="min-width: 170px; flex: 1 1 100%;"><label>SKU / model · 🏢</label><input type="text" id="matSku-${id}" value="${esc(it.sku || '')}" placeholder="the Wizard fills this from a photo" onchange="matSet('${id}', 'sku', this.value)"></div>
     ${+it.est > 0 ? `<div class="hint" style="flex: 1 1 100%; margin: 0;">with this job's ${mk}% markup: <b>${fmtMoney(matMkUp(it.est, mk))}</b> · 🏢 office only — the client never sees a markup</div>` : ''}
     <div class="field" style="min-width: 170px; flex: 1 1 100%;"><label>💰 Estimate line it belongs to · 🏢</label>
-      <select id="matEc-${id}" onchange="matSet('${id}', 'ec', this.value)"><option value="">— none —</option>${matEcList(it).map(n => `<option${it.ec === n ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>`;
+      <select id="matEc-${id}" onchange="matSet('${id}', 'ec', this.value)"><option value="">— none —</option>${catOptionsHtml(matEcList(it), it.ec)}</select></div>`;
   const pktN = ((it.pkt || {}).docs || []).length + ((it.pkt || {}).notes ? 1 : 0);
   return `<div class="mat-sheet" id="matSheet" role="dialog" aria-modal="true" aria-label="edit ${esc(it.n)}" onpointerdown="this._pd = (event.target === this)" onclick="if (event.target === this && this._pd) matEditClose(); this._pd = false">
    <div class="mat-sheet-box">
@@ -23510,7 +23562,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.47';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.48';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

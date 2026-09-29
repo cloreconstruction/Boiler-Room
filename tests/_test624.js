@@ -120,12 +120,12 @@ const { chromium } = require('playwright');
     return qnRcpt && open && /What kind of cost is this/.test(txt) && ($('qnCatRow') === null);
   }));
 
-  ok('v6.25: the window lists the categories A → Z', await page.evaluate(() => {
-    // v6.35 — the window has an OVERHEAD group above the A → Z list now; the A → Z list is the last grid
-    const grids = Array.from($('catBox').querySelectorAll('.cat-grid'));
-    const names = Array.from(grids[grids.length - 1].querySelectorAll('.pick-chip')).map(b => b.textContent.replace(/^\S+\s+/, ''));
-    const sorted = [...names].sort((a, b) => a.localeCompare(b));
-    return names.length >= 50 && JSON.stringify(names) === JSON.stringify(sorted);
+  // 🗂 v7.48 — Eric: "make sure they're always in the same order." The window listed them A → Z (his v6.25 / v6.33 word, "easier to
+  // find"); now it lists them in THE order every other list uses — the build, phase by phase — under the phases' own headings.
+  ok('the window lists the project costs in the one order — the build, under its five phases (it was A → Z)', await page.evaluate(() => {
+    const names = Array.from($('catBox').querySelectorAll('#catPhases .pick-chip')).map(b => b.textContent.replace(/^\S+\s+/, ''));
+    const known = names.filter(n => CATS_IN_ORDER.includes(n));
+    return names.length >= 50 && JSON.stringify(known) === JSON.stringify(CATS_IN_ORDER) && $('catBox').querySelectorAll('#catPhases .bl-ph-h').length === 5;
   }));
 
   ok('v6.25: the job\'s own picks ride on top, starred', await page.evaluate(() => {

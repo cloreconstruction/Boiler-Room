@@ -88,9 +88,9 @@ const { chromium } = require('playwright');
       /🏢 Tools/.test(overGrid.textContent) && /🏢 Office\/Admin/.test(overGrid.textContent) && /⛽ Fuel/.test(overGrid.textContent) && /🔧 Truck maintenance/.test(overGrid.textContent) && overGrid.querySelectorAll('.pick-chip').length === 4;
   }));
 
-  ok('the A → Z list is project costs only — Tools, Fuel, Truck maintenance and Office/Admin are not in it', await page.evaluate(() => {
-    const grids = [...$('catBox').querySelectorAll('.cat-grid')];
-    const az = grids[grids.length - 1].textContent;
+  // 🗂 v7.48 — the project costs are in build order under their phases now (#catPhases); the rule this check holds is unchanged
+  ok('the project-costs list is project costs only — Tools, Fuel, Truck maintenance and Office/Admin are not in it', await page.evaluate(() => {
+    const az = $('catBox').querySelector('#catPhases').textContent;
     const okNow = !/Tools/.test(az) && !/Fuel/.test(az) && !/Truck maintenance/.test(az) && !/Office\/Admin/.test(az) && /Framing/.test(az);
     catModalClose();
     return okNow;

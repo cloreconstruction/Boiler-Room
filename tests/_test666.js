@@ -79,11 +79,13 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(300);
   const board = () => page.evaluate(() => $('revBox').textContent);
 
-  ok('it opens on NEEDS YOU: the two bills first, then the phases in build order', await page.evaluate(() => {
+  // 🗂 v7.48 — the rows under NEEDS YOU follow THE order too (the build: Roofing and Garage Doors are shell, Interior Paint is
+  // finish); they used to follow the order the board happened to be saved in
+  ok('it opens on NEEDS YOU — the two bills and the one over its estimate, in build order — then the phases in build order', await page.evaluate(() => {
     const heads = [...document.querySelectorAll('.est-phase')].map(h => h.textContent.replace(/\s+/g, ' ').trim());
-    const firstRows = [...document.querySelectorAll('.est-phase.need ~ .est-row:not([hidden])')].slice(0, 2).map(r => r.querySelector('.est-name').textContent.trim());
+    const firstRows = [...document.querySelectorAll('.est-phase.need ~ .est-row:not([hidden])')].slice(0, 3).map(r => r.querySelector('.est-name').textContent.trim());
     return /^⚠ Needs you 2 bills waiting$/.test(heads[0]) && /^Site & utilities/.test(heads[1]) && /^Foundation & shell/.test(heads[2]) && /^Mechanical/.test(heads[3]) && /^Interior finish/.test(heads[4]) && /^Other costs/.test(heads[5]) && heads.length === 6 &&
-      firstRows.join('|') === '▸ Interior Paint|▸ Garage Doors';
+      firstRows.join('|') === '▸ Roofing|▸ Garage Doors|▸ Interior Paint';
   }));
 
   ok('the header says what is showing and what needs him; the how-it-works words are one tap away', await page.evaluate(() => {

@@ -105,9 +105,11 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   const some = await home({ ...basePg, budget: [{ n: 'Framing', est: 10000 }, { n: 'Plumbing', est: 3600, g: 1, up: 600 }, { n: 'Roofing', est: 6000, g: 1 }], upcoming: { items: [{ n: 'Plumbing', a: 600 }], tot: 600, all: 1 } });
   const s = await card(some);
-  ok('a placeholder line wears ≈ on what remains, the word PLACEHOLDER under its name in plain words, and a dashed edge — a real number wears none of it', s.rows.length === 3 && !s.rows[0].ph && s.rows[0].left === '$10,000.00 remaining' && !s.rows[0].tag && s.rows[0].edge !== 'dashed' &&
-    s.rows[1].ph && s.rows[1].left === '≈ $3,000.00 remaining' && s.rows[1].tag === '≈ PLACEHOLDER — a rough number until the real bid comes in' && s.rows[1].edge === 'dashed' && s.rows[1].edgeW >= 3 && /estimate ≈ \$3,600\.00 · /.test(s.rows[1].t) &&
-    s.rows[2].ph && s.rows[2].left === '≈ $6,000.00 remaining', JSON.stringify(s.rows));
+  // 🗂 v7.48 — a line is read by its NAME: their page draws the lines in the one order (Framing · Roofing · Plumbing), whichever way the page holds them
+  const R = (c, n) => c.rows.find(r => r.t.startsWith(n)) || {};
+  ok('a placeholder line wears ≈ on what remains, the word PLACEHOLDER under its name in plain words, and a dashed edge — a real number wears none of it', s.rows.length === 3 && R(s, 'Framing').ph === false && R(s, 'Framing').left === '$10,000.00 remaining' && !R(s, 'Framing').tag && R(s, 'Framing').edge !== 'dashed' &&
+    R(s, 'Plumbing').ph && R(s, 'Plumbing').left === '≈ $3,000.00 remaining' && R(s, 'Plumbing').tag === '≈ PLACEHOLDER — a rough number until the real bid comes in' && R(s, 'Plumbing').edge === 'dashed' && R(s, 'Plumbing').edgeW >= 3 && /estimate ≈ \$3,600\.00 · /.test(R(s, 'Plumbing').t) &&
+    R(s, 'Roofing').ph && R(s, 'Roofing').left === '≈ $6,000.00 remaining' && s.rows.map(r => r.t.split(' ')[0]).join('|') === 'Framing|Roofing|Plumbing', JSON.stringify(s.rows));
   ok('before the first line the card says what a placeholder is — how many there are, that the real number replaces it, that it may be higher or lower', /^≈ 2 OF THESE 3 ARE PLACEHOLDER NUMBERS — a rough figure that holds the spot until the real bid comes in\. It will be replaced by the real number, which may be higher or lower\.$/.test(s.note) && s.noteFirst, s.note);
   ok('the big number and the estimate wear ≈ too, and the line under them says how much of the estimate is placeholder numbers', s.tot === '≈ $19,000.00' && /ESTIMATE ≈ \$19,600\.00 · ≈ \$9,600\.00 OF IT IS PLACEHOLDER NUMBERS · /.test(s.sub), JSON.stringify([s.tot, s.sub]));
   ok('the receipts card is about real receipts — no ≈ and no placeholder word on it', !/≈|PLACEHOLDER|placeholder/.test(s.up) && /Plumbing/.test(s.up));
@@ -115,7 +117,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('the light page shows the same mark (the edge, the glyph, the words)', await (async () => {
     await some.evaluate(() => { document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'); });
     const t = await card(some);
-    return t.rows[1].edge === 'dashed' && t.rows[1].edgeW >= 3 && t.rows[1].left === '≈ $3,000.00 remaining' && /PLACEHOLDER/.test(t.rows[1].tag);
+    return R(t, 'Plumbing').edge === 'dashed' && R(t, 'Plumbing').edgeW >= 3 && R(t, 'Plumbing').left === '≈ $3,000.00 remaining' && /PLACEHOLDER/.test(R(t, 'Plumbing').tag);
   })());
   await some.close();
 

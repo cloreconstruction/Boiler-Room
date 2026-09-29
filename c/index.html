@@ -637,6 +637,24 @@ const bDef = b => Number.isInteger(b.def) && b.opts[b.def] ? b.def : 0;
 const bEst = b => Array.isArray(b.opts)
   ? +((b.opts[bPicked(b) != null ? bPicked(b) : bDef(b)] || {}).est) || 0
   : +b.est || 0;
+// 🗂 v7.48 — ONE ORDER. Eric: "Look through everywhere that there is a full list of construction categories and make sure they're
+// always in the same order." The lines on this page follow the order of his own board now: the build, phase by phase (the
+// receipts list was largest first, the estimates in whatever order the board happened to be saved in). It is only how the page
+// is DRAWN — the page's data is not touched, and a line keeps its own place in it, which is what a tap names (pickOpt, lockOpt).
+// The SAME table as the app's (index.html) — keep the two identical; a suite compares them.
+const EST_PHASES = [
+  ['site', 'Site & utilities', ['Demo', 'Well line, sewerline to house', 'Septic', 'Dirt work', 'Enstar', 'HEA', 'Temporary Electric', 'Well', 'Helical Piers', 'Inspections / Permit', 'Engineering', 'Surveying']],
+  ['shell', 'Foundation & shell', ['Concrete and foundation', 'ICF Walls', 'Window Wells', 'Framing', 'Trusses', 'Roofing', 'Windows', 'Exterior Doors', 'Siding', 'Decks', 'Ext Painting', 'Garage Doors', 'Gutters']],
+  ['mech', 'Mechanical', ['Plumbing', 'Heating', 'Air', 'Water Softener', 'Electrical', 'Insulation', 'Urethane', 'Woodstove or fireplace']],
+  ['finish', 'Interior finish', ['Gypcrete', 'Drywall, Mud and Texture', 'Interior Paint', 'Kitchen cabinets', 'Countertops', 'Vanities and sinks', 'Bathrooms', 'Int Doors', 'Trim', 'Drop ceiling', 'Tile (floors)', 'Tile (Showers)', 'Flooring', 'Carpet', 'Closet Interiors', 'Appliances']],
+  ['other', 'Other costs', ['Winter costs', 'Snow Plowing', 'Trash / Construction Debris', 'Misc', 'Contingency', 'Add ons']],
+];
+const CAT_RANK = {};
+EST_PHASES.flatMap(p => p[2]).forEach((n, i) => { CAT_RANK[n.toLowerCase()] = i; });
+const catRank = n => { const r = CAT_RANK[String(n || '').trim().toLowerCase()]; return r == null ? 1e6 : r; };
+// a list in the one order. A name the list does not know (a category of his own, a week of labor) comes after the ones it does,
+// in the order it came in.
+const inOrder = (list, nameOf) => list.map((x, i) => [x, i]).sort((a, b) => (catRank(nameOf(a[0])) - catRank(nameOf(b[0]))) || (a[1] - b[1])).map(x => x[0]);
 // 🔮 v6.27 — ESTIMATED UPCOMING COSTS. Eric: "clients can forsee upcoming costs before the
 // next weeks invoice, make suggestions or feedback before building."
 //
@@ -668,7 +686,7 @@ function receiptsOf(d) {
   return { items, tot: Math.round(items.reduce((s, i) => s + i.a, 0) * 100) / 100 };
 }
 function upcomingHtml(d) {
-  const r = receiptsOf(d), items = r.items, tot = r.tot;
+  const r = receiptsOf(d), items = inOrder(r.items, i => i.n), tot = r.tot;   // 🗂 v7.48 — in the one order, the same as the card under it
   const rows = items.map(i => `<div class="rc-row" style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin: 6px 0;">
       <span style="font-weight: 700;">${bEsc(i.n)}</span><span>${money(i.a)}</span></div>`).join('');
   const body = items.length
@@ -711,7 +729,7 @@ function budgetHtml(d) {
   const behind = inv > 0 && phTot < inv * 0.9;
   let totE = 0, totU = 0, totUp = 0, totLeft = 0, totOver = 0, anyOpts = false, anyOpen = false;
   let nPh = 0, totPh = 0;   // ≈ v7.46 — the placeholder lines: how many, and how much of the estimate they are
-  const rows = d.budget.map((b, bi) => {
+  const rowAt = d.budget.map((b, bi) => {
     const est = bEst(b);
     // ≈ v7.46 — is the number this line COUNTS a placeholder? (a plain line's own mark; on a line with choices, the mark of the
     // option the total rides right now — their pick, else the planned one)
@@ -763,7 +781,9 @@ function budgetHtml(d) {
         ${pctUp ? `<div style="height: 100%; width: ${pctUp}%; background: var(--acc, #b8860b); opacity: .45;" title="receipts received — not on an invoice yet"></div>` : ''}
       </div>
     </div>`;
-  }).join('');
+  });
+  // 🗂 v7.48 — drawn in the one order (the build, phase by phase); the sums above do not care about the order
+  const rows = inOrder(d.budget.map((b, bi) => bi), bi => (d.budget[bi] || {}).n).map(bi => rowAt[bi]).join('');
   totLeft = Math.round(totLeft * 100) / 100; totOver = Math.round(totOver * 100) / 100; totPh = Math.round(totPh * 100) / 100;
   // ≈ v7.46 — what ≈ means, said once, before the first line: so a number that looks too high or oddly low is read as what it is
   const nAll = d.budget.length;
