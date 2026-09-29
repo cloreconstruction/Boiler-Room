@@ -4418,7 +4418,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.45 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.46 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -14830,17 +14830,26 @@ function estOpts(x) { return (x.bids || []).filter(b => b.opt); }
 // ≈ (b.guess): his own number, no bid behind it. While the bid a category USES is a guess, the row wears ≈ on its number, the words
 // on its second line and a dashed edge (never the colour alone); the top of the board counts them and one tap lists only those.
 // The mark comes off when he taps the plate again (the real bid's number typed in) or picks another bid with ○ use this.
-// Office-side: it never rides to their page — estCut sends the name and the number, as ever.
+// (v7.45 kept the mark office-side; since v7.46 their page says PLACEHOLDER on the line too — see estBidGuess.)
 function estIsGuess(x) { const b = estAccBid(x); return !!(b && b.guess && estTotal(x) > 0); }
 let _estGuessOnly = false;
 function estGuessOnly() { _estGuessOnly = !_estGuessOnly; renderEstimates(); }
-function estBidGuess(ci, bi) {
+// ≈ v7.46 — THEIR PAGE SAYS IT TOO. Eric: "The client page on the estimates coming in needs to make clear that they're placeholder
+// numbers so that people don't panic when they're too high or weirdly low." The mark rides to their page as `g: 1` on the line
+// (estCut) and their ESTIMATED REMAINING COSTS card says it in words: ≈ on the number, PLACEHOLDER under the name, a note above the
+// first line that a placeholder holds the spot until the real bid comes in and may go up or down. A mark made on a line that is
+// ON their page reaches it at once (no debounce window — the v5.89 rule); opening the board puts a page's marks right when they
+// differ (estGuessStale). v7.45 had kept the mark office-side.
+async function estBidGuess(ci, bi) {
   const x = _estD.cats[ci], b = ((x && x.bids) || [])[bi];
   if (!b) return;
   if (b.guess) delete b.guess; else b.guess = true;
-  scheduleEstSave();   // office-side: their page carries the number either way, so nothing is republished
   renderEstimates();
-  toast(b.guess ? `≈ ${x.n} — marked as your best guess. It stays highlighted until a real bid backs it.` : `✓ ${x.n} — a real bid backs it now. The highlight is off.`);
+  const onPage = !!(x.appr && (b.acc || b.opt));
+  if (onPage) { clearTimeout(_estTimer); _estTimer = null; window._estPub = true; await estSave(); }
+  else scheduleEstSave();
+  toast(b.guess ? `≈ ${x.n} — marked as your best guess. It stays highlighted until a real bid backs it.${onPage ? ' Their page says PLACEHOLDER on it.' : ''}`
+    : `✓ ${x.n} — a real bid backs it now. The highlight is off${onPage ? ', here and on their page' : ''}.`);
 }
 let _estOpenCats = new Set();
 async function openEstimates(i) {
@@ -14894,6 +14903,7 @@ async function openEstimates(i) {
   // books run rebuilds pages from QuickBooks and did not carry `upcoming` over). The board is
   // the truth for what is pending; if the page disagrees, republish it right here, on open.
   else if (estUpcomingStale()) { const why = estUpcomingWhy(false); window._estPub = true; scheduleEstSave(true); toast(why); }   // 🧾 v7.45 — a page in the old shape is brought up to date, and the words say which it was
+  else if (estGuessStale()) { window._estPub = true; scheduleEstSave(true); toast('≈ Marking the placeholder numbers on their page…'); }   // ≈ v7.46 — their page's marks follow the board's
   renderEstimates();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -15148,7 +15158,7 @@ function renderEstimates() {
     <div style="margin: 0 0 8px; font-size: 14px; line-height: 1.4;">${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}${needN ? ` · <b style="color: var(--warn, #ffa657);">⚠ ${needN} need${needN > 1 ? '' : 's'} you</b>` : ''} <span class="hint" style="margin: 0;">· 💹 markup ${estMk()}%</span></div>
     ${guessN ? `<button type="button" class="pick-chip est-guess-filter${_estGuessOnly ? ' sel' : ''}" id="estGuessBtn" aria-pressed="${_estGuessOnly}" onclick="estGuessOnly()">${_estGuessOnly ? `✓ ≈ ONLY THE BEST GUESSES (${guessN}) — tap to show everything` : `≈ ${guessN} best guess${guessN > 1 ? 'es' : ''} — ${money0(guessTot)} with no bid behind it yet · tap to see only those`}</button>` : ''}
     <button type="button" class="btn-ghost est-help-btn" onclick="estHelp()" aria-expanded="${_estHelp}">${_estHelp ? '▾' : '▸'} ? How this works</button>
-    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing. <b>≈ Placeholder — best guess:</b> no bid yet? Open the category, tap ≈ ➕ placeholder, type your own number. The row wears ≈ and a dashed edge until a real bid backs it — type the real number and tap the ≈ plate again, or add the bid and tap ○ use this. The ≈ mark is yours alone; their page shows the number like any other.</div>
+    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing. <b>≈ Placeholder — best guess:</b> no bid yet? Open the category, tap ≈ ➕ placeholder, type your own number. The row wears ≈ and a dashed edge until a real bid backs it — type the real number and tap the ≈ plate again, or add the bid and tap ○ use this. Once the category is ✓ ON PAGE their page says it too: ≈ on the number and the word PLACEHOLDER — a rough figure that holds the spot until the real bid comes in, which may be higher or lower.</div>
     ${(() => { const bills = estBillCands();
       // 📥 v6.02 — Eric: "keep it small until it has something to deal with." Nothing waiting
       // = one thin line you can tap open to file a bill by hand. A bill arrives = it opens
@@ -15212,7 +15222,7 @@ function renderEstimates() {
       // the number column: the estimate if there is one, else what is on the way, else what the books show
       const numTxt = tot ? (guess ? '≈ ' : '') + money0(tot) : pendUp ? money0(pendUp) : u ? money0(u) : '—';
       const sub = [
-        guess ? '<b class="est-guess-word">≈ PLACEHOLDER — best guess, no bid yet</b>' : accB && accB.guess ? '<b class="est-guess-word">≈ placeholder — no number typed yet</b>' : '',
+        guess ? '<b class="est-guess-word">≈ PLACEHOLDER — best guess, no bid yet</b>' + (x.appr ? ' <span class="est-guess-word">(their page says so too)</span>' : '') : accB && accB.guess ? '<b class="est-guess-word">≈ placeholder — no number typed yet</b>' : '',
         x.appr ? '✓ ON THEIR PAGE' : '',
         tot && rawT !== tot ? `<span style="opacity:.8">bid ${money0(rawT)}</span>` : '',
         !tot && nb ? `${nb} bid${nb > 1 ? 's' : ''}, none picked` : '',
@@ -16053,14 +16063,28 @@ function estCut() {
     const shD = b => b.shN && (b.note || '').trim() ? { d: b.note.trim().slice(0, 200) } : {};
     // 📥 v5.94 — approved bills ride as "on the way": marked-up SUM only, vendors stay home
     const up = estPendUp(x) > 0 ? { up: estPendUp(x) } : {};
+    // ≈ v7.46 — a best guess rides as `g: 1` — the ONE thing about a bid their page is told besides its number: that the number
+    // is a placeholder. Nothing else about the bid goes (no vendor, no note unless 🏠, no markup — as ever).
+    const gOf = b => b && b.guess ? { g: 1 } : {};
     if (opts.length >= 2) {
       // v5.92 — def = Eric's plan (his ✓ pick), pick = HERS and only hers. Until she taps,
       // her page PROMPTS the choice and the total rides the plan; nothing shows pre-chosen.
       const accI = opts.findIndex(b => b.acc);
-      return { n: x.n, opts: opts.map((b, i) => ({ t: (b.lbl || '').trim() || 'Option ' + (i + 1), est: estBidClient(b), ...shD(b) })), def: accI >= 0 ? accI : 0, ...up };
+      return { n: x.n, opts: opts.map((b, i) => ({ t: (b.lbl || '').trim() || 'Option ' + (i + 1), est: estBidClient(b), ...shD(b), ...gOf(b) })), def: accI >= 0 ? accI : 0, ...up };
     }
-    return { n: x.n, est: estTotal(x), ...shD(estAccBid(x) || {}), ...up };
+    return { n: x.n, est: estTotal(x), ...shD(estAccBid(x) || {}), ...gOf(estAccBid(x)), ...up };
   });
+}
+// ≈ v7.46 — do the placeholder marks on their page match the board's? (a page written by v7.45 carries none; a mark made while
+// the board's save was still in the air never landed.) Compared line by line, by name — a line's numbers are not this check's
+// business, only whether it is marked.
+function estGuessStale() {
+  if (!_estD || !_estPage) return false;
+  const marks = list => (Array.isArray(list) ? list : []).filter(b => b && b.n).map(b => b.n + ':' + (Array.isArray(b.opts) ? b.opts.map(o => o && o.g ? 1 : 0).join('') : (b.g ? 1 : 0))).sort().join('|');
+  const names = list => list.filter(b => b && b.n).map(b => b.n + (Array.isArray(b.opts) ? '#' + b.opts.length : '')).sort().join('|');
+  const have = Array.isArray(_estPage.budget) ? _estPage.budget : [], want = estCut();
+  if (names(have) !== names(want)) return false;   // the lines themselves differ — that is a lamp's business, not a mark's
+  return marks(have) !== marks(want);
 }
 // 🔔 v6.68 — HOMEOWNER PINGS. Two triggers, by Eric's spec: a journal entry posted, the budget
 // changed. The words are fixed on the server; the phone only says WHICH page and WHICH kind.
@@ -23365,7 +23389,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.45';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.46';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

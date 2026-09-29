@@ -103,14 +103,16 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return on.g && /≈ 2 best guesses — \$7,600/.test(on.b) && /Electrical — marked as your best guess/.test(on.said) && on.num === '≈ $4,000' && on.heads.some(h => /^Mechanical .*· ≈ \$4,000 best guess$/.test(h)) &&
       off.g === undefined && /≈ 1 best guess —/.test(off.b) && /Electrical — a real bid backs it now/.test(off.said) && off.num === '$4,000' && off.plate === '○ placeholder — best guess';
   })());
-  ok('✓ APPROVE a best guess: their page gets the name and the number like any other — no mark, no word of it; the board row still wears ≈ with its lamp lit', await (async () => {
+  // ≈ v7.46 — Eric: "The client page … needs to make clear that they're placeholder numbers" — the mark rides to their page now,
+  // as ONE letter on the line (g: 1); v7.45 had kept it off their page altogether. Nothing else about the bid goes (_test746).
+  ok('✓ APPROVE a best guess: their page gets the name, the number and the placeholder mark (g) — nothing else about the bid; the board row still wears ≈ with its lamp lit', await (async () => {
     const ci = (await row('Plumbing')).ci;
     await page.evaluate(async ci => { await estApprove(ci); await estApprove(ci); }, ci);
     await page.waitForTimeout(200);
     const pg = await pageJson(), b = (pg.budget || []).find(x => x.n === 'Plumbing'), r = await row('Plumbing');
-    return !!b && b.est === 3600 && b.up === 600 && !('guess' in b) && !/guess|placeholder|≈/i.test(JSON.stringify(pg)) && r.guess && /✓ ON PAGE/.test(r.lamp) && /≈ PLACEHOLDER/.test(r.sub) && /✓ ON THEIR PAGE/.test(r.sub);
+    return !!b && b.est === 3600 && b.up === 600 && b.g === 1 && Object.keys(b).sort().join(',') === 'est,g,n,up' && !/guess|Pipe Shop|Lumber Co|markup/i.test(JSON.stringify(pg)) && r.guess && /✓ ON PAGE/.test(r.lamp) && /≈ PLACEHOLDER/.test(r.sub) && /✓ ON THEIR PAGE/.test(r.sub);
   })(), JSON.stringify((await pageJson()).budget));
-  ok('the mark is saved on the board file (it is his) and nowhere else', await (async () => {
+  ok('the bid\'s own mark (guess) is saved on the board file and nowhere else', await (async () => {
     await page.waitForTimeout(1400);
     return page.evaluate(CODE => { const bd = JSON.parse(window._dbxFiles[estPath(CODE)]); const p = bd.cats.find(x => x.n === 'Plumbing');
       return p.bids[0].guess === true && Object.keys(window._dbxFiles).filter(k => k !== estPath(CODE)).every(k => !/"guess"/.test(window._dbxFiles[k])); }, CODE);
@@ -121,9 +123,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await page.evaluate(async ci => { await estBidAccept(ci, 1); }, ci);
     await page.waitForTimeout(200);
     const r = await row('Plumbing'), pg = await pageJson(), b = pg.budget.find(x => x.n === 'Plumbing');
-    return !r.guess && r.num === '$3,360' && !/PLACEHOLDER/.test(r.sub) && r.edge !== 'dashed' && await page.evaluate(ci => !$('estGuessBtn') && _estD.cats[ci].bids[0].guess === true && !_estD.cats[ci].bids[0].acc, ci) && b.est === 3360;
+    return !r.guess && r.num === '$3,360' && !/PLACEHOLDER/.test(r.sub) && r.edge !== 'dashed' && await page.evaluate(ci => !$('estGuessBtn') && _estD.cats[ci].bids[0].guess === true && !_estD.cats[ci].bids[0].acc, ci) && b.est === 3360 && !('g' in b);
   })(), JSON.stringify(await row('Plumbing')));
-  ok('? How this works says it in words', await page.evaluate(() => /≈ Placeholder — best guess:/.test($('estHelpBox').textContent) && /their page shows the number like any other/.test($('estHelpBox').textContent)));
+  ok('? How this works says it in words', await page.evaluate(() => /≈ Placeholder — best guess:/.test($('estHelpBox').textContent) && /their page says it too/.test($('estHelpBox').textContent)));
   ok('at 390px the board does not run off the side', await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth && $('revBox').scrollWidth <= $('revBox').clientWidth + 1));
   ok('🎛 What they see names the two cards as their page does, in the page\'s order', await page.evaluate(() => PV_CARDS.map(c => c[0]).join('|') === 'journal|money|upcoming|budget|phases' && /^🧾 Receipts received — not on an invoice yet$/.test(PV_CARDS[2][1]) && /^📐 Estimated remaining costs/.test(PV_CARDS[3][1]) && OWN_WORDS.upcoming === 'receipts received' && OWN_WORDS.budget === 'estimated remaining costs'));
   ok('his own words follow: the receipts window and the toasts name the card their page shows', /under <b>RECEIPTS RECEIVED — NOT ON AN INVOICE YET<\/b>/.test(src) && /On their page under RECEIPTS RECEIVED — /.test(src) && !/under UPCOMING —/.test(src) && !/ESTIMATED UPCOMING COSTS<\/b>/.test(src));

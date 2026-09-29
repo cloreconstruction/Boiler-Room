@@ -126,6 +126,14 @@
   .opt-pick.lkd { opacity: .55; cursor: default; }
   .bud-total { font-size: 27px; font-weight: 900; letter-spacing: .5px; line-height: 1.15; }
   .bud-total-l { font-size: 11.5px; color: var(--ink2); letter-spacing: 1px; font-weight: 800; margin-bottom: 6px; }
+  /* ≈ v7.46 — PLACEHOLDER NUMBERS. Eric: "The client page on the estimates coming in needs to make clear that they're placeholder
+     numbers so that people don't panic when they're too high or weirdly low." A placeholder wears ≈ in front of its number, the
+     word PLACEHOLDER under its name and a dashed edge down its side — the glyph, the word and the edge, never the colour alone —
+     and the card says what ≈ means before its first line. */
+  .bud-row.bud-ph { border-left: 4px dashed var(--gold); padding: 4px 0 4px 10px; }
+  .bud-ph-tag { margin-top: 3px; font-size: 11.5px; font-weight: 800; letter-spacing: .5px; color: var(--gold); line-height: 1.35; }
+  .bud-ph-note { border: 2px dashed var(--gold); border-radius: 10px; padding: 9px 12px; margin: 8px 0 4px; font-size: 13.5px; line-height: 1.45; }
+  .bud-ph-note b { color: var(--gold); letter-spacing: .4px; }
 </style>
 </head>
 <body>
@@ -702,8 +710,13 @@ function budgetHtml(d) {
   const inv = +d.invoiced || 0, phTot = (d.phases || []).reduce((s, p) => s + (p.cats || []).reduce((a, c) => a + (+c[1] || 0), 0), 0);
   const behind = inv > 0 && phTot < inv * 0.9;
   let totE = 0, totU = 0, totUp = 0, totLeft = 0, totOver = 0, anyOpts = false, anyOpen = false;
+  let nPh = 0, totPh = 0;   // ≈ v7.46 — the placeholder lines: how many, and how much of the estimate they are
   const rows = d.budget.map((b, bi) => {
     const est = bEst(b);
+    // ≈ v7.46 — is the number this line COUNTS a placeholder? (a plain line's own mark; on a line with choices, the mark of the
+    // option the total rides right now — their pick, else the planned one)
+    const isPh = Array.isArray(b.opts) ? !!((b.opts[bPicked(b) != null ? bPicked(b) : bDef(b)] || {}).g) : !!b.g;
+    if (isPh) { nPh++; totPh += est; }
     const used = Math.max(0, usedBy[b.n] || 0);
     const up = +b.up || 0; // 🧾 receipts received against this line — not on an invoice yet (they are listed on the receipts card)
     // 📐 v7.45 — what is still ahead on this line: its estimate, less what has been billed to it, less the receipts that wait
@@ -723,7 +736,8 @@ function budgetHtml(d) {
       optRows = `<div>` +
         (picked == null ? `<div class="opt-prompt">⬇ CHOOSE YOUR ${bEsc(b.n).toUpperCase()} OPTION — tap the way you want to go</div>` : '') +
         b.opts.map((o, oi) => `<button type="button" class="opt-pick${oi === picked ? ' sel' : ''}${lkd ? ' lkd' : ''}" ${lkd ? 'disabled' : `onclick="event.stopPropagation(); pickOpt(${bi}, ${oi})"`} aria-pressed="${oi === picked}">
-          <span class="op-row"><span class="op-l">${oi === picked ? '✓' : '○'} ${bEsc(o.t)}</span><span class="op-r">${money(o.est)}${oi === picked ? ' · YOUR PICK' : picked == null && oi === def ? ' · in the total for now' : ''}</span></span>
+          <span class="op-row"><span class="op-l">${oi === picked ? '✓' : '○'} ${bEsc(o.t)}</span><span class="op-r">${o.g ? '≈ ' : ''}${money(o.est)}${oi === picked ? ' · YOUR PICK' : picked == null && oi === def ? ' · in the total for now' : ''}</span></span>
+          ${o.g ? `<span class="op-d op-ph">≈ placeholder — a rough number until the real bid comes in</span>` : ''}
           ${o.d ? `<span class="op-d">${bEsc(o.d)}</span>` : ''}
         </button>`).join('') +
         (picked == null ? '' : lkd
@@ -735,12 +749,13 @@ function budgetHtml(d) {
           : lkd ? 'Your choice is locked and on their desk. ↩ Change my mind reopens it any time.'
           : 'Tap around all you like — when you\'re sure, LOCK IT IN sends Clore Construction the definite word.'}</div></div>`;
     }
-    return `<div class="bud-row" style="margin: 10px 0;">
+    return `<div class="bud-row${isPh ? ' bud-ph' : ''}" style="margin: 10px 0;">
       <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px;">
         <span style="font-weight: 700;">${bEsc(b.n)}${b.opts ? (picked != null ? ' — YOUR CHOICE' : ' — CHOOSE YOUR OPTION') : ''}</span>
-        <span class="bud-left" style="font-weight: 700; white-space: nowrap;">${over ? `<b style="color:#c0392b;">⚠ over by ${money(over)}</b>` : `${money(left)} remaining`}</span>
+        <span class="bud-left" style="font-weight: 700; white-space: nowrap;">${over ? `<b style="color:#c0392b;">⚠ over by ${money(over)}</b>` : `${isPh ? '≈ ' : ''}${money(left)} remaining`}</span>
       </div>
-      <div class="bud-math" style="font-size: 12.5px; opacity: .8; margin-top: 2px;">estimate ${money(est)} · ${behind && !used ? 'what is billed is not split out by line yet' : money(used) + ' billed so far'}${up ? ` · 🧾 ${money(up)} in receipts not invoiced yet` : ''}</div>
+      ${isPh ? `<div class="bud-ph-tag">≈ PLACEHOLDER — a rough number until the real bid comes in</div>` : ''}
+      <div class="bud-math" style="font-size: 12.5px; opacity: .8; margin-top: 2px;">estimate ${isPh ? '≈ ' : ''}${money(est)} · ${behind && !used ? 'what is billed is not split out by line yet' : money(used) + ' billed so far'}${up ? ` · 🧾 ${money(up)} in receipts not invoiced yet` : ''}</div>
       ${!b.opts && b.d ? `<div class="opt-desc" style="margin-left: 0;">${bEsc(b.d)}</div>` : ''}
       ${optRows}
       <div style="margin-top: 4px; height: 10px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; display: flex;">
@@ -749,10 +764,14 @@ function budgetHtml(d) {
       </div>
     </div>`;
   }).join('');
-  totLeft = Math.round(totLeft * 100) / 100; totOver = Math.round(totOver * 100) / 100;
+  totLeft = Math.round(totLeft * 100) / 100; totOver = Math.round(totOver * 100) / 100; totPh = Math.round(totPh * 100) / 100;
+  // ≈ v7.46 — what ≈ means, said once, before the first line: so a number that looks too high or oddly low is read as what it is
+  const nAll = d.budget.length;
+  const phNote = nPh ? `<div class="bud-ph-note" id="budPhNote"><b>≈ ${nPh === nAll ? (nAll === 1 ? 'THIS IS A PLACEHOLDER NUMBER' : 'THESE ARE PLACEHOLDER NUMBERS') : nPh + ' OF THESE ' + nAll + (nPh === 1 ? ' IS A PLACEHOLDER NUMBER' : ' ARE PLACEHOLDER NUMBERS')}</b> — a rough figure that holds the spot until the real bid comes in. It will be replaced by the real number, which may be higher or lower.</div>` : '';
   return `<div class="card" id="budgetCard" onclick="ping('budget')"><h3>ESTIMATED REMAINING COSTS</h3>
-    <div class="bud-total">${money(totLeft)}</div>
-    <div class="bud-total-l">STILL AHEAD ON THE APPROVED WORK · ESTIMATE ${money(totE)} · ${behind && !totU ? 'WHAT IS BILLED IS NOT SPLIT OUT BY LINE YET' : money(totU) + ' BILLED SO FAR'}${totUp ? ` · 🧾 ${money(totUp)} IN RECEIPTS NOT INVOICED YET` : ''}${totOver ? ` · <b style="color:#c0392b;">⚠ OVER BY ${money(totOver)}</b>` : ''}</div>
+    <div class="bud-total">${nPh ? '≈ ' : ''}${money(totLeft)}</div>
+    <div class="bud-total-l">STILL AHEAD ON THE APPROVED WORK · ESTIMATE ${nPh ? '≈ ' : ''}${money(totE)}${nPh ? ` · ≈ ${money(totPh)} OF IT IS PLACEHOLDER NUMBERS` : ''} · ${behind && !totU ? 'WHAT IS BILLED IS NOT SPLIT OUT BY LINE YET' : money(totU) + ' BILLED SO FAR'}${totUp ? ` · 🧾 ${money(totUp)} IN RECEIPTS NOT INVOICED YET` : ''}${totOver ? ` · <b style="color:#c0392b;">⚠ OVER BY ${money(totOver)}</b>` : ''}</div>
+    ${phNote}
     ${rows}
     <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"Remaining" is each estimate, less what has been billed to that line so far${totUp ? ' and less the receipts still waiting for an invoice' : ''}. The bar fills as a line is billed; "billed" updates as the books do.${behind ? ' <b class="bud-behind">Some of what has been invoiced is not matched to a line here yet, so what truly remains may be less than shown.</b>' : ''}${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}</div></div>`;
 }
