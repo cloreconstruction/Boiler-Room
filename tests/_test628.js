@@ -116,14 +116,18 @@ const { chromium } = require('playwright');
   ok('a 15% board says $1,150 — not the 20% default', await page.evaluate(async id => {
     await estQuickUpcoming(id);
     const t = $('toast').textContent;   // the toast itself, not the whole page
-    return /\$1,150/.test(t) && !/\$1,200/.test(t) && /UPCOMING/.test(t);
+    return /\$1,150/.test(t) && !/\$1,200/.test(t) && /RECEIPTS RECEIVED/.test(t);
   }, id));
 
   console.log('— ➗ v6.28 every pending dollar appears exactly ONCE —');
 
-  ok('a lit category with an estimate stays OUT of upcoming — its budget row has it', await page.evaluate(() => {
+  // 🧾 v7.45 — the rule stands (each dollar once), the way of it changed: their page lists EVERY receipt that waits on
+  // RECEIPTS RECEIVED, the lit category's too (all: 1), and the ESTIMATED REMAINING COSTS card takes that receipt OFF the
+  // line's estimate instead of printing it again beside it (_test745 adds their page up).
+  ok('a lit category with an estimate rides the receipts list too — and its budget row carries the same sum to take off what remains', await page.evaluate(() => {
     _estD = { mk: 20, cats: [{ n: 'Framing', appr: true, bids: [{ e1: 10000, acc: true }], pend: [{ a: 1000, base: 0 }] }] };
-    return estUpcoming() === null && estPendUp(_estD.cats[0]) === 1200;
+    const u = estUpcoming();
+    return !!u && u.all === 1 && u.tot === 1200 && u.items.length === 1 && u.items[0].n === 'Framing' && estPendUp(_estD.cats[0]) === 1200 && estCut()[0].up === 1200;
   }));
 
   ok('a lit category with NO estimate DOES ride — the budget card drops it', await page.evaluate(() => {
@@ -143,7 +147,8 @@ const { chromium } = require('playwright');
       { n: 'Septic', appr: false, bids: [], pend: [{ a: 500, base: 0 }] }] };                        // upcoming
     const inBudget = estPendUp(_estD.cats[0]);
     const u = estUpcoming();
-    return inBudget === 1200 && u.tot === 600 && u.items.length === 1 && u.items[0].n === 'Septic';
+    // 🧾 v7.45 — both receipts are on the list, once each; the budget line's 1,200 is what the remaining card SUBTRACTS
+    return inBudget === 1200 && u.tot === 1800 && u.items.length === 2 && u.items.map(i => i.n + ':' + i.a).join('|') === 'Framing:1200|Septic:600' && u.all === 1;
   }));
 
   console.log('— 💸 v6.28 one payment retires one bill —');

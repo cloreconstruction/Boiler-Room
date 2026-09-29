@@ -125,7 +125,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
     if (!(up && await windowRows())) return false;
     const rs = await rows();
     const keys = rs.map(r => r.k).join('|');
-    return keys === 'journal|money|budget|upcoming|phases|photos|ask|boards|mat|board:b1|board:b2|board:b3'
+    return keys === 'journal|money|upcoming|budget|phases|photos|ask|boards|mat|board:b1|board:b2|board:b3'
       && rs.every(r => /^✓ THEY SEE THIS( BOARD)? — tap to hide$|^○ HIDDEN FROM THEM — tap to show$/.test(r.t) && r.on === r.sel && r.on === /THEY SEE/.test(r.t));
   })());
   ok('the plates read the page: budget HIDDEN (its switch is false), money and phases THEY SEE (opt-in, true), journal and the tiles THEY SEE (absent = on), the b2 board HIDDEN and b1 / b3 THEY SEE THIS BOARD', await (async () => {

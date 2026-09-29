@@ -57,10 +57,12 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
 
   const client = fs.readFileSync(path.join(path.dirname(fileURLToPath(appUrl)), 'c', 'index.html'), 'utf8');
-  ok('client page: the upcoming-costs note stops at "once it\'s invoiced." — the "question or a change" line is gone',
-    !/Questions or a change of mind/.test(client) && /once it's invoiced\.<\/div>/.test(client));
+  // 🧾 v7.45 — the card is RECEIPTS RECEIVED — NOT ON AN INVOICE YET now and its note is reworded (receipts, not estimates);
+  // v6.37's cut still holds: the note ends where the list is explained, with no invitation after it.
+  ok('client page: the receipts note stops at "once it is invoiced." — the "question or a change" line is gone',
+    !/Questions or a change of mind/.test(client) && /once it is invoiced\.<\/div>/.test(client));
 
-  ok('client page: the rest of the note is untouched', /already committed to your job that haven't reached an invoice yet/.test(client) && /Figures are estimates and can move a little\. Each drops off this list once it's invoiced\./.test(client));
+  ok('client page: the note says what the list is, in the v7.45 words', /already bought or done for your job that have not reached an invoice yet/.test(client) && /Each is shown as it will appear on your invoice, and drops off this list once it is invoiced\./.test(client) && !/Figures are estimates/.test(client));
 
   ok('version bumped — APP_VER and the footer agree', await page.evaluate(() => {
     const num = v => (String(v).match(/(\d+)\.(\d+)/) || []).slice(1).reduce((a, b) => a * 1000 + +b, 0);

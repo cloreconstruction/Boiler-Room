@@ -646,20 +646,31 @@ const bEst = b => Array.isArray(b.opts)
 // because a page whose JSON has no `upcoming` key at all reads as an empty one.
 // ✂ v6.37 — Eric: "take out the last part of the note from 'question or a change..' on."
 // The invitation to send a note is gone; the card just says what the list is.
-function upcomingHtml(d) {
+// 🧾 v7.45 — TWO CARDS, TWO DIFFERENT THINGS. Eric: "there need to be a distinction to the client between the budget approved
+// estimates need to be more like 'estimated remaining costs' and estimated upcoming costs can be 'receipts recived but not on
+// invoices'." The page reads in three steps now: WHERE IT STANDS (what is invoiced) · RECEIPTS RECEIVED — NOT ON AN INVOICE YET
+// (bought or done already, coming on the next invoice) · ESTIMATED REMAINING COSTS (what the approved estimates still have ahead
+// of them). The receipts list holds EVERY receipt that waits, once: a page written since v7.45 carries them all (`upcoming.all`);
+// an older page kept the receipts of an approved line inside that budget line (`up`), so they are joined in here. The remaining
+// card takes the waiting receipts OFF each line — a dollar is on the list or in the remainder, never both.
+function receiptsOf(d) {
   const u = d.upcoming;
-  const items = u && Array.isArray(u.items) ? u.items : [];
-  const tot = items.length ? +u.tot || 0 : 0;
-  const rows = items.map(i => `<div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin: 6px 0;">
+  const items = (u && Array.isArray(u.items) ? u.items : []).map(i => ({ n: String(i.n || ''), a: +i.a || 0 })).filter(i => i.a > 0);
+  if (!(u && u.all)) (Array.isArray(d.budget) ? d.budget : []).forEach(b => { if (b && +b.up > 0) items.push({ n: String(b.n || ''), a: +b.up }); });
+  return { items, tot: Math.round(items.reduce((s, i) => s + i.a, 0) * 100) / 100 };
+}
+function upcomingHtml(d) {
+  const r = receiptsOf(d), items = r.items, tot = r.tot;
+  const rows = items.map(i => `<div class="rc-row" style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin: 6px 0;">
       <span style="font-weight: 700;">${bEsc(i.n)}</span><span>${money(i.a)}</span></div>`).join('');
   const body = items.length
     ? `${rows}
-    <div style="font-size: 12px; opacity: .7; margin-top: 8px;">These are materials and work already committed to your job that haven't reached an invoice yet — so you can see what's coming before the next one lands. Figures are estimates and can move a little. Each drops off this list once it's invoiced.</div>`
-    : `<div style="font-size: 14px; margin: 6px 0;">Nothing waiting right now — everything committed to your job so far is already on an invoice.</div>
-    <div style="font-size: 12px; opacity: .7; margin-top: 8px;">When Clore Construction takes on materials or work that hasn't reached an invoice yet, it shows up here first — so you can see what's coming, and say something before it's built.</div>`;
-  return `<div class="card" id="upcomingCard" onclick="ping('upcoming')"><h3>🔮 ESTIMATED UPCOMING COSTS</h3>
+    <div style="font-size: 12px; opacity: .7; margin-top: 8px;">These are receipts for materials and work already bought or done for your job that have not reached an invoice yet — so you can see what is coming before the next one lands. Each is shown as it will appear on your invoice, and drops off this list once it is invoiced.</div>`
+    : `<div style="font-size: 14px; margin: 6px 0;">Nothing waiting right now — every receipt for your job so far is already on an invoice.</div>
+    <div style="font-size: 12px; opacity: .7; margin-top: 8px;">When a receipt comes in for materials or work on your job, it shows here until it reaches an invoice.</div>`;
+  return `<div class="card" id="upcomingCard" onclick="ping('upcoming')"><h3>🧾 RECEIPTS RECEIVED — NOT ON AN INVOICE YET</h3>
     <div class="bud-total">${money(tot)}</div>
-    <div class="bud-total-l">${items.length ? 'COSTS ALREADY UNDER WAY — NOT YET INVOICED' : 'NOTHING WAITING — ALL CAUGHT UP'}</div>
+    <div class="bud-total-l">${items.length ? 'ALREADY BOUGHT OR DONE FOR YOUR JOB — COMING ON YOUR NEXT INVOICE' : 'NOTHING WAITING — ALL CAUGHT UP'}</div>
     ${body}</div>`;
 }
 function budgetHtml(d) {
@@ -685,15 +696,22 @@ function budgetHtml(d) {
     d.budget.forEach(b => { const s = score(qn, b.n); if (s > bs) { bs = s; best = b.n; } });
     if (best && bs > 0) usedBy[best] = (usedBy[best] || 0) + amt;
   }));
-  let totE = 0, totU = 0, totUp = 0, anyOpts = false, anyOpen = false;
+  // 🧾 v7.45 — NEVER MORE SURE THAN THE PAGE IS. "Billed so far" per line comes from the books' split by category, and that
+  // split can be behind what has been invoiced. When more than a tenth of what is invoiced is not split out by line, the card
+  // says so in words — what truly remains may be LESS than shown — and a line with nothing split out yet does not claim $0.00.
+  const inv = +d.invoiced || 0, phTot = (d.phases || []).reduce((s, p) => s + (p.cats || []).reduce((a, c) => a + (+c[1] || 0), 0), 0);
+  const behind = inv > 0 && phTot < inv * 0.9;
+  let totE = 0, totU = 0, totUp = 0, totLeft = 0, totOver = 0, anyOpts = false, anyOpen = false;
   const rows = d.budget.map((b, bi) => {
     const est = bEst(b);
     const used = Math.max(0, usedBy[b.n] || 0);
-    const up = +b.up || 0; // 📥 billed to the job — on its way into the books
-    totE += est; totU += used; totUp += up;
+    const up = +b.up || 0; // 🧾 receipts received against this line — not on an invoice yet (they are listed on the receipts card)
+    // 📐 v7.45 — what is still ahead on this line: its estimate, less what has been billed to it, less the receipts that wait
+    const left = Math.max(0, Math.round((est - used - up) * 100) / 100);
+    const over = used + up > est ? Math.round((used + up - est) * 100) / 100 : 0;
+    totE += est; totU += used; totUp += up; totLeft += left; totOver += over;
     const pct = est > 0 ? Math.min(100, Math.round(used / est * 100)) : 0;
     const pctUp = est > 0 && up > 0 ? Math.min(100 - pct, Math.round(up / est * 100)) : 0;
-    const over = used > est ? used - est : 0;
     let optRows = '';
     let picked = null;
     if (Array.isArray(b.opts)) {
@@ -717,25 +735,26 @@ function budgetHtml(d) {
           : lkd ? 'Your choice is locked and on their desk. ↩ Change my mind reopens it any time.'
           : 'Tap around all you like — when you\'re sure, LOCK IT IN sends Clore Construction the definite word.'}</div></div>`;
     }
-    return `<div style="margin: 10px 0;">
+    return `<div class="bud-row" style="margin: 10px 0;">
       <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px;">
         <span style="font-weight: 700;">${bEsc(b.n)}${b.opts ? (picked != null ? ' — YOUR CHOICE' : ' — CHOOSE YOUR OPTION') : ''}</span>
-        <span>est ${money(est)} · ${money(used)} in${up ? ` · 📥 ${money(up)} on the way` : ''}${over ? ` · <b style="color:#c0392b;">over by ${money(over)}</b>` : ''}</span>
+        <span class="bud-left" style="font-weight: 700; white-space: nowrap;">${over ? `<b style="color:#c0392b;">⚠ over by ${money(over)}</b>` : `${money(left)} remaining`}</span>
       </div>
+      <div class="bud-math" style="font-size: 12.5px; opacity: .8; margin-top: 2px;">estimate ${money(est)} · ${behind && !used ? 'what is billed is not split out by line yet' : money(used) + ' billed so far'}${up ? ` · 🧾 ${money(up)} in receipts not invoiced yet` : ''}</div>
       ${!b.opts && b.d ? `<div class="opt-desc" style="margin-left: 0;">${bEsc(b.d)}</div>` : ''}
       ${optRows}
       <div style="margin-top: 4px; height: 10px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; display: flex;">
-        <div style="height: 100%; width: ${pct}%; background: ${over ? '#c0392b' : 'var(--acc, #b8860b)'};"></div>
-        ${pctUp ? `<div style="height: 100%; width: ${pctUp}%; background: var(--acc, #b8860b); opacity: .45;" title="billed — on the way"></div>` : ''}
+        <div style="height: 100%; width: ${pct}%; background: ${over ? '#c0392b' : 'var(--acc, #b8860b)'};" title="billed so far"></div>
+        ${pctUp ? `<div style="height: 100%; width: ${pctUp}%; background: var(--acc, #b8860b); opacity: .45;" title="receipts received — not on an invoice yet"></div>` : ''}
       </div>
     </div>`;
   }).join('');
-  const totOver = totU > totE ? totU - totE : 0;
-  return `<div class="card" id="budgetCard" onclick="ping('budget')"><h3>BUDGET — APPROVED ESTIMATES</h3>
-    <div class="bud-total">${money(totE)}</div>
-    <div class="bud-total-l">TOTAL ESTIMATE — APPROVED WORK · ${money(totU)} in so far${totUp ? ` · 📥 ${money(totUp)} billed, on the way` : ''}${totOver ? ` · <b style="color:#c0392b;">OVER BY ${money(totOver)}</b>` : ''}</div>
+  totLeft = Math.round(totLeft * 100) / 100; totOver = Math.round(totOver * 100) / 100;
+  return `<div class="card" id="budgetCard" onclick="ping('budget')"><h3>ESTIMATED REMAINING COSTS</h3>
+    <div class="bud-total">${money(totLeft)}</div>
+    <div class="bud-total-l">STILL AHEAD ON THE APPROVED WORK · ESTIMATE ${money(totE)} · ${behind && !totU ? 'WHAT IS BILLED IS NOT SPLIT OUT BY LINE YET' : money(totU) + ' BILLED SO FAR'}${totUp ? ` · 🧾 ${money(totUp)} IN RECEIPTS NOT INVOICED YET` : ''}${totOver ? ` · <b style="color:#c0392b;">⚠ OVER BY ${money(totOver)}</b>` : ''}</div>
     ${rows}
-    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"In" counts the work billed to each category so far — it updates as the books do.${totUp ? ' "On the way" is work already invoiced to the job that the books will catch up with shortly.' : ''}${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}</div></div>`;
+    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"Remaining" is each estimate, less what has been billed to that line so far${totUp ? ' and less the receipts still waiting for an invoice' : ''}. The bar fills as a line is billed; "billed" updates as the books do.${behind ? ' <b class="bud-behind">Some of what has been invoiced is not matched to a line here yet, so what truly remains may be less than shown.</b>' : ''}${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}</div></div>`;
 }
 async function pickOpt(bi, oi) {
   const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null;
@@ -872,6 +891,9 @@ async function boot() {
         <br><span style="opacity:.75">Your invoice is the itemized record — this is the quick picture of what's on it.</span></div>
     </div>` : ''}</div>`;
   }
+  // 🧾 v7.45 — the money reads top to bottom in the order it happens: invoiced (above) · the receipts received and not on an
+  // invoice yet · the estimated costs remaining. (v6.27 had the receipts under the budget.)
+  if (sh('upcoming')) h += upcomingHtml(d);
   // 💰 approved estimates — the card lives in budgetHtml() so a pick can redraw it in place
   // 👁 v6.61 — both cards now answer to a per-client switch, like the rest
   if (sh('budget')) {
@@ -880,8 +902,6 @@ async function boot() {
     // in?" Yes: the card exists for the homeowner only once a lamp is lit with a number on it.
     h += bh || '';
   }
-  // 🔮 v6.27 — under the approved budget: what is coming but not yet invoiced
-  if (sh('upcoming')) h += upcomingHtml(d);
   if (d.show && d.show.phases && (d.phases || []).length) {
     h += `<div class="card" id="phasesCard"><h3>WORK BY PHASE — tap a phase for detail</h3>` +
       d.phases.map((p, i) => `<div class="ph" id="ph${i}"><div class="ph-head" onclick="document.getElementById('ph${i}').classList.toggle('open'); ping('phase:${esc(p.name).slice(0, 20)}')">

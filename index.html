@@ -1680,6 +1680,16 @@
   :root[data-skin="calm"] .est-board .btn-ghost { font-size: 14px !important; min-height: 44px !important; }
   :root[data-skin="calm"] .est-board .field label { font-size: var(--fs11, 11px) !important; }
   :root[data-skin="calm"] .est-board input, :root[data-skin="calm"] .est-board select { font-size: 15px !important; min-height: 40px; padding: 6px 8px !important; }
+  /* ≈ v7.45 — PLACEHOLDER, BEST GUESS. Eric: "that number needs to be highlighted somehow until it gets backed by a real bid."
+     A row whose number is his own guess wears ≈ in front of the number, the words on its second line and a dashed edge down its
+     left side — the glyph, the words and the edge, never the colour alone. */
+  .est-board .set-section.est-row.est-guess { border-left: 4px dashed var(--warn, #ffa657) !important; padding-left: 10px !important; }
+  .est-num.guess { color: var(--warn, #ffa657); text-decoration: underline dashed; text-underline-offset: 4px; }
+  .est-guess-word { color: var(--warn, #ffa657); letter-spacing: .2px; }
+  .est-bid.guess { border: 2px dashed var(--warn, #ffa657) !important; }
+  .est-guess-say { margin: 6px 0 0; font-size: var(--fs12, 12px); line-height: 1.45; color: var(--warn, #ffa657); }
+  .est-board .pick-chip.est-guess-filter { width: 100%; text-align: left; justify-content: flex-start; margin: 0 0 8px; min-height: 40px !important; border: 2px dashed var(--warn, #ffa657) !important; white-space: normal; line-height: 1.3; }
+  .est-board .pick-chip.est-guess-filter.sel { border-style: solid !important; }
   /* 🏠 v6.05 — the Project Portal fold, on a phone. Eric: "the button size is still bad."
      They were sizing themselves to their own words and stair-stepping down the screen with
      the little ones floated off to the right. Now: two even columns, one full-width plate
@@ -4408,7 +4418,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.44 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.45 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6742,7 +6752,7 @@ function blModalOpen() {
     return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="qnBLPick('${escq(r.name)}')" aria-pressed="${on}">${on ? '✓' : '📋'} ${esc(r.name)} <span style="display: block; font-weight: 400; opacity: .8; font-size: var(--fs11, 11px);">${r.n} row${r.n === 1 ? '' : 's'}</span></button>`; };
   $('catBox').innerHTML = `<h3>📋 Where on the Build List?
     ${winX('blModalClose()', 'close')}</h3>
-    <div class="hint" style="margin: 0 0 8px;">The <b>${esc(_qnBLJob)}</b> Build List. SEND files the note in your log as always <b>and</b> puts it here as a ✅ checklist item — ⇄ on the row turns it into something to buy. The first line is the row's name; the rest is its note. <b>Pick a construction category and a note with a dollar amount goes onto the homeowner's ESTIMATED UPCOMING COSTS too</b> — the job's markup folded in, no stop in the receipts window.</div>
+    <div class="hint" style="margin: 0 0 8px;">The <b>${esc(_qnBLJob)}</b> Build List. SEND files the note in your log as always <b>and</b> puts it here as a ✅ checklist item — ⇄ on the row turns it into something to buy. The first line is the row's name; the rest is its note. <b>Pick a construction category and a note with a dollar amount goes onto the homeowner's RECEIPTS RECEIVED list too</b> — the job's markup folded in, no stop in the receipts window.</div>
     <div style="max-height: 52vh; overflow-y: auto; margin-bottom: 10px;">
     ${rooms.length ? `<div class="bl-ph-h">📋 On this Build List now</div><div class="chips-row cat-grid" id="blRoomGrid" style="align-content: flex-start; margin-bottom: 6px;">${rooms.map(chip).join('')}</div>` : `<div class="hint" style="margin: 0 0 8px;">This Build List has no categories yet — pick a construction category below, or name your own.</div>`}
     <!-- 🏗 v7.10 — Eric: "I want all the construction categories on there, well organized, so I can just click." The estimates
@@ -8389,7 +8399,7 @@ function saveNoteFrom(boxId, fromPanel) {
   const toPage = !!(_bl && _bl.cat && _bl.amt > 0);   // 💵 v7.10 — it goes onto the homeowner's page: no undo (a page is "someone", like a routed note)
   if (updated === 'pocket') toast(`🎒 From the pocket, through the grinder · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''}${vis ? ' · ' + (vis === 'crew' ? '🔓 all crew' : '📨 ' + vis) : ''} ✓`);   // ⚙ v7.18 — an undo would delete the pocket note itself
   else if (updated) toast(`📧 Filed · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`);   // 📥 v6.71 — an undo here would delete the email itself
-  else if (toPage) toast(`Note saved · ${noteJob} · 📋 Build List → ${_bl.room} · 💵 → their Upcoming ✓`);
+  else if (toPage) toast(`Note saved · ${noteJob} · 📋 Build List → ${_bl.room} · 💵 → their receipts list ✓`);
   else if (!routed && !wasAsk && !vis) toastUndo(`Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''}${_bl ? ' · 📋 Build List → ' + _bl.room : ''} ✓`, () => {
     if (_bl) grindBuildListUndo(e, _bl.job);   // 📋 v6.97 — the row comes off the board with the note
     if (_fromPocket) { pocket().unshift(_fromPocket); renderPocket(); }   // ⚙ v7.18 — a pocket item comes back onto the pocket
@@ -8410,7 +8420,7 @@ function saveNoteFrom(boxId, fromPanel) {
   // cost line, so the money stays off their page and he is told (no guessing which line it belongs to).
   if (_bl && _bl.amt > 0) {
     if (_bl.cat) { e.category = _bl.room; scheduleSave(); estQuickUpcoming(e.id, null, _bl.amt); }
-    else toast(`💵 $${_bl.amt.toLocaleString()} stays off their page — pick a construction category (Framing, Plumbing…) for it to reach their Upcoming`, false);
+    else toast(`💵 $${_bl.amt.toLocaleString()} stays off their page — pick a construction category (Framing, Plumbing…) for it to reach their receipts list`, false);
   }
 }
 // 💵 v7.10 — what a grinder note is worth: the photo's read first (💵 $…), else the first $ in the words. A minus is never a cost.
@@ -14744,7 +14754,7 @@ async function laborSend(wk) {
     await estSave();
     _estIdx = -1;
     renderRcptReview();
-    toast(`👷 On their page under UPCOMING — Labor, week of ${laborWeekLabel(wk)}: ${price.hours} h, $${price.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ✓`);
+    toast(`👷 On their page under RECEIPTS RECEIVED — Labor, week of ${laborWeekLabel(wk)}: ${price.hours} h, $${price.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ✓`);
   } finally {
     window._qUpBusy = false;
   }
@@ -14815,13 +14825,30 @@ function estTotal(x) {
 // one they want, and it will change their total estimated cost." (vinyl siding vs repaint)
 // The bids Eric flags 👁 become tap-to-choose options on their page — 2+ makes a real choice.
 function estOpts(x) { return (x.bids || []).filter(b => b.opt); }
+// ≈ v7.45 — PLACEHOLDER, BEST GUESS. Eric: "on the estimates page i need a button to push that says 'placeholder best guess' or
+// something similar and that number needs to be highlighted somehow until it gets backed by a real bid." A bid line can be marked
+// ≈ (b.guess): his own number, no bid behind it. While the bid a category USES is a guess, the row wears ≈ on its number, the words
+// on its second line and a dashed edge (never the colour alone); the top of the board counts them and one tap lists only those.
+// The mark comes off when he taps the plate again (the real bid's number typed in) or picks another bid with ○ use this.
+// Office-side: it never rides to their page — estCut sends the name and the number, as ever.
+function estIsGuess(x) { const b = estAccBid(x); return !!(b && b.guess && estTotal(x) > 0); }
+let _estGuessOnly = false;
+function estGuessOnly() { _estGuessOnly = !_estGuessOnly; renderEstimates(); }
+function estBidGuess(ci, bi) {
+  const x = _estD.cats[ci], b = ((x && x.bids) || [])[bi];
+  if (!b) return;
+  if (b.guess) delete b.guess; else b.guess = true;
+  scheduleEstSave();   // office-side: their page carries the number either way, so nothing is republished
+  renderEstimates();
+  toast(b.guess ? `≈ ${x.n} — marked as your best guess. It stays highlighted until a real bid backs it.` : `✓ ${x.n} — a real bid backs it now. The highlight is off.`);
+}
 let _estOpenCats = new Set();
 async function openEstimates(i) {
   if (portalGuard()) return;
   // 💰 v6.07 opened this board to an OFFICE phone; 🏢 v7.09 — Eric: "I don't want him to have the Project Tracker,
   // Receipts, or estimates" — so the money stays on his phone, whatever kind of crew phone asks.
   if (CREW_NAME) { toast('💰 The estimates board is Eric\'s — the money stays on his phone', false); return; }
-  _estIdx = i; _estArm = ''; _estOpenCats = new Set(); _estShowEmpty = new Set(); _estHelp = false;   // 🕯 v6.66 — the folds start shut
+  _estIdx = i; _estArm = ''; _estOpenCats = new Set(); _estShowEmpty = new Set(); _estHelp = false; _estGuessOnly = false;   // 🕯 v6.66 — the folds start shut
   const c = _portalIdx.clients[i];
   toast('⏳ Opening the estimates…');
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
@@ -14861,12 +14888,12 @@ async function openEstimates(i) {
     if (lifted) scheduleEstSave();
   }
   const gone = estAutoClear();
-  if (gone) { window._estPub = true; scheduleEstSave(true); toast(`📗 ${gone} bill${gone > 1 ? 's' : ''} matched in QuickBooks — off their upcoming list`); }
+  if (gone) { window._estPub = true; scheduleEstSave(true); toast(`📗 ${gone} bill${gone > 1 ? 's' : ''} matched in QuickBooks — off their receipts list`); }
   // 🩹 v6.64 — SELF-HEAL. Eric, on Josten: a $15,600 receipt "says sent on their page" but the
   // page's upcoming block was gone — another writer had rewritten the page without it (the
   // books run rebuilds pages from QuickBooks and did not carry `upcoming` over). The board is
   // the truth for what is pending; if the page disagrees, republish it right here, on open.
-  else if (estUpcomingStale()) { window._estPub = true; scheduleEstSave(true); toast('🩹 Their page had lost the upcoming costs — putting them back'); }
+  else if (estUpcomingStale()) { const why = estUpcomingWhy(false); window._estPub = true; scheduleEstSave(true); toast(why); }   // 🧾 v7.45 — a page in the old shape is brought up to date, and the words say which it was
   renderEstimates();
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
@@ -15001,10 +15028,26 @@ function estUpcomingStale() {
   const have = JSON.stringify(_estPage.upcoming || null);
   return want !== have;
 }
+// 🧾 v7.45 — is the page's list only in the OLD shape (written before v7.45: the receipts of an approved line sat inside that
+// budget line, not on the list)? Then bringing it up to date is not a loss put right, and the words say so.
+function estUpcomingOld(pg) {
+  const p = pg || _estPage; if (!p) return false;
+  return !!(p.upcoming ? !p.upcoming.all : (Array.isArray(p.budget) && p.budget.some(b => b && +b.up > 0)));
+}
+function estUpcomingWhy(done) {
+  return estUpcomingOld() ? (done ? '🧾 Their receipts list brought up to date ✓' : '🧾 Bringing their receipts list up to date…')
+    : (done ? '🩹 Their page had lost its receipts list — put back' : '🩹 Their page had lost its receipts list — putting it back');
+}
+// 🧾 v7.45 — RECEIPTS RECEIVED, EVERY ONE OF THEM. Eric: "there need to be a distinction to the client between the budget approved
+// estimates need to be more like 'estimated remaining costs' and estimated upcoming costs can be 'receipts recived but not on
+// invoices'." Their page now reads in three steps — what is invoiced · the receipts received and not on an invoice yet · the
+// estimated costs remaining — so the list carries EVERY receipt that waits, the ones under an approved line too (`all: 1` says
+// so; v6.28 had kept those inside the budget line as "on the way"). No dollar is counted twice: the remaining card takes the
+// waiting receipts OFF each line's estimate (the line's `up`), it does not add them. A page written before v7.45 still reads
+// whole — the homeowner's page joins the budget lines' `up` to the list itself until this rewrites it.
 function estUpcoming() {
   if (!_estD) return null;
   const items = _estD.cats
-    .filter(x => !(x.appr && estTotal(x) > 0))   // shown in the budget row instead — not twice
     .map(x => ({ n: x.n, a: Math.round((x.pend || []).filter(p => p.kind !== 'labor').reduce((s, p) => s + estPendMk(p), 0) * 100) / 100 }))
     .filter(x => x.a > 0)
     .sort((a, b) => b.a - a.a);
@@ -15014,7 +15057,7 @@ function estUpcoming() {
     if (p.kind === 'labor' && +p.a > 0) items.push({ n: `Labor — week of ${laborWeekLabel(p.wk)} (${+p.hrs || 0} h)`, a: Math.round(+p.a * 100) / 100 });
   }));
   if (!items.length) return null;
-  return { items, tot: Math.round(items.reduce((s, x) => s + x.a, 0) * 100) / 100 };
+  return { items, tot: Math.round(items.reduce((s, x) => s + x.a, 0) * 100) / 100, all: 1 };
 }
 // 🧾→📗 v6.27 — auto-clear with a paper trail. Eric: "auto but with a paper trail that can be
 // checked or traced if something goes wrong."
@@ -15097,11 +15140,15 @@ function renderEstimates() {
   // 🕯 v6.66 — what needs him: a bill waiting on a category, or a category over its estimate
   const estNeeds = x => (x.pend || []).length > 0 || (estTotal(x) > 0 && (used[x.n] || 0) > estTotal(x));
   const needN = _estD.cats.filter(estNeeds).length;
+  // ≈ v7.45 — the best guesses: how many numbers on this board have no bid behind them, and what they add up to (as the client would see them)
+  const guessN = _estD.cats.filter(estIsGuess).length, guessTot = _estD.cats.filter(estIsGuess).reduce((s, x) => s + estTotal(x), 0);
+  if (!guessN) _estGuessOnly = false;
   $('revBox').innerHTML = `<div class="est-board"><h3>💰 ${esc(c.job)} — estimates
     ${winX('closeEstimates()', 'close estimates')}</h3>
     <div style="margin: 0 0 8px; font-size: 14px; line-height: 1.4;">${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}${needN ? ` · <b style="color: var(--warn, #ffa657);">⚠ ${needN} need${needN > 1 ? '' : 's'} you</b>` : ''} <span class="hint" style="margin: 0;">· 💹 markup ${estMk()}%</span></div>
+    ${guessN ? `<button type="button" class="pick-chip est-guess-filter${_estGuessOnly ? ' sel' : ''}" id="estGuessBtn" aria-pressed="${_estGuessOnly}" onclick="estGuessOnly()">${_estGuessOnly ? `✓ ≈ ONLY THE BEST GUESSES (${guessN}) — tap to show everything` : `≈ ${guessN} best guess${guessN > 1 ? 'es' : ''} — ${money0(guessTot)} with no bid behind it yet · tap to see only those`}</button>` : ''}
     <button type="button" class="btn-ghost est-help-btn" onclick="estHelp()" aria-expanded="${_estHelp}">${_estHelp ? '▾' : '▸'} ? How this works</button>
-    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing.</div>
+    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing. <b>≈ Placeholder — best guess:</b> no bid yet? Open the category, tap ≈ ➕ placeholder, type your own number. The row wears ≈ and a dashed edge until a real bid backs it — type the real number and tap the ≈ plate again, or add the bid and tap ○ use this. The ≈ mark is yours alone; their page shows the number like any other.</div>
     ${(() => { const bills = estBillCands();
       // 📥 v6.02 — Eric: "keep it small until it has something to deal with." Nothing waiting
       // = one thin line you can tap open to file a bill by hand. A bill arrives = it opens
@@ -15137,7 +15184,7 @@ function renderEstimates() {
         <button type="button" class="pick-chip${window._estHandInc ? '' : ' sel'}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;" onclick="estHandIncFlip()">${window._estHandInc ? '✓ markup already in' : '+' + estMk() + '% rides on top'}</button>
         <button type="button" class="pick-chip sel" style="font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); min-height: 30px;" onclick="estBillHand()">➕ ADD BILL BY HAND</button>
       </div>
-      <div class="hint" style="margin: 6px 0 0;">These are the grinder's receipt reads for this job. ✓ Approve = it shows on their page as "billed — on the way," markup riding invisibly. When a QuickBooks run catches it, retire the line inside its category. 🏢 not budget just leaves it in the log.</div>
+      <div class="hint" style="margin: 6px 0 0;">These are the grinder's receipt reads for this job. ✓ Approve = it shows on their page under RECEIPTS RECEIVED — NOT ON AN INVOICE YET, markup riding invisibly, and it comes off that line's estimated remaining cost. When a QuickBooks run catches it, retire the line inside its category. 🏢 not budget just leaves it in the log.</div>
     </div>`; })()}
     ${(() => {
       // 🕯 v6.66 — one row per category, drawn by rowOf; the sections underneath decide WHERE it sits.
@@ -15160,9 +15207,12 @@ function renderEstimates() {
       const mrBit = estMatRollBit(x.n);   // 📋 v6.89 — what the build list holds under this line
       const empty = !x.appr && !tot && !nb && !u && !pendUp && !mrBit;
       const hid = empty && !open && !_estShowEmpty.has(ph);
+      const guess = estIsGuess(x);   // ≈ v7.45 — the number this row uses is his own best guess, no bid behind it
+      const accB = estAccBid(x);
       // the number column: the estimate if there is one, else what is on the way, else what the books show
-      const numTxt = tot ? money0(tot) : pendUp ? money0(pendUp) : u ? money0(u) : '—';
+      const numTxt = tot ? (guess ? '≈ ' : '') + money0(tot) : pendUp ? money0(pendUp) : u ? money0(u) : '—';
       const sub = [
+        guess ? '<b class="est-guess-word">≈ PLACEHOLDER — best guess, no bid yet</b>' : accB && accB.guess ? '<b class="est-guess-word">≈ placeholder — no number typed yet</b>' : '',
         x.appr ? '✓ ON THEIR PAGE' : '',
         tot && rawT !== tot ? `<span style="opacity:.8">bid ${money0(rawT)}</span>` : '',
         !tot && nb ? `${nb} bid${nb > 1 ? 's' : ''}, none picked` : '',
@@ -15172,17 +15222,17 @@ function renderEstimates() {
         x.appr && nOpt >= 2 ? `<b>🏠 ${theirPick != null ? `${pgB.lk ? '🔒 LOCKED IN' : 'they picked'} "${esc(pgB.opts[theirPick].t)}"` : nOpt + ' choices out — waiting on their pick'}</b>` : '',
         mrBit,
       ].filter(Boolean).join(' · ');
-      return `<div class="set-section fc-sec est-row${open ? ' est-open' : ''}${x.appr ? ' est-lit' : ''}"${hid ? ' hidden' : ''} data-ci="${ci}" style="margin-top: 6px; padding: 8px 12px;">
+      return `<div class="set-section fc-sec est-row${open ? ' est-open' : ''}${x.appr ? ' est-lit' : ''}${guess ? ' est-guess' : ''}"${hid ? ' hidden' : ''} data-ci="${ci}" style="margin-top: 6px; padding: 8px 12px;">
       <div class="est-line">
         <span role="button" class="est-name" aria-expanded="${open}" onclick="estFold(${ci})">${open ? '▾' : '▸'} ${esc(x.n)}</span>
-        <span class="est-num${tot ? '' : ' mute'}">${numTxt}</span>
+        <span class="est-num${tot ? '' : ' mute'}${guess ? ' guess' : ''}"${guess ? ' title="your best guess — no bid behind it yet" aria-label="about ' + money0(tot) + ', your best guess, no bid behind it yet"' : ''}>${numTxt}</span>
         <button type="button" class="pick-chip est-lamp${x.appr ? ' sel' : ''}" style="flex: none; font-size: var(--fs105, 10.5px); padding: 5px 9px; min-height: 28px; font-weight: var(--fw8, 800);${x.appr ? '' : ' border-style: dashed;'}" onclick="estApprove(${ci})">${_estArm === 'ap' + ci ? '⚠ SURE?' : x.appr ? '✓ ON PAGE' : '🏢 office'}</button>
       </div>
       ${sub ? `<div class="hint est-sub">${sub}</div>` : ''}
       ${tot > 0 || u > 0 ? `<div style="margin: 5px 0 2px; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--ink-muted) 22%, transparent); overflow: hidden;">
         <div style="height: 100%; width: ${tot ? pct : 0}%; background: ${over ? 'var(--err, #c0392b)' : 'var(--accent)'};"></div></div>` : ''}
       ${open ? `
-        ${(x.bids || []).map((b, bi) => `<div style="margin-top: 8px; padding: 8px; border: 1.5px solid ${b.acc ? 'var(--accent)' : 'var(--border)'}; border-radius: 8px;${b.acc ? '' : ' opacity: .85;'}">
+        ${(x.bids || []).map((b, bi) => `<div class="est-bid${b.guess ? ' guess' : ''}" data-bi="${bi}" style="margin-top: 8px; padding: 8px; border: 1.5px solid ${b.acc ? 'var(--accent)' : 'var(--border)'}; border-radius: 8px;${b.acc ? '' : ' opacity: .85;'}">
           <div class="frow" style="gap: 5px; align-items: center; flex-wrap: wrap;">
             <button type="button" class="pick-chip${b.acc ? ' sel' : ''}" style="font-size: var(--fs105, 10.5px); padding: 5px 9px; min-height: 28px; font-weight: var(--fw8, 800);" onclick="estBidAccept(${ci}, ${bi})">${b.acc ? '✓ USING THIS ONE' : '○ use this'}</button>
             <div class="field" style="flex: 1; min-width: 86px; margin: 0;"><label style="font-size: var(--fs10, 10px);">Estimate 1</label>
@@ -15192,6 +15242,7 @@ function renderEstimates() {
             <span class="hint" style="margin: 0; font-weight: var(--fw8, 800); white-space: nowrap;">= ${money0((+b.e1 || 0) + (+b.e2 || 0))}${!b.inc && estMk() ? ` <span style="opacity:.75">→ ${money0(Math.round(((+b.e1 || 0) + (+b.e2 || 0)) * (1 + estMk() / 100) * 100) / 100)} to client</span>` : ''}</span>
             <button type="button" class="pick-chip${b.inc ? '' : ' sel'}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;" onclick="estBidInc(${ci}, ${bi})" title="whether the ${estMk()}% markup rides on top of this number or is already inside it">${b.inc ? '✓ markup already in' : '+' + estMk() + '% rides on top'}</button>
             <button type="button" class="pick-chip${b.opt ? ' sel' : ''}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;${b.opt ? '' : ' border-style: dashed;'}" onclick="estBidOpt(${ci}, ${bi})" title="put this bid on the homeowner's page as a tap-to-choose option — flag 2 or more and their page asks them to choose">${b.opt ? '👁 THEY SEE THIS OPTION' : '○ let them choose this'}</button>
+            <button type="button" class="pick-chip est-guess-btn${b.guess ? ' sel' : ''}" aria-pressed="${!!b.guess}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;${b.guess ? '' : ' border-style: dashed;'}" onclick="estBidGuess(${ci}, ${bi})" title="your own number, no bid behind it yet — the row stays highlighted until a real bid backs it">${b.guess ? '≈ PLACEHOLDER — best guess' : '○ placeholder — best guess'}</button>
             ${x.appr && theirPick != null && optIdx[bi] === theirPick ? `<span style="font-weight: var(--fw8, 800); white-space: nowrap;">🏠 THEIR PICK${pgB.lk ? ' · 🔒 LOCKED' : ''}</span>` : ''}
             <button type="button" class="btn-ghost req-x" style="font-size: var(--fs11, 11px); color: var(--err, #c0392b);" onclick="estBidDel(${ci}, ${bi})">${_estArm === 'bd' + ci + '_' + bi ? '⚠ SURE?' : '✕'}</button>
           </div>
@@ -15209,18 +15260,20 @@ function renderEstimates() {
             <button type="button" class="pick-chip" style="font-size: var(--fs11, 11px); padding: 4px 9px; min-height: 26px;" onclick="$('estF-${ci}-${bi}').click()">📁 ➕ bid paper</button>
             <input type="file" id="estF-${ci}-${bi}" accept="image/*,.pdf,application/pdf" multiple style="display: none;" onchange="estAddDocs(${ci}, ${bi}, this.files)">
           </div>
+          ${b.guess ? `<div class="est-guess-say">≈ Your best guess — no bid behind this number yet. When the real bid comes in, type its number here and tap the ≈ plate again — or add the bid and tap ○ use this.</div>` : ''}
         </div>`).join('')}
         ${(x.pend || []).map((p, pi) => { const lg = estBillToLogan(p); const nudge = (used[x.n] || 0) >= (+p.base || 0) + (+p.a || 0) * 0.5;
           return `<div class="frow" style="gap: 6px; align-items: center; margin-top: 8px; padding: 6px 8px; border: 1.5px dashed var(--accent); border-radius: 8px; flex-wrap: wrap;">
           <span style="flex: 1; min-width: 150px;">📥 <b>$${(+p.a || 0).toLocaleString()}</b>${p.v ? ' from ' + esc(p.v) : ''} <span class="hint" style="margin: 0;">→ $${estPendMk(p).toLocaleString()} on their page · ${esc(p.ts || '')}${nudge ? ' · <b>📗 a QB run may have caught this</b>' : ''}</span></span>
           <button type="button" class="pick-chip${lg ? ' sel' : ''}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;${lg ? '' : ' border-style: dashed;'}" onclick="estPendLogan(${ci}, ${pi})" title="has this invoice gone to Logan for processing? Lights itself if it went through TO THE BOOKKEEPER">${lg ? '📗 WITH LOGAN' : '○ sent to Logan?'}</button>
-          <button type="button" class="pick-chip${nudge ? ' sel' : ''}" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="estPendClear(${ci}, ${pi}, 'qb')" title="QuickBooks carries this now — settle it and take it off their upcoming list">✓ QB HAS IT — retire</button>
+          <button type="button" class="pick-chip${nudge ? ' sel' : ''}" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="estPendClear(${ci}, ${pi}, 'qb')" title="QuickBooks carries this now — settle it and take it off their receipts list">✓ QB HAS IT — retire</button>
           <!-- ↩ v6.34 — Eric: "how can i edit, change or take back". Off their page, and the
                receipt goes back to waiting in the log so it can be fixed and sent again. -->
           <button type="button" class="pick-chip" style="font-size: var(--fs105, 10.5px); min-height: 28px; border-style: dashed;" onclick="estPendClear(${ci}, ${pi}, 'back')" title="Wrong amount or wrong job? Off their page, and the receipt is offered again in the log">↩ Take back</button>
         </div>`; }).join('')}
         <div class="chips-row" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
           <button type="button" class="btn-ghost req-x" onclick="estBidAdd(${ci})">➕ another bid in ${esc(x.n)}</button>
+          <button type="button" class="btn-ghost req-x est-guess-add" onclick="estBidAdd(${ci}, true)" title="no bid yet — put your own number in, marked as a best guess until a real bid backs it">≈ ➕ placeholder — best guess</button>
           <button type="button" class="btn-ghost req-x" onclick="estRenameStart(${ci})">✎ rename</button>
           <button type="button" class="btn-ghost req-x" style="color: var(--err, #c0392b);" onclick="estDelCat(${ci})">${_estArm === 'del' + ci ? '⚠ SURE? Bids go too' : '✕ remove category'}</button>
         </div>
@@ -15240,17 +15293,20 @@ function renderEstimates() {
         byPh.get(ph).push(ci);
       });
       let out = '';
-      if (needs.length) {
-        const nBills = needs.reduce((s, ci) => s + (_estD.cats[ci].pend || []).length, 0);
-        out += `<div class="est-phase need">⚠ Needs you <span>${nBills ? `${nBills} bill${nBills > 1 ? 's' : ''} waiting` : 'over the estimate'}</span></div>` + needs.map(ci => rowOf(_estD.cats[ci], ci, '')).join('');
+      const gOnly = _estGuessOnly, isG = ci => estIsGuess(_estD.cats[ci]);   // ≈ v7.45 — "only the best guesses": the same rows, the same sections, the rest left out
+      const needsShown = gOnly ? needs.filter(isG) : needs;
+      if (needsShown.length) {
+        const nBills = needsShown.reduce((s, ci) => s + (_estD.cats[ci].pend || []).length, 0);
+        out += `<div class="est-phase need">⚠ Needs you <span>${nBills ? `${nBills} bill${nBills > 1 ? 's' : ''} waiting` : 'over the estimate'}</span></div>` + needsShown.map(ci => rowOf(_estD.cats[ci], ci, '')).join('');
       }
       EST_PHASES.forEach(([ph, name]) => {
-        const list = byPh.get(ph) || [];
+        const list = gOnly ? (byPh.get(ph) || []).filter(isG) : (byPh.get(ph) || []);
         if (!list.length) return;
         const appr = list.filter(ci => _estD.cats[ci].appr && estTotal(_estD.cats[ci]) > 0).reduce((s, ci) => s + estTotal(_estD.cats[ci]), 0);
-        const emptyN = list.filter(ci => { const x = _estD.cats[ci]; return !x.appr && !estTotal(x) && !(x.bids || []).length && !(used[x.n] || 0) && !estPendUp(x) && !_estOpenCats.has(ci); }).length;
+        const gTot = list.filter(isG).reduce((s, ci) => s + estTotal(_estD.cats[ci]), 0);
+        const emptyN = gOnly ? 0 : list.filter(ci => { const x = _estD.cats[ci]; return !x.appr && !estTotal(x) && !(x.bids || []).length && !(used[x.n] || 0) && !estPendUp(x) && !_estOpenCats.has(ci); }).length;
         const show = _estShowEmpty.has(ph);
-        out += `<div class="est-phase">${esc(name)} <span>${appr ? `${money0(appr)} approved` : 'nothing approved'}</span></div>` +
+        out += `<div class="est-phase">${esc(name)} <span>${appr ? `${money0(appr)} approved` : 'nothing approved'}${gTot ? ` · ≈ ${money0(gTot)} best guess` : ''}</span></div>` +
           list.map(ci => rowOf(_estD.cats[ci], ci, ph)).join('') +
           (emptyN ? `<button type="button" class="btn-ghost est-empty-fold" onclick="estShowEmpty('${ph}')" aria-expanded="${show}">${show ? `▾ hide the ${emptyN} empty` : `▸ +${emptyN} empty — tap to show`}</button>` : '');
       });
@@ -15273,13 +15329,14 @@ function estBidSet(ci, bi, k, v) {
   scheduleEstSave(_estD.cats[ci].appr && (b.acc || b.opt)); // a number or label their page carries changed → it follows
   renderEstimates();
 }
-function estBidAdd(ci) {
+function estBidAdd(ci, guess) {   // ≈ v7.45 — `guess`: the line starts marked as his best guess, its number box ready to type in
   const x = _estD.cats[ci];
   if (!x) return;
   x.bids = x.bids || [];
-  x.bids.push({ e1: 0, e2: 0, note: '', docs: [], acc: x.bids.length === 0 }); // the first bid starts picked
+  x.bids.push({ e1: 0, e2: 0, note: '', docs: [], acc: x.bids.length === 0, ...(guess ? { guess: true } : {}) }); // the first bid starts picked
   scheduleEstSave();
   renderEstimates();
+  if (guess) setTimeout(() => { const el = document.querySelector(`.est-row[data-ci="${ci}"] .est-bid[data-bi="${x.bids.length - 1}"] input`); if (el) el.focus(); }, 60);
 }
 function estBidDel(ci, bi) {
   if (_estArm !== 'bd' + ci + '_' + bi) {
@@ -15370,7 +15427,7 @@ async function estBillApprove(id) {
   await estSave();
   toast(x.appr
     ? `📥 On their page under ${x.n} — $${mkAmt.toLocaleString()} billed, on the way ✓`
-    : `🔮 On their page under UPCOMING — ${x.n}, $${mkAmt.toLocaleString()} ✓`);
+    : `🔮 On their page under RECEIPTS RECEIVED — ${x.n}, $${mkAmt.toLocaleString()} ✓`);
 }
 // 🔮 v6.27 — ONE TAP from the log. Eric asked for the 🧾 tag to put the cost straight on the
 // client's page; his call on the gate was "keep your tap, but make it one tap from the log".
@@ -15465,7 +15522,7 @@ async function estQuickUpcoming(id, ev, amt) {   // 💵 v7.10 — `amt`: the gr
     await estSave();
     if (!wasOpen) { _estIdx = -1; _estD = null; _estPage = null; }
     renderLog();
-    toast(`🔮 On their page under UPCOMING — ${cat}, $${shown.toLocaleString()} ✓`);
+    toast(`🔮 On their page under RECEIPTS RECEIVED — ${cat}, $${shown.toLocaleString()} ✓`);
   } finally {
     window._qUpBusy = false;
   }
@@ -15578,7 +15635,8 @@ async function openRcptReview(i) {
     if (!(+_estD.mk >= 0)) _estD.mk = 20;
     if (estUpcomingStale()) {
       _estIdx = _rcptIdx;
-      try { await estPublish(c, estCut()); toast('🩹 Their page had lost the upcoming costs — put back'); } catch (err) { /* next open tries again */ }
+      const why = estUpcomingWhy(true);   // 🧾 v7.45 — read BEFORE the publish swaps the page in
+      try { await estPublish(c, estCut()); toast(why); } catch (err) { /* next open tries again */ }
       _estIdx = -1;
     }
   }
@@ -15648,7 +15706,7 @@ function renderRcptReview() {
         ${lamp(L.paired, '② 📗 ✓ PAIRED WITH QB', '② ○ NOT PAIRED YET — waiting on the books')}
         ${lamp(L.paid, '③ 💵 ✓ INVOICED & PAID', '③ ○ NOT YET — comes from the books')}
       </div>
-      ${L.paired ? `<div class="hint" style="margin-top: 2px;">Off their upcoming list — the books carry it now${L.trail && L.trail.cl ? ' (' + esc(L.trail.cl) + ')' : ''}.</div>`
+      ${L.paired ? `<div class="hint" style="margin-top: 2px;">Off their receipts list — the books carry it now${L.trail && L.trail.cl ? ' (' + esc(L.trail.cl) + ')' : ''}.</div>`
                  : `<div class="hint" style="margin-top: 2px;">↩ To change or take it back: 💰 Estimates → the bill's row → ↩ Take back.</div>`}
     </div>`;
   }).join('');
@@ -15725,7 +15783,7 @@ function renderRcptReview() {
   }, 0);
   $('revBox').innerHTML = `<div class="est-board"><h3>🧾 ${esc(c.job)} — receipts waiting
     ${winX('closeRcptReview()', 'close receipts')}</h3>
-    <div class="hint" style="margin: 0 0 8px;">🏢 Office-side. Check the ones that are right, then send them together. Each lands on their page under <b>ESTIMATED UPCOMING COSTS</b> with the ${mk}% already folded in — they never see the markup or the vendor. ${list.length ? `<b>${list.length} waiting.</b>` : '<b>Nothing waiting — every tagged receipt on this job is already through.</b>'}</div>
+    <div class="hint" style="margin: 0 0 8px;">🏢 Office-side. Check the ones that are right, then send them together. Each lands on their page under <b>RECEIPTS RECEIVED — NOT ON AN INVOICE YET</b> with the ${mk}% already folded in — they never see the markup or the vendor. ${list.length ? `<b>${list.length} waiting.</b>` : '<b>Nothing waiting — every tagged receipt on this job is already through.</b>'}</div>
     ${rows}
     ${list.length ? `<div class="g-step" style="margin-top: 12px;">
       <div style="font-size: 13px; font-weight: var(--fw8, 800);">${okCount ? `☑ ${okCount} checked · they will see ${money(total)}` : '☐ Nothing checked yet'}</div>
@@ -15803,7 +15861,7 @@ async function rcptApprove() {
     _rcptSel = new Set();
     renderRcptReview();
     renderLog();
-    toast(`🔮 ${picked.length} on their page under UPCOMING — they see $${shown.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ✓`);
+    toast(`🔮 ${picked.length} on their page under RECEIPTS RECEIVED — they see$${shown.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ✓`);
   } finally {
     window._qUpBusy = false;
   }
@@ -15844,7 +15902,7 @@ async function estBillHand() {
   await estSave();
   toast(x.appr
     ? `📥 On their page under ${x.n} — $${mkAmt.toLocaleString()} billed, on the way ✓`
-    : `🔮 On their page under UPCOMING — ${x.n}, $${mkAmt.toLocaleString()} ✓`);
+    : `🔮 On their page under RECEIPTS RECEIVED — ${x.n}, $${mkAmt.toLocaleString()} ✓`);
 }
 function estBillSkip(id) {
   const e = entries.find(x => x.id === id);
@@ -15895,7 +15953,7 @@ async function estPendClear(ci, pi, how = 'qb') {
   renderLog();
   toast(back
     ? (e ? '↩ Taken back — off their page, and the receipt is waiting in the log again' : '↩ Taken back — off their page')
-    : '📗 Retired — QuickBooks carries it now; off their upcoming list');
+    : '📗 Retired — QuickBooks carries it now; off their receipts list');
 }
 // 🗒→🏠 v5.93 — Eric: "the description next to each estimate needs to be viewable by the
 // client… a button next to the text to turn it on for them." Per-bid, default OFF —
@@ -16022,6 +16080,7 @@ async function estPublish(c, cut) {
     const pg = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null');
     if (!pg) return;
     const before = JSON.stringify([pg.budget || null, pg.upcoming || null]);   // 🔔 v6.68 — ping only when what THEY see changed
+    const wasOld = estUpcomingOld(pg);   // 🧾 v7.45 — the list only changing SHAPE is not news for a homeowner's phone
     // 🏠 v5.91 — the homeowner's own pick SURVIVES a republish (it's their choice, not ours)
     // 🔒 v5.93 — and so does their lock
     const oldPick = {};
@@ -16036,7 +16095,7 @@ async function estPublish(c, cut) {
     pg.updated = localDay(new Date());
     await dbxUpload(portalRoot() + '/' + c.code + '.json', JSON.stringify(pg, null, 1));
     _estPage = pg;
-    if (changed) cpPush(c.code, 'budget');   // 🔔 v6.68
+    if (changed && !wasOld) cpPush(c.code, 'budget');   // 🔔 v6.68
   } catch (e) { toast('Saved here, but their page didn\'t take the update — try the lamp again', false); }
 }
 async function estAddDocs(ci, bi, files) {
@@ -16176,7 +16235,7 @@ function clientPreviewOpen(i) {
 // the v6.61 owner bars through a postMessage listener; the bars are gone (WHAT THEY SEE, below) and the listener with
 // them — the window calls these straight. money and phases are opt-IN (their switch must be true), the rest opt-OUT.
 const OWN_KEYS = ['journal', 'money', 'budget', 'upcoming', 'phases', 'photos', 'ask', 'boards', 'mat'];
-const OWN_WORDS = { journal: 'the journal', money: 'where it stands', budget: 'the budget', upcoming: 'upcoming costs', phases: 'work by phase', photos: 'the photos', ask: 'ask / remark', boards: 'the options boards', mat: 'the build list' };
+const OWN_WORDS = { journal: 'the journal', money: 'where it stands', budget: 'estimated remaining costs', upcoming: 'receipts received', phases: 'work by phase', photos: 'the photos', ask: 'ask / remark', boards: 'the options boards', mat: 'the build list' };
 async function pageShowSet(i, key, on) {
   const c = (((_portalIdx || {}).clients) || [])[i];
   if (!c || !OWN_KEYS.includes(key)) return;
@@ -16215,7 +16274,7 @@ async function pageBoardSet(i, id, off) {
 // in words (✓ THEY SEE THIS — tap to hide / ○ HIDDEN FROM THEM — tap to show; off = dashed and dim, never colour alone),
 // writing the same page.show / boardsOff keys through pageShowSet / pageBoardSet as the bars did. Eric's phone only: the
 // office fold draws no door, and a crew phone that reaches the function is turned away in words.
-const PV_CARDS = [['journal', '📖 Journal — the weekly journal and its photos'], ['money', '💵 Where it stands — invoiced, paid, open'], ['budget', '💰 Budget — approved estimates'], ['upcoming', '🔮 Estimated upcoming costs'], ['phases', '📊 Work by phase']];
+const PV_CARDS = [['journal', '📖 Journal — the weekly journal and its photos'], ['money', '💵 Where it stands — invoiced, paid, open'], ['upcoming', '🧾 Receipts received — not on an invoice yet'], ['budget', '📐 Estimated remaining costs — the approved estimates'], ['phases', '📊 Work by phase']];   // 🧾 v7.45 — the two cards by the names their page gives them now, in the order it draws them
 const PV_TILES = [['photos', '📷 Photos'], ['ask', '💬 Ask / Remark'], ['boards', '🖼 Options — the option boards'], ['mat', '📋 Build List']];
 const _pvBoardsOff = {};   // code → the boards hidden from that client (page.boardsOff)
 let _pvIdx = -1, _pvNoRead = '';
@@ -16253,7 +16312,7 @@ function renderPageVis(force) {
     ${!show ? `<div class="hint" style="margin: 0 0 10px;">${_pvNoRead === c.code ? '⚠ Could not read their page — check the connection, then open this again.' : '⏳ reading their page…'}</div>` : `
     <h4 class="pv-h">THE CARDS</h4>
     ${PV_CARDS.map(([k, lab]) => row(k, lab, `pageVisTap('${k}')`, visOn(show, k))).join('')}
-    <div class="hint" style="margin: 6px 0 12px;">💵 Where it stands and 📊 Work by phase draw only with figures from the books — a page with no QuickBooks numbers shows nothing there even when on. 💰 Budget appears for them only once a category's lamp is lit with a number on the estimates board.</div>
+    <div class="hint" style="margin: 6px 0 12px;">💵 Where it stands and 📊 Work by phase draw only with figures from the books — a page with no QuickBooks numbers shows nothing there even when on. 📐 Estimated remaining costs appears for them only once a category's lamp is lit with a number on the estimates board.</div>
     <h4 class="pv-h">THE TILES</h4>
     ${PV_TILES.map(([k, lab]) => row(k, lab, `pageVisTap('${k}')`, visOn(show, k))).join('')}
     <h4 class="pv-h">THE OPTION BOARDS</h4>
@@ -21360,7 +21419,7 @@ function brdShareBits(e) {   // what a crew phone gets to know about a line: the
 function brdCrewWho(e) { return e.vis === 'crew' ? 'everyone' : Array.isArray(e.vis) ? e.vis.join(', ') : e.vis === 'Eric' ? '' : (e.vis || ''); }
 function brdPageState(e) {
   if (e.jrnSent || e.jrnDone) { const d = typeof e.jrnSent === 'string' ? new Date(e.jrnSent + 'T12:00') : null; return { on: true, word: `ON THEIR PAGE${d && !isNaN(d) ? ' — sent ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}` }; }
-  if (e.budg === 'sent') return { on: true, word: 'ON THEIR PAGE — upcoming costs' };
+  if (e.budg === 'sent') return { on: true, word: 'ON THEIR PAGE — receipts received' };
   if (e.jrn) return { on: false, word: 'STAMPED — rides with the next journal week' };
   return { on: false, word: 'not on their page' };
 }
@@ -22993,7 +23052,7 @@ function logRowHtml(e) {
       // it on their page under UPCOMING, markup folded in. Without a category the old jump
       // still stands, because the board is where he gives it one.
       ? (e.category
-        ? `<span>·</span><span style="cursor: pointer; font-weight: var(--fw8, 800);" title="One tap — ${esc(e.category)}, marked up, onto ${esc(e.job)}'s page under ESTIMATED UPCOMING COSTS" onclick="estQuickUpcoming(${e.id}, event)">🔮 → Upcoming</span><span>·</span><span style="cursor: pointer;" title="Open ${esc(e.job)}'s estimates board instead" onclick="estJumpFromEntry(${e.id}, event)">💰 board</span>`
+        ? `<span>·</span><span style="cursor: pointer; font-weight: var(--fw8, 800);" title="One tap — ${esc(e.category)}, marked up, onto ${esc(e.job)}'s page under RECEIPTS RECEIVED — NOT ON AN INVOICE YET" onclick="estQuickUpcoming(${e.id}, event)">🔮 → Upcoming</span><span>·</span><span style="cursor: pointer;" title="Open ${esc(e.job)}'s estimates board instead" onclick="estJumpFromEntry(${e.id}, event)">💰 board</span>`
         : `<span>·</span><span style="cursor: pointer; font-weight: var(--fw8, 800);" title="Open ${esc(e.job)}'s estimates board — this bill is waiting there under 📥 BILLS THAT CAME IN" onclick="estJumpFromEntry(${e.id}, event)">💰 → Budget</span>`)
       : e.budg === 'sent' ? `<span>·</span><span title="Approved onto the client's budget — riding as billed, on the way">💰 on their page</span>` : '';
     // 🟢🔴 v6.32 — the lamp: is this receipt on the approve list or not
@@ -23306,7 +23365,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.44';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.45';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

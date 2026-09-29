@@ -143,7 +143,7 @@ const { chromium } = require('playwright');
 
   ok('a paired one tells him where to take it back; an unpaired one too', await page.evaluate(() => {
     const t = $('revBox').textContent;
-    return /Off their upcoming list — the books carry it now/.test(t) && /↩ To change or take it back: 💰 Estimates/.test(t);
+    return /Off their receipts list — the books carry it now/.test(t) && /↩ To change or take it back: 💰 Estimates/.test(t);
   }));
 
   await page.evaluate(() => closeRcptReview());

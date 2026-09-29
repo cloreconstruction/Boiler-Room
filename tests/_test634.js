@@ -109,7 +109,7 @@ const { chromium } = require('playwright');
     await estBillApprove(e2.id);
     const pg = JSON.parse(window._dbxFiles[portalRoot() + '/mery-224374.json']);
     closeEstimates();
-    return pg.upcoming && pg.upcoming.tot === 600 && /UPCOMING/.test($('toast').textContent);
+    return pg.upcoming && pg.upcoming.tot === 600 && /RECEIPTS RECEIVED/.test($('toast').textContent);
   }) === true);
 
   ok('the by-hand line publishes the same way', await page.evaluate(async () => {

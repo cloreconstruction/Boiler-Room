@@ -100,7 +100,7 @@ const { chromium } = require('playwright');
       !/Peninsula/.test(JSON.stringify(pg.upcoming));
   }));
 
-  ok('the toast says exactly what they see', await page.evaluate(() => /UPCOMING — Garage Doors, \$3,948/.test($('toast').textContent)));
+  ok('the toast says exactly what they see', await page.evaluate(() => /RECEIPTS RECEIVED — Garage Doors, \$3,948/.test($('toast').textContent)));
 
   id = await seed();
   ok('the file EXISTS but would not read → still refused, nothing invented, nothing written', await page.evaluate(async () => {

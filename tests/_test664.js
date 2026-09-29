@@ -49,7 +49,7 @@ const { chromium } = require('playwright');
     await page.evaluate(async () => { await openEstimates(0); });
     await page.waitForTimeout(1600);   // scheduleEstSave's debounce
     const p = await pg();
-    const said = await page.evaluate(() => /put(ting)? (them )?back/i.test($('toast').textContent));
+    const said = await page.evaluate(() => /put(ting)? (them |it )?back/i.test($('toast').textContent));
     const names = (p.upcoming || { items: [] }).items.map(i => i.n).sort().join('|');
     return !!p.upcoming && p.upcoming.tot === Math.round((13400 + 15600 + 3290) * 1.2 * 100) / 100 &&
       names === 'Garage Doors|Heating|Interior Paint' && !/Waterworks|Peninsula/.test(JSON.stringify(p.upcoming)) && said;

@@ -50,7 +50,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   });
   ok('the window lists the job\'s own categories first, then a heading a build phase — Site & utilities · Foundation & shell · Mechanical · Interior finish · Other costs', w.open && /On this Build List now/.test(w.heads[0]) && w.heads.slice(1).join('|') === '🏗 Site & utilities|🏗 Foundation & shell|🏗 Mechanical|🏗 Interior finish|🏗 Other costs', JSON.stringify(w.heads));
   ok('every construction category is a plate to tap (50+), the overhead ones (Tools · Fuel · Office/Admin) are not, and a category already on the board (Framing) is not listed twice', w.n >= 50 && w.cats.includes('Plumbing') && w.cats.includes('Trusses') && !w.cats.includes('Tools') && !w.cats.includes('Fuel') && !w.cats.includes('Office/Admin') && !w.cats.includes('Framing') && w.rooms.some(r => /Framing/.test(r)), JSON.stringify({ n: w.n, has: w.cats.slice(0, 6) }));
-  ok('the hint says it in words: a construction category + a dollar amount = their Upcoming too, no stop in the receipts window', /construction category and a note with a dollar amount goes onto the homeowner's ESTIMATED UPCOMING COSTS too/.test(w.words) && /no stop in the receipts window/.test(w.words) && w.fits);
+  ok('the hint says it in words: a construction category + a dollar amount = their Upcoming too, no stop in the receipts window', /construction category and a note with a dollar amount goes onto the homeowner's RECEIPTS RECEIVED list too/.test(w.words) && /no stop in the receipts window/.test(w.words) && w.fits);
   ok('tapping a phase category lights the chip with its name', await page.evaluate(() => {
     [...$('catBox').querySelectorAll('#blPhases .bl-cat')].find(b => /Plumbing/.test(b.textContent)).click();
     return qnBL && qnBLRoom === 'Plumbing' && /📋 Plumbing/.test($('qnBLChip').textContent) && !$('catModal').classList.contains('show');
@@ -71,7 +71,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('the homeowner\'s page shows it under ESTIMATED UPCOMING COSTS with the 20% folded in — $1,488, no vendor, no "markup" anywhere on the page', (() => {
     const j = s1.page; return /1488/.test(j) && !/supply house/i.test(j) && !/markup/i.test(j) && !/1240/.test(j);
   })(), s1.page);
-  ok('the toasts say so, and there is NO ↩ Undo (it reached their page)', /Build List → Plumbing · 💵 → their Upcoming/.test(s1.said) && /On their page under UPCOMING — Plumbing, \$1,488/.test(s1.said) && !s1.undo, s1.said.slice(0, 300));
+  ok('the toasts say so, and there is NO ↩ Undo (it reached their page)', /Build List → Plumbing · 💵 → their receipts list/.test(s1.said) && /On their page under RECEIPTS RECEIVED — Plumbing, \$1,488/.test(s1.said) && !s1.undo, s1.said.slice(0, 300));
 
   console.log('— 🏠 v7.10 a ROOM pick with a $ stays off their page; no $ is just a row —');
   ok('KITCHEN + "$300 pot filler" → the row lands, the money stays off their page and he is told why (no guessing the cost line)', await page.evaluate(async () => {
