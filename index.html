@@ -959,6 +959,28 @@
   .pb-zero.armed { border-color: var(--err, #ff8a70); border-width: 2px; font-weight: var(--fw8, 800); }   /* 🧹 v7.30 — armed: the words say ⚠ SURE? too */
   /* 🏦 v7.26 — the bank statement drop box and the TO SORT rows */
   .pb-drop { border: 3px dashed var(--line, #3a3226); border-radius: 14px; padding: 18px 12px; min-height: 96px; display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; font-size: 15px; line-height: 1.4; margin: 8px 0; }
+  /* 📈 v7.38 — the Business page: the savings growth chart, the statements, the temporary-money marks */
+  .biz-card { margin-top: 12px; }
+  .biz-title { font-size: 15px; font-weight: var(--fw8, 800); letter-spacing: .3px; margin: 0 0 8px; }
+  .biz-ctl { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 6px; }
+  .biz-ctl .mini-sel { flex: 1 1 140px; min-width: 0; min-height: 36px; font-size: 13px; }
+  .biz-chart { display: block; overflow: visible; color: var(--ink-1); }
+  .biz-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs12, 12px); color: var(--ink-2); margin-top: 6px; }
+  .biz-sw { display: inline-block; width: 14px; height: 10px; vertical-align: middle; margin-right: 5px; border-radius: 2px; }
+  .biz-sw.bar { background: #3aa6a0; }
+  .biz-sw.line { height: 0; border-top: 3px solid var(--warn, #ffa657); }
+  .biz-sw.avg { height: 0; border-top: 2px dashed #3aa6a0; }
+  .biz-drop.over { border-color: var(--accent); }
+  .biz-acct { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 0; border-top: 1px solid var(--grid); }
+  .biz-name { flex: 1 1 120px; min-width: 0; min-height: 34px; font-size: 14px; }
+  .biz-line { display: grid; grid-template-columns: 54px 1fr; gap: 2px 8px; padding: 8px 0; border-top: 1px solid var(--grid); font-size: 13.5px; align-items: center; }
+  .biz-ld { color: var(--ink-2); }
+  .biz-lw { grid-column: 2; color: var(--ink-2); font-size: var(--fs12, 12px); }
+  .biz-tag { grid-column: 2; font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); letter-spacing: .3px; }
+  .biz-tag.lit { color: var(--warn, #ffa657); }
+  .biz-lb { grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; }
+  .biz-lb .pick-chip { min-height: 34px; }
+  body.crew-mode #scRow .sc-btn:nth-child(5), body.crew-preview #scRow .sc-btn:nth-child(5), body.crew-mode #bizSec { display: none; }   /* 📈 the Business plate and the Setup section are Eric's alone */
   .pb-drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .pb-drop small { display: block; font-size: var(--fs12, 12px); color: var(--ink-muted); margin-top: 4px; }
   .pb-txrow { flex-wrap: wrap; }
@@ -2971,14 +2993,14 @@
      and the waiting count sits on the plate's top corner so it never widens the row.
      A crew phone keeps its two plates (🏠 and 📇) — the summary is the office's, like the Review banner it replaced. */
   .sc-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  body:not(.crew-mode) #scRow .sc-btn { font-size: var(--fs12, 12px); letter-spacing: 0.2px; padding: 12px 4px; gap: 4px; }
+  body:not(.crew-mode) #scRow .sc-btn { font-size: var(--fs12, 12px); letter-spacing: 0.2px; padding: 8px 3px; gap: 3px; line-height: 1.15; }   /* 📈 v7.38 — four plates again: "Project portal" wraps at phone width, so the row is kept tight and the writing box stays on the first screen */
   #scRow .sc-btn { position: relative; }
   body.crew-mode #scRow .sc-btn:nth-child(4) { display: none; }
   /* 📊 v6.85 (PC) → v6.86 (everywhere) — Eric: "the phone version still has 2 summary buttons at the top." ONE summary
      button: the header SUMMARY, which wears the waiting count (#hbSumN). The plate under the clock is gone for Eric on
      every screen size; a crew phone never had it. */
   body:not(.crew-mode) #scRow .sc-btn:nth-child(4) { display: none; }
-  body:not(.crew-mode) #scRow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  body:not(.crew-mode) #scRow { grid-template-columns: repeat(4, minmax(0, 1fr)); }   /* 📈 v7.38 — four again: the Business plate took the empty slot */
   .sc-btn .sc-n { position: absolute; top: -7px; right: -5px; min-width: 18px; padding: 0 5px; border-radius: 999px; box-sizing: border-box;
     background: #141414; color: #ffffff; border: 2px solid rgba(255,255,255,0.85); font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); line-height: 18px; letter-spacing: 0;
     box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
@@ -3189,6 +3211,8 @@
     <button type="button" class="sc-btn" onclick="openJobCards()">📇 <span>Job cards</span></button>
     <!-- 📊 v6.76 — Eric: "make a button for it up to the right of job cards at the top of main page." The summaries page: the sort tab and the summary tab; the count is what waits to be sorted. -->
     <button type="button" class="sc-btn" onclick="openReview('last')" title="Summary, the board, and the sort tab — opens where you were last">📊 <span>Summary<span class="sc-n" id="scSumN"></span></span></button>
+    <!-- 📈 v7.38 — Eric: "i want a button at the top next to summary that has business graphs and charts" — the savings growth chart, the Profit Ticker, the Project Tracker; his phones only -->
+    <button type="button" class="sc-btn sc-biz" onclick="openBusiness()" title="Business charts and numbers — the savings growth chart, the Profit Ticker, the Project Tracker">📈 <span>Business</span></button>
   </div>
 
 
@@ -4151,6 +4175,15 @@
           <!-- 📚 v6.18 — the receipt for the run: which client pages actually got new money -->
           <button class="btn-ghost" style="margin-top: 10px;" onclick="openQbFresh()">📚 Did every client budget update?</button>
         </div>
+        <!-- 📈 v7.38 — Eric: "drag and drop the statements into setup from relay business accounts and this is one graph id like it
+             to update and continue over time." The drop box; the chart lives behind the 📈 Business plate at the top. -->
+        <div class="set-section" id="bizSec">
+          <h4>📈 Business bank statements (Relay)</h4>
+          <div class="hint" style="line-height: 1.5;">On Relay: Accounts → Statements → Export → <b>CSV or OFX</b> — a year at a time, every account you like (the savings account is the one the chart reads). Drop the files here; the 📈 Business plate at the top draws the savings growth chart from them, and every new statement carries it on. The files stay in your own Dropbox — nothing here reaches the crew, a client page or the Wizard.</div>
+          <div id="bizSetupDrop"></div>
+          <div id="bizSetupMsg" class="hint" style="margin-top: 6px;"></div>
+          <button class="btn-ghost" style="margin-top: 8px;" onclick="closePanels(); openBusiness()">📈 Open the Business page</button>
+        </div>
         <div class="set-section" id="setPrivacy">
       <h4>🔒 Personal people</h4>
       <div class="field" style="margin-bottom: 10px;"><label>🔒 Personal people (comma list — their texts stay yours: never in summaries, never near crew)</label>
@@ -4303,7 +4336,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.37 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.38 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8582,6 +8615,246 @@ async function trackerFresh(html) {
     return out;
   } catch (e) { return html; }   // anything odd: show the page exactly as the run left it
 }
+// ================= 📈 v7.38 — BUSINESS: THE SAVINGS GROWTH CHART =================
+// Eric, 2026-09-28, with the chart he built in ChatGPT from his Relay statements: "i want a button at the top next to summary
+// that has business graphs and charts … drag and drop the statements into setup from relay business accounts and this is one
+// graph id like it to update and continue over time." A 📈 Business plate at the top (his phones only) opens this page: the two
+// money pages he already had (the Profit Ticker, the Project Tracker) and SAVINGS GROWTH — bars for what went INTO the savings
+// account each month (interest in), a dashed line for the average of the full months, a line for the month-end balance, ONE
+// shared dollar axis (two axes made the deposits look bigger than the balance), the partial month labelled by its last day, the
+// last balance written at the end of its line, and no paragraphs under it — his chart's own rules, word for word.
+// The statements come from Relay (Accounts → Statements → Export: CSV or OFX; the personal budget's reader knows both, and a
+// PDF), dropped in ⚙ Setup or on this page, into App Data/business-bank.json in HIS Dropbox — never a crew file, never a client
+// page, never the Wizard; an account is its last four; no figure of his is in this file (the suite scans the block).
+// TEMPORARY MONEY: money parked in savings for a while and then sent back out fakes a big month and a big balance. The app
+// PRE-LIGHTS a deposit whose exact amount goes back out later (or came in after the same amount went out) — his tap decides,
+// nothing is marked by itself: ⇄ Parked = out of the bars, and off the balance line until it leaves; ↩ Returned (money
+// coming back) = out of the bars only. The receiving account shows the other side of the same transfers, so the chart reads
+// ONE account — summing both would count every transfer twice.
+const BIZ_PATH = () => DBX_ROOT + '/App Data/business-bank.json';
+const BIZ_MIRROR = 'daylog-bizbank';
+const BIZ_MONTHS_MAX = 12, BIZ_PAIR_DAYS = 120;
+let _biz = null, _bizT = null, _bizDirty = false, _bizHelp = false, _bizAll = false;
+function bizStore() {
+  if (!_biz) { try { _biz = JSON.parse(lsGet(BIZ_MIRROR) || 'null'); } catch (e) { _biz = null; } }
+  if (!_biz || typeof _biz !== 'object' || !_biz.accts || typeof _biz.accts !== 'object') _biz = { v: 1, accts: {}, marks: {} };
+  if (!_biz.marks || typeof _biz.marks !== 'object') _biz.marks = {};
+  return _biz;
+}
+function bizMirror() { try { lsSet(BIZ_MIRROR, JSON.stringify(bizStore())); } catch (e) {} }
+async function bizLoad() {
+  if (CREW_NAME || !dbx.refreshToken) return;
+  try {
+    const j = JSON.parse(await dbxDownload(BIZ_PATH()) || 'null');
+    if (!j || !j.accts || typeof j.accts !== 'object') return;
+    const mine = bizStore();   // an account brought in while offline rides in; for one both hold, the newer touch wins
+    Object.keys(mine.accts).forEach(k => { const a = mine.accts[k], b = j.accts[k]; if (!b || String(a.touch || '') > String(b.touch || '')) j.accts[k] = a; });
+    j.marks = { ...(j.marks || {}), ...(mine.marks || {}) };
+    _biz = j; bizMirror();
+  } catch (e) { /* no file yet, or a bad read — what this device has stands */ }
+}
+function bizSaveSoon() { _bizDirty = true; bizMirror(); clearTimeout(_bizT); _bizT = setTimeout(bizSaveNow, 1200); }
+async function bizSaveNow() {
+  clearTimeout(_bizT);
+  if (CREW_NAME || !dbx.refreshToken) { _bizDirty = false; return; }
+  try {
+    const raw = await dbxDownload(BIZ_PATH());
+    let remote = null; try { remote = JSON.parse(raw || 'null'); } catch (e) { remote = null; }
+    const mine = bizStore();   // read-modify-write: an account or a mark this device never held is carried over
+    if (remote && remote.accts && typeof remote.accts === 'object') Object.keys(remote.accts).forEach(k => { if (!mine.accts[k]) mine.accts[k] = remote.accts[k]; });
+    if (remote && remote.marks && typeof remote.marks === 'object') Object.keys(remote.marks).forEach(id => { if (!(id in mine.marks)) mine.marks[id] = remote.marks[id]; });
+    await dbxUpload(BIZ_PATH(), JSON.stringify(mine, null, 1));
+    _bizDirty = false;
+  } catch (e) { toast('⚠ The business statements did not save — check the connection', false); }
+}
+// ---------- the statements in ----------
+function bizAcctKey(parsed, fileName) {   // the account id the file carries, else the bare four-digit run in Relay's file name (a year is not one), else the file's own name
+  if (parsed.acct) return String(parsed.acct);
+  const nm = String(fileName || '').replace(/\.[a-z0-9]+$/i, '');
+  const four = (nm.match(/(?<![\d-])\d{4}(?![\d-])/g) || []).filter(x => !/^20\d\d$/.test(x));
+  return four.length ? four[four.length - 1] : pbAcctKey(parsed, fileName);
+}
+function bizImport(parsed, fileName) {
+  const S = bizStore(), k = bizAcctKey(parsed, fileName), today = localDay(new Date());
+  const a = S.accts[k] || (S.accts[k] = { last4: parsed.acct || (/^\d{4}$/.test(k) ? k : ''), name: '', lines: [], bal: null, balAt: '', file: '' });
+  const had = new Set(a.lines.map(l => l.id)), hadAlt = new Set(a.lines.map(l => l.alt).filter(Boolean)), seen = {}, seenAlt = {};
+  let added = 0, dup = 0;
+  parsed.lines.forEach(l => {
+    if (l.d > today) return;   // a bank does not post the future
+    const base = l.fitid ? 'f:' + l.fitid : `${l.d}|${l.amt}|${pbStoreKey(l.desc)}`;
+    const n = seen[base] = (seen[base] || 0) + 1, id = l.fitid ? base : `${base}|${n}`;
+    const altKey = `${l.d}|${l.amt}|${pbStoreKey(l.desc)}`, alt = altKey + '|' + (seenAlt[altKey] = (seenAlt[altKey] || 0) + 1);   // the same line through a CSV and then an OFX is ONE line
+    if (had.has(id) || hadAlt.has(alt)) { dup++; return; }
+    a.lines.push({ id, alt, d: l.d, amt: l.amt, desc: l.desc, bal: l.bal == null ? null : l.bal }); had.add(id); hadAlt.add(alt); added++;
+  });
+  a.lines.sort((x, y) => x.d.localeCompare(y.d));
+  if (parsed.bal != null && (!a.balAt || (parsed.balAt || today) >= a.balAt)) { a.bal = parsed.bal; a.balAt = parsed.balAt || today; }   // the newest balance the statements printed anchors every month-end
+  else if (a.bal == null) { const wb = a.lines.filter(l => l.bal != null); if (wb.length) { const last = wb[wb.length - 1]; a.bal = last.bal; a.balAt = last.d; } }
+  a.file = String(fileName || '').slice(0, 60); a.touch = new Date().toISOString();
+  return { added, dup, k };
+}
+async function bizStmtFiles(fileList) {
+  if (CREW_NAME) return;
+  const files = [...(fileList || [])].filter(f => /\.(csv|txt|tsv|ofx|qfx|qbo|pdf)$/i.test(f.name));
+  if (!files.length) { toast('That is not a bank file — a CSV or OFX from Relay\'s Statements page works (a PDF too)', false); return; }
+  let did = 0;
+  for (const f of files) {
+    let parsed;
+    if (/\.pdf$/i.test(f.name)) {   // 📄 v7.28's reader
+      busyShow('📄 READING THE STATEMENT…');
+      try { parsed = await pbPdfParse(await f.arrayBuffer(), f.name); }
+      catch (e) { busyDone('⚠ COULD NOT READ THE PDF'); toast(/unavailable/.test(String(e && e.message)) ? '📄 The PDF reader needs the internet once to fetch itself — try again when you are online' : `⚠ Could not read ${f.name} as a statement`, false); continue; }
+      busyDone('📄 ✓ READ');
+    } else {
+      let text = ''; try { text = await f.text(); } catch (e) { toast(`⚠ Could not read ${f.name}`, false); continue; }
+      parsed = /<OFX>|<STMTTRN>|OFXHEADER/i.test(text) ? pbOfxParse(text) : pbCsvParse(text, f.name);
+    }
+    if (!parsed.lines.length) { toast(`⚠ ${f.name}: ${parsed.why || 'nothing in it I could read'}`, false); continue; }
+    const r = bizImport(parsed, f.name); did++;
+    toast(`🏦 ${parsed.lines.length} line${parsed.lines.length === 1 ? '' : 's'} read from ${f.name} → ${bizAcctWord(r.k)} · ${r.added} new · ${r.dup} already here`);
+  }
+  if (did) { bizSaveSoon(); renderBusiness(); bizSetupWord(); }
+  ['bizFileIn', 'bizFileInSet'].forEach(id => { const i = $(id); if (i) i.value = ''; });
+}
+function bizAcctWord(k) { const a = bizStore().accts[k]; if (!a) return k; return ((a.name ? a.name + ' ' : '') + (a.last4 ? pbAcctShow(a.last4) : (a.name ? '' : k))).trim(); }
+function bizAcctName(k, v) { const a = bizStore().accts[k]; if (!a) return; a.name = String(v || '').trim().slice(0, 24); a.touch = new Date().toISOString(); bizSaveSoon(); renderBusiness(); bizSetupWord(); }
+function bizSetupWord() {
+  const m = $('bizSetupMsg'), dz = $('bizSetupDrop'); if (!m) return;
+  if (dz && !dz.innerHTML) dz.innerHTML = bizDropHtml('bizFileInSet');
+  const S = bizStore(), ks = Object.keys(S.accts);
+  m.textContent = ks.length ? ks.map(k => { const a = S.accts[k], last = a.lines.length ? a.lines[a.lines.length - 1].d : ''; return `${bizAcctWord(k)}: ${a.lines.length} line${a.lines.length === 1 ? '' : 's'}${last ? ' through ' + bizDayWord(last) : ''}`; }).join(' · ') : 'Nothing dropped yet.';
+}
+function bizDropHtml(id) {
+  return `<label class="pb-drop biz-drop" ondragover="event.preventDefault(); this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault(); this.classList.remove('over'); bizStmtFiles(event.dataTransfer.files)">📥 <b>Drop the Relay statements here</b> — CSV or OFX from Accounts → Statements → Export, every account you like · or tap to pick<input type="file" id="${id}" accept=".csv,.txt,.tsv,.ofx,.qfx,.qbo,.pdf" multiple style="display: none;" onchange="bizStmtFiles(this.files)"></label>`;
+}
+// ---------- the balance, the months, the marks ----------
+function bizBalAt(a, day) {   // the balance at the end of `day`: from the newest balance the statements printed, walked back or on — else counted up from the first line
+  const sum = f => a.lines.reduce((s, l) => f(l) ? s + l.amt : s, 0);
+  if (a.bal != null && a.balAt) {
+    if (day >= a.balAt) return Math.round((a.bal + sum(l => l.d > a.balAt && l.d <= day)) * 100) / 100;
+    return Math.round((a.bal - sum(l => l.d > day && l.d <= a.balAt)) * 100) / 100;
+  }
+  return Math.round(sum(l => l.d <= day) * 100) / 100;
+}
+function bizMonthKey(d) { return String(d || '').slice(0, 7); }
+function bizMonthEnd(mk) { const [y, m] = mk.split('-').map(Number); return localDay(new Date(y, m, 0)); }
+function bizAddMonths(mk, n) { const [y, m] = mk.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function bizMonthWord(mk, short) { const [y, m] = mk.split('-').map(Number); const d = new Date(y, m - 1, 1); return short ? d.toLocaleDateString('en-US', { month: 'short' }) : d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
+function bizDayWord(d) { const x = new Date(String(d) + 'T12:00:00'); return isNaN(x) ? String(d) : x.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+function bizMark(id) { const m = bizStore().marks[id]; return m && m.kind ? m : null; }
+function bizPairOut(a, l) {   // a later line on the same account that takes exactly this money back out, within BIZ_PAIR_DAYS
+  if (!(l.amt > 0)) return null;
+  const t0 = +new Date(l.d + 'T12:00:00');
+  return a.lines.find(u => u !== l && u.amt < 0 && Math.abs(-u.amt - l.amt) < 0.005 && u.d >= l.d && (+new Date(u.d + 'T12:00:00') - t0) <= BIZ_PAIR_DAYS * 864e5) || null;
+}
+function bizPairIn(a, l) {   // an earlier line that sent exactly this money out — this deposit is money coming BACK
+  if (!(l.amt > 0)) return null;
+  const t0 = +new Date(l.d + 'T12:00:00');
+  return a.lines.find(u => u !== l && u.amt < 0 && Math.abs(-u.amt - l.amt) < 0.005 && u.d <= l.d && (t0 - +new Date(u.d + 'T12:00:00')) <= BIZ_PAIR_DAYS * 864e5) || null;
+}
+function bizMarkSet(k, id, kind) {   // 'parked' | 'returned'; the same plate again takes the mark off (a tombstone, so another device does not put it back)
+  const S = bizStore(), a = S.accts[k]; if (!a) return;
+  const l = a.lines.find(x => x.id === id); if (!l) return;
+  const was = bizMark(id);
+  if (was && was.kind === kind) kind = '';
+  const rec = { kind, at: new Date().toISOString() };
+  if (kind === 'parked') { const out = bizPairOut(a, l); rec.until = out ? out.d : ''; }
+  S.marks[id] = rec;
+  bizSaveSoon(); renderBusiness();
+  toast(kind === 'parked' ? `⇄ Parked — out of the bars, and off the balance line ${rec.until ? 'until ' + bizDayWord(rec.until) : 'until it goes back out'}` : kind === 'returned' ? '↩ Money coming back — out of the bars; the balance line keeps it' : '↩ Counted as new savings again');
+}
+function bizSavAcct() {   // the account the chart reads: his pick, else the one whose name or file says savings, else the first
+  const S = bizStore(), ks = Object.keys(S.accts); if (!ks.length) return '';
+  if (prefs.bizSav && S.accts[prefs.bizSav]) return prefs.bizSav;
+  return ks.find(k => /sav/i.test((S.accts[k].name || '') + ' ' + (S.accts[k].file || ''))) || ks[0];
+}
+function bizFromAuto(a) {   // where the chart starts by itself: the month the balance last touched zero (the growth story starts over there), else the first month; never more than BIZ_MONTHS_MAX months
+  if (!a.lines.length) return { mk: '', why: '' };
+  const first = a.lines[0].d, lastMk = bizMonthKey(a.lines[a.lines.length - 1].d);
+  let run = bizBalAt(a, first) - a.lines.filter(l => l.d === first).reduce((s, l) => s + l.amt, 0), zeroMk = '';
+  a.lines.forEach(l => { run = Math.round((run + l.amt) * 100) / 100; if (Math.abs(run) < 0.005) zeroMk = bizMonthKey(l.d); });
+  const floor = bizAddMonths(lastMk, -(BIZ_MONTHS_MAX - 1));
+  let mk = zeroMk || bizMonthKey(first), why = zeroMk ? 'the month the balance last touched zero' : 'the first month on the statements';
+  if (mk < floor) { mk = floor; why = 'the last twelve months'; }
+  return { mk, why };
+}
+function bizSeries(k, fromMk) {
+  const S = bizStore(), a = S.accts[k]; if (!a || !a.lines.length) return null;
+  const lastLine = a.lines[a.lines.length - 1].d, asOf = a.balAt && a.balAt > lastLine ? a.balAt : lastLine;
+  const lastMk = bizMonthKey(asOf), auto = bizFromAuto(a), from = fromMk && fromMk <= lastMk ? fromMk : auto.mk;
+  const months = []; for (let mk = from; mk <= lastMk && months.length < BIZ_MONTHS_MAX; mk = bizAddMonths(mk, 1)) months.push(mk);
+  const parked = a.lines.filter(l => l.amt > 0 && bizMark(l.id) && bizMark(l.id).kind === 'parked').map(l => ({ l, until: bizMark(l.id).until || '' }));
+  const rows = months.map(mk => {
+    const end = bizMonthEnd(mk), partial = mk === lastMk && asOf < end, at = partial ? asOf : end;
+    const added = a.lines.filter(l => l.amt > 0 && bizMonthKey(l.d) === mk && !bizMark(l.id)).reduce((s, l) => s + l.amt, 0);
+    const actual = bizBalAt(a, at);
+    const parkedIn = parked.filter(p => p.l.d <= at && (!p.until || p.until > at)).reduce((s, p) => s + p.l.amt, 0);
+    return { mk, label: partial ? bizDayWord(asOf) : bizMonthWord(mk, true), word: partial ? bizMonthWord(mk) + ' through ' + bizDayWord(asOf) : bizMonthWord(mk), added: Math.round(added * 100) / 100, actual, adj: Math.round((actual - parkedIn) * 100) / 100, partial };
+  });
+  const full = rows.filter(r => !r.partial);
+  const avg = full.length ? Math.round(full.reduce((s, r) => s + r.added, 0) / full.length * 100) / 100 : null;
+  return { k, a, rows, avg, from, fromWhy: fromMk && fromMk <= lastMk ? 'your pick' : auto.why, asOf, fullN: full.length };
+}
+// ---------- the chart ----------
+function bizMoney(n, cents) { const v = Math.abs(+n || 0); const s = cents ? v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Math.round(v).toLocaleString('en-US'); return (n < 0 ? '-$' : '$') + s; }
+function bizNice(max) {   // the top of the shared dollar axis: a round step, four of them, the top never under the tallest thing
+  if (!(max > 0)) return { top: 4, step: 1 };
+  const raw = max / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p, step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+  return { top: step * 4, step };
+}
+function bizAxisWord(v) { return v >= 1000 ? '$' + (Math.round(v / 100) / 10) + 'k' : '$' + Math.round(v); }
+function bizChartSvg(ser) {
+  const W = 360, H = 232, L = 46, R = 14, T = 20, B = 30, pw = W - L - R, ph = H - T - B;
+  const rows = ser.rows, n = rows.length;
+  const maxV = Math.max(...rows.map(r => Math.max(r.added, r.adj, 0)), ser.avg || 0), ax = bizNice(maxV);
+  const y = v => T + ph - Math.max(0, Math.min(1, v / ax.top)) * ph, x = i => L + pw * (i + 0.5) / n;
+  const bw = Math.min(28, pw / n * 11 / 20);
+  const teal = '#3aa6a0', tealDk = '#1f6f6a', orange = 'stroke: var(--warn, #ffa657); fill: var(--warn, #ffa657);';
+  const f1 = v => (+v).toFixed(1);
+  const grid = [0, 1, 2, 3, 4].map(i => ax.step * i).map(v => `<line x1="${L}" x2="${W - R}" y1="${f1(y(v))}" y2="${f1(y(v))}" stroke="currentColor" stroke-opacity=".18"/><text x="${L - 4}" y="${f1(y(v) + 3)}" text-anchor="end" font-size="9" fill="currentColor" opacity=".75">${esc(bizAxisWord(v))}</text>`).join('');
+  const bars = rows.map((r, i) => `<g><title>${esc(r.word)} — added ${esc(bizMoney(r.added, true))} · balance ${esc(bizMoney(r.adj, true))}${r.adj !== r.actual ? ' (the bank says ' + esc(bizMoney(r.actual, true)) + ' with the parked money in)' : ''}</title><rect x="${f1(x(i) - bw / 2)}" y="${f1(y(r.added))}" width="${f1(bw)}" height="${f1(y(0) - y(r.added))}" fill="${teal}" stroke="${tealDk}" rx="2"/><text x="${f1(x(i))}" y="${f1(y(r.added) - 3)}" text-anchor="middle" font-size="8.5" fill="currentColor">${esc(bizMoney(r.added))}</text></g>`).join('');
+  const avgLine = ser.avg != null ? `<line x1="${L}" x2="${W - R}" y1="${f1(y(ser.avg))}" y2="${f1(y(ser.avg))}" stroke="${teal}" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${W - R}" y="${f1(y(ser.avg) - 3)}" text-anchor="end" font-size="8.5" fill="${teal}">avg ${esc(bizMoney(ser.avg))}</text>` : '';
+  const last = rows[n - 1];
+  const line = `<polyline points="${rows.map((r, i) => f1(x(i)) + ',' + f1(y(r.adj))).join(' ')}" fill="none" style="stroke: var(--warn, #ffa657);" stroke-width="2.5" stroke-linejoin="round"/>` +
+    rows.map((r, i) => `<circle cx="${f1(x(i))}" cy="${f1(y(r.adj))}" r="3.2" style="${orange}"/>`).join('') +
+    `<text x="${f1(x(n - 1) - 2)}" y="${f1(y(last.adj) - 9)}" text-anchor="end" font-size="10" font-weight="700" style="fill: var(--warn, #ffa657);">${esc(bizMoney(last.adj, true))}</text>`;
+  const xl = rows.map((r, i) => `<text x="${f1(x(i))}" y="${H - B + 14}" text-anchor="middle" font-size="9.5" fill="currentColor"${r.partial ? ' font-style="italic"' : ''}>${esc(r.label)}</text>`).join('');
+  const label = 'Savings growth: ' + rows.map(r => `${r.word} added ${bizMoney(r.added, true)}, balance ${bizMoney(r.adj, true)}`).join('; ') + (ser.avg != null ? `; average of the full months ${bizMoney(ser.avg, true)}` : '');
+  return `<svg class="biz-chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}">${grid}${bars}${avgLine}${line}${xl}</svg>`;
+}
+// ---------- the page ----------
+function openBusiness() {
+  if (CREW_NAME || crewPreview) return;
+  _bizHelp = false; _bizAll = false;
+  renderBusiness(true);
+  $('revModal').classList.add('show', 'mat-full'); document.body.classList.add('modal-open');
+  if (!_bizDirty) bizLoad().then(() => { if ($('bizBox')) renderBusiness(); });
+}
+function bizClose() { if (_bizDirty) bizSaveNow(); closeReview(); }
+function renderBusiness(force) {
+  const box = $('revBox'); if (!box || CREW_NAME) return;
+  if (!force && !$('bizBox')) return;   // only while this page is on the screen
+  const S = bizStore(), ks = Object.keys(S.accts), k = bizSavAcct(), a = k ? S.accts[k] : null, ser = k ? bizSeries(k, prefs.bizFrom || '') : null;
+  const accts = ks.map(key => { const c = S.accts[key], last = c.lines.length ? c.lines[c.lines.length - 1].d : ''; return `<div class="biz-acct"><b>${esc(bizAcctWord(key))}</b><input class="biz-name" value="${esc(c.name || '')}" placeholder="name it — Savings, Receiving…" maxlength="24" aria-label="a name for this account" onchange="bizAcctName('${escq(key)}', this.value)"><span class="hint">${c.lines.length} line${c.lines.length === 1 ? '' : 's'}${last ? ' · through ' + esc(bizDayWord(last)) : ''}${c.bal != null ? ' · ' + esc(bizMoney(c.bal, true)) + ' on ' + esc(bizDayWord(c.balAt)) : ''}</span></div>`; }).join('');
+  const wheel = ks.length > 1 ? `<select class="mini-sel" aria-label="which account is the savings" onchange="prefs.bizSav = this.value; scheduleSave(); renderBusiness();">${ks.map(key => `<option value="${esc(key)}"${key === k ? ' selected' : ''}>chart: ${esc(bizAcctWord(key))}</option>`).join('')}</select>` : '';
+  const fromWheel = ser ? (() => { const first = bizMonthKey(a.lines[0].d), lastMk = bizMonthKey(ser.asOf), auto = bizFromAuto(a), opts = []; for (let mk = lastMk; mk >= first && opts.length < 36; mk = bizAddMonths(mk, -1)) opts.push(mk);
+    return `<select class="mini-sel" aria-label="from which month" onchange="prefs.bizFrom = this.value; scheduleSave(); renderBusiness();"><option value=""${!prefs.bizFrom ? ' selected' : ''}>from ${esc(bizMonthWord(auto.mk))} — ${esc(auto.why)}</option>${opts.map(mk => `<option value="${mk}"${prefs.bizFrom === mk ? ' selected' : ''}>from ${esc(bizMonthWord(mk))}</option>`).join('')}</select>`; })() : '';
+  const deposits = a ? a.lines.filter(l => l.amt > 0 && !/interest/i.test(l.desc)).slice().sort((x, y) => y.d.localeCompare(x.d)) : [];
+  const cands = deposits.filter(l => !bizMark(l.id) && (bizPairOut(a, l) || bizPairIn(a, l))), marked = deposits.filter(l => bizMark(l.id));
+  const row = l => { const m = bizMark(l.id), out = bizPairOut(a, l), back = bizPairIn(a, l);
+    return `<div class="biz-line"><span class="biz-ld">${esc(bizDayWord(l.d))}</span><b>${esc(bizMoney(l.amt, true))}</b><span class="biz-lw">${esc(String(l.desc || '').slice(0, 60))}</span>${m ? `<span class="biz-tag">${m.kind === 'parked' ? '⇄ PARKED' + (m.until ? ' — out again ' + esc(bizDayWord(m.until)) : ' — still here') : '↩ RETURNED — money coming back'}</span>` : out ? `<span class="biz-tag lit">⚠ LOOKS PARKED — the same money went back out ${esc(bizDayWord(out.d))}</span>` : back ? `<span class="biz-tag lit">⚠ LOOKS RETURNED — the same money went out ${esc(bizDayWord(back.d))}</span>` : ''}<span class="biz-lb"><button type="button" class="pick-chip${m && m.kind === 'parked' ? ' sel' : ''}" aria-pressed="${!!(m && m.kind === 'parked')}" onclick="bizMarkSet('${escq(k)}', '${escq(l.id)}', 'parked')" title="parked here for a while, then back out — out of the bars, and off the balance line until it leaves">${m && m.kind === 'parked' ? '✓ ' : ''}⇄ Parked</button><button type="button" class="pick-chip${m && m.kind === 'returned' ? ' sel' : ''}" aria-pressed="${!!(m && m.kind === 'returned')}" onclick="bizMarkSet('${escq(k)}', '${escq(l.id)}', 'returned')" title="money coming back that went out before — out of the bars; the balance line keeps it">${m && m.kind === 'returned' ? '✓ ' : ''}↩ Returned</button></span></div>`; };
+  box.innerHTML = `<div id="bizBox"><h3>📈 BUSINESS <span class="hint" style="font-weight: 400; font-size: 13px;">— charts and numbers · yours alone</span>${winX('bizClose()', 'close')}</h3>
+    <div class="rev-row" style="flex-wrap: wrap; gap: 8px; margin: 6px 0 12px;"><button class="btn-ghost" style="flex: 1; min-width: 140px;" onclick="openMoneyPage('ticker')">💰 Profit Ticker</button><button class="btn-ghost" style="flex: 1; min-width: 140px;" onclick="openMoneyPage('tracker')">📊 Project Tracker</button></div>
+    <div class="pb-card biz-card"><div class="biz-title">🏦 SAVINGS GROWTH${k ? ` <span class="hint" style="font-weight: 400;">— ${esc(bizAcctWord(k))}</span>` : ''}</div>
+      ${ser ? `<div class="biz-ctl">${wheel}${fromWheel}</div>${bizChartSvg(ser)}<div class="biz-legend"><span><i class="biz-sw bar"></i>added each month, interest in</span><span><i class="biz-sw line"></i>month-end balance</span>${ser.avg != null ? `<span><i class="biz-sw avg"></i>average of the ${ser.fullN} full month${ser.fullN === 1 ? '' : 's'}</span>` : ''}${ser.rows.some(r => r.partial) ? `<span><i>${esc(ser.rows[ser.rows.length - 1].label)}</i> = through the newest line</span>` : ''}</div>` : `<div class="hint">No statements yet — drop Relay's CSV or OFX for the savings account below (the whole history, so the balance line starts where the account did).</div>`}
+    </div>
+    ${a && (cands.length || marked.length) ? `<div class="pb-card biz-card"><div class="biz-title">⇄ TEMPORARY MONEY</div>${cands.length ? `<div class="hint" style="margin: 0 0 6px;">⚠ These deposits look temporary — the same amount went back out later, or came in after it went out. Your tap decides; nothing is marked by itself.</div>${cands.map(row).join('')}` : ''}${marked.length ? `<div class="hint" style="margin: 8px 0 6px;">Marked — tap the same plate to take it off:</div>${marked.map(row).join('')}` : ''}</div>` : ''}
+    <div class="pb-card biz-card"><div class="biz-title">📥 STATEMENTS</div>${bizDropHtml('bizFileIn')}${accts || '<div class="hint">Nothing dropped yet.</div>'}${a && deposits.length ? `<button type="button" class="btn-ghost" style="margin-top: 8px; width: 100%;" onclick="_bizAll = !_bizAll; renderBusiness()" aria-expanded="${_bizAll}">${_bizAll ? '▾' : '▸'} every deposit on ${esc(bizAcctWord(k))} (${deposits.length}) — mark one ⇄ parked or ↩ returned</button>${_bizAll ? deposits.map(row).join('') : ''}` : ''}</div>
+    <button type="button" class="btn-ghost" style="width: 100%;" onclick="_bizHelp = !_bizHelp; renderBusiness()" aria-expanded="${_bizHelp}">${_bizHelp ? '▾' : '▸'} ? how this works</button>
+    ${_bizHelp ? `<div class="hint" style="line-height: 1.5; margin: 6px 2px;">Drop the savings account's statements — the whole history, so the balance line starts where the account did (Relay's Statements page exports a year at a time, CSV or OFX). <b>Bars:</b> what went into the account each month, interest in. <b>Orange line:</b> the balance at each month's end, from the newest balance the statements printed (counted up from the first line when they printed none). <b>Dashed line:</b> the average of the full months shown; the newest month is partial and is labelled by its last day. The chart starts the month the balance last touched zero — the wheel picks another. A deposit whose exact amount goes back out later is pre-lit for your tap: <b>⇄ Parked</b> takes it out of the bars and off the balance line until it leaves; <b>↩ Returned</b> (money coming back) takes it out of the bars only. Every account is its last four. This page is yours alone — never a crew phone, never a client page, never the Wizard. The receiving account shows the other side of the same transfers, so the chart reads one account.</div>` : ''}
+  </div>`;
+}
+setTimeout(() => { try { bizSetupWord(); } catch (e) {} }, 0);
 async function openMoneyPage(which) {
   const pg = MONEY_PAGES[which];
   if (!pg) return;
@@ -22440,7 +22713,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.37';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.38';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

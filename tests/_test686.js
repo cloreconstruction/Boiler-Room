@@ -49,10 +49,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   console.log('— 📊 v6.86 one summary button, on the phone too —');
 
-  ok('the phone shows three plates under the clock and no Summary plate; the header SUMMARY is there and wears the count', await page.evaluate(() => {
+  ok('the phone shows four plates under the clock (📈 Business since v7.38) and no Summary plate; the header SUMMARY is there and wears the count', await page.evaluate(() => {
     const vis = [...document.querySelectorAll('#scRow .sc-btn')].filter(b => getComputedStyle(b).display !== 'none');
     pendingQueue = [{ id: 'x1', kind: 'todo', payload: { text: 'call Dale' } }]; renderPendBanner();
-    const r = vis.length === 3 && !vis.some(b => /Summary/.test(b.textContent)) && getComputedStyle($('summaryBtn')).display !== 'none' && $('summaryBtn').getBoundingClientRect().width > 0 && $('hbSumN').textContent === '1' && getComputedStyle($('scRow')).gridTemplateColumns.split(' ').length === 3;
+    const r = vis.length === 4 && !vis.some(b => /Summary/.test(b.textContent)) && getComputedStyle($('summaryBtn')).display !== 'none' && $('summaryBtn').getBoundingClientRect().width > 0 && $('hbSumN').textContent === '1' && getComputedStyle($('scRow')).gridTemplateColumns.split(' ').length === 4;
     pendingQueue = []; renderPendBanner(); return r;
   }));
 

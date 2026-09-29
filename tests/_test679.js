@@ -48,7 +48,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     openReview('board');
     const tabs = [...document.querySelectorAll('.rev-tab')].map(b => b.textContent.trim());
     return tabs.length === 3 && /BOARD · 5/.test(tabs[2]) && document.querySelector('.rev-tab.on').textContent.includes('BOARD') &&
-      /openReview\('last'\)/.test(document.querySelector('#scRow .sc-btn:last-child').getAttribute('onclick')) && /openReview\('last'\)/.test($('summaryBtn').getAttribute('onclick')) &&
+      /openReview\('last'\)/.test(document.querySelector('#scRow .sc-btn:nth-child(4)').getAttribute('onclick')) && /openReview\('last'\)/.test($('summaryBtn').getAttribute('onclick')) &&
       getComputedStyle(document.querySelector('.rev-tabs')).gridTemplateColumns.split(' ').length === 3 &&
       [...document.querySelectorAll('.rev-tab')].every(b => b.getBoundingClientRect().height < 50);   // one line each — the count never wraps
   }));

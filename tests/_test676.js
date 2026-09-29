@@ -49,10 +49,10 @@ const { chromium } = require('playwright');
 
   ok('the 📊 Summary plate still sits in the row to the right of Job cards carrying the count — hidden since v6.86 (Eric: "the phone version still has 2 summary buttons"): the header SUMMARY is the one door, with the same count', await page.evaluate(() => {
     const plates = [...document.querySelectorAll('#scRow .sc-btn')].map(b => b.textContent.replace(/\s+/g, ' ').trim());
-    const sum = document.querySelector('#scRow .sc-btn:last-child');
-    return plates.length === 4 && /Job cards/.test(plates[2]) && /Summary/.test(plates[3]) && /openReview\('(summary|last)'\)/.test(sum.getAttribute('onclick')) && $('scSumN').textContent === '1' &&
+    const sum = document.querySelector('#scRow .sc-btn:nth-child(4)');   // 📈 v7.38 — Business is last now
+    return plates.length === 5 && /Job cards/.test(plates[2]) && /Summary/.test(plates[3]) && /Business/.test(plates[4])   /* 📈 v7.38 — the Business plate is the fifth */ && /openReview\('(summary|last)'\)/.test(sum.getAttribute('onclick')) && $('scSumN').textContent === '1' &&
       getComputedStyle(sum).display === 'none' && $('hbSumN').textContent === '1' && getComputedStyle($('summaryBtn')).display !== 'none' &&
-      getComputedStyle(document.querySelector('#scRow')).gridTemplateColumns.split(' ').length === 3;
+      getComputedStyle(document.querySelector('#scRow')).gridTemplateColumns.split(' ').length === 4;   // 📈 v7.38 — four across again
   }));
 
   ok('the SUMMARY header button opens the same page; the Review banner under the clock and the 📧 card are off the main page but still render their words', await page.evaluate(() => {

@@ -117,19 +117,19 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     pendingQueue = []; renderPendBanner();
     return on && hn.textContent === '' && getComputedStyle(hn).display === 'none';
   }));
-  ok('the phone shows three plates under the clock — since v6.86 the header SUMMARY is the one summary button there too', await page.evaluate(() => {
+  ok('the phone shows four plates under the clock (📈 Business since v7.38) — since v6.86 the header SUMMARY is the one summary button there too', await page.evaluate(() => {
     const vis = [...document.querySelectorAll('#scRow .sc-btn')].filter(b => getComputedStyle(b).display !== 'none');
-    return vis.length === 3 && !vis.some(b => /Summary/.test(b.textContent)) && getComputedStyle($('summaryBtn')).display !== 'none';
+    return vis.length === 4 && !vis.some(b => /Summary/.test(b.textContent)) && getComputedStyle($('summaryBtn')).display !== 'none';
   }));
 
   const ctx2 = await browser.newContext({ viewport: { width: 1200, height: 900 } });
   const p2 = await ctx2.newPage();
   await p2.goto(appUrl); await p2.waitForTimeout(700);
-  ok('on a PC there is ONE summary button — the header one, between the Wizard lamp and SETUP; the plate under the clock is gone and the row holds three', await p2.evaluate(() => {
+  ok('on a PC there is ONE summary button — the header one, between the Wizard lamp and SETUP; the plate under the clock is gone and the row holds four (📈 Business since v7.38)', await p2.evaluate(() => {
     const vis = [...document.querySelectorAll('#scRow .sc-btn')].filter(b => getComputedStyle(b).display !== 'none');
     const sum = $('summaryBtn'), order = [...document.querySelectorAll('.header-right > button')].map(b => b.id).join(',');
-    return vis.length === 3 && !vis.some(b => /Summary/.test(b.textContent)) && getComputedStyle(sum).display !== 'none' && sum.getBoundingClientRect().width > 0 && order === 'syncChip,wizLamp,summaryBtn,setupBtn' && getComputedStyle($('setupBtn')).display !== 'none' &&
-      getComputedStyle($('scRow')).gridTemplateColumns.split(' ').length === 3;
+    return vis.length === 4 && !vis.some(b => /Summary/.test(b.textContent)) && getComputedStyle(sum).display !== 'none' && sum.getBoundingClientRect().width > 0 && order === 'syncChip,wizLamp,summaryBtn,setupBtn' && getComputedStyle($('setupBtn')).display !== 'none' &&
+      getComputedStyle($('scRow')).gridTemplateColumns.split(' ').length === 4;
   }));
   ok('…and its count rides the header there', await p2.evaluate(() => {
     pendingQueue = [{ id: 'x1', kind: 'todo', payload: { text: 'call Dale' } }, { id: 'x2', kind: 'todo', payload: { text: 'order glass' } }]; renderPendBanner();

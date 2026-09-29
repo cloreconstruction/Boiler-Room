@@ -39,7 +39,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   // 🏢 v7.09 — Eric: "I don't want him to have the Project Tracker, Receipts, or estimates" — the office-phone fold lost it; Eric's fold and the Money section keep it
   ok('the button sits in Eric\'s fold and the Money section only — the office-phone fold does not carry it (v7.09)', (() => {
     const src = fs.readFileSync(fileURLToPath(appUrl), 'utf8');
-    return (src.match(/onclick="openMoneyPage\('tracker'\)"/g) || []).length === 2;
+    return (src.match(/onclick="openMoneyPage\('tracker'\)"/g) || []).length === 3;   // 📈 v7.38 — and the Business page's door (Eric's phones only; openBusiness refuses crew)
   })());
 
   ok('tapping it opens the same Project Tracker page the Summary window shows', await page.evaluate(async () => {
