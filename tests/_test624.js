@@ -71,9 +71,9 @@ const { chromium } = require('playwright');
 
   ok('the ⚠ Heads-up chip is OFF the tag row (v7.32 — ⚠ Needs attention in ⑤ is the heads-up now); 🧾 Receipt leads', await page.evaluate(() => {
     renderTagChips();
-    const first = document.querySelector('#qnTagChips .pick-chip');
+    const first = document.querySelector('#qnTagFixed .pick-chip, #qnTagChips .pick-chip');
     return first && /Receipt/.test(first.textContent) && !/Heads-up/.test($('qnTagChips').textContent);   // 🏷 v7.32 — the fixed row leads · 🔒 v7.35 — 🧾 Receipt first (the Personal chip is off ④)
-  }), await page.evaluate(() => JSON.stringify({ first: (document.querySelector('#qnTagChips .pick-chip') || {}).textContent, txt: $('qnTagChips').textContent.replace(/s+/g, ' ').slice(0, 200) })));
+  }), await page.evaluate(() => JSON.stringify({ first: (document.querySelector('#qnTagFixed .pick-chip, #qnTagChips .pick-chip') || {}).textContent, txt: $('qnTagChips').textContent.replace(/s+/g, ' ').slice(0, 200) })));
 
   ok('tapped ⚠ + saved note = heads flag on the entry, then the chip resets', await page.evaluate(() => {
     entries = []; nextId = 1; qnHeads = false; qnHeadsToggle();
@@ -109,7 +109,7 @@ const { chromium } = require('playwright');
   console.log('— 🧾 v6.24 receipt category funnel —');
 
   ok('the 🧾 chip is built in next to ⚠', await page.evaluate(() => {
-    const chips = Array.from(document.querySelectorAll('#qnTagChips .pick-chip')).map(c => c.textContent);
+    const chips = Array.from(document.querySelectorAll('#qnTagFixed .pick-chip, #qnTagChips .pick-chip')).map(c => c.textContent);
     return chips.some(t => /🧾 Receipt/.test(t));
   }));
 
@@ -138,14 +138,14 @@ const { chromium } = require('playwright');
 
   ok('v6.25: picking closes the window and stamps the 🧾 chip with the pick', await page.evaluate(() => {
     qnCatPick('Framing');
-    const chip = Array.from(document.querySelectorAll('#qnTagChips .pick-chip')).map(c => c.textContent).find(t => /🧾/.test(t));
+    const chip = Array.from(document.querySelectorAll('#qnTagFixed .pick-chip, #qnTagChips .pick-chip')).map(c => c.textContent).find(t => /🧾/.test(t));
     return !$('catModal').classList.contains('show') && qnCat === 'Framing' && /🧾 Framing/.test(chip);
   }));
 
   ok('v6.25: ✕ Not a receipt clears the whole thing', await page.evaluate(() => {
     catModalOpen();
     qnRcpt = false; qnCat = ''; catModalClose(); renderCatRow();
-    const chip = Array.from(document.querySelectorAll('#qnTagChips .pick-chip')).map(c => c.textContent).find(t => /🧾/.test(t));
+    const chip = Array.from(document.querySelectorAll('#qnTagFixed .pick-chip, #qnTagChips .pick-chip')).map(c => c.textContent).find(t => /🧾/.test(t));
     return !$('catModal').classList.contains('show') && /🧾 Receipt$/.test(chip.trim());
   }));
 
@@ -213,14 +213,14 @@ const { chromium } = require('playwright');
 
   console.log('— 🪜 v6.25 the five steps —');
 
-  ok('the grinder card is six numbered plates, in order (v6.86: the photo is ③)', await page.evaluate(() => {
+  ok('the grinder card is six numbered plates, in order (📷 v7.43: the photo is ②, the words ③)', await page.evaluate(() => {
     const steps = Array.from(document.querySelectorAll('#qnCard .g-step')).map(el => +el.dataset.step);
     // 🔀 v6.30 — the job and the words swapped places (Eric: "pick the job… important first")
     // 📷 v6.86 — Eric: "take the photo/file select button and make it step 3 and move tag it to step 4"
     return JSON.stringify(steps) === '[1,2,3,4,5,6]' &&
       $('qnJob').closest('.g-step').dataset.step === '1' &&
-      $('askText').closest('.g-step').dataset.step === '2' &&
-      $('qnPhotoInfo').closest('.g-step').dataset.step === '3' &&
+      $('askText').closest('.g-step').dataset.step === '3' &&
+      $('qnPhotoInfo').closest('.g-step').dataset.step === '2' &&
       $('qnTagChips').closest('.g-step').dataset.step === '4' &&
       $('qnVisChips').closest('.g-step').dataset.step === '5' &&
       document.querySelector('.plate-row').closest('.g-step').dataset.step === '6';
@@ -241,7 +241,7 @@ const { chromium } = require('playwright');
   // 🔀 v6.30 — with BOTH the job and the words in, the eye jumps to the lever
   ok('job and words in → the eye goes straight to ⑥ SEND IT (tags and unlock stay optional)', await page.evaluate(() => {
     qnJobPick = 'Mery'; $('askText').value = 'ran conduit under the slab'; updateStepFlow();
-    const s2 = document.querySelector('.g-step[data-step="2"]'), s5 = document.querySelector('.g-step[data-step="6"]');
+    const s2 = document.querySelector('.g-step[data-step="3"]'), s5 = document.querySelector('.g-step[data-step="6"]');   // 📷 v7.43 — the words are ③
     const s3 = document.querySelector('.g-step[data-step="4"]');   // v6.86 — ③ is the photo now; tags are ④, send is ⑥
     return s2.classList.contains('done') && s5.classList.contains('next') && !s3.classList.contains('next');
   }));

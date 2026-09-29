@@ -1593,7 +1593,7 @@
   .g-step-sum { display: none; font-weight: 400; letter-spacing: 0; text-transform: none; opacity: .9; }
   .g-step.fold .g-step-sum { display: inline; }
   .g-step.fold { padding: 9px 11px; }
-  .g-step.fold > *:not(.g-step-label) { display: none !important; }   /* beats #qnTagChips's own display */
+  .g-step.fold > *:not(.g-step-label):not(.tag-fixed-row) { display: none !important; }   /* beats #qnTagChips's own display */
   .g-step.fold .g-step-label { margin-bottom: 0; cursor: pointer; }
   .g-step.fold .g-step-opt { display: none; }
   .g-step.has-jobchips #qnJob { font-size: 13.5px !important; font-weight: var(--fw7, 700) !important; padding: 8px 9px !important; }
@@ -2252,7 +2252,7 @@
      send/urgency block go dim AND dead — not dim-but-still-tappable, which would be a lie.
      The who-sees-it row itself stays live: that row IS the unlock.
      Never colour alone — the dimming is backed by the 🔒 glyph and a spelled-out line. */
-  body.crew-locked #qnTagChips, body.crew-locked #nTagChips, body.crew-locked #crewRoute {
+  body.crew-locked #qnTagChips, body.crew-locked #qnTagFixed, body.crew-locked #nTagChips, body.crew-locked #crewRoute {
     opacity: 0.38; pointer-events: none; filter: saturate(0.15);
   }
   /* 🔒 v5.49 — the owner's lock is lighter than the crew's: only the siren dies, so the
@@ -2734,6 +2734,27 @@
     display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 6px;
     --chip-base: 12.5px; --chip-mul: 1;
   }
+  /* 📷 v7.43 — ② is ONE slim row (its name on the left, the plate on the right) so the writing box under it still sits whole on the first
+     phone screen, above the bottom bar — the rule since v6.12; the long hint shows on a PC, where there is room */
+  .g-step--slim { padding: 4px 10px; }
+  .g-slim-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+  .g-step--slim .g-step-label { margin-bottom: 0; flex-wrap: wrap; row-gap: 2px; }
+  .g-step--slim .cam-btn--wide { width: auto; min-height: 44px; margin-top: 0; padding: 4px 10px; gap: 6px; }
+  .g-step--slim .cam-btn--wide .cam-ic { height: 30px; }
+  .g-step--slim .cam-btn--wide .cam-tx { font-size: var(--fs115, 11.5px); line-height: 1.2; text-align: left; max-width: 96px; }
+  .g-step--slim #qnPhotoInfo:empty { display: none; }
+  @media (max-width: 700px) {
+    .g-step--slim .g-step-opt { display: none; }
+    #qnCard .g-step[data-step="2"], #qnCard .g-step[data-step="3"] { margin-top: 6px; }
+    #qnCard .g-step[data-step="3"] { padding-top: 6px; }
+    #qnCard .g-step[data-step="3"] .g-step-label { margin-bottom: 6px; }
+  }
+  /* 🧙 v7.43 — the read plate under the photo plate, and ④'s fixed row above its fold */
+  .wiz-read { width: 100%; min-height: 46px; margin-top: 8px; font-weight: var(--fw8, 800); white-space: normal; }
+  .wiz-read[disabled] { opacity: .7; }
+  .wiz-read-why { margin: 4px 0 0; font-size: var(--fs11, 11px); line-height: 1.45; }
+  .tag-fixed-row { margin: 6px 0 2px; }
+  .tag-fixed-row .pick-chip { min-height: 40px; font-size: 13px; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
   .tag-fixed { grid-column: 1 / -1; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }   /* 🏷 v7.32 — one fixed row, his own tags below it · 🔒 v7.35 — 🧾 Receipt · 📋 Build List (the Personal chip is off ④); the row shares itself among whatever chips it holds */
   #qnTagChips .pick-chip, #nTagChips .pick-chip, #qnTagChips .mini-sel, #nTagChips .mini-sel {
     width: 100%; margin: 0; min-height: 36px; padding: 4px 6px;
@@ -3315,8 +3336,20 @@
       <select class="mini-sel" id="qnJob" onchange="qnJobPick = this.value; qnBLJobChanged(); renderCatRow(); updateStepFlow()" title="Job this one note files under — snaps back after you send" style="flex: 1; min-width: 0; font-size: 16.5px; font-weight: var(--fw8, 800); padding: 12px 10px; border: 2px solid var(--accent); border-radius: 10px;"></select>
     </div>
     </div>
-    <div class="g-step" data-step="2">
-    <div class="g-step-label"><span class="g-step-num">2</span> SAY IT <span class="g-step-opt">· write it or speak it</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <!-- 📷 v7.43 — Eric: "lets swap 2 and 3 on the grinder, i want to add photo first and them have a button to have the wizard read
+         it instead of auto read." The photo is step ② and the words are step ③: job → photo → 🧙 Have the Wizard read it (HIS tap —
+         nothing reads a photo by itself in the grinder any more; the words land in ③ where he can fix them) → say it → tags →
+         unlock → send. (v6.86 had made the photo step ③, after the words.) -->
+    <div class="g-step g-step--slim" data-step="2">
+    <div class="g-slim-row">
+    <div class="g-step-label"><span class="g-step-num">2</span> ADD A PHOTO OR FILE <span class="g-step-sum"></span><span class="g-step-opt">· optional — a receipt, a plan, a picture of the work</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <button type="button" class="btn-ghost cam-btn cam-btn--wide" onclick="$('qnPhoto').click()" aria-label="Add photos or files — or drag them onto this card" title="Add photos or files — or drag them onto this card"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"><span class="cam-tx">ADD PHOTOS OR FILES</span></button>
+    </div>
+    <div id="qnPhotoInfo" class="frow" style="gap: 6px; flex-wrap: wrap; margin-top: 6px;"></div>
+    <div id="qnReadRow"></div>
+    </div>
+    <div class="g-step" data-step="3">
+    <div class="g-step-label"><span class="g-step-num">3</span> SAY IT <span class="g-step-opt">· write it or speak it</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
     <div class="ask-row">
       <textarea id="askText" class="grow qn-big" rows="4" oninput="fitTa(this); updateStepFlow()" placeholder="Write a note, or ask a question.&#10;&#10;⚙ To the grinder — below — files it.&#10;🧙 ASK — right here — answers it."></textarea>
       <input type="file" id="qnPhoto" accept="image/*,.pdf,application/pdf" multiple onchange="noteAddPhotos(this)" style="display: none;">
@@ -3337,16 +3370,9 @@
          The two plates + the bookkeeper button now ride at the BOTTOM of this card, after
          every tag, who-sees-it and send-to section. Write → file → THEN pull the lever. -->
     </div>
-    <!-- 📷 v6.86 — Eric: "take the photo/file select button and make it step 3 and move tag it to step 4." The camera
-         plate leaves the side of the writing box and is a step of its own, so a receipt or a plan is a thing he does
-         on purpose, in order: job → words → photo → tags → unlock → send. -->
-    <div class="g-step" data-step="3">
-    <div class="g-step-label"><span class="g-step-num">3</span> ADD A PHOTO OR FILE <span class="g-step-sum"></span><span class="g-step-opt">· optional — a receipt, a plan, a picture of the work</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
-    <button type="button" class="btn-ghost cam-btn cam-btn--wide" onclick="$('qnPhoto').click()" aria-label="Add photos or files — or drag them onto this card" title="Add photos or files — or drag them onto this card"><img class="cam-ic" src="steam/btn-photo.webp" alt="" onerror="this.outerHTML='📷'"><span class="cam-tx">ADD PHOTOS OR FILES</span></button>
-    <div id="qnPhotoInfo" class="frow" style="gap: 6px; flex-wrap: wrap; margin-top: 6px;"></div>
-    </div>
     <div class="g-step" data-step="4">
-    <div class="g-step-label" onclick="gFold(4)"><span class="g-step-num">4</span> TAG IT <span class="g-step-sum"></span><span class="g-step-opt">· optional — files it, never sends it</span><span class="g-step-tap">▸ tap to open</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div class="g-step-label" onclick="gFold(4)"><span class="g-step-num">4</span> TAG IT <span class="g-step-sum"></span><span class="g-step-opt">· optional — files it, never sends it</span><span class="g-step-tap">▸ tap for your other tags</span><span class="g-step-next">▸ NEXT</span><span class="g-step-done">✓ DONE</span></div>
+    <div id="qnTagFixed" class="tag-fixed-row"></div>
     <div class="chips-row" id="qnTagChips"></div>
     <div class="hint" id="tagExplain" style="margin-top: 4px; font-size: var(--fs11, 11px); line-height: 1.5;">🏷 Tags FILE it so it's findable later — they never send it anywhere. A <b>Personal</b> tag locks this note to this phone.</div>
     </div>
@@ -4271,7 +4297,7 @@
       <div class="hint" id="aiKeyStatus" style="margin-top: 8px;">No key saved — Ask answers arrive on the hourly check. With a key, answers are instant. The key stays on this device only (paste it once per device, like the Dropbox connection).</div>
       <label class="hint" style="display: flex; gap: 8px; align-items: center; margin-top: 10px; cursor: pointer;">
         <input type="checkbox" id="sAiPhotos" onchange="prefs.aiPhotos = this.checked; scheduleSave();">
-        🔮 Read photos automatically — receipts fill themselves in (📅 date · 🏪 place · 💵 cost) and feed the bill radar. Jobsite photos are NEVER auto-described — tap 🔮 describe on a log entry when you want a line (about ¼¢ per look)
+        🔮 Read photos automatically — for the doors other than the grinder (a to-do's photo, the File Cabinet). In the GRINDER nothing reads a photo by itself: tap 🧙 Have the Wizard read it under the photo, and a receipt comes back as 📅 date · 🏪 store · 💵 amount · 🛒 the items (about ¼¢ per look). Jobsite photos are never described unless you ask
       </label>
       <label class="hint" style="display: flex; gap: 8px; align-items: center; margin-top: 10px; cursor: pointer;">
         <input type="checkbox" id="sRobotSkip" onchange="prefs.robotSkip = this.checked; scheduleSave(); renderTextDigest();">
@@ -4382,7 +4408,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.42 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.43 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6779,18 +6805,22 @@ function updateStepFlow() {
   // ▸ v6.42 — Eric: "the step guide points back up the page." Once the words are in, the NEXT
   // thing is always the lever, job or no job — an unfiled note is allowed and step ① says so.
   // 📷 v6.86 — Eric: "take the photo/file select button and make it step 3 and move tag it to step 4." ③ photo, ④ tags, ⑤ unlock, ⑥ send.
-  const next = hasWords ? 6 : (jobPicked ? 2 : 1);
-  const done = { 1: jobPicked, 2: words, 3: photos, 4: !!(qnSel.size || qnRcpt || qnBL), 5: !!(qnVis || qnVisNames.size), 6: false };
+  // 📷 v7.43 — Eric: "lets swap 2 and 3 on the grinder, i want to add photo first." ② photo, ③ words: after the job the lamp points at the
+  // photo; with a photo in, at the words (the Wizard's read lands there on his tap); with words in, at the lever.
+  const next = words ? 6 : photos ? 3 : (jobPicked ? 2 : 1);
+  const done = { 1: jobPicked, 2: photos, 3: words, 4: !!(qnSel.size || qnRcpt || qnBL), 5: !!(qnVis || qnVisNames.size), 6: false };
   renderQnJobChips();
   card.querySelectorAll('.g-step').forEach(el => {
     const n = +el.dataset.step;
     el.classList.toggle('next', n === next);
     el.classList.toggle('done', !!done[n] && n !== next);
     if (n === 1) el.classList.toggle('blank', hasWords && !jobPicked);
-    if (n === 3) { const sum = el.querySelector('.g-step-sum'); if (sum) sum.textContent = photos ? `· 📷 ${notePhotos.length} attached` : ''; }
+    if (n === 2) { const sum = el.querySelector('.g-step-sum'); if (sum) sum.textContent = photos ? `· 📷 ${notePhotos.length} attached` : ''; }
     if (n === 4 || n === 5) {
       window._gOpen = window._gOpen || {};
-      el.classList.toggle('fold', !done[n] && !_gOpen[n]);
+      // 🏷 v7.43 — Eric: "leave the tag it drop down so that it always shows receipt and build list but then the drop down is all the other
+      // tags" — ④ stays folded until he opens it or picks one of his OWN tags; 🧾 Receipt and 📋 Build List sit above the fold (#qnTagFixed)
+      el.classList.toggle('fold', n === 4 ? !(qnSel.size || _gOpen[4]) : (!done[n] && !_gOpen[n]));
       const sum = el.querySelector('.g-step-sum');
       if (sum) sum.textContent = n === 4
         ? ((qnSel.size ? '· 🏷 ' + [...qnSel].join(', ') : '· none picked') + (qnBL && qnBLRoom ? ' · 📋 Build List → ' + qnBLRoom : ''))
@@ -7016,12 +7046,15 @@ function renderTagChips() {
   // Told him the difference: 🔒 Just me keeps a note from the crew; the Personal lock also kept it off Dropbox, the Wizard and
   // the summaries. His call.
   const restTags = shown.filter(t => t.toLowerCase() !== 'personal');
-  const html = `<div class="tag-fixed">${rcptChip}${qnBLChipHtml()}</div>` + restTags.map(chipOf).join('') +
+  const fixedRow = `<div class="tag-fixed">${rcptChip}${qnBLChipHtml()}</div>`;
+  const html = restTags.map(chipOf).join('') +
     `<div class="chip-bar">
       <button type="button" class="pick-chip" onclick="tagNewInput(this)">➕ tag</button>
       <button type="button" class="pick-chip" onclick="tagArrangeToggle()" title="reorder or clean up the chips">✎ arrange</button>
       <span class="sp"></span>${rowsSel(prefs.tagRows || 2)}${colsSel(cols)}</div>`;
-  ['qnTagChips', 'nTagChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
+  // 🏷 v7.43 — in the grinder the two fixed chips sit ABOVE the fold (#qnTagFixed) and his own tags inside it; the parked Note panel keeps one block
+  const fx = $('qnTagFixed'); if (fx) fx.innerHTML = fixedRow;
+  ['qnTagChips', 'nTagChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = (id === 'qnTagChips' && fx ? '' : fixedRow) + html; chipFit(el, cols); });
   lockGate(); // 🔒 v5.44 — freshly drawn chips have to obey the lock too
   if (typeof updateStepFlow === 'function') updateStepFlow(); // 🪜 v6.25 — keep the rail honest
 }
@@ -7303,7 +7336,7 @@ function noteAddPhotos(inp) {
   for (const f of inp.files) {
     if (!notePhotos.some(x => x.name === f.name && x.size === f.size)) {
       notePhotos.push(f);
-      if (fileMeta(f).url) { queueOcr(f); queueAi(f, fileMeta(f), renderNotePhotoList); }
+      if (fileMeta(f).url) queueOcr(f, true);   // 📷 v7.43 — no automatic read: the free reader runs quietly (search finds its words on the saved entry), 🧙 Have the Wizard read it is his tap
     }
   }
   inp.value = ''; // so the same photo can be re-picked after removal
@@ -7319,22 +7352,39 @@ function noteRemovePhoto(i) {
 }
 function noteClearPhotos() {
   notePhotos.forEach(f => { const m = fcMeta.get(f); if (m && m.url) URL.revokeObjectURL(m.url); fcMeta.delete(f); });
-  notePhotos = [];
+  notePhotos = []; _wizReadBlock = '';
   renderNotePhotoList();
 }
-// 🔮 v5.96 — the WIZARD READ button: read every staged photo/PDF right now, on Eric's tap,
-// and put the words in the note box where he can fix them before grinding. Receipts get the
-// three filing lines (they feed the 📥 bill strip through the saved entry); jobsite shots
-// get one plain sentence. Works with the auto-read setting OFF — that's the point.
+// 🧙 v7.43 — THE WIZARD READS A PHOTO ON HIS TAP. Eric: "lets swap 2 and 3 on the grinder, i want to add photo first and them have a
+// button to have the wizard read it instead of auto read, and on reciepts, id like the date, store, amount, and summary of items and
+// if agent reads it and it has some weird name because of the store sku and it can't figure out what it was, just put exactly what it
+// ways on the reciept." Nothing reads a photo by itself in the grinder any more (noteAddPhotos no longer queues the AI; the free
+// in-browser reader still runs quietly so search finds the words on the saved entry, but it drafts nothing and cards nothing). The
+// plate under the photo plate — 🧙 Have the Wizard read it — reads every staged photo or PDF and puts the words in ③ SAY IT where
+// he can fix them; a second read replaces the first read's words instead of doubling them; the radars that rode the automatic read
+// (the category pre-light, the 💳 bill card, the 🔁 renewal card, the amount) ride his tap now. A receipt comes back as 📅 date ·
+// 🏪 store · 💵 amount · 🛒 the items — an item the Wizard cannot read as a product is copied EXACTLY as printed, in quotes.
+let _wizReading = false, _wizReadAt = 0, _wizReadBlock = '';
+function qnReadable() { return notePhotos.filter(f => (f.type || '').startsWith('image/') || f.type === 'application/pdf'); }
+function qnReadRowHtml() {
+  const files = qnReadable(); if (!files.length) return '';
+  const n = files.length, done = files.every(f => (fcMeta.get(f) || {}).aiStatus === '🔮✓');
+  const word = _wizReading ? `🧙 READING… ${_wizReadAt} of ${n}` : done ? '🧙 ✓ READ — the words are in ③ SAY IT · tap to read again' : `🧙 Have the Wizard read ${n === 1 ? 'it' : 'all ' + n}`;
+  const why = !aiKey() ? '⚠ It needs your Claude key first — ⚙ Setup → the Wizard.'
+    : qnRcpt ? '🧾 A receipt: the read fills in the date, the store, the amount and the items, so they ride along.'
+    : 'Nothing reads a photo by itself — the Wizard reads it when you tap, and puts the words in ③ where you can fix them.';
+  return `<button type="button" class="btn-ghost wiz-read${done && !_wizReading ? ' sel' : ''}" id="wizReadBtn" onclick="wizardReadStaged()"${_wizReading ? ' disabled aria-busy="true"' : ''} aria-pressed="${done}">${word}</button><div class="hint wiz-read-why">${why}</div>`;
+}
 async function wizardReadStaged() {
   if (!aiKey()) { toast('Add your Anthropic key in ⚙ Setup → the Wizard first', false); return; }
-  if (!notePhotos.length) return;
-  toast(`🔮 Reading ${notePhotos.length === 1 ? 'it' : notePhotos.length + ' files'}…`);
-  const added = [];
-  for (const f of notePhotos) {
-    if (!((f.type || '').startsWith('image/') || f.type === 'application/pdf')) continue;
+  const files = qnReadable();
+  if (!files.length || _wizReading) return;
+  _wizReading = true; _wizReadAt = 0;
+  busyShow('🧙 THE WIZARD IS READING THE PHOTO…');
+  const added = []; let failed = 0;
+  for (const f of files) {
     const m = fileMeta(f);
-    m.aiStatus = '🔮…'; renderNotePhotoList();
+    _wizReadAt++; m.aiStatus = '🔮…'; renderNotePhotoList();
     try {
       const p = await aiDescribePhoto(f);
       const isRcpt = isReceiptRead(p);
@@ -7342,23 +7392,30 @@ async function wizardReadStaged() {
       if (!words) { m.aiStatus = ''; continue; }
       m.ai = words; // the saved entry carries the read — a receipt lands in the bill strip
       if (p.category && !m.aiCat) m.aiCat = p.category;
+      const _vc = isRcpt && p.vendor && (prefs.vendCat || {})[String(p.vendor).toLowerCase().trim()];
+      if (_vc) m.aiCat = _vc;   // 🧾 v6.24 — his own past pick for that exact vendor name pre-lights; his tap still decides
       if (p.total != null && p.total !== '' && !isNaN(+p.total)) m.aiTotal = +p.total;
       if (/^\d{4}-\d{2}-\d{2}$/.test(p.due || '')) m.aiDue = p.due;
       if (p.dueAmt != null && p.dueAmt !== '' && !isNaN(+p.dueAmt)) m.aiDueAmt = +p.dueAmt;
       if (/^\d{4}-\d{2}-\d{2}$/.test(p.expires || '')) m.aiExpires = p.expires;
       m.aiStatus = '🔮✓';
       added.push(words);
-    } catch (e) { m.aiStatus = ''; toast(`Couldn't read ${f.name || 'that one'} — ${e.message === 'too big' ? 'it\'s over the size limit' : 'check the connection'}`, false); }
+      aiMaybeSuggestCat(f, m); billMaybeSuggest(f, m); renewMaybeSuggest(f, m); aiMaybePrefillAmt(f, m);
+    } catch (e) { failed++; m.aiStatus = ''; toast(`Couldn't read ${f.name || 'that one'} — ${e.message === 'too big' ? 'it\'s over the size limit' : 'check the connection'}`, false); }
   }
-  renderNotePhotoList();
+  _wizReading = false;
   if (added.length) {
-    const box = $('askText');
+    const box = $('askText'), block = added.join('\n');
     if (box) {
-      box.value = (box.value.trim() ? box.value.trim() + '\n' : '') + added.join('\n');
+      const cur = box.value;
+      box.value = _wizReadBlock && cur.includes(_wizReadBlock) ? cur.replace(_wizReadBlock, block) : (cur.trim() ? cur.trim() + '\n' : '') + block;
+      _wizReadBlock = block;
       box.dispatchEvent(new Event('input'));
     }
-    toast('🔮 Read ✓ — the words are in the note box, fix them however you like');
-  }
+    busyDone('🧙 ✓ READ');
+    toast('🧙 Read ✓ — the words are in ③ SAY IT, fix them however you like');
+  } else busyDone(failed ? '⚠ THE WIZARD COULD NOT READ IT' : '🧙 NOTHING TO READ ON IT');
+  renderNotePhotoList();
 }
 function renderNotePhotoList() {
   const el = $('nPhotoInfo');
@@ -7372,9 +7429,11 @@ function renderNotePhotoList() {
     // 🔮 v5.96 — Eric: "when I add a PDF or a photo to the main note section I want a button
     // that says wizard read… the option to have it read and put a description in there."
     // On-demand, works with the auto-read OFF, and the words land in the NOTE BOX to edit.
-    + (notePhotos.length ? `<button type="button" class="pick-chip" style="font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); min-height: 30px;" onclick="wizardReadStaged()">🔮 WIZARD READ${notePhotos.length > 1 ? ' — all ' + notePhotos.length : ''}</button>` : '');
-  el.innerHTML = html;
+    ;
+  // 🧙 v7.43 — in the grinder the read is a plate of its own under the photo plate (#qnReadRow); the small chip stays in the parked Note panel
+  el.innerHTML = html + (notePhotos.length ? `<button type="button" class="pick-chip" style="font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); min-height: 30px;" onclick="wizardReadStaged()">🔮 WIZARD READ${notePhotos.length > 1 ? ' — all ' + notePhotos.length : ''}</button>` : '');
   const qn = $('qnPhotoInfo'); if (qn) qn.innerHTML = html; // quick card and note panel share the same staged photos
+  const rr = $('qnReadRow'); if (rr) rr.innerHTML = qnReadRowHtml();
   if (typeof updateStepFlow === 'function') updateStepFlow(); // 🪜 photos count as words said
   qnAutoDraft(); // 📝 a freshly-read photo takes the first swing at the note
 }
@@ -7451,6 +7510,7 @@ function ocrClean(data) {
 // land in an empty box or replace an earlier draft as better reading arrives.
 let _qnDraft = '';
 function qnAutoDraft() {
+  if (!window.QN_AUTO_DRAFT) return;   // 📷 v7.43 — Eric: "a button to have the wizard read it instead of auto read" — nothing drafts the note by itself (the code stays)
   const box = $('askText');
   if (!box || !notePhotos.length) return;
   if (box.value.trim() && box.value !== _qnDraft) return; // Eric's own words stand
@@ -7470,7 +7530,7 @@ function qnAutoDraft() {
   fitTa(box);
   toast('📝 Drafted from the photo — ⚙ to approve, or fix the words first');
 }
-function queueOcr(f) {
+function queueOcr(f, quiet) {   // 📷 v7.43 — quiet = the grinder: read for search, card nothing
   const m = fileMeta(f);
   m.status = '📄…';
   _ocrChain = _ocrChain.then(async () => {
@@ -7478,7 +7538,7 @@ function queueOcr(f) {
     catch (e) { m.status = ''; }
     if (fcFiles.includes(f)) renderFcFileList();
     if (notePhotos.includes(f)) renderNotePhotoList();
-    if (m.ocr && !aiOn()) billMaybeSuggest(f, m); // 💳 no key? plain OCR still spots due dates
+    if (m.ocr && !aiOn() && !quiet) billMaybeSuggest(f, m); // 💳 no key? plain OCR still spots due dates
   });
 }
 function queueOcrSingle(inpId, infoId, f) {
@@ -7525,8 +7585,8 @@ async function aiDescribePhoto(f) {
     : { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: await shrinkForAi(f) } };
   // 🧠 v5.42 — labeling a receipt or a jobsite shot is the ⚡ quick brain's best work
   const { r } = await aiCall({
-      max_tokens: 300,
-      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"ONE short plain sentence: what the photo shows and the stage of work — no filler","category":"best match from this list or empty: ' + RCPT_CATS.join(', ') + '","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"rdate":"YYYY-MM-DD purchase/receipt date if visible on a receipt/invoice, else empty","due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"pastDue":amount shown as past due, overdue, or previous balance unpaid, as a number, else null,"balance":total balance or amount outstanding as a number if this is a statement, else null,"acctLast4":"ONLY the last four digits of any account or loan number, else empty","expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty"}',
+      max_tokens: 700,   // 🛒 v7.43 — room for the items
+      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"ONE short plain sentence: what the photo shows and the stage of work — no filler","category":"best match from this list or empty: ' + RCPT_CATS.join(', ') + '","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"rdate":"YYYY-MM-DD purchase/receipt date if visible on a receipt/invoice, else empty","due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"pastDue":amount shown as past due, overdue, or previous balance unpaid, as a number, else null,"balance":total balance or amount outstanding as a number if this is a statement, else null,"acctLast4":"ONLY the last four digits of any account or loan number, else empty","expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty","items":[{"n":"what was bought, in a few plain words — when the receipt prints a store code or an abbreviation you cannot read as a product with confidence, copy that text EXACTLY as printed and set raw to true; never guess what it might be","q":quantity as a number or null,"raw":true if n was copied exactly as printed else false}] (up to 12 lines in the order printed, only for a receipt or an invoice — an empty list for anything else)}',
       messages: [{ role: 'user', content: [
         srcBlock,
         { type: 'text', text: isPdf ? 'Label this document.' : 'Label this photo.' }
@@ -7542,6 +7602,17 @@ async function aiDescribePhoto(f) {
 // that are past due. Put important numbers into the description." A plain receipt still gets
 // his three lines and no more; a BILL earns the extra ones, and only the ones it actually has.
 // Account numbers never travel further than their last four digits.
+// 🛒 v7.43 — Eric: "on reciepts, id like the date, store, amount, and summary of items and if agent reads it and it has some weird name
+// because of the store sku and it can't figure out what it was, just put exactly what it ways on the reciept." One line of items, names
+// and quantities only (no dollar sign ever sits on it — the 💵 line is the one amount every reader parses); an item the Wizard could not
+// read as a product rides in quotes, exactly as the receipt printed it.
+function receiptItemsLine(p) {
+  const list = (Array.isArray(p.items) ? p.items : []).map(it => (typeof it === 'string' ? { n: it } : (it || {})))
+    .map(it => ({ n: String(it.n || '').replace(/\s+/g, ' ').replace(/\$/g, '').trim().slice(0, 60), q: +it.q > 0 && +it.q !== 1 ? +it.q : 0, raw: !!it.raw })).filter(it => it.n);
+  if (!list.length) return '';
+  const shown = list.slice(0, 12).map(it => (it.raw ? '"' + it.n + '"' : it.n) + (it.q ? ' × ' + it.q : ''));
+  return '🛒 ' + shown.join(' · ') + (list.length > 12 ? ' · + ' + (list.length - 12) + ' more' : '');
+}
 function receiptLines(p) {
   const money = n => '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
   const dayOnly = /^\d{4}-\d{2}-\d{2}$/;
@@ -7549,6 +7620,7 @@ function receiptLines(p) {
   if (dayOnly.test(p.rdate || '')) L.push('📅 ' + p.rdate);
   if (p.vendor) L.push('🏪 ' + p.vendor);
   if (p.total != null && p.total !== '') L.push('💵 ' + money(p.total));
+  const items = receiptItemsLine(p); if (items) L.push(items);   // 🛒 v7.43
   if (dayOnly.test(p.due || '')) {
     const late = p.due < localDay(new Date());
     L.push(`🗓 DUE ${p.due}${late ? ' — ⚠ PAST DUE' : ''}`);
@@ -12282,7 +12354,7 @@ function renderVisChips() {
   const ex = $('visExplain');
   if (ex) ex.innerHTML = mine
     ? '🔒 stays on <b>this phone only</b> — never syncs · 📨 goes to Eric · 🔓 the whole crew sees it, and their Wizards can look it up · ⚠ pins it at the top of Eric\'s page until it is answered' + (lsGet('daylog-push-secret') ? ' and rings his phone, in his hours.' : '.')   // 🔔 v7.42
-    : `🔒 <b>just yours</b> — nothing sends · 📨 goes to ${buddy ? esc(buddy) + '\'s phone' : 'their phone'}, marked for them · 🔓 every crew phone sees it, and their Wizards can look it up · ⚠ stays up big on their page until somebody answers (it cannot ring their phone yet).`;   // 🔔 v7.42
+    : `🔒 <b>just yours</b> — saved on this phone and in your own Dropbox; no crew phone gets it · 📨 goes to ${buddy ? esc(buddy) + '\'s phone' : 'their phone'}, marked for them · 🔓 every crew phone sees it, and their Wizards can look it up · ⚠ stays up big on their page until somebody answers (it cannot ring their phone yet).`;   // 🔔 v7.42
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
   // the personal lock: every chip but 🔒 goes dim and dead, with the reason on the glass
   ['qnVisChips', 'nVisChips'].forEach(id => {
@@ -12319,7 +12391,7 @@ function lockGate() {
   const locked = isCrew() && nobody;
   document.body.classList.toggle('crew-locked', locked);
   // the chips inside really go dead, not just grey — a dim button you can still press lies
-  ['qnTagChips', 'nTagChips', 'routeChips', 'urgChips'].forEach(id => {
+  ['qnTagChips', 'qnTagFixed', 'nTagChips', 'routeChips', 'urgChips'].forEach(id => {   // 🏷 v7.43 — the fixed row above the fold obeys the lock too
     const el = $(id); if (!el) return;
     el.querySelectorAll('button, select, input').forEach(b => {
       if (locked) b.setAttribute('disabled', ''); else b.removeAttribute('disabled');
@@ -23167,7 +23239,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.42';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.43';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

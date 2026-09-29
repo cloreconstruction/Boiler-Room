@@ -24,26 +24,26 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   console.log('— 📷 v6.86 the grinder: ③ photo, ④ tags, ⑤ unlock, ⑥ send —');
 
-  ok('six steps in order — ① job, ② SAY IT, ③ ADD A PHOTO OR FILE with the camera plate and the photo list, ④ TAG IT, ⑤ UNLOCK IT, ⑥ SEND IT — and the camera left the side of the writing box', await page.evaluate(() => {
+  ok('six steps in order — ① job, ② ADD A PHOTO OR FILE with the camera plate and the photo list, ③ SAY IT (📷 v7.43 — Eric: "i want to add photo first"), ④ TAG IT, ⑤ UNLOCK IT, ⑥ SEND IT — and the camera is not at the side of the writing box', await page.evaluate(() => {
     const steps = [...document.querySelectorAll('#qnCard .g-step')];
     const num = s => s.querySelector('.g-step-num').textContent.trim(), lbl = s => s.querySelector('.g-step-label').textContent;
-    const s3 = steps[2], s4 = steps[3], s5 = steps[4], s6 = steps[5];
-    return steps.map(num).join('') === '123456' && /SAY IT/.test(lbl(steps[1])) && /ADD A PHOTO OR FILE/.test(lbl(s3)) && s3.dataset.step === '3' &&
-      !!s3.querySelector('.cam-btn--wide[onclick*="qnPhoto"]') && s3.contains($('qnPhotoInfo')) && /ADD PHOTOS OR FILES/.test(s3.textContent) &&
+    const s2 = steps[1], s3 = steps[2], s4 = steps[3], s5 = steps[4], s6 = steps[5];
+    return steps.map(num).join('') === '123456' && /SAY IT/.test(lbl(s3)) && /ADD A PHOTO OR FILE/.test(lbl(s2)) && s2.dataset.step === '2' && s3.contains($('askText')) &&
+      !!s2.querySelector('.cam-btn--wide[onclick*="qnPhoto"]') && s2.contains($('qnPhotoInfo')) && /ADD PHOTOS OR FILES/.test(s2.textContent) &&
       /TAG IT/.test(lbl(s4)) && s4.contains($('qnTagChips')) && /UNLOCK IT/.test(lbl(s5)) && s5.contains($('qnVisRow')) && /SEND IT/.test(lbl(s6)) && !!s6.querySelector('.plate-btn--grind') &&
-      !document.querySelector('.ask-side .cam-btn') && !!document.querySelector('.ask-side #wizSideBtn') && !/add a photo/.test(lbl(steps[1]));
+      !document.querySelector('.ask-side .cam-btn') && !!document.querySelector('.ask-side #wizSideBtn') && !/add a photo/.test(lbl(s3));
   }));
 
-  ok('the flow: words → ⑥ is NEXT and ② DONE; a photo alone → ③ DONE with "1 attached", ② not done, ⑥ NEXT; tags and unlock fold as ④ and ⑤', await page.evaluate(() => {
+  ok('the flow: words → ⑥ is NEXT and ③ DONE; a photo alone → ② DONE with "1 attached", ③ not done and NEXT (the words come after the photo, 📷 v7.43); tags and unlock fold as ④ and ⑤', await page.evaluate(() => {
     window._gOpen = {}; qnSel = new Set(); qnVis = ''; qnVisNames = new Set(); qnHeads = false; qnJobPick = 'Mery'; notePhotos = [];
     $('askText').value = 'a note'; updateStepFlow();
     const S = n => document.querySelector(`.g-step[data-step="${n}"]`);
-    const a = S(6).classList.contains('next') && S(2).classList.contains('done') && !S(3).classList.contains('done') && S(4).classList.contains('fold') && S(5).classList.contains('fold') && /none picked/.test(S(4).textContent) && /just you/.test(S(5).textContent);
+    const a = S(6).classList.contains('next') && S(3).classList.contains('done') && !S(2).classList.contains('done') && S(4).classList.contains('fold') && S(5).classList.contains('fold') && /none picked/.test(S(4).textContent) && /just you/.test(S(5).textContent);
     $('askText').value = ''; notePhotos = [{ name: 'receipt.jpg' }]; updateStepFlow();
-    const b = S(6).classList.contains('next') && S(3).classList.contains('done') && /📷 1 attached/.test(S(3).textContent) && !S(2).classList.contains('done');
+    const b = S(3).classList.contains('next') && S(2).classList.contains('done') && /📷 1 attached/.test(S(2).textContent) && !S(3).classList.contains('done');
     gFold(4); const c = !S(4).classList.contains('fold'); gFold(4);
     notePhotos = []; updateStepFlow();
-    const d = !S(3).classList.contains('done') && S(1).classList.contains('done') && S(2).classList.contains('next');
+    const d = !S(2).classList.contains('done') && S(1).classList.contains('done') && S(2).classList.contains('next');
     return a && b && c && d;
   }));
 

@@ -196,7 +196,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const chips = $('qnTagChips');
     return three.classList.contains('fold') && four.classList.contains('fold') &&
       getComputedStyle(chips).display === 'none' &&
-      /none picked/.test(three.textContent) && /just you/.test(four.textContent) && /tap to open/.test(three.textContent);
+      /none picked/.test(three.textContent) && /just you/.test(four.textContent) && /tap for your other tags/.test(three.textContent);   // 🏷 v7.43 — 🧾 Receipt and 📋 Build List stay above the fold
   }));
 
   ok('11b. tapping the line opens that band, and anything picked keeps it open and names it', await page.evaluate(() => {

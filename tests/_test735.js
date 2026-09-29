@@ -105,7 +105,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— 🔒 (2) the Personal chip is off ④ TAG IT —');
   ok('④ TAG IT: the fixed row is 🧾 Receipt · 📋 Build List — two across, one line, the full width; no Personal chip anywhere in ④ even when his list has the tag; his own tags start under the row', await page.evaluate(() => {
     prefs.tags = ['Home Depot', 'Personal', 'Spenard']; prefs.tagRows = 2; renderTagChips(); window._gOpen = { 4: true }; updateStepFlow();
-    const fx = $('qnTagChips').querySelector('.tag-fixed'); if (!fx) return false;
+    const fx = $('qnTagFixed').querySelector('.tag-fixed'); if (!fx) return false;   // 🏷 v7.43 — above the fold
     const chips = [...fx.querySelectorAll('.pick-chip')], c = chips.map(b => b.textContent.trim()), r = chips.map(b => b.getBoundingClientRect());
     const firstTag = $('qnTagChips').querySelector(':scope > .pick-chip');
     return c.length === 2 && /Receipt/.test(c[0]) && /Build List/.test(c[1]) && Math.abs(r[0].top - r[1].top) <= 2 && Math.abs(r[0].width - r[1].width) <= 3 &&

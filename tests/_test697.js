@@ -42,7 +42,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— 📋 v6.97 the chip and the window —');
 
   ok('the 📋 Build List chip sits in ④ TAG IT beside ⚠ Heads-up and 🧾 Receipt; with no job on the wheel it asks for the job first and stays off', await page.evaluate(async () => {
-    const chips = [...$('qnTagChips').querySelectorAll('button')].map(b => b.textContent.trim());
+    const chips = [...document.querySelectorAll('#qnTagFixed button, #qnTagChips button')].map(b => b.textContent.trim());   // 🏷 v7.43 — the fixed row sits above ④'s fold
     const at = chips.findIndex(c => /Build List/.test(c));
     _said.length = 0; await qnBLToggle();
     return at === 1 && /Receipt/.test(chips[0]) && !qnBL   /* 🏷 v7.32 — the fixed row leads ④ · 🔒 v7.35 — 🧾 Receipt · 📋 Build List (the Personal chip is off) */ && /Pick the job first/.test(_said.join(' ')) && _chip().getAttribute('aria-pressed') === 'false';

@@ -20,9 +20,9 @@ const { chromium } = require('playwright');
 
   console.log('— 🔀 v6.30 pick the job FIRST —');
 
-  ok('the job wheel is step ①, the writing box is step ②', await page.evaluate(() =>
+  ok('the job wheel is step ①, the writing box is step ③ (📷 v7.43 — the photo is ② now)', await page.evaluate(() =>
     $('qnJob').closest('.g-step').dataset.step === '1' &&
-    $('askText').closest('.g-step').dataset.step === '2'));
+    $('askText').closest('.g-step').dataset.step === '3'));
 
   ok('the job plate is physically ABOVE the writing box on the page', await page.evaluate(() =>
     $('qnJob').getBoundingClientRect().top < $('askText').getBoundingClientRect().top));
@@ -32,9 +32,9 @@ const { chromium } = require('playwright');
     return JSON.stringify(steps) === '[1,2,3,4,5,6]';
   }));
 
-  ok('the labels swapped too — ① says PICK THE JOB, ② says SAY IT', await page.evaluate(() => {
+  ok('the labels follow — ① says PICK THE JOB, ② ADD A PHOTO OR FILE, ③ SAY IT (📷 v7.43)', await page.evaluate(() => {
     const l = n => document.querySelector(`.g-step[data-step="${n}"] .g-step-label`).textContent;
-    return /PICK THE JOB/.test(l(1)) && /SAY IT/.test(l(2));
+    return /PICK THE JOB/.test(l(1)) && /ADD A PHOTO OR FILE/.test(l(2)) && /SAY IT/.test(l(3));
   }));
 
   ok('nothing picked → ① PICK THE JOB wears ▸ NEXT', await page.evaluate(() => {
@@ -50,8 +50,8 @@ const { chromium } = require('playwright');
 
   ok('words in → the eye goes to ⑥ SEND IT, tags and unlock stay optional', await page.evaluate(() => {
     $('askText').value = 'ran conduit under the slab'; updateStepFlow();
-    const s2 = document.querySelector('.g-step[data-step="2"]'), s5 = document.querySelector('.g-step[data-step="6"]');
-    const s3 = document.querySelector('.g-step[data-step="4"]');   // v6.86 — ③ is the photo now; tags are ④, send is ⑥
+    const s2 = document.querySelector('.g-step[data-step="3"]'), s5 = document.querySelector('.g-step[data-step="6"]');   // 📷 v7.43 — the words are ③
+    const s3 = document.querySelector('.g-step[data-step="4"]');   // tags are ④, send is ⑥
     return s2.classList.contains('done') && s5.classList.contains('next') && !s3.classList.contains('next');
   }));
 

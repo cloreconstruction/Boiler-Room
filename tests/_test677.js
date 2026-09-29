@@ -151,7 +151,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }));
 
   ok('the writing box is still within a thumb\'s reach with the pocket framed (v6.12 / v6.75)', await page.evaluate(() =>
-    $('askText').getBoundingClientRect().top + scrollY < 600));
+    $('askText').getBoundingClientRect().top + scrollY < 660));   // 📷 v7.43 — the photo step (one slim row) sits above the box at Eric's ask
 
   ok('version bumped — APP_VER and the footer agree', await page.evaluate(() => {
     const num = v => (String(v).match(/(\d+)\.(\d+)/) || []).slice(1).reduce((a, b) => a * 1000 + +b, 0);

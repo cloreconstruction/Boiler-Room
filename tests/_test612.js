@@ -53,9 +53,9 @@ const { chromium } = require('playwright');
     return !!w && !!w.closest('.ask-row') && !!w.closest('.ask-side');
   }));
 
-  ok('it sits beside the writing box; the photo plate is step ③ right under (v6.86 — Eric: "make it step 3")', await page.evaluate(() => {
-    const w = $('wizSideBtn').getBoundingClientRect(), t = $('askText').getBoundingClientRect(), cam = document.querySelector('.g-step[data-step="3"] .cam-btn--wide');
-    return !!cam && w.left >= t.right - 4 && cam.getBoundingClientRect().top >= t.bottom - 4 && !document.querySelector('.ask-side .cam-btn');
+  ok('it sits beside the writing box; the photo plate is step ② right ABOVE it (📷 v7.43 — Eric: "lets swap 2 and 3 on the grinder, i want to add photo first")', await page.evaluate(() => {
+    const w = $('wizSideBtn').getBoundingClientRect(), t = $('askText').getBoundingClientRect(), cam = document.querySelector('.g-step[data-step="2"] .cam-btn--wide');
+    return !!cam && w.left >= t.right - 4 && cam.getBoundingClientRect().bottom <= t.top + 4 && !document.querySelector('.ask-side .cam-btn');
   }));
 
   ok('no scrolling to reach it — it is level with the text box', await page.evaluate(() => {
@@ -86,14 +86,15 @@ const { chromium } = require('playwright');
     let opened = 0;
     const inp = $('qnPhoto'); const orig = inp.click.bind(inp);
     inp.click = () => { opened++; };
-    document.querySelector('.g-step[data-step="3"] .cam-btn--wide').click();   // v6.86 — the camera plate is step ③ now
+    document.querySelector('.g-step[data-step="2"] .cam-btn--wide').click();   // 📷 v7.43 — the camera plate is step ② now
     inp.click = orig;
     return opened === 1;
   }));
 
   ok('the whole writing box fits on one phone screen — no scroll to write and ask', await page.evaluate(() => {
     const r = $('askText').getBoundingClientRect(), w = $('wizSideBtn').getBoundingClientRect();
-    return r.top < 600 && w.bottom < 800;   // 844-tall viewport — v6.75: the pocket list sits above ① at Eric's ask, so the box moved down a hand's width and still fits
+    const bar = document.querySelector('.capture').getBoundingClientRect();
+    return r.top < 660 && r.bottom <= bar.top && w.bottom <= bar.top;   // 📷 v7.43 — the photo step sits above the box now (Eric: "i want to add photo first"): one slim row, and the box is still whole above the bottom bar
   }));
 
   console.log('page errors:', errs.length); errs.forEach(e => console.log('  ' + e));

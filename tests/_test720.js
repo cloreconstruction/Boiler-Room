@@ -28,7 +28,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
       box: $('askText').getBoundingClientRect().top + scrollY, wiz: $('wizSideBtn').getBoundingClientRect().bottom };
   });
   ok('the grinder\'s card opens with its own name — ⚙️ GRINDER — in the pocket list\'s own lettering, above ① PICK THE JOB', g.first && g.words === '⚙️ GRINDER' && g.same && g.above && g.inCard, JSON.stringify(g));
-  ok('…and the writing box and the Wizard plate still fit the first phone screen (v6.12)', g.box < 600 && g.wiz < 800, JSON.stringify(g));
+  ok('…and the writing box and the Wizard plate still fit the first phone screen (v6.12)', g.box < 660 && g.wiz < 780, JSON.stringify(g));   // 📷 v7.43 — a slim photo row above the box; the Wizard plate still ends above the bottom bar
 
   await page.evaluate(async () => {
     jobs = ['Oak House']; crew = ['Phil']; entries = []; todos = []; nextId = 1; pendingQueue = [];
