@@ -46,7 +46,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath, pathToFileURL
   ok('⚙ Setup → 🔔 Notifications draws the hours (7 AM to 8 PM to start, with ☀ All day), one switch per kind in words (✓ ON — / ○ OFF —), and ⚠ Only urgent; the old words about an evening reminder are gone', await page.evaluate(() => {
     renderPushSetup(); const t = $('ntBox').textContent.replace(/\s+/g, ' ');
     return $('ntFrom').value === '7' && $('ntTo').value === '20' && /Only between these times/.test(t) && /Alerts ring from 7 AM to 8 PM/.test(t) && /All day/.test(t) &&
-      [...$('ntBox').querySelectorAll('.nt-kinds .pick-chip')].length === 5 && /✓ ON — 🔥 A text that needs you/.test(t) && /✓ ON — 📧 An important email/.test(t) && /○ OFF — ⚠ Only urgent/.test(t) &&
+      [...$('ntBox').querySelectorAll('.nt-kinds .pick-chip')].length === 5 && /✓ ON — 🔥 A text that needs you/.test(t) && /✓ ON — 📧 An important email/.test(t) && /○ OFF — everything switched on above rings/.test(t) && /Only the urgent ones/.test(t)   /* 🔔 v7.42 words */ &&
       !/evening reminder/.test($('setNotif').textContent) && /push secret is not on this phone yet/.test(t);
   }), await page.evaluate(() => $('ntBox').textContent.replace(/\s+/g, ' ').slice(0, 400)));
   ok('a tap on 🌧 turns it off in words and in prefs; the hours wheels set the window; the settings file and the mail rules go up to Dropbox — the sorter\'s quiet hours are the window turned inside out', await page.evaluate(async () => {
@@ -122,7 +122,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath, pathToFileURL
     _biz = { v: 1, accts: { '1234': { last4: '1234', name: 'Savings', lines: [
       { id: 'a', alt: 'a', d: '2026-06-03', amt: 900, desc: 'Transfer from Receiving', bal: 900 }, { id: 'b', alt: 'b', d: '2026-07-24', amt: 7000, desc: 'Manual transfer from OPEX', bal: 7900 },
       { id: 'c', alt: 'c', d: '2026-08-05', amt: 800, desc: 'Transfer from Receiving', bal: 8700 }, { id: 'd', alt: 'd', d: '2026-09-11', amt: -7000, desc: 'To OPEX', bal: 1700 }, { id: 'e', alt: 'e', d: '2026-09-20', amt: 300, desc: 'Transfer from Receiving', bal: 2000 }], bal: 2000, balAt: '2026-09-20', file: 'savings.csv' } }, marks: {} };
-    prefs.bizSav = '1234'; prefs.bizFrom = '2026-06'; renderBusiness(true);
+    prefs.bizSav = '1234'; prefs.bizFrom = '2026-06'; _bizView = 'savings'; renderBusiness(true);   // 📈 v7.41 — the savings chart is a window of its own
     const card = () => [...document.querySelectorAll('.biz-card')].find(c => /TEMPORARY MONEY/.test(c.textContent));
     const plates = () => [...card().querySelectorAll('.biz-line .pick-chip')].map(b => b.textContent.trim());
     const p0 = plates();
