@@ -4408,7 +4408,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.43 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.44 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -5581,14 +5581,14 @@ const EST_DEFAULT_CATS = ['Demo', 'Well line, sewerline to house', 'Septic', 'Di
 // and Eric's 48 on the estimates board. A receipt now files under the SAME list the budget
 // bars use, so nothing downstream has to guess a name match. A few money buckets a jobsite
 // budget doesn't carry ride at the end.
-const RCPT_CATS = [...EST_DEFAULT_CATS, 'Materials', 'Tools', 'Fuel', 'Office/Admin', 'Personal'];
+const RCPT_CATS = [...EST_DEFAULT_CATS, 'Materials', 'Tools', 'Fuel', 'Truck maintenance', 'Office/Admin', 'Personal'];   // 🚚 v7.44 — Truck maintenance
 // 🏢 v6.35 — OVERHEAD. Eric: "whenever im sorting reciepts i need to be able to categorize it
 // as tools or office or business expense etc so that can send it to some place to record but
 // isn't a billable project receipt." His call on the gate: picking one of THESE in the 🧾
 // window IS the mark — no second tap. An overhead receipt is recorded (the log, the job's
 // receipts window, the CSV Logan gets with billable = no) and is never offered to a client
 // page. A saw bought FOR a job goes under a project category instead — that was the trade.
-const OVERHEAD_CATS = ['Tools', 'Fuel', 'Office/Admin'];
+const OVERHEAD_CATS = ['Tools', 'Fuel', 'Truck maintenance', 'Office/Admin'];   // 🚚 v7.44 — a truck's upkeep is overhead, like its fuel
 function isOverheadEntry(e) {
   if (!e) return false;
   // 🕰 v6.38 — HOURS are never overhead by category name. A shift filed under Tools, Fuel or
@@ -6622,8 +6622,48 @@ let qnRcpt = false, qnCat = '', _qnCatMore = false;
 // 🧾 v6.25 — tapping the chip opens the category WINDOW (Eric: inline chips next to the tags
 // "looks like more tags — super confusing"). Tap again any time to change or un-receipt it.
 function qnRcptToggle() { if (!qnRcpt) { qnRcpt = true; renderTagChips(); } catModalOpen(); }
+// 🚚 v7.44 — FUEL AND MAINTENANCE GO ON A TRUCK. Eric: "on the what kind of cost is this pop up window when someone selects fuel a
+// little pop up window should come up to select the truck also it could say fuel or maintenence so other truck related costs are
+// assigned to that truck." ⛽ Fuel and 🔧 Truck maintenance (a new overhead category — recorded for the books, never billed to a
+// client) ask WHICH TRUCK in the same window: what it was (⛽ Fuel · 🔧 Maintenance — the one he tapped is lit, the other a tap
+// away), a plate a truck (the one with a trip open first, then the one he drove last, then his own order), ○ Not a truck (a can, a
+// generator, equipment) and ‹ Back. The pick rides the receipt (truck + the truck's last odometer reading as truckOdo — never the
+// trip field odometer, which belongs to a trip) and 📈 Business → 🚚 Truck mileage adds them up per truck. No truck is ever
+// guessed — the last one driven only stands first in the row; the truck is always his tap.
+const TRUCK_CATS = ['Fuel', 'Truck maintenance'];
+const CAT_ICON = { 'Fuel': '⛽', 'Truck maintenance': '🔧' };
+let qnTruck = '', _catTruckKind = '';
+function catTrucks() { return (Array.isArray(trucks) ? trucks : []).map(t => t && t.name).filter(Boolean); }
+function catTruckStep(kind) {
+  _catTruckKind = TRUCK_CATS.includes(kind) ? kind : 'Fuel';
+  const names = catTrucks(), open = (trucks.find(t => t && t.trip) || {}).name || '', last = prefs.lastTruck || '';
+  const order = [...new Set([open, last, ...names].filter(n => n && names.includes(n)))];
+  const kindBtn = k => `<button type="button" class="pick-chip${_catTruckKind === k ? ' sel' : ''}" aria-pressed="${_catTruckKind === k}" onclick="catTruckStep('${escq(k)}')">${_catTruckKind === k ? '✓ ' : ''}${CAT_ICON[k]} ${k === 'Fuel' ? 'Fuel' : 'Maintenance'}</button>`;
+  const head = w => `<div style="font-weight: var(--fw8, 800); font-size: var(--fs115, 11.5px); letter-spacing: .4px; margin: 6px 0 4px;">${w}</div>`;
+  $('catBox').innerHTML = `<h3>🚚 Which truck?
+    ${winX('catModalClose()', 'close')}</h3>
+    <div class="hint" style="margin: 0 0 8px;">The cost goes on that truck — 📈 Business → 🚚 Truck mileage adds up its fuel and its maintenance. It is overhead: recorded for the books, never billed to a client.</div>
+    ${head('WHAT WAS IT')}
+    <div class="chips-row cat-grid" id="catKindGrid" style="margin-bottom: 8px;">${TRUCK_CATS.map(kindBtn).join('')}</div>
+    ${head('🚚 THE TRUCK')}
+    <div class="chips-row cat-grid" id="catTruckGrid" style="margin-bottom: 8px;">${order.map(n => { const on = qnTruck === n && qnCat === _catTruckKind; return `<button type="button" class="pick-chip${on ? ' sel' : ''}" aria-pressed="${on}" onclick="qnTruckPick('${escq(n)}')">${on ? '✓ ' : '🚚 '}${esc(n)}</button>`; }).join('')}</div>
+    <div class="frow" style="gap: 8px; margin-top: 12px; align-items: stretch;">
+      <button type="button" class="btn-ghost" style="flex: 1;" onclick="qnTruckPick('')">○ Not a truck — a can, a generator, equipment</button>
+      <button type="button" class="btn-ghost" style="flex: 1;" onclick="catModalOpen()">‹ Back to the categories</button>
+    </div>`;
+  $('catModal').classList.add('show');
+}
+function qnTruckPick(name) {
+  qnCat = _catTruckKind || 'Fuel';
+  qnTruck = name && catTrucks().includes(name) ? name : '';
+  catModalClose();
+  renderTagChips(); renderCatRow();
+  if (typeof updateStepFlow === 'function') updateStepFlow();
+  toast(`${CAT_ICON[qnCat] || '📂'} ${qnCat}${qnTruck ? ' → 🚚 ' + qnTruck : ' — not on a truck'} ✓`);
+}
 function qnCatPick(c) {
-  qnCat = c || '';
+  if (TRUCK_CATS.includes(c) && catTrucks().length) { catTruckStep(c); return; }   // 🚚 v7.44 — fuel or maintenance: which truck?
+  qnCat = c || ''; qnTruck = '';
   catModalClose();
   renderTagChips(); renderCatRow();
   if (typeof updateStepFlow === 'function') updateStepFlow();
@@ -6637,7 +6677,7 @@ function catModalOpen() {
   // 🔲 v6.33 — Eric: "all those cards needs to be the same size so its 3 across or whatever
   // fits best." Same-size plates in a three-wide grid (.cat-grid), instead of pills of every
   // length wrapping wherever they fell. No inline sizing here so the grid rule can win.
-  const chip = (c, star) => `<button type="button" class="pick-chip${qnCat === c ? ' sel' : ''}" onclick="qnCatPick('${escq(c)}')" aria-pressed="${qnCat === c}">${qnCat === c ? '✓' : star ? '⭐' : OVERHEAD_CATS.includes(c) ? '🏢' : '📂'} ${esc(c)}</button>`;
+  const chip = (c, star) => `<button type="button" class="pick-chip${qnCat === c ? ' sel' : ''}" onclick="qnCatPick('${escq(c)}')" aria-pressed="${qnCat === c}">${qnCat === c ? '✓' : star ? '⭐' : CAT_ICON[c] ? CAT_ICON[c] : OVERHEAD_CATS.includes(c) ? '🏢' : '📂'} ${esc(c)}${qnCat === c && qnTruck ? ' · 🚚 ' + esc(qnTruck) : ''}</button>`;
   $('catBox').innerHTML = `<h3>🧾 What kind of cost is this?
     ${winX('catModalClose()', 'close')}</h3>
     <div class="hint" style="margin: 0 0 8px;">Filing under <b>${esc(job && job !== '—' ? job : 'no job yet — pick one after')}</b>. The pick rides the receipt to the budget pile pre-sorted, and it's remembered for next time.</div>
@@ -6645,12 +6685,13 @@ function catModalOpen() {
       <div class="chips-row cat-grid" style="margin-bottom: 8px;">${learned.map(c => chip(c, true)).join('')}</div>
       <div style="font-weight: var(--fw8, 800); font-size: var(--fs115, 11.5px); letter-spacing: .4px; margin: 6px 0 4px;">🅰 THE WHOLE LIST, A → Z</div>` : ''}
     <div style="font-weight: var(--fw8, 800); font-size: var(--fs115, 11.5px); letter-spacing: .4px; margin: 6px 0 4px;">🏢 OVERHEAD — recorded for the books, never billed to a client</div>
-    <div class="chips-row cat-grid" style="margin-bottom: 8px;">${OVERHEAD_CATS.map(c => chip(c, false)).join('')}</div>
+    <div class="chips-row cat-grid" style="margin-bottom: 4px;">${OVERHEAD_CATS.map(c => chip(c, false)).join('')}</div>
+    ${catTrucks().length ? '<div class="hint" style="margin: 0 0 8px;">⛽ Fuel and 🔧 Truck maintenance ask which truck next.</div>' : ''}
     ${learned.length ? '' : `<div style="font-weight: var(--fw8, 800); font-size: var(--fs115, 11.5px); letter-spacing: .4px; margin: 6px 0 4px;">🅰 PROJECT COSTS, A → Z</div>`}
     <div class="chips-row cat-grid" style="max-height: 40vh; overflow-y: auto; align-content: flex-start;">${all.map(c => chip(c, false)).join('')}</div>
     <div class="frow" style="gap: 8px; margin-top: 12px;">
       <button type="button" class="btn-ghost" style="flex: 1;" onclick="catModalClose()">⏭ Skip — pick it at the budget later</button>
-      <button type="button" class="btn-ghost" style="flex: 1; color: var(--err, #c0392b);" onclick="qnRcpt = false; qnCat = ''; catModalClose(); renderTagChips(); renderCatRow();">✕ Not a receipt</button>
+      <button type="button" class="btn-ghost" style="flex: 1; color: var(--err, #c0392b);" onclick="qnRcpt = false; qnCat = ''; qnTruck = ''; catModalClose(); renderTagChips(); renderCatRow();">✕ Not a receipt</button>
     </div>`;
   $('catModal').classList.add('show');
 }
@@ -7026,7 +7067,7 @@ function renderTagChips() {
   const headsChip = `<button type="button" class="pick-chip lockchip${qnHeads ? ' sel is-down' : ''}" onclick="qnHeadsToggle()" aria-pressed="${qnHeads}"
       title="Marks this note as something that bites later work — the Wizard surfaces it first and the job card counts it">${qnHeads ? '⚠ HEADS-UP — ON THE JOB CARD' : '⚠ Heads-up'}</button>`;
   const rcptChip = `<button type="button" class="pick-chip lockchip${qnRcpt ? ' sel is-down' : ''}" onclick="qnRcptToggle()" aria-pressed="${qnRcpt}"
-      title="A typed or dictated purchase — opens the category window and files it toward the job's budget pile">${qnRcpt ? (qnCat ? '🧾 ' + esc(qnCat) + ' — tap to change' : '🧾 RECEIPT — tap to pick category') : '🧾 Receipt'}</button>`;
+      title="A typed or dictated purchase — opens the category window and files it toward the job's budget pile">${qnRcpt ? (qnCat ? '🧾 ' + esc(qnCat) + (qnTruck ? ' · 🚚 ' + esc(qnTruck) : '') + ' — tap to change' : '🧾 RECEIPT — tap to pick category') : '🧾 Receipt'}</button>`;
   const chipOf = t => {   // 📋 v6.97 — the Build List chip · ⚠ v7.32 — Eric: "on tag it, lets take the heads up off and make the needs attention in box 5 the same thing" (headsChip stays built, never drawn)
     if (_tagArm === t) return `<button type="button" class="pick-chip" style="border-color: var(--err, #c0392b); color: var(--err, #c0392b); font-weight: var(--fw8, 800);" onclick="tagDelete('${escq(t)}')">✕ delete ${esc(t)}?</button>`;
     const on = qnSel.has(t);
@@ -7923,7 +7964,7 @@ const CAT_FOLDER = {
   'Framing': 'Receipts', 'Foundation': 'Receipts', 'Roofing': 'Receipts', 'Siding': 'Receipts',
   'Windows/Doors': 'Receipts', 'Electrical': 'Receipts', 'Plumbing': 'Receipts', 'HVAC': 'Receipts',
   'Drywall': 'Receipts', 'Paint': 'Receipts', 'Finish': 'Receipts', 'Landscaping': 'Receipts',
-  'Materials': 'Receipts', 'Tools': 'Receipts', 'Fuel': 'Receipts',
+  'Materials': 'Receipts', 'Tools': 'Receipts', 'Fuel': 'Receipts', 'Truck maintenance': 'Receipts',
   'Subcontractor': 'Invoices', 'Loan/Bank': 'Bank Statements', 'Insurance': 'Bank Statements',
   'Personal': 'Personal'
 };
@@ -8275,6 +8316,7 @@ function saveNoteFrom(boxId, fromPanel) {
   if (qnRcpt) {
     nExtra.rcpt = true;
     if (qnCat) { nExtra.category = qnCat; catLearn(noteJob, qnCat); if (OVERHEAD_CATS.includes(qnCat)) nExtra.billable = false; }   // 🏢 v6.35 — overhead is marked at the grind
+    if (qnTruck && TRUCK_CATS.includes(qnCat)) { nExtra.truck = qnTruck; const lo = (prefs.lastOdo || {})[qnTruck]; if (lo && lo.odo != null && isFinite(+lo.odo)) nExtra.truckOdo = +lo.odo; }   // 🚚 v7.44 — his pick, and where the truck stood
     if (!nExtra.ai) {
       const am = t.match(/\$\s?([\d,]+(?:\.\d{1,2})?)/) || t.match(/\b([\d,]+(?:\.\d{1,2})?)\s*(?:dollars|bucks)\b/i);
       if (am) nExtra.ai = '💵 $' + am[1];
@@ -8324,7 +8366,7 @@ function saveNoteFrom(boxId, fromPanel) {
   aiRegisterLate(photos, 'entry', e.id);
   ['nText', 'askText'].forEach(id => { if ($(id)) { $(id).value = ''; fitTa(id); } });
   if (fromPanel) closePanels();
-  qnSel = new Set(); qnHeads = false; qnRcpt = false; qnCat = ''; _qnCatMore = false; tagBump(tags); renderTagChips(); renderCatRow();
+  qnSel = new Set(); qnHeads = false; qnRcpt = false; qnCat = ''; qnTruck = ''; _qnCatMore = false; tagBump(tags); renderTagChips(); renderCatRow();
   if (isCrew() && nExtra.urg === 'now') pushOut('crew', true, `🔥 ${CREW_NAME || 'Crew'} needs it NOW`, 'Open Boiler Room — it is pinned at the top.', 'crew-now');   // 🔔 v7.39 — Eric's hours and switches are checked at the cloud door; no note words on a lock screen (the v6.41 rule)
   qnRoute = ''; qnUrg = ''; renderRouteChips();
   const vis = nExtra.vis || '', wasAsk = qnAsk;
@@ -9089,8 +9131,16 @@ function bizOdoNow(name, trips) {
   if (p && own) return +p.odo >= own.odo ? +p.odo : own.odo;
   return p ? +p.odo : own ? own.odo : null;
 }
-function bizService(name, trips) {   // the newest trip on this truck whose words say oil / service / tires / brakes, with a reading
-  return trips.filter(t => t.truck === name && t.odo != null && /\b(oil|service|serviced|tires?|brakes?)\b/i.test(t.words)).sort((a, b) => b.d.localeCompare(a.d))[0] || null;
+function bizService(name, trips) {   // the newest service on this truck with a reading: a trip whose words say oil / service / tires / brakes, or (🚚 v7.44) a 🔧 maintenance receipt put on it
+  const said = trips.filter(t => t.truck === name && t.odo != null && /\b(oil|service|serviced|tires?|brakes?)\b/i.test(t.words));
+  const paid = bizTruckCosts().filter(c => c.truck === name && c.kind === 'Truck maintenance' && c.odo != null);
+  return [...said, ...paid].sort((a, b) => b.d.localeCompare(a.d))[0] || null;
+}
+// 🚚 v7.44 — what was spent ON a truck: the receipts he put on it in the cost window (⛽ Fuel · 🔧 Truck maintenance), never a personal one
+function bizTruckCosts() {
+  return entries.filter(e => e && !e.sample && !e.personal && e.type !== 'Mileage' && e.truck && TRUCK_CATS.includes(String(e.category || '')))
+    .map(e => ({ d: bizDayOf(e.ts), v: grindAmtOf(e) || (+e.amount > 0 ? +e.amount : 0), truck: e.truck, kind: e.category, odo: e.truckOdo != null ? +e.truckOdo : null, rcpt: true, words: String(e.details || '').split('\n')[0].slice(0, 60) }))
+    .filter(c => c.d);
 }
 function bizMilesSpan(k) { _bizMSpan = k; renderBusiness(); }
 function bizMilesHtml() {
@@ -9103,9 +9153,15 @@ function bizMilesHtml() {
   const byWho = new Set(inRange.map(t => t.who)).size > 1 ? Object.entries(inRange.reduce((m, t) => { m[t.who] = (m[t.who] || 0) + t.v; return m; }, {})).sort((a, b) => b[1] - a[1]) : [];
   const rangeWord = bizRangeWord(span);
   const truckTiles = (truck ? [truck] : names).map(nm => { const odo = bizOdoNow(nm, all), svc = bizService(nm, all);
-    return `<div class="biz-tile"><b>${odo != null ? esc(odo.toLocaleString('en-US')) : '—'}</b><span>${esc(nm)} · odometer now${svc && odo != null ? ` · ${esc(bizMiWord(odo - svc.odo))} since the ${esc(bizDayWord(svc.d))} service note` : ' · no service note yet — say "oil change" on a trip and it counts from there'}</span></div>`; }).join('');
+    return `<div class="biz-tile"><b>${odo != null ? esc(odo.toLocaleString('en-US')) : '—'}</b><span>${esc(nm)} · odometer now${svc && odo != null ? ` · ${esc(bizMiWord(odo - svc.odo))} since the ${esc(bizDayWord(svc.d))} ${svc.rcpt ? '🔧 maintenance receipt' : 'service note'}` : ' · no service note yet — say "oil change" on a trip, or put a 🔧 maintenance receipt on this truck, and it counts from there'}</span></div>`; }).join('');
   const series = [{ key: 'mi', word: truck || 'all trucks', color: BIZ_COLORS[0][0], marker: 'circle', vals }];
   const recent = inRange.slice().sort((a, b) => b.d.localeCompare(a.d)).slice(0, 25);
+  // 🚚 v7.44 — the truck's fuel and its maintenance, from the receipts put on it
+  const costs = bizTruckCosts().filter(c => !truck || c.truck === truck), yr = today.slice(0, 4), sumV = l => l.reduce((a, c) => a + c.v, 0);
+  const fuelY = sumV(costs.filter(c => c.kind === 'Fuel' && c.d.slice(0, 4) === yr)), mntY = sumV(costs.filter(c => c.kind === 'Truck maintenance' && c.d.slice(0, 4) === yr));
+  const costTiles = costs.length ? `<div class="biz-tile"><b>${esc(bizMoney(fuelY))}</b><span>⛽ fuel this year</span></div><div class="biz-tile"><b>${esc(bizMoney(mntY))}</b><span>🔧 maintenance this year</span></div>` +
+    (thisYear > 0 && fuelY + mntY > 0 ? `<div class="biz-tile"><b>${esc(bizMoney((fuelY + mntY) / thisYear, true))}</b><span>a mile this year — fuel and maintenance over the miles logged</span></div>` : '') : '';
+  const costsIn = costs.filter(c => keySet.has(bizPeriodKey(c.d, span))).sort((a, b) => b.d.localeCompare(a.d));
   const trips1 = n => n + ' trip' + (n === 1 ? '' : 's');
   return `${bizHead('🚚 TRUCK MILEAGE', 'from the mileage log · yours alone')}
     ${!all.length ? '<div class="hint">No trips logged yet — the 🚚 Mileage plate at the bottom starts one.</div>' : `
@@ -9113,12 +9169,16 @@ function bizMilesHtml() {
     ${bizSpanBtns(span, 'bizMilesSpan', BIZ_SPANS.filter(s => s[0] !== 'day'))}
     <div class="pb-card biz-card"><div class="biz-title">MILES BY ${span.toUpperCase()} <span class="hint" style="font-weight: 400;">— ${esc(rangeWord)}${truck ? ' · ' + esc(truck) : ''}</span></div>
       ${bizMultiSvg(keys, span, series, (v, short) => short ? String(Math.round(v)) : bizMiWord(v), v => Math.round(v).toLocaleString('en-US'))}
-      <div class="biz-tiles"><div class="biz-tile"><b>${esc(bizMiWord(thisMonth))}</b><span>this month</span></div><div class="biz-tile"><b>${esc(bizMiWord(thisYear))}</b><span>this year</span></div><div class="biz-tile"><b>${esc(bizMiWord(allTime))}</b><span>all time · ${trips1(trips.length)}</span></div><div class="biz-tile"><b>${esc(bizMiWord(rangeMi))}</b><span>${esc(rangeWord)} · ${trips1(inRange.length)}</span></div>${truckTiles}</div>
+      <div class="biz-tiles"><div class="biz-tile"><b>${esc(bizMiWord(thisMonth))}</b><span>this month</span></div><div class="biz-tile"><b>${esc(bizMiWord(thisYear))}</b><span>this year</span></div><div class="biz-tile"><b>${esc(bizMiWord(allTime))}</b><span>all time · ${trips1(trips.length)}</span></div><div class="biz-tile"><b>${esc(bizMiWord(rangeMi))}</b><span>${esc(rangeWord)} · ${trips1(inRange.length)}</span></div>${truckTiles}${costTiles}</div>
     </div>
     <div class="pb-card biz-card"><div class="biz-title">BY JOB <span class="hint" style="font-weight: 400;">— ${esc(rangeWord)}</span></div>
       ${byJob.length ? `<table class="biz-tbl"><tr><th>job</th><th class="n">miles</th><th class="n">trips</th><th class="n">share</th></tr>${byJob.map(([j, o]) => `<tr><td>${esc(j)}</td><td class="n">${esc(bizMiWord(o.v))}</td><td class="n">${o.n}</td><td class="n">${rangeMi ? Math.round(o.v / rangeMi * 100) : 0}%</td></tr>`).join('')}</table>` : '<div class="hint">No trips in this span.</div>'}
       ${byWho.length ? `<div class="biz-title" style="margin-top: 10px;">BY WHO</div><table class="biz-tbl">${byWho.map(([w, v]) => `<tr><td>${esc(w)}</td><td class="n">${esc(bizMiWord(v))}</td></tr>`).join('')}</table>` : ''}
     </div>
+    ${costs.length ? `<div class="pb-card biz-card" id="bizTruckCosts"><div class="biz-title">⛽ FUEL AND 🔧 MAINTENANCE <span class="hint" style="font-weight: 400;">— ${esc(rangeWord)} · ${esc(bizMoney(sumV(costsIn)))}</span></div>
+      ${costsIn.length ? costsIn.slice(0, 25).map(c => `<div class="biz-line"><span class="biz-ld">${esc(bizDayWord(c.d))}</span><b>${c.v ? esc(bizMoney(c.v, true)) : 'no amount read'} · ${CAT_ICON[c.kind] || ''} ${c.kind === 'Fuel' ? 'fuel' : 'maintenance'}${c.truck ? ' · ' + esc(c.truck) : ''}</b><span class="biz-lw">${esc(c.words)}${c.odo != null ? ' · at ' + esc(c.odo.toLocaleString('en-US')) : ''}</span></div>`).join('') : '<div class="hint">Nothing in this span.</div>'}
+      <div class="hint" style="margin: 6px 0 0;">A cost lands here when you pick ⛽ Fuel or 🔧 Truck maintenance in the grinder's 🧾 cost window and tap the truck.</div>
+    </div>` : ''}
     <div class="pb-card biz-card"><div class="biz-title">THE TRIPS <span class="hint" style="font-weight: 400;">— newest first, ${recent.length} of ${inRange.length}</span></div>
       ${recent.map(t => `<div class="biz-line"><span class="biz-ld">${esc(bizDayWord(t.d))}</span><b>${esc(bizMiWord(t.v))}${t.truck ? ' · ' + esc(t.truck) : ''}</b><span class="biz-lw">${esc(t.job || '—')}${t.who !== 'you' ? ' · ' + esc(t.who) : ''}${t.odo != null ? ' · at ' + esc(t.odo.toLocaleString('en-US')) : ''}</span></div>`).join('')}
     </div>`}`;
@@ -10082,6 +10142,7 @@ function reviewAct(id, accept) {
         if (pay.vis === 'crew' && pay.type === 'Note') extra.vis = 'crew';
         if (pay.hours != null) extra.hours = +pay.hours;
         if (pay.category) extra.category = pay.category;
+        if (pay.type === 'Note' && pay.truck && TRUCK_CATS.includes(pay.category)) { extra.truck = pay.truck; if (pay.truckOdo != null && isFinite(+pay.truckOdo)) extra.truckOdo = +pay.truckOdo; }   // 🚚 v7.44 — a crew member's fuel or maintenance receipt keeps its truck in Eric's log
         if (pay.day && /^\d{4}-\d{2}-\d{2}$/.test(pay.day) && pay.day !== localDay(new Date())) extra.ts = new Date(pay.day + 'T12:00:00');
         extra.noSniff = true;
         extra.crewKey = p.id;   // ⤵ v7.15 — which crew note this is, so a flush on any of his devices knows it is already in the log (cfInLog)
@@ -13873,7 +13934,7 @@ async function checkCrewLogs() {
         pendingQueue.push({ id: key, kind: 'crew', source: name, payload: {
           from: name, type: e.type, text: e.details || '', job: e.job || '',
           hours: e.hours, category: e.category || '', route: e.route || '', urg: e.urg || '',
-          miles: e.miles, truck: e.truck || '', odometer: e.odometer, startOdometer: e.startOdometer,
+          miles: e.miles, truck: e.truck || '', odometer: e.odometer, startOdometer: e.startOdometer, truckOdo: e.truckOdo,
           srcRef: e.srcRef || '', day: String(e.ts).slice(0, 10),
           vis: e.vis || '', // 🔓 v5.44 — "pass this round to everybody" rides in with the note
           ph: cfPhotoPath(e.photoPath || (e.photoPaths || [])[0], f.path_display || f.path_lower), phs: (e.photoPaths || []).map(p => cfPhotoPath(p, f.path_display || f.path_lower)).filter(Boolean), jrn: !!e.jrn,   // 📷 v7.31 — the picture and the 📖 journal stamp ride to the card, so ⤵ Flush carries them into Eric's log
@@ -19642,6 +19703,7 @@ function buildAskContext(question) {
     if (e.hours != null) o.hrs = e.hours;
     if (e.miles != null) o.mi = e.miles;
     if (e.cats && e.cats.length) o.cat = e.cats.join(', '); else if (e.category) o.cat = e.category;
+    if (e.truck) o.truck = e.truck;   // 🚚 v7.44 — which truck a trip, a fill-up or a repair belongs to
     if (e.who && e.who !== 'Me') o.who = e.who;
     if (e.shared) o.sentTo = e.sharedTo || 'Logan';
     if (e.billable === false) o.billable = false;
@@ -21706,7 +21768,7 @@ function renderAskRecent() {
     })()),
     ...shownEntries.map(e => { const k = kindOf(e), d = (e.details || '').replace(/^(Text|Email) from /, ''); return {
       ts: +new Date(e.ts), kind: k, who: personOf(e), e,
-      h: `${GLYPH[k]} <span class="arq">${k === 'pocket' && POCKET_WORD[e.pocket] ? `<b>${POCKET_WORD[e.pocket]}</b> — ${esc(pocketWords(e).slice(0, 60))}` : esc((k === 'pocket' ? d.replace(/^🎒 /, '') : d).slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && !isOverheadEntry(e) && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}${!CREW_NAME ? rcptLampHtml(e) : ''}</span>` }; })
+      h: `${GLYPH[k]} <span class="arq">${k === 'pocket' && POCKET_WORD[e.pocket] ? `<b>${POCKET_WORD[e.pocket]}</b> — ${esc(pocketWords(e).slice(0, 60))}` : esc((k === 'pocket' ? d.replace(/^🎒 /, '') : d).slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && !isOverheadEntry(e) && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}${truckCostBit(e)}${!CREW_NAME ? rcptLampHtml(e) : ''}</span>` }; })
   ].filter(it => !isNaN(it.ts));
   // 🎒 v7.07 — under the 🎒 plate, what is ON the pocket list right now leads (it is not on the log until it is checked
   // off or flushed), then every pocket note, newest first. A tap on one still on the list goes to the list itself.
@@ -23073,6 +23135,11 @@ function isRcptEntry(e) {
 //
 // Never colour alone (standing rule): each lamp carries its own glyph AND its own word, so a
 // grey day, a cracked screen or colour-blind eyes read exactly the same state.
+// 🚚 v7.44 — a fuel or maintenance receipt names its truck on the running log row (a glyph and the name, in words)
+function truckCostBit(e) {
+  return e && e.truck && e.type !== 'Mileage' && TRUCK_CATS.includes(String(e.category || ''))
+    ? `<span>·</span><span class="rc-truck" title="This cost is on that truck — 📈 Business → 🚚 Truck mileage adds it up">${CAT_ICON[e.category]} ${esc(e.truck)}</span>` : '';
+}
 function rcptLampHtml(e) {
   if (!isRcptEntry(e)) return '';
   // 🏢 v6.35 — overhead has no client to be on a list for: it says so, in words, and stops there
@@ -23239,7 +23306,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.43';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.44';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

@@ -77,20 +77,21 @@ const { chromium } = require('playwright');
 
   console.log('— 🧾 v6.35 the category window: overhead has its own group —');
 
-  ok('the window shows an OVERHEAD group, in words, with Tools / Fuel / Office-Admin wearing 🏢', await page.evaluate(() => {
+  // 🚚 v7.44 — a fourth overhead plate (Truck maintenance); Fuel and Truck maintenance wear their own glyph (⛽ 🔧), the other two 🏢
+  ok('the window shows an OVERHEAD group, in words: Tools and Office/Admin wearing 🏢, ⛽ Fuel and 🔧 Truck maintenance their own glyph', await page.evaluate(() => {
     qnJobPick = 'Mery'; prefs.jobCats = {};
     catModalOpen();
     const t = $('catBox').textContent;
     const grids = [...$('catBox').querySelectorAll('.cat-grid')];
     const overGrid = grids.find(g => /Tools/.test(g.textContent) && /Fuel/.test(g.textContent));
     return /OVERHEAD — recorded for the books, never billed to a client/.test(t) && overGrid &&
-      /🏢 Tools/.test(overGrid.textContent) && overGrid.querySelectorAll('.pick-chip').length === 3;
+      /🏢 Tools/.test(overGrid.textContent) && /🏢 Office\/Admin/.test(overGrid.textContent) && /⛽ Fuel/.test(overGrid.textContent) && /🔧 Truck maintenance/.test(overGrid.textContent) && overGrid.querySelectorAll('.pick-chip').length === 4;
   }));
 
-  ok('the A → Z list is project costs only — Tools, Fuel and Office/Admin are not in it', await page.evaluate(() => {
+  ok('the A → Z list is project costs only — Tools, Fuel, Truck maintenance and Office/Admin are not in it', await page.evaluate(() => {
     const grids = [...$('catBox').querySelectorAll('.cat-grid')];
     const az = grids[grids.length - 1].textContent;
-    const okNow = !/Tools/.test(az) && !/Fuel/.test(az) && !/Office\/Admin/.test(az) && /Framing/.test(az);
+    const okNow = !/Tools/.test(az) && !/Fuel/.test(az) && !/Truck maintenance/.test(az) && !/Office\/Admin/.test(az) && /Framing/.test(az);
     catModalClose();
     return okNow;
   }));
