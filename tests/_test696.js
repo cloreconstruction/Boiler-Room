@@ -1,12 +1,16 @@
-// ┄ v6.96 — Eric: "anytime im in the client preview i want anything they cant see to have a dashed border, bright, even the
-// buttons that are for me." The REAL homeowner page inside a frame in OWNER mode (a tiny HTTP server stands in for the
-// function), and the same page opened plainly as the homeowner. Every name and figure below is made up.
+// ┄ v6.96 gave the owner view a bright dashed edge on everything only Eric sees. 🎛 v7.40 took the owner view out — Eric:
+// "on the client view take out the blue dotted boxes off, id rather setup which functions they see or dont on a different
+// page." This suite now proves the OTHER direction: the REAL homeowner page inside a frame that still asks for owner mode
+// (an older app, &owner=1) draws nothing but the homeowner's page — no owner line, no owner buttons, nothing hidden drawn,
+// not one dashed edge — in both themes, and the plain page is the same. A tiny HTTP server stands in for the function.
+// Every name and figure below is made up.
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 (async () => {
   const APP = process.env.APP_URL || 'file:///home/claude/work/clore-daylog.html';
   const ROOT = path.dirname(decodeURIComponent(new URL(APP).pathname).replace(/^\/([A-Za-z]:)/, '$1'));
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const csrc = fs.readFileSync(path.join(ROOT, 'c', 'index.html'), 'utf8');
   const pageJson = JSON.stringify({ name: 'Oak House', updated: '2026-09-10', show: { money: true, phases: true, upcoming: false, mat: false }, invoiced: 1000, paid: 800, open: 200,
     phases: [{ n: 1, name: 'Site', total: 100, cats: [['Demo', 100]] }], journal: [{ week: 'Sep 4 – Sep 10', released: '2026-09-10', text: 'Walls are up.', photos: [] }],
     budget: [{ n: 'Framing', est: 5000 }], upcoming: { items: [{ n: 'Septic', a: 600 }], tot: 600 }, boardsOff: ['b2'] });
@@ -35,59 +39,46 @@ const http = require('http'), fs = require('fs'), path = require('path');
   const page = await ctx.newPage(); page.on('pageerror', e => { if (!/Failed to fetch/.test(e.message)) errs.push(e.message); });
   await page.goto(SRV + '/parent.html');
   const fr = () => page.frames().find(f => /owner=1/.test(f.url()));
-  for (let i = 0; i < 80 && !(fr() && await fr().evaluate(() => !!document.querySelector('.own-head')).catch(() => false)); i++) await new Promise(r => setTimeout(r, 100));
+  for (let i = 0; i < 80 && !(fr() && await fr().evaluate(() => !!document.getElementById('moneyCard')).catch(() => false)); i++) await new Promise(r => setTimeout(r, 100));
 
-  console.log('— ┄ v6.96 the owner view: only-you things wear a bright dashed edge —');
-
-  // helpers that run inside the frame
+  console.log('— 🎛 v7.40 a frame that still asks for owner mode gets the homeowner\'s page and nothing else —');
+  // what an older app's &owner=1 used to draw: the OWNER VIEW line, a bar on every card, hidden cards dimmed with a rim,
+  // a ○ HIDDEN switch on a board row — and the bright dashed --mine edge on all of it
   const probe = () => fr().evaluate(() => {
-    const lum = c => { const m = c.match(/[\d.]+/g).map(Number); const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
-    const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
-    const tmp = document.createElement('div'); tmp.style.cssText = 'color: var(--mine); background: var(--gold); border-color: var(--bg)'; document.body.appendChild(tmp);
-    const cs0 = getComputedStyle(tmp), mine = cs0.color, gold = cs0.backgroundColor, bg = cs0.borderTopColor; tmp.remove();
-    const edge = el => { const c = getComputedStyle(el); return { style: c.borderTopStyle, w: parseFloat(c.borderTopWidth), color: c.borderTopColor }; };
-    const rim = el => { const c = getComputedStyle(el); return { style: c.outlineStyle, w: parseFloat(c.outlineWidth), color: c.outlineColor, op: +c.opacity }; };
-    const head = document.querySelector('.own-head');
-    const btns = [...document.querySelectorAll('.own-bar button, .own-inline')];
-    const hidden = [...document.querySelectorAll('.own-off')], seen = [...document.querySelectorAll('.card')].filter(c => !c.classList.contains('own-off'));
-    const rgb = c => c.match(/[\d.]+/g).slice(0, 3).map(Number), far = (a, b) => Math.hypot(...rgb(a).map((v, i) => v - rgb(b)[i]));
-    return { mine, gold, bg, contrast: ratio(mine, bg), vsGold: far(mine, gold), theme: document.documentElement.dataset.theme || 'dark',
-      head: { ...edge(head), words: head.textContent }, nBtns: btns.length, btnsOk: btns.every(b => { const e = edge(b); return e.style === 'dashed' && e.w >= 2 && e.color === mine; }),
-      btnWords: btns.map(b => b.textContent.trim().slice(0, 22)),
-      hiddenIds: hidden.map(h => h.id || h.className), hiddenOk: hidden.length > 0 && hidden.every(h => { const r = rim(h); return r.style === 'dashed' && r.w >= 2.5 && r.color === mine && r.op === 1; }),
-      innerDim: hidden.filter(h => h.classList.contains('card')).every(h => [...h.children].filter(k => !k.classList.contains('own-bar') && !k.classList.contains('own-tag')).every(k => +getComputedStyle(k).opacity < 1) && [...h.querySelectorAll(':scope > .own-bar')].every(k => +getComputedStyle(k).opacity === 1)),
-      seenPlain: seen.length > 0 && seen.every(c => getComputedStyle(c).outlineStyle !== 'dashed' && getComputedStyle(c).borderTopColor !== mine) };
+    const els = [...document.querySelectorAll('body *')];
+    const dashed = els.filter(el => getComputedStyle(el).outlineStyle === 'dashed').map(el => el.className || el.tagName);   // the owner view marked a hidden thing with a dashed OUTLINE; the page's own option chips wear a dashed border by design
+    return { theme: document.documentElement.dataset.theme || 'dark',
+      owner: !!document.querySelector('.own-head, .own-bar, .own-off, .own-inline, .own-tag, .own-tiles'),
+      words: /OWNER VIEW|THEY SEE THIS|HIDDEN FROM THEM|ONLY YOU see it/.test((document.getElementById('app') || document.body).textContent),   // the rendered page, not the script's own comments
+      upcoming: !!document.getElementById('upcomingCard'), mat: !!document.getElementById('matTile'), money: !!document.getElementById('moneyCard'), journal: !!document.getElementById('journalCard'),
+      dashed };
   });
   await fr().evaluate(() => { document.documentElement.dataset.theme = 'dark'; });
   const d = await probe();
-  ok('the OWNER VIEW line wears the edge itself and says what it means in words — "a bright dashed edge … means ONLY YOU see it"', d.head.style === 'dashed' && d.head.w >= 2 && d.head.color === d.mine && /bright dashed edge, like this one, means ONLY YOU see it/.test(d.head.words), JSON.stringify(d.head));
-  ok('EVERY button that is his — ✓ THEY SEE THIS / ○ HIDDEN, ✎ Edit, ➕ Add photos, the tile switches — has the bright dashed edge', d.nBtns >= 8 && d.btnsOk, JSON.stringify({ n: d.nBtns, words: d.btnWords }));
-  ok('everything he has HIDDEN from them (a card, a tile) wears a bright dashed rim at FULL brightness — what is inside dims, his bar on it does not', d.hiddenOk && d.innerDim && d.hiddenIds.includes('upcomingCard') && d.hiddenIds.some(x => /matTile|soon/.test(x)), JSON.stringify(d.hiddenIds));
-  ok('a thing they DO see keeps its plain edge — the sign means one thing only', d.seenPlain);
-  ok('the colour is one their page never uses (not its gold) and it stands out from the page: 3:1 or better on the dark page', d.vsGold > 120 && d.contrast >= 3 && d.mine !== d.gold, JSON.stringify({ mine: d.mine, bg: d.bg, c: d.contrast }));
-
+  ok('dark: no owner line, no owner buttons, none of the owner words — and the parts he hid (upcoming, the Build List tile) are simply not drawn, as for the homeowner', !d.owner && !d.words && !d.upcoming && !d.mat && d.money && d.journal, JSON.stringify(d));
+  ok('dark: not one dashed rim anywhere on the page', d.dashed.length === 0, JSON.stringify(d.dashed));
   await fr().evaluate(() => { document.documentElement.dataset.theme = 'light'; });
   const l = await probe();
-  ok('…and on the LIGHT page too: still dashed, still his colour, still 3:1 or better against the cream', l.btnsOk && l.hiddenOk && l.contrast >= 3 && l.vsGold > 120 && l.mine !== d.mine, JSON.stringify({ mine: l.mine, bg: l.bg, c: l.contrast }));
+  ok('light: the same — nothing of the owner view, no dashed edge', l.theme === 'light' && !l.owner && !l.words && !l.upcoming && !l.mat && l.dashed.length === 0, JSON.stringify(l));
 
-  ok('a hidden option board in the Options window wears it too, with its ○ HIDDEN switch', await (async () => {
+  ok('the Options window lists only the boards they get (the hidden one is not there) and no row carries a switch', await (async () => {
     await fr().evaluate(() => { document.documentElement.dataset.theme = 'dark'; const t = document.getElementById('boardTile'); if (t) t.click(); });
-    for (let i = 0; i < 40 && !(await fr().evaluate(() => !!document.querySelector('.bd-row.own-off'))); i++) await new Promise(r => setTimeout(r, 100));
-    return fr().evaluate(() => { const r = document.querySelector('.bd-row.own-off'); if (!r) return false; const c = getComputedStyle(r), b = getComputedStyle(r.querySelector('.own-inline'));
-      return c.outlineStyle === 'dashed' && parseFloat(c.outlineWidth) >= 2.5 && b.borderTopStyle === 'dashed' && /HIDDEN FROM/.test(r.textContent); });
+    for (let i = 0; i < 40 && !(await fr().evaluate(() => document.querySelectorAll('.bd-row').length > 0)); i++) await new Promise(r => setTimeout(r, 100));
+    return fr().evaluate(() => { const rows = [...document.querySelectorAll('.bd-row')]; return rows.length === 1 && /Drywall corners/.test(rows[0].textContent) && !rows[0].querySelector('button') && !/Shower drain/.test(document.body.textContent); });
   })());
 
-  console.log('— 🏠 the homeowner sees none of it —');
+  console.log('— 🏠 the plain page —');
   const home = await ctx.newPage(); home.on('pageerror', e => { if (!/Failed to fetch/.test(e.message)) errs.push('home: ' + e.message); });
   await home.goto(SRV + '/c/?c=oak-1'); await home.waitForTimeout(900);
-  ok('the plain page has no owner line, no owner buttons, nothing hidden drawn and not one dashed bright edge anywhere', await home.evaluate(() => {
-    const tmp = document.createElement('div'); tmp.style.color = 'var(--mine)'; document.body.appendChild(tmp); const mine = getComputedStyle(tmp).color; tmp.remove();
-    const any = [...document.querySelectorAll('body *')].some(el => { const c = getComputedStyle(el); return (c.borderTopStyle === 'dashed' && c.borderTopColor === mine) || (c.outlineStyle === 'dashed' && c.outlineColor === mine); });
-    return !document.querySelector('.own-head, .own-bar, .own-off, .own-inline') && !any && !document.getElementById('upcomingCard');
+  ok('the plain page: no owner line, no owner buttons, nothing hidden drawn, not one dashed rim', await home.evaluate(() => {
+    const any = [...document.querySelectorAll('body *')].some(el => getComputedStyle(el).outlineStyle === 'dashed');
+    return !document.querySelector('.own-head, .own-bar, .own-off, .own-inline') && !any && !document.getElementById('upcomingCard') && !!document.getElementById('moneyCard');
   }));
+  ok('the owner code is out of the homeowner page for good — no OWNER, no ownerMsg, no --mine, no own- class in its source', !/\bOWNER\b|ownerMsg|ownerDecorate|--mine|own-bar|own-off|own-head/.test(csrc));
+  ok('and the app no longer asks for it — the viewer opens the page with &pv=1 alone', /portalUrl\(i\) \+ '&pv=1';/.test(src) && !/&owner=1/.test(src));
 
   ok('version bumped — APP_VER, the footer and version.txt agree', (() => { const v = (src.match(/const APP_VER = '(v[\d.]+)'/) || [])[1]; const num = x => (String(x).match(/(\d+)\.(\d+)/) || []).slice(1).reduce((a, b) => a * 1000 + +b, 0);
-    return num(v) >= num('v6.96') && src.includes('<footer>' + v + ' ·') && fs.readFileSync(path.join(ROOT, 'version.txt'), 'utf8').trim() === v; })());
+    return num(v) >= num('v7.40') && src.includes('<footer>' + v + ' ·') && fs.readFileSync(path.join(ROOT, 'version.txt'), 'utf8').trim() === v; })());
   ok('no page errors through all of it', errs.length === 0, errs.join(' | '));
 
   console.log(`\n${pass} passed, ${fail} failed`);

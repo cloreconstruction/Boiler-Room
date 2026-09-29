@@ -2,8 +2,12 @@
 // client page, and it will also control the client page … I have my edit buttons there and my
 // add photos, and I can hide windows from them." The real client page inside the app's preview
 // frame, a bar on every card, per-client per-card switches (and per option board), every tap a
-// message to the app. This suite runs a tiny HTTP server so the app and the page share ONE store
-// the way they share Dropbox in production.
+// message to the app.
+// 🎛 v7.40 — and then Eric: "on the client view take out the blue dotted boxes off, id rather setup which functions they see
+// or dont on a different page." The bars and the owner mode are gone: the viewer is the homeowner's page exactly as they
+// get it, and the switches live in the portal's 🎛 What they see window (tests/_test740.js walks that window). This suite
+// keeps the homeowner half and pins the viewer to the plain page. It runs a tiny HTTP server so the app and the page share
+// ONE store the way they share Dropbox in production.
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 (async () => {
@@ -29,7 +33,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
         if (u.searchParams.get('boards')) return send(200, JSON.stringify(boards), 'application/json');
         if (u.searchParams.get('a')) return send(200, '[]', 'application/json');
         if (u.searchParams.get('mat')) return send(200, '{"rooms":[]}', 'application/json');
-        if (u.searchParams.get('p') || u.searchParams.get('bimg')) return send(404, '');
+        if (u.searchParams.get('p') || u.searchParams.get('bimg') || u.searchParams.get('manifest')) return send(404, '');
         const v = store.get(state.base + '/' + u.searchParams.get('c') + '.json');
         return v == null ? send(404, '{"error":"not found"}', 'application/json') : send(200, v, 'application/json');
       }
@@ -51,7 +55,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
   const wait = async (fn, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch (e) {} await new Promise(r => setTimeout(r, 80)); } return false; };
   const pageJson = () => JSON.parse(store.get(state.base + '/' + CODE + '.json'));
 
-  state.base = await page.evaluate(({ SRV, CODE }) => {
+  const setup = await page.evaluate(({ SRV, CODE }) => {
     window.dbxDownload = async p => { const r = await fetch(SRV + '/__get?path=' + encodeURIComponent(p)); return r.ok ? await r.text() : null; };
     window.dbxUpload = async (p, body) => { await fetch(SRV + '/__put?path=' + encodeURIComponent(p), { method: 'POST', body: typeof body === 'string' ? body : JSON.stringify(body) }); return {}; };
     window.dbxPathExists = async p => (await fetch(SRV + '/__get?path=' + encodeURIComponent(p))).ok;
@@ -60,8 +64,11 @@ const http = require('http'), fs = require('fs'), path = require('path');
     dbx.refreshToken = 'test-token';
     jobs = ['Mery']; curJob = 'Mery'; entries = []; nextId = 1;
     _portalIdx = { clients: [{ key: 'mery', job: 'Mery Addition & Remodel', code: CODE }] };
-    return portalRoot();
+    _boards = null;
+    return { base: portalRoot(), boardsPath: BOARDS_DIR() + '/boards.json' };
   }, { SRV, CODE });
+  state.base = setup.base;
+  store.set(setup.boardsPath, JSON.stringify({ v: 1, boards: boards.boards }));
   store.set(state.base + '/' + CODE + '.json', JSON.stringify({
     name: 'Mery Addition & Remodel', updated: '2026-09-10',
     show: { money: true, phases: true, budget: false },
@@ -90,169 +97,59 @@ const http = require('http'), fs = require('fs'), path = require('path');
   ok('&owner=1 pasted into a plain browser (no parent frame) draws NOTHING extra', await home.evaluate(() => !document.querySelector('.own-bar') && !document.querySelector('.own-head')));
   await home.close();
 
-  console.log('— 👁 v6.61 the OWNER view inside the app —');
+  console.log('— 👁 v7.40 the viewer inside the app is the same page —');
   const frame = () => page.frames().find(f => /\/c\/\?c=/.test(f.url()));
-  const frameReady = async () => wait(async () => { const f = frame(); return f && /owner=1/.test(f.url()) && await f.evaluate(() => !!document.querySelector('.own-head')); }, 12000);
+  const frameReady = async () => wait(async () => { const f = frame(); return f && await f.evaluate(() => !!document.getElementById('moneyCard')); }, 12000);
 
-  ok('View as this client opens the page in owner mode, banner and all', await (async () => {
+  ok('View as this client opens the page with &pv=1 and NO owner mode — no owner line, no bars, none of the owner words', await (async () => {
     await page.evaluate(() => clientPreviewOpen(0));
     const src = await page.evaluate(() => $('cpFrame').src);
-    return /owner=1/.test(src) && /pv=1/.test(src) && await frameReady();
+    return /pv=1/.test(src) && !/owner=1/.test(src) && await frameReady()
+      && await frame().evaluate(() => !document.querySelector('.own-head, .own-bar, .own-off, .own-inline, .own-tiles') && !/OWNER VIEW|THEY SEE THIS|HIDDEN FROM THEM/.test((document.getElementById('app') || document.body).textContent));
   })());
-
-  ok('the hidden budget card STILL draws for Eric — dimmed, and it says so', await frame().evaluate(() => {
-    const c = document.getElementById('budgetCard');
-    return !!c && c.classList.contains('own-off') && /HIDDEN FROM THEM — tap to show/.test(c.querySelector('.own-bar').textContent);
-  }));
-
-  ok('a shown card says THEY SEE THIS, and offers ✎ Edit', await frame().evaluate(() => {
-    const c = document.getElementById('upcomingCard');
-    const t = c.querySelector('.own-bar').textContent;
-    return /THEY SEE THIS — tap to hide/.test(t) && /✎ Edit/.test(t);
-  }));
-
-  ok('the journal card carries ➕ Add photos', await frame().evaluate(() => /➕ Add photos/.test(document.querySelector('#journalCard .own-bar').textContent)));
-
-  ok('the four tiles get their own switches, in words', await frame().evaluate(() => {
-    const rows = [...document.querySelectorAll('.own-tiles .own-bar')];
-    return rows.length === 4 && rows.every(r => /THEY SEE|HIDDEN/.test(r.textContent)) && /Options/.test(rows[2].textContent);
-  }));
-
-  // 👁 v6.63 — "when i have 'options' or 'build list' hidden and i still see it above, do they
-  // still see it?" No — and now his own screen says so on the tile itself.
-  ok('hide a TILE and it dims on Eric\'s screen with the words, while the homeowner never gets it', await (async () => {
-    await frame().evaluate(() => ownerMsg({ act: 'hide', card: 'mat' }));
-    const wrote = await wait(() => pageJson().show.mat === false);
-    const back = await frameReady();
-    const dim = back && await frame().evaluate(() => { const t = document.getElementById('matTile'); return !!t && t.classList.contains('own-off') && /HIDDEN FROM THEM/.test(t.textContent); });
-    const live = back && await frame().evaluate(() => { const t = document.getElementById('boardTile'); return !!t && !t.classList.contains('own-off') && !/HIDDEN FROM THEM/.test(t.textContent); });
-    const h3 = await ctx.newPage(); await h3.goto(SRV + '/c/?c=' + CODE); await h3.waitForTimeout(600);
-    const gone = await h3.evaluate(() => !document.getElementById('matTile') && !document.getElementById('matCard') && !!document.getElementById('boardTile'));
-    await h3.close();
-    await frame().evaluate(() => ownerMsg({ act: 'show', card: 'mat' }));
-    await wait(() => pageJson().show.mat === true); await frameReady();
-    return wrote && dim && live && gone;
-  })());
-
-  ok('in owner mode the switched-off board is still listed, marked, with its own switch', await frame().evaluate(async () => {
+  ok('the hidden budget card is NOT drawn in the viewer — Eric sees exactly what they get; upcoming, where it stands and work by phase are there', await frame().evaluate(() =>
+    !document.getElementById('budgetCard') && !!document.getElementById('upcomingCard') && !!document.getElementById('moneyCard') && !!document.getElementById('phasesCard')));
+  ok('the hidden board is not listed inside the viewer either — 2 of 3', await frame().evaluate(async () => {
     await boardsOpen();
-    const rows = [...document.querySelectorAll('#boardCard .bd-row')];
-    const off = rows.find(r => /Shower drain/.test(r.textContent));
-    return rows.length === 3 && off && off.classList.contains('own-off') && /HIDDEN FROM THEM — tap to show/.test(off.textContent);
+    const rows = [...document.querySelectorAll('#boardCard .bd-row')].map(r => r.textContent);
+    return rows.length === 2 && !rows.some(t => /Shower drain/.test(t));
   }));
-
-  console.log('— 🔁 v6.61 a tap on the page flips the switch through the app —');
-
-  ok('tap "show" on the budget → the page file changes → the frame reloads with it shown', await (async () => {
-    await frame().click('#budgetCard .own-vis');
-    const wrote = await wait(() => pageJson().show.budget === true);
-    const back = await frameReady();
-    const shown = back && await frame().evaluate(() => { const c = document.getElementById('budgetCard'); return !!c && !c.classList.contains('own-off') && /THEY SEE THIS/.test(c.querySelector('.own-bar').textContent); });
-    return wrote && shown;
-  })());
-
-  ok('tap "hide" on upcoming → hidden for the homeowner, still there for Eric', await (async () => {
-    await frame().click('#upcomingCard .own-vis');
-    const wrote = await wait(() => pageJson().show.upcoming === false);
-    const back = await frameReady();
-    const dim = back && await frame().evaluate(() => document.getElementById('upcomingCard').classList.contains('own-off'));
-    const h2 = await ctx.newPage(); await h2.goto(SRV + '/c/?c=' + CODE); await h2.waitForTimeout(600);
-    const gone = await h2.evaluate(() => !document.getElementById('upcomingCard') && !!document.getElementById('budgetCard'));
-    await h2.close();
-    return wrote && dim && gone;
-  })());
-
-  ok('money is opt-in: hiding it writes false, showing it writes true (never a missing key)', await (async () => {
-    await frame().click('#moneyCard .own-vis');
-    const off = await wait(() => pageJson().show.money === false);
-    await frameReady();
-    await frame().click('#moneyCard .own-vis');
-    const on = await wait(() => pageJson().show.money === true);
-    await frameReady();
-    return off && on;
-  })());
-
-  ok('a board can be switched back on, and another off, per client', await (async () => {
-    await frame().evaluate(async () => { await boardsOpen(); });
-    await frame().click('#boardCard .bd-row.own-off .own-inline');
-    const on = await wait(() => !(pageJson().boardsOff || []).includes('b2'));
-    await frameReady();
-    await frame().evaluate(async () => { await boardsOpen(); });
-    const rows = await frame().$$('#boardCard .bd-row .own-inline');
-    await rows[0].click();
-    const off = await wait(() => (pageJson().boardsOff || []).includes('b1'));
-    await frameReady();
-    return on && off;
-  })());
-
-  console.log('— ✎ v6.61 edit goes to the window that owns the card —');
-
-  ok('✎ Edit on the budget closes the preview and opens the estimates board', await (async () => {
-    await frame().evaluate(async () => { await boardsOpen(); });
-    const btns = await frame().$$('#budgetCard .own-bar button');
-    await btns[1].click();
-    const opened = await wait(() => page.evaluate(() => !$('cliPrev').classList.contains('show') && $('revModal').classList.contains('show') && /estimates/i.test($('revBox').textContent)));
-    await page.evaluate(() => closeEstimates());
-    return opened;
-  })());
-
-  ok('➕ Add photos on the journal opens the journal window', await (async () => {
-    await page.evaluate(() => clientPreviewOpen(0));
-    await frameReady();
-    const btns = await frame().$$('#journalCard .own-bar button');
-    await btns[2].click();
-    const opened = await wait(() => page.evaluate(() => !$('cliPrev').classList.contains('show') && $('revModal').classList.contains('show') && /journal/i.test($('revBox').textContent)));
-    await page.evaluate(() => closeReview());
-    return opened;
-  })());
-
-  console.log('— 🔒 v6.61 only the preview frame is listened to —');
-
-  ok('a message from anywhere but the frame is ignored', await (async () => {
-    const before = JSON.stringify(pageJson().show);
-    await page.evaluate(() => window.postMessage({ boiler: 'owner', act: 'hide', card: 'phases' }, '*'));
-    await page.waitForTimeout(500);
-    return JSON.stringify(pageJson().show) === before;
-  })());
-
-  ok('a card name the app does not know is dropped, not written', await (async () => {
-    await page.evaluate(() => clientPreviewOpen(0));
-    await frameReady();
-    const before = JSON.stringify(pageJson());
-    await frame().evaluate(() => ownerMsg({ act: 'hide', card: '__proto__' }));
-    await frame().evaluate(() => ownerMsg({ act: 'hide', card: 'wages' }));
-    await page.waitForTimeout(500);
-    return JSON.stringify(pageJson()) === before;
-  })());
-
-  // 👁 v6.64 — "is that only on there once i enter an estimate in?" Yes; and the owner view says so
-  ok('with NO approved estimate: nothing for the homeowner, a dim placeholder with ✎ for Eric', await (async () => {
-    const pg = pageJson(); delete pg.budget; store.set(state.base + '/' + CODE + '.json', JSON.stringify(pg));
-    const h4 = await ctx.newPage(); await h4.goto(SRV + '/c/?c=' + CODE); await h4.waitForTimeout(600);
-    const none = await h4.evaluate(() => !document.getElementById('budgetCard'));
-    await h4.close();
-    // a fresh load of the frame: blank it, let that settle, then open again (the same src twice is not a reload)
-    await page.evaluate(() => { $('cpFrame').src = 'about:blank'; });
+  ok('an older app asking for owner mode inside the frame (&owner=1) gets the plain page too', await (async () => {
+    await page.evaluate(() => { $('cpFrame').src = $('cpFrame').src + '&owner=1'; });
     await page.waitForTimeout(300);
-    await page.evaluate(() => clientPreviewOpen(0));
-    if (!(await frameReady())) return false;
-    const ph = await frame().evaluate(() => { const c = document.getElementById('budgetCard'); return !!c && c.classList.contains('own-off') && /NOT ON THEIR PAGE YET/.test(c.textContent) && /✎ Edit/.test(c.querySelector('.own-bar').textContent) && !c.querySelector('.own-vis'); });
-    const btn = await frame().$('#budgetCard .own-bar button');
-    if (!btn) return false;
-    await btn.click();
-    const opened = await wait(() => page.evaluate(() => !$('cliPrev').classList.contains('show') && $('revModal').classList.contains('show') && /estimates/i.test($('revBox').textContent)));
-    await page.evaluate(() => closeEstimates());
-    pg.budget = [{ n: 'Framing', est: 5000 }]; store.set(state.base + '/' + CODE + '.json', JSON.stringify(pg));
-    await page.evaluate(() => clientPreviewOpen(0)); await frameReady();
-    return none && ph && opened;
+    return await frameReady() && await frame().evaluate(() => /owner=1/.test(location.search) && !document.querySelector('.own-head, .own-bar, .own-off') && !document.getElementById('budgetCard'));
   })());
+  await page.evaluate(() => clientPreviewClose());
 
-  ok('every owner control is a WORD, never a lamp alone', await frame().evaluate(() =>
-    [...document.querySelectorAll('.own-bar button, .own-inline')].every(b => /[A-Za-z]{3,}/.test(b.textContent))));
+  console.log('— 🎛 v7.40 the switches live on the portal now —');
+  ok('🎛 What they see (the portal fold) writes the same page file: show the budget → show.budget true, and a fresh homeowner load has the card', await (async () => {
+    await page.evaluate(async () => { openPortalWin(); await renderPortalList(); _portalOpen = 0; await renderPortalList(); openPageVis(0); });
+    const drawn = await wait(() => page.evaluate(() => document.querySelectorAll('#pvBox .pv-row').length >= 9), 8000);
+    if (!drawn) return false;
+    await page.evaluate(() => { [...document.querySelectorAll('#pvBox .pv-row')].find(r => r.dataset.key === 'budget').querySelector('.pv-sw').click(); });
+    const wrote = await wait(() => pageJson().show.budget === true);
+    const h2 = await ctx.newPage(); await h2.goto(SRV + '/c/?c=' + CODE); await h2.waitForTimeout(700);
+    const has = await h2.evaluate(() => !!document.getElementById('budgetCard'));
+    await h2.close();
+    return wrote && has;
+  })());
+  ok('money is opt-in: hiding it writes false, showing it writes true (never a missing key)', await (async () => {
+    await page.evaluate(() => pageShowSet(0, 'money', false)); const a = await wait(() => pageJson().show.money === false);
+    await page.evaluate(() => pageShowSet(0, 'money', true)); const b = await wait(() => pageJson().show.money === true);
+    return a && b;
+  })());
+  ok('a card name the app does not know is dropped, not written', await (async () => {
+    await page.evaluate(() => pageShowSet(0, 'wallet', false));
+    await page.waitForTimeout(300);
+    return pageJson().show.wallet === undefined;
+  })());
+  ok('every plate in the window is a WORD, never a lamp alone', await page.evaluate(() =>
+    [...document.querySelectorAll('#pvBox .pv-sw')].every(b => /[A-Za-z]{3,}/.test(b.textContent))));
+  await page.evaluate(() => pageVisClose());
 
   ok('version bumped — APP_VER and the footer agree', await page.evaluate(() => {
     const num = v => (String(v).match(/(\d+)\.(\d+)/) || []).slice(1).reduce((a, b) => a * 1000 + +b, 0);
-    return num(APP_VER) >= num('v6.61') && document.querySelector('footer').textContent.includes(APP_VER);
+    return num(APP_VER) >= num('v7.40') && document.querySelector('footer').textContent.includes(APP_VER);
   }));
 
   ok('no page errors through all of it', errs.length === 0, errs.join(' | '));

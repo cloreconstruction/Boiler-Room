@@ -41,8 +41,8 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const cs = key && getComputedStyle(key);
     return { dashed, plain, key: key ? txt(key) : '', keyDashed: cs && cs.borderTopStyle === 'dashed', btnDashed: getComputedStyle(document.querySelector('#portalList .pf-acts .only-me')).outlineStyle === 'dashed' };
   });
-  ok('on Eric\'s portal the Estimates, Receipts and Project Tracker plates, Rotate / Rename / Remove, the 🎛 they-can-see block and ➕ Give a job a client page all wear the dashed edge',
-    fold.dashed.some(t => /Estimates/.test(t)) && fold.dashed.some(t => /Receipts/.test(t)) && fold.dashed.some(t => /Project Tracker/.test(t)) && fold.dashed.some(t => /Rotate/.test(t)) && fold.dashed.some(t => /Rename/.test(t)) && fold.dashed.some(t => /Remove/.test(t)) && fold.dashed.some(t => /They can see/.test(t)) && fold.dashed.some(t => /Give a job a client/.test(t)) && fold.btnDashed, JSON.stringify(fold));
+  ok('on Eric\'s portal the Estimates, Receipts and Project Tracker plates, Rotate / Rename / Remove, the 🎛 What they see plate (v7.40) and ➕ Give a job a client page all wear the dashed edge',
+    fold.dashed.some(t => /Estimates/.test(t)) && fold.dashed.some(t => /Receipts/.test(t)) && fold.dashed.some(t => /Project Tracker/.test(t)) && fold.dashed.some(t => /Rotate/.test(t)) && fold.dashed.some(t => /Rename/.test(t)) && fold.dashed.some(t => /Remove/.test(t)) && fold.dashed.some(t => /What they see/.test(t)) && fold.dashed.some(t => /Give a job a client/.test(t)) && fold.btnDashed, JSON.stringify(fold));
   ok('Plans, Journal, Build List and View as are plain — Phil gets those (v7.14: Copy link and What they look at are only Eric\x27s)', fold.plain.join('|') === '📐 Plans|📖 Journal|📋 Build List|👁 View as this client', fold.plain.join('|'));
   ok('the line at the top says it in words, and names him', /dashed edge means only you see it — Phil does not/.test(fold.key) && fold.keyDashed, fold.key);
   ok('with no office crew there is nothing to keep from anyone: no dashes, no line', await page.evaluate(async () => {

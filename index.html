@@ -1668,6 +1668,16 @@
   .only-me { outline: 2.5px dashed var(--mine); outline-offset: 2px; }
   .set-section.only-me { outline-width: 3px; outline-offset: 3px; }
   .pf-visbox.only-me { outline-offset: 4px; border-radius: 6px; }
+  /* 🎛 v7.40 — WHAT THEY SEE: one plate per part of the homeowner's page, in words; off = dashed and dim, never colour alone */
+  .pv-box { max-width: 560px; margin: 0 auto; padding: 4px 0 24px; }
+  .pv-head { display: flex; align-items: center; gap: 10px; font-size: 17px; letter-spacing: .5px; margin: 0 0 8px; }
+  .pv-h { margin: 12px 0 4px; font-size: var(--fs12, 12px); letter-spacing: 1px; opacity: .8; }
+  .pv-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding: 8px 0; border-bottom: 1px solid var(--grid, #3a3120); }
+  .pv-name { font-weight: var(--fw7, 700); font-size: 15px; }
+  #pvBox .pv-sw { min-height: 44px; width: 100%; text-align: left; white-space: normal; }
+  #pvBox .pv-sw:not(.sel) { opacity: .6; border-style: dashed; }   /* the id outranks the skins' .pick-chip rules */
+  .pv-foot { margin-top: 14px; }
+  .pv-foot .btn-ghost { width: 100%; min-height: 44px; white-space: normal; }
   .only-me-key { margin: 0 0 10px; padding: 8px 10px; border: 2.5px dashed var(--mine); border-radius: 10px; font-size: 12.5px; line-height: 1.4; }
   .pf-small { display: grid; grid-template-columns: repeat(auto-fit, minmax(102px, 1fr)); gap: 5px;
     flex: 1 1 100%; margin-top: 6px; }
@@ -4344,7 +4354,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.39 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.40 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -13707,6 +13717,7 @@ async function renderPortalList() {
         <button class="btn-ghost${om}" onclick="portalCopy(${i})">📋 Copy link</button>
         <button class="btn-ghost${om}" onclick="portalIntel(${i})">📊 What they look at</button>
         <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
+        <button class="btn-ghost pf-wide${om}" onclick="openPageVis(${i})">🎛 What they see — turn parts of their page on or off</button>
         <!-- 🧾 v6.30 — beside "view as a client", as Eric asked: the tagged receipts still
              waiting on this job, to check and approve in one sitting. -->
         <button class="btn-ghost pf-wide${om}" onclick="openRcptReview(${i})">🧾 Receipts to approve${rcptCount(portalAppJob(c)) ? " · " + rcptCount(portalAppJob(c)) + " WAITING" : " · none"}</button>
@@ -13718,14 +13729,6 @@ async function renderPortalList() {
         <button class="btn-ghost req-x${om}" onclick="portalRotate(${i})">${_rotArm === i + 1 ? '⚠ SURE? Kills their link' : '🔄 Rotate code'}</button>
         <button class="btn-ghost req-x${om}" onclick="portalEditStart(${i})">✎ Rename</button>
         <button class="btn-ghost req-x${om}" style="color: var(--err, #c0392b);" onclick="portalDelete(${i})">${_portalDelArm === i + 1 ? '⚠ SURE? Comes down' : '✕ Remove page'}</button>
-      </div>
-      <div class="pf-visbox${om}" style="flex: 1 1 100%; margin-top: 6px;">
-        <span class="hint" style="margin: 0; font-size: var(--fs11, 11px);">🎛 They can see — tap to flip, takes hold on their next load:</span>
-        <div class="pf-vis">
-        ${_visCache[c.code] ? VIS_KEYS.map(([k, lab]) => { const on = visOn(_visCache[c.code], k);
-          return `<button type="button" class="pick-chip${on ? ' sel' : ''}"${on ? '' : ' style="opacity: .55; border-style: dashed;"'} onclick="portalVis(${i}, '${k}')">${on ? '✓ ' : '✕ '}${lab}</button>`; }).join('')
-        : '<span class="hint" style="margin: 0;">⏳ reading their page…</span>'}
-        </div>
       </div>
       ${_portalEdit === i ? `<div class="frow" style="flex: 1 1 100%; gap: 6px;">
         <input type="text" id="peName-${i}" value="${esc(c.job)}" style="flex: 1; min-width: 120px; font-weight: var(--fw7, 700);">
@@ -15688,40 +15691,17 @@ function clientPreviewOpen(i) {
   // of giving crew the portal; the office gate belongs on the tools that CHANGE things.
   if (!_portalIdx || !(_portalIdx.clients || [])[i]) return;
   _cpIdx = i;
-  // 👁 v6.61 — on Eric's phone the page comes up in OWNER mode: the same page, with his bars
-  // on every card. A crew phone gets the plain page, exactly as the homeowner does.
-  $('cpFrame').src = portalUrl(i) + '&pv=1' + (CREW_NAME ? '' : '&owner=1');
+  // 👁 v7.40 — the PLAIN page for everyone. Eric: "on the client view take out the blue dotted boxes off … also office crew
+  // should be able to click on the client viewer." The v6.61 owner mode (the owner flag on the frame, the bars, the v6.96 dashed edges) is
+  // gone; which parts show is set on the portal's 🎛 What they see window. &pv=1 keeps these looks out of their tallies.
+  $('cpFrame').src = portalUrl(i) + '&pv=1';
   $('cliPrev').classList.add('show');
 }
-// 👁 v6.61 — THE OWNER BARS TALK TO THE APP THROUGH HERE. Eric: "The project portal is for me,
-// and I can basically look at exactly what the client is looking at. I have my edit buttons
-// there and my add photos, and I can hide windows from them." Only the preview frame is
-// listened to, never a crew phone, and every act maps to a door that already exists — hide
-// and show flip the page's own switch through Eric's Dropbox; edit closes the preview and
-// opens the window that has always owned that card. The page itself gains no write.
+// 🎛 v7.40 — pageShowSet / pageBoardSet: the page's own switches, written through Eric's Dropbox. They were reached from
+// the v6.61 owner bars through a postMessage listener; the bars are gone (WHAT THEY SEE, below) and the listener with
+// them — the window calls these straight. money and phases are opt-IN (their switch must be true), the rest opt-OUT.
 const OWN_KEYS = ['journal', 'money', 'budget', 'upcoming', 'phases', 'photos', 'ask', 'boards', 'mat'];
 const OWN_WORDS = { journal: 'the journal', money: 'where it stands', budget: 'the budget', upcoming: 'upcoming costs', phases: 'work by phase', photos: 'the photos', ask: 'ask / remark', boards: 'the options boards', mat: 'the build list' };
-window.addEventListener('message', async ev => {
-  const m = ev.data;
-  if (!m || typeof m !== 'object' || m.boiler !== 'owner') return;
-  const fr = $('cpFrame');
-  if (!fr || ev.source !== fr.contentWindow) return;      // the preview frame, nobody else
-  if (CREW_NAME || _cpIdx < 0) return;
-  const i = _cpIdx, act = String(m.act || ''), card = String(m.card || '').replace(/[^a-z]/g, '');
-  if (act === 'hide' || act === 'show') { await pageShowSet(i, card, act === 'show'); return; }
-  if (act === 'boardOff' || act === 'boardOn') { await pageBoardSet(i, String(m.id || '').slice(0, 60), act === 'boardOff'); return; }
-  if (act === 'edit' || act === 'photos') {
-    const to = act === 'photos' ? 'journal' : String(m.to || '');
-    clientPreviewClose();
-    if (to === 'journal') { await openJournal(i); if (act === 'photos') toast('➕ Add photos is right here — tap it under the photo grid'); }
-    else if (to === 'budget') openEstimates(i);
-    else if (to === 'upcoming') openRcptReview(i);
-    else if (to === 'mat') openMaterials(i);
-    else if (to === 'boards') jumpSetup('setBoards');
-    else if (to === 'review') openReview();
-    else if (to === 'tracker') openMoneyPage('tracker');
-  }
-});
 async function pageShowSet(i, key, on) {
   const c = (((_portalIdx || {}).clients) || [])[i];
   if (!c || !OWN_KEYS.includes(key)) return;
@@ -15732,6 +15712,7 @@ async function pageShowSet(i, key, on) {
   pg.show = pg.show || {};
   pg.show[key] = !!on;                      // money and phases are opt-in, the rest opt-out — true/false serves both
   try { await dbxUpload(path, JSON.stringify(pg, null, 1)); } catch (e) { toast('Couldn\'t save their page — try again', false); return; }
+  _visCache[c.code] = pg.show; if ($('pvBox')) renderPageVis();   // 🎛 v7.40 — the window follows
   toast(on ? `👁 ${OWN_WORDS[key] || key} — they see it again ✓` : `🙈 ${OWN_WORDS[key] || key} — hidden from them ✓`);
   cpReload();
 }
@@ -15746,8 +15727,74 @@ async function pageBoardSet(i, id, off) {
   if (off) pg.boardsOff.push(id);
   if (!pg.boardsOff.length) delete pg.boardsOff;
   try { await dbxUpload(path, JSON.stringify(pg, null, 1)); } catch (e) { toast('Couldn\'t save their page — try again', false); return; }
+  _pvBoardsOff[c.code] = pg.boardsOff || []; if ($('pvBox')) renderPageVis();   // 🎛 v7.40
   toast(off ? '🙈 That board is hidden from them ✓' : '👁 That board is back on their page ✓');
   cpReload();
+}
+// ================= 🎛 v7.40 — WHAT THEY SEE =================
+// Eric: "on the client view take out the blue dotted boxes off, id rather setup which functions they see or dont on a
+// different page. also office crew should be able to click on the client viewer." The v6.61 owner bars and the v6.96 dashed
+// edges are gone from the client viewer: it shows the homeowner's page exactly as they get it, on Eric's phone and on an
+// office crew phone alike (the owner flag the frame carried is gone, and the page's owner code with it). The switches moved
+// HERE — a window of their own off the portal fold (🎛 What they see): one plate per card, per tile and per option board,
+// in words (✓ THEY SEE THIS — tap to hide / ○ HIDDEN FROM THEM — tap to show; off = dashed and dim, never colour alone),
+// writing the same page.show / boardsOff keys through pageShowSet / pageBoardSet as the bars did. Eric's phone only: the
+// office fold draws no door, and a crew phone that reaches the function is turned away in words.
+const PV_CARDS = [['journal', '📖 Journal — the weekly journal and its photos'], ['money', '💵 Where it stands — invoiced, paid, open'], ['budget', '💰 Budget — approved estimates'], ['upcoming', '🔮 Estimated upcoming costs'], ['phases', '📊 Work by phase']];
+const PV_TILES = [['photos', '📷 Photos'], ['ask', '💬 Ask / Remark'], ['boards', '🖼 Options — the option boards'], ['mat', '📋 Build List']];
+const _pvBoardsOff = {};   // code → the boards hidden from that client (page.boardsOff)
+let _pvIdx = -1, _pvNoRead = '';
+function openPageVis(i) {
+  if (CREW_NAME || crewPreview) { toast('🎛 Which parts of their page show is Eric\'s to set — on his phone', false); return; }
+  const c = (((_portalIdx || {}).clients) || [])[i]; if (!c) return;
+  _pvIdx = i; _pvNoRead = '';
+  renderPageVis(true);
+  $('revModal').classList.add('show', 'mat-full'); document.body.classList.add('modal-open');
+  pageVisLoad(i);
+}
+function pageVisClose() { closeReview(); }
+async function pageVisLoad(i) {
+  const c = (((_portalIdx || {}).clients) || [])[i]; if (!c) return;
+  let pg = null;
+  try { pg = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (e) { pg = null; }
+  if (pg) { _visCache[c.code] = pg.show || {}; _pvBoardsOff[c.code] = Array.isArray(pg.boardsOff) ? pg.boardsOff : []; }
+  else if (!_visCache[c.code]) _pvNoRead = c.code;
+  try { await bdLoad(); } catch (e) {}
+  renderPageVis();
+}
+function pvPlate(on, tap, board) {
+  return `<button type="button" class="pick-chip pv-sw${on ? ' sel' : ''}" aria-pressed="${on}" onclick="${tap}">${on ? '✓ THEY SEE THIS' + (board ? ' BOARD' : '') + ' — tap to hide' : '○ HIDDEN FROM THEM — tap to show'}</button>`;
+}
+function renderPageVis(force) {
+  const box = $('revBox'); if (!box || CREW_NAME) return;
+  if (!force && !$('pvBox')) return;   // only while this window is on the screen
+  const c = (((_portalIdx || {}).clients) || [])[_pvIdx]; if (!c) return;
+  const show = _visCache[c.code], off = _pvBoardsOff[c.code] || [];
+  const row = (k, lab, tap, on, board) => `<div class="pv-row" data-key="${esc(k)}"><span class="pv-name">${lab}</span>${pvPlate(on, tap, board)}</div>`;
+  const lib = (_boards || []).filter(b => b && b.id && b.on !== false);   // the library's boards that are switched on at all (what the page can be served)
+  box.innerHTML = `<div id="pvBox" class="pv-box">
+    <div class="pv-head"><button type="button" class="x-plate x-small" onclick="pageVisClose()" aria-label="close — back to the portal">✕</button><span><b>🎛 WHAT THEY SEE</b> — ${esc(c.job)}</span></div>
+    <div class="hint" style="margin: 0 0 10px;">Tap a plate to flip it. It takes hold the next time they open their page. Nothing here changes the page's words or figures — only whether a part shows.</div>
+    ${!show ? `<div class="hint" style="margin: 0 0 10px;">${_pvNoRead === c.code ? '⚠ Could not read their page — check the connection, then open this again.' : '⏳ reading their page…'}</div>` : `
+    <h4 class="pv-h">THE CARDS</h4>
+    ${PV_CARDS.map(([k, lab]) => row(k, lab, `pageVisTap('${k}')`, visOn(show, k))).join('')}
+    <div class="hint" style="margin: 6px 0 12px;">💵 Where it stands and 📊 Work by phase draw only with figures from the books — a page with no QuickBooks numbers shows nothing there even when on. 💰 Budget appears for them only once a category's lamp is lit with a number on the estimates board.</div>
+    <h4 class="pv-h">THE TILES</h4>
+    ${PV_TILES.map(([k, lab]) => row(k, lab, `pageVisTap('${k}')`, visOn(show, k))).join('')}
+    <h4 class="pv-h">THE OPTION BOARDS</h4>
+    ${!visOn(show, 'boards') ? '<div class="hint" style="margin: 0 0 10px;">🖼 Options is off for them — no board reaches this page while it is.</div>'
+      : !lib.length ? '<div class="hint" style="margin: 0 0 10px;">No boards switched on in the library yet (⚙ Setup → 🖼 Option boards).</div>'
+      : lib.map(b => row('board:' + b.id, `🖼 ${esc(b.name || b.id)}`, `pageBoardTap('${escq(b.id)}')`, !off.includes(b.id), true)).join('')}`}
+    <div class="pv-foot"><button type="button" class="btn-ghost" onclick="clientPreviewOpen(${_pvIdx})">👁 View as this client — the page exactly as they get it</button></div>
+  </div>`;
+}
+async function pageVisTap(k) {
+  const c = (((_portalIdx || {}).clients) || [])[_pvIdx]; if (!c || !_visCache[c.code]) return;
+  await pageShowSet(_pvIdx, k, !visOn(_visCache[c.code], k));
+}
+async function pageBoardTap(id) {
+  const c = (((_portalIdx || {}).clients) || [])[_pvIdx]; if (!c) return;
+  await pageBoardSet(_pvIdx, id, !(_pvBoardsOff[c.code] || []).includes(id));
 }
 function cpReload() { const fr = $('cpFrame'); if (fr && fr.src && fr.src !== 'about:blank') { const s = fr.src; fr.src = 'about:blank'; setTimeout(() => { fr.src = s; }, 30); } }
 function clientPreviewClose() {
@@ -22778,7 +22825,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.39';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.40';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

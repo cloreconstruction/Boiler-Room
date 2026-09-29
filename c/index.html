@@ -18,34 +18,8 @@
   /* 🌙 v6.33 — paint the root dark before anything else: this page loads inside the app's
      preview frame and used to show the browser's white until its CSS arrived. */
   html { background: var(--bg); }
-  /* 👁 v6.61 — the owner bars. Brass on the card, never on the homeowner's screen (they only
-     exist in OWNER mode). A hidden card stays readable but dims and wears a dashed rim. */
-  .own-head { background: var(--gold); color: #1c1608; font-weight: 800; font-size: 12px; letter-spacing: .5px; padding: 8px 12px; border-radius: 10px; margin: 0 0 12px; }
-  .own-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
-  .own-bar button, .own-inline { font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .3px; padding: 6px 10px; min-height: 36px;
-    border-radius: 999px; border: 2px solid var(--gold); background: var(--card); color: var(--ink); cursor: pointer; }
-  .own-bar.off .own-vis, .own-off .own-inline { background: var(--gold); color: #1c1608; }
-  .own-lbl { font-size: 12px; font-weight: 800; margin-right: 2px; }
-  .own-tiles { margin: 0 0 12px; }
-  .own-tiles .own-bar { border-top: 1px dashed var(--line); padding-top: 6px; }
-  .own-off { opacity: .55; outline: 2px dashed var(--gold); outline-offset: 2px; }
-  .own-inline { display: inline-block; margin-top: 6px; min-height: 32px; }
-  .soon.own-off { position: relative; }
-  .own-tag { position: absolute; left: 0; right: 0; bottom: 0; background: var(--gold); color: #1c1608; font-size: 10px; font-weight: 800; letter-spacing: .4px; text-align: center; padding: 3px 4px; }
-  /* ┄ v6.96 — Eric: "anytime im in the client preview i want anything they cant see to have a dashed border, bright, even
-     the buttons that are for me." ONE sign for "only you see this": a bright dashed edge in a colour their page never
-     uses (--mine) — on the OWNER VIEW line, on every bar button and ✎/➕/hide switch that is his, on a card, a tile or an
-     option board he has hidden, on the empty-budget stand-in. The rim of a hidden thing stays at full brightness; only
-     what is inside it dims (it used to dim rim and all). A thing they DO see keeps its plain edge. The line at the top
-     says it in words, so it is never the colour alone. */
-  :root { --mine: #4de3ff; }
-  [data-theme="light"] { --mine: #0070d6; }
-  .own-head { background: var(--card); color: var(--ink); border: 2.5px dashed var(--mine); }
-  .own-head b { color: var(--mine); }
-  .own-bar button, .own-inline { border: 2.5px dashed var(--mine); }
-  .own-off { opacity: 1; outline: 3px dashed var(--mine); outline-offset: 2px; }
-  .own-off > *:not(.own-bar):not(.own-tag) { opacity: .5; }
-  .own-tag { background: var(--card); color: var(--ink); border-top: 2.5px dashed var(--mine); }
+  /* 👁 v7.40 — the v6.61 owner bars and the v6.96 dashed edges are gone: this page is the homeowner's page and nothing
+     else, inside Eric's viewer too. Which parts show is set in the app (the portal's 🎛 What they see window). */
   body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 640px; margin: 0 auto; padding: 22px 16px 60px; }
   header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 8px; }
@@ -160,62 +134,11 @@
 const code = new URLSearchParams(location.search).get('c') || location.hash.slice(1);
 // 👁 pv=1 = Eric previewing from inside his app — real page, but his taps don't count
 const PV = !!new URLSearchParams(location.search).get('pv');
-// 👁 v6.61 — OWNER MODE. Eric: "I want my project portal to basically look exactly like the
-// client page, and it will also control the client page … I have my edit buttons there and my
-// add photos, and I can hide windows from them." The REAL page, inside his app's preview frame,
-// with a small bar on every card. The bar only draws when the page is embedded (a parent frame
-// exists) AND the app asked for it (&owner=1): a homeowner pasting &owner=1 into a browser gets
-// the plain page. And the bar never writes anything itself — every tap is a message to the app
-// above it, which does the work with Eric's own Dropbox. The page gains no powers.
-const OWNER = PV && !!new URLSearchParams(location.search).get('owner') && window.parent !== window;
-function ownerMsg(m) { try { window.parent.postMessage({ boiler: 'owner', ...m }, '*'); } catch (e) {} }
-// what the homeowner is NOT shown. money and phases are opt-IN (their switch must be true —
-// a page with no books numbers must never show a zero); everything else is opt-OUT.
-function hidOwner(k) {
-  const s = (_d && _d.show) || {};
-  return (k === 'money' || k === 'phases') ? !s[k] : s[k] === false;
-}
-const OWN_CARDS = [                       // key · element id · what ✎ Edit opens in the app
-  ['journal', 'journalCard', 'journal'], ['money', 'moneyCard', 'tracker'], ['budget', 'budgetCard', 'budget'],
-  ['upcoming', 'upcomingCard', 'upcoming'], ['phases', 'phasesCard', 'tracker']];
-const OWN_TILES = [['photos', '📷 Photos', 'journal'], ['ask', '💬 Ask / Remark', 'review'], ['boards', '🖼 Options', 'boards'], ['mat', '📋 Build List', 'mat']];
-function ownerBar(key, edit, extra) {
-  const off = hidOwner(key);
-  return `<div class="own-bar${off ? ' off' : ''}" data-own="${key}">
-    <button type="button" class="own-vis" onclick="event.stopPropagation(); ownerMsg({ act: '${off ? 'show' : 'hide'}', card: '${key}' })">${off ? '○ HIDDEN FROM THEM — tap to show' : '✓ THEY SEE THIS — tap to hide'}</button>
-    ${edit ? `<button type="button" onclick="event.stopPropagation(); ownerMsg({ act: 'edit', card: '${key}', to: '${edit}' })">✎ Edit</button>` : ''}
-    ${extra || ''}</div>`;
-}
-function ownerDecorate() {
-  if (!OWNER) return;
-  const app = document.getElementById('app'); if (!app) return;
-  app.insertAdjacentHTML('afterbegin', `<div class="own-head">👁 OWNER VIEW — this is exactly what they see. <b>┄ A bright dashed edge, like this one, means ONLY YOU see it</b> — your buttons, and anything you have hidden from them.</div>`);   // ┄ v6.96
-  OWN_CARDS.forEach(([key, id, edit]) => {
-    const el = document.getElementById(id); if (!el) return;
-    if (el.dataset.ownEmpty) {   // 👁 v6.64 — an empty card has no switch, only the door in
-      el.insertAdjacentHTML('afterbegin', `<div class="own-bar" data-own="${key}"><button type="button" onclick="event.stopPropagation(); ownerMsg({ act: 'edit', card: '${key}', to: '${edit}' })">✎ Edit — open the estimates board</button></div>`);
-      return;
-    }
-    el.classList.toggle('own-off', hidOwner(key));
-    el.insertAdjacentHTML('afterbegin', ownerBar(key, edit, key === 'journal'
-      ? `<button type="button" onclick="event.stopPropagation(); ownerMsg({ act: 'photos', card: 'journal' })">➕ Add photos</button>` : ''));
-  });
-  // 👁 v6.63 — Eric: "when i have 'options' or 'build list' hidden and i still see it above, do
-  // they still see it?" They never did — but the tile looked the same as a live one on his
-  // screen. A hidden tile now dims and wears the words, exactly like a hidden card.
-  [['photos', 'photoTile'], ['ask', 'askTile'], ['boards', 'boardTile'], ['mat', 'matTile']].forEach(([key, id]) => {
-    const t = document.getElementById(id); if (!t) return;
-    const off = hidOwner(key);
-    t.classList.toggle('own-off', off);
-    if (off) t.insertAdjacentHTML('beforeend', `<div class="own-tag">○ HIDDEN FROM THEM</div>`);
-  });
-  const grid = document.querySelector('.soon-grid');
-  if (grid) grid.insertAdjacentHTML('afterend', `<div class="own-tiles">${OWN_TILES.map(([key, label, edit]) => {
-    const off = hidOwner(key);
-    return `<div class="own-bar${off ? ' off' : ''}" data-own="${key}"><span class="own-lbl">${label}</span>
-      <button type="button" class="own-vis" onclick="ownerMsg({ act: '${off ? 'show' : 'hide'}', card: '${key}' })">${off ? '○ HIDDEN — tap to show' : '✓ THEY SEE — tap to hide'}</button>
-      <button type="button" onclick="ownerMsg({ act: 'edit', card: '${key}', to: '${edit}' })">✎ Edit</button></div>`; }).join('')}</div>`);
-}
+// 👁 v7.40 — owner mode is gone. Eric: "on the client view take out the blue dotted boxes off, id rather setup which
+// functions they see or dont on a different page." The v6.61 bars (✓ THEY SEE THIS / ✎ Edit / ➕ Add photos) and the v6.96
+// dashed edges no longer draw: Eric's viewer shows this page exactly as the homeowner gets it, and an office crew phone's
+// viewer is the same page. The switches live in the app — the portal's 🎛 What they see window — which writes the same
+// page.show / boardsOff keys this page has always read. A stray &owner=1 from an older app draws nothing extra.
 const $ = s => document.querySelector(s);
 const money = n => '$' + (+n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const FN = '/.netlify/functions/client-portal';
@@ -384,13 +307,11 @@ async function boardsLoad() {
     const j = r.ok ? await r.json() : null;
     _boards = (j && Array.isArray(j.boards)) ? j.boards : [];
   } catch (e) { _boards = []; }
-  // 👁 v6.61 — boards Eric switched off for THIS client (page.boardsOff) never reach the
-  // homeowner; in owner mode they stay in the list, marked, so he can switch them back
+  // 👁 v6.61 — boards Eric switched off for THIS client (page.boardsOff) never reach the page (🎛 What they see, v7.40)
   const off = (_d && Array.isArray(_d.boardsOff)) ? _d.boardsOff : [];
-  if (!OWNER && off.length) _boards = _boards.filter(b => !off.includes(b.id));
+  if (off.length) _boards = _boards.filter(b => !off.includes(b.id));
   return _boards;
 }
-function boardOffHere(id) { return !!(_d && Array.isArray(_d.boardsOff) && _d.boardsOff.includes(id)); }
 function boardTile() {
   const t = document.getElementById('boardTile'); if (!t) return;
   const n = (_boards || []).length;
@@ -422,12 +343,12 @@ function renderBoards() {
   if (!_bOpen) {
     box.innerHTML = `<h3>🖼 OPTIONS — HAVE A LOOK</h3>
       <p class="hint">Browse the choices for your job. Tick what you like, say anything you'd change, and send it over. Nothing is decided until you send it.</p>
-      ${list.map(b => { const a = (_bAns || {})[b.id]; const off = OWNER && boardOffHere(b.id);
-        return `<div class="bd-row${off ? ' own-off' : ''}" onclick="boardOpen('${bEscq(b.id)}')">
+      ${list.map(b => { const a = (_bAns || {})[b.id];
+        return `<div class="bd-row" onclick="boardOpen('${bEscq(b.id)}')">
           ${b.img ? `<img loading="lazy" src="${boardImg(b.img)}" alt="">` : '<div class="bd-noimg">🖼</div>'}
           <div class="bd-row-t"><b>${bEsc(b.name || b.id)}</b>
             <span class="hint">${a ? '✓ Answered — tap to change' : (b.groups || []).map(g => bEsc(g.n)).join(' · ') || 'have a look'}</span>
-            ${OWNER ? `<button type="button" class="own-vis own-inline" onclick="event.stopPropagation(); ownerMsg({ act: '${off ? 'boardOn' : 'boardOff'}', id: '${bEscq(b.id)}' })">${off ? '○ HIDDEN FROM THEM — tap to show' : '✓ THEY SEE THIS BOARD — tap to hide'}</button>` : ''}</div>
+            </div>
           <span class="bd-go">›</span></div>`; }).join('')}`;
     return;
   }
@@ -867,10 +788,8 @@ async function boot() {
   _d = d; // 💰 the budget card redraws itself from here when a choice is tapped
   _bAns = (d.boardPicks && typeof d.boardPicks === 'object') ? d.boardPicks : {};   // 🖼 v6.50
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  // 🎛 per-page switches Eric flips from his phone: absent = ON, explicit false = OFF
-  // 👁 v6.61 — in OWNER mode every card draws (a hidden one dimmed, with the words) so Eric can
-  // flip it back; for the homeowner the switch is the switch
-  const sh = k => OWNER || !d.show || d.show[k] !== false;
+  // 🎛 per-page switches Eric flips from his phone (the portal's 🎛 What they see, v7.40): absent = ON, explicit false = OFF
+  const sh = k => !d.show || d.show[k] !== false;
   // 💡 the lamp: LIT when the page got fresher since this client's last visit
   const seenKey = 'clore-seen-' + code;
   const lastSeen = localStorage.getItem(seenKey) || '';
@@ -936,7 +855,7 @@ async function boot() {
           <div class="ph-cats" style="white-space: pre-wrap;">${esc(j.text)}${shots(j)}</div>
         </div>`).join('') + `</div></div>` : '') + `</div>`;
   }
-  if ((d.show && d.show.money) || OWNER) {
+  if (d.show && d.show.money) {
     // 💵 open-balance breakdown — tap the number, see what the bill is FOR (categories only,
     // matched to what they see happening on site). Renders only when Eric's books provide it.
     const brk = (d.open > 0 && Array.isArray(d.openBrk) && d.openBrk.length) ? d.openBrk : null;
@@ -959,14 +878,11 @@ async function boot() {
     const bh = budgetHtml(d);
     // 👁 v6.64 — Eric: "what about the estimates? is that only on there once i enter an estimate
     // in?" Yes: the card exists for the homeowner only once a lamp is lit with a number on it.
-    // In OWNER view an empty budget draws a dim placeholder that says so, with the ✎ door to the
-    // estimates board — nothing for them, a way in for him.
-    h += bh || (OWNER ? `<div class="card own-off" id="budgetCard" data-own-empty="1"><h3>BUDGET — APPROVED ESTIMATES</h3>
-      <div class="hint" style="margin: 0;">○ NOT ON THEIR PAGE YET — nothing approved. Light a category's lamp on the estimates board, with a number on it, and this card appears for them.</div></div>` : '');
+    h += bh || '';
   }
   // 🔮 v6.27 — under the approved budget: what is coming but not yet invoiced
   if (sh('upcoming')) h += upcomingHtml(d);
-  if (((d.show && d.show.phases) || OWNER) && (d.phases || []).length) {
+  if (d.show && d.show.phases && (d.phases || []).length) {
     h += `<div class="card" id="phasesCard"><h3>WORK BY PHASE — tap a phase for detail</h3>` +
       d.phases.map((p, i) => `<div class="ph" id="ph${i}"><div class="ph-head" onclick="document.getElementById('ph${i}').classList.toggle('open'); ping('phase:${esc(p.name).slice(0, 20)}')">
         <span>${p.n ? p.n + '. ' : ''}${esc(p.name)}</span><span>${money(p.total)}</span></div>
@@ -977,7 +893,6 @@ async function boot() {
   h += `<button class="theme-btn" style="display: block; margin: 22px auto 0;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
     <div class="foot">${sh('ask') ? 'Questions? Use 💬 Ask / Remark above, or call or text Eric directly.' : 'Questions? Call or text Eric directly.'}</div>`;
   $('#app').innerHTML = h;
-  ownerDecorate();               // 👁 v6.61 — the owner bars, only inside Eric's app
   if (sh('ask')) loadAsks(false); // 💬 their open questions + the three lamps
   // 📋 the materials board comes alive when Eric has published one
   loadMat().then(() => {
