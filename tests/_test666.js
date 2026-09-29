@@ -113,16 +113,12 @@ const { chromium } = require('playwright');
       [...document.querySelectorAll('.est-phase.need ~ .est-row:not([hidden])')].slice(0, 3).some(r => r === rf);
   }));
 
-  ok('empty rows fold away under their phase, with a line that says how many; the tap brings them back', await page.evaluate(() => {
-    const hidden = [...document.querySelectorAll('.est-row[hidden]')];
-    const site = [...document.querySelectorAll('.est-empty-fold')][0];   // the first fold line = Site & utilities, all 12 of them empty
-    const n = +(site.textContent.match(/\+(\d+) empty/) || [])[1];
-    const before = hidden.length;
-    site.click();
-    const shownNow = [...document.querySelectorAll('.est-row[hidden]')].length;
-    const wordAfter = /hide the \d+ empty/.test([...document.querySelectorAll('.est-empty-fold')][0].textContent);
-    [...document.querySelectorAll('.est-empty-fold')][0].click();
-    return before >= 40 && n >= 10 && shownNow === before - n && wordAfter && [...document.querySelectorAll('.est-row[hidden]')].length === before;
+  // 👁 v7.49 — Eric: "It says 'Hide the 4 empty or 11 empty tap to show.' I don't want that. I need to be able to see all the categories
+  // all the time." v6.66 folded the empty rows away under one line per phase; every category is on the list now, each folded to its line.
+  ok('an empty row is on the list like any other — nothing is hidden and there is no "+n empty" line', await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.est-row')];
+    const site = rows.filter(r => { let h = r.previousElementSibling; while (h && !h.classList.contains('est-phase')) h = h.previousElementSibling; return h && /^Site & utilities/.test(h.textContent.trim()); });
+    return rows.length >= 55 && !document.querySelector('.est-row[hidden]') && !document.querySelector('.est-empty-fold') && site.length === 12 && rows.every(r => getComputedStyle(r).display !== 'none') && !document.querySelector('.est-row.est-open');
   }));
 
   ok('a custom category with a bid sits under OTHER COSTS, visible', await page.evaluate(() => {

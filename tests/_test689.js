@@ -197,7 +197,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const rowOf = n => [...document.querySelectorAll('#revBox .est-row')].find(r => r.querySelector('.est-name') && r.querySelector('.est-name').textContent.replace(/^[▸▾]\s*/, '') === n);
     const a = rowOf(cat), b = rowOf(lone), other = rowOf(EST_DEFAULT_CATS[0]);
     const r = !!a && !a.hidden && /📋 2 on the build list · 1 picked · 1 ordered · 0 received · 0 installed · est \$600 · paid \$380/.test(a.querySelector('.est-sub').textContent) &&
-      !!b && !b.hidden && /📋 1 on the build list · 1 picked · 1 ordered · 1 received · 1 installed/.test(b.querySelector('.est-sub').textContent) && !!other && other.hidden === true;
+      !!b && !b.hidden && /📋 1 on the build list · 1 picked · 1 ordered · 1 received · 1 installed/.test(b.querySelector('.est-sub').textContent) && !!other && other.hidden === false;   // 👁 v7.49 — no row folds away any more: every category is always on the list
     closeEstimates(); return r;
   }));
 
