@@ -35,9 +35,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/bn.js/lib/bn.js
+// ../boiler-room-tools/node_modules/bn.js/lib/bn.js
 var require_bn = __commonJS({
-  "node_modules/bn.js/lib/bn.js"(exports, module) {
+  "../boiler-room-tools/node_modules/bn.js/lib/bn.js"(exports, module) {
     (function(module2, exports2) {
       "use strict";
       function assert(val, msg) {
@@ -83,11 +83,11 @@ var require_bn = __commonJS({
         }
       } catch (e) {
       }
-      BN.isBN = function isBN(num) {
-        if (num instanceof BN) {
+      BN.isBN = function isBN(num2) {
+        if (num2 instanceof BN) {
           return true;
         }
-        return num !== null && typeof num === "object" && num.constructor.wordSize === BN.wordSize && Array.isArray(num.words);
+        return num2 !== null && typeof num2 === "object" && num2.constructor.wordSize === BN.wordSize && Array.isArray(num2.words);
       };
       BN.max = function max(left, right) {
         if (left.cmp(right) > 0) return left;
@@ -608,12 +608,12 @@ var require_bn = __commonJS({
         var hi = this._countBits(w);
         return (this.length - 1) * 26 + hi;
       };
-      function toBitArray(num) {
-        var w = new Array(num.bitLength());
+      function toBitArray(num2) {
+        var w = new Array(num2.bitLength());
         for (var bit = 0; bit < w.length; bit++) {
           var off = bit / 26 | 0;
           var wbit = bit % 26;
-          w[bit] = (num.words[off] & 1 << wbit) >>> wbit;
+          w[bit] = (num2.words[off] & 1 << wbit) >>> wbit;
         }
         return w;
       }
@@ -654,60 +654,60 @@ var require_bn = __commonJS({
         }
         return this;
       };
-      BN.prototype.iuor = function iuor(num) {
-        while (this.length < num.length) {
+      BN.prototype.iuor = function iuor(num2) {
+        while (this.length < num2.length) {
           this.words[this.length++] = 0;
         }
-        for (var i = 0; i < num.length; i++) {
-          this.words[i] = this.words[i] | num.words[i];
+        for (var i = 0; i < num2.length; i++) {
+          this.words[i] = this.words[i] | num2.words[i];
         }
         return this.strip();
       };
-      BN.prototype.ior = function ior(num) {
-        assert((this.negative | num.negative) === 0);
-        return this.iuor(num);
+      BN.prototype.ior = function ior(num2) {
+        assert((this.negative | num2.negative) === 0);
+        return this.iuor(num2);
       };
-      BN.prototype.or = function or(num) {
-        if (this.length > num.length) return this.clone().ior(num);
-        return num.clone().ior(this);
+      BN.prototype.or = function or(num2) {
+        if (this.length > num2.length) return this.clone().ior(num2);
+        return num2.clone().ior(this);
       };
-      BN.prototype.uor = function uor(num) {
-        if (this.length > num.length) return this.clone().iuor(num);
-        return num.clone().iuor(this);
+      BN.prototype.uor = function uor(num2) {
+        if (this.length > num2.length) return this.clone().iuor(num2);
+        return num2.clone().iuor(this);
       };
-      BN.prototype.iuand = function iuand(num) {
+      BN.prototype.iuand = function iuand(num2) {
         var b;
-        if (this.length > num.length) {
-          b = num;
+        if (this.length > num2.length) {
+          b = num2;
         } else {
           b = this;
         }
         for (var i = 0; i < b.length; i++) {
-          this.words[i] = this.words[i] & num.words[i];
+          this.words[i] = this.words[i] & num2.words[i];
         }
         this.length = b.length;
         return this.strip();
       };
-      BN.prototype.iand = function iand(num) {
-        assert((this.negative | num.negative) === 0);
-        return this.iuand(num);
+      BN.prototype.iand = function iand(num2) {
+        assert((this.negative | num2.negative) === 0);
+        return this.iuand(num2);
       };
-      BN.prototype.and = function and(num) {
-        if (this.length > num.length) return this.clone().iand(num);
-        return num.clone().iand(this);
+      BN.prototype.and = function and(num2) {
+        if (this.length > num2.length) return this.clone().iand(num2);
+        return num2.clone().iand(this);
       };
-      BN.prototype.uand = function uand(num) {
-        if (this.length > num.length) return this.clone().iuand(num);
-        return num.clone().iuand(this);
+      BN.prototype.uand = function uand(num2) {
+        if (this.length > num2.length) return this.clone().iuand(num2);
+        return num2.clone().iuand(this);
       };
-      BN.prototype.iuxor = function iuxor(num) {
+      BN.prototype.iuxor = function iuxor(num2) {
         var a;
         var b;
-        if (this.length > num.length) {
+        if (this.length > num2.length) {
           a = this;
-          b = num;
+          b = num2;
         } else {
-          a = num;
+          a = num2;
           b = this;
         }
         for (var i = 0; i < b.length; i++) {
@@ -721,17 +721,17 @@ var require_bn = __commonJS({
         this.length = a.length;
         return this.strip();
       };
-      BN.prototype.ixor = function ixor(num) {
-        assert((this.negative | num.negative) === 0);
-        return this.iuxor(num);
+      BN.prototype.ixor = function ixor(num2) {
+        assert((this.negative | num2.negative) === 0);
+        return this.iuxor(num2);
       };
-      BN.prototype.xor = function xor(num) {
-        if (this.length > num.length) return this.clone().ixor(num);
-        return num.clone().ixor(this);
+      BN.prototype.xor = function xor(num2) {
+        if (this.length > num2.length) return this.clone().ixor(num2);
+        return num2.clone().ixor(this);
       };
-      BN.prototype.uxor = function uxor(num) {
-        if (this.length > num.length) return this.clone().iuxor(num);
-        return num.clone().iuxor(this);
+      BN.prototype.uxor = function uxor(num2) {
+        if (this.length > num2.length) return this.clone().iuxor(num2);
+        return num2.clone().iuxor(this);
       };
       BN.prototype.inotn = function inotn(width) {
         assert(typeof width === "number" && width >= 0);
@@ -768,25 +768,25 @@ var require_bn = __commonJS({
         }
         return this.strip();
       };
-      BN.prototype.iadd = function iadd(num) {
+      BN.prototype.iadd = function iadd(num2) {
         var r;
-        if (this.negative !== 0 && num.negative === 0) {
+        if (this.negative !== 0 && num2.negative === 0) {
           this.negative = 0;
-          r = this.isub(num);
+          r = this.isub(num2);
           this.negative ^= 1;
           return this._normSign();
-        } else if (this.negative === 0 && num.negative !== 0) {
-          num.negative = 0;
-          r = this.isub(num);
-          num.negative = 1;
+        } else if (this.negative === 0 && num2.negative !== 0) {
+          num2.negative = 0;
+          r = this.isub(num2);
+          num2.negative = 1;
           return r._normSign();
         }
         var a, b;
-        if (this.length > num.length) {
+        if (this.length > num2.length) {
           a = this;
-          b = num;
+          b = num2;
         } else {
-          a = num;
+          a = num2;
           b = this;
         }
         var carry = 0;
@@ -811,35 +811,35 @@ var require_bn = __commonJS({
         }
         return this;
       };
-      BN.prototype.add = function add(num) {
+      BN.prototype.add = function add(num2) {
         var res;
-        if (num.negative !== 0 && this.negative === 0) {
-          num.negative = 0;
-          res = this.sub(num);
-          num.negative ^= 1;
+        if (num2.negative !== 0 && this.negative === 0) {
+          num2.negative = 0;
+          res = this.sub(num2);
+          num2.negative ^= 1;
           return res;
-        } else if (num.negative === 0 && this.negative !== 0) {
+        } else if (num2.negative === 0 && this.negative !== 0) {
           this.negative = 0;
-          res = num.sub(this);
+          res = num2.sub(this);
           this.negative = 1;
           return res;
         }
-        if (this.length > num.length) return this.clone().iadd(num);
-        return num.clone().iadd(this);
+        if (this.length > num2.length) return this.clone().iadd(num2);
+        return num2.clone().iadd(this);
       };
-      BN.prototype.isub = function isub(num) {
-        if (num.negative !== 0) {
-          num.negative = 0;
-          var r = this.iadd(num);
-          num.negative = 1;
+      BN.prototype.isub = function isub(num2) {
+        if (num2.negative !== 0) {
+          num2.negative = 0;
+          var r = this.iadd(num2);
+          num2.negative = 1;
           return r._normSign();
         } else if (this.negative !== 0) {
           this.negative = 0;
-          this.iadd(num);
+          this.iadd(num2);
           this.negative = 1;
           return this._normSign();
         }
-        var cmp = this.cmp(num);
+        var cmp = this.cmp(num2);
         if (cmp === 0) {
           this.negative = 0;
           this.length = 1;
@@ -849,9 +849,9 @@ var require_bn = __commonJS({
         var a, b;
         if (cmp > 0) {
           a = this;
-          b = num;
+          b = num2;
         } else {
-          a = num;
+          a = num2;
           b = this;
         }
         var carry = 0;
@@ -876,16 +876,16 @@ var require_bn = __commonJS({
         }
         return this.strip();
       };
-      BN.prototype.sub = function sub(num) {
-        return this.clone().isub(num);
+      BN.prototype.sub = function sub(num2) {
+        return this.clone().isub(num2);
       };
-      function smallMulTo(self, num, out) {
-        out.negative = num.negative ^ self.negative;
-        var len = self.length + num.length | 0;
+      function smallMulTo(self, num2, out) {
+        out.negative = num2.negative ^ self.negative;
+        var len = self.length + num2.length | 0;
         out.length = len;
         len = len - 1 | 0;
         var a = self.words[0] | 0;
-        var b = num.words[0] | 0;
+        var b = num2.words[0] | 0;
         var r = a * b;
         var lo = r & 67108863;
         var carry = r / 67108864 | 0;
@@ -893,11 +893,11 @@ var require_bn = __commonJS({
         for (var k = 1; k < len; k++) {
           var ncarry = carry >>> 26;
           var rword = carry & 67108863;
-          var maxJ = Math.min(k, num.length - 1);
+          var maxJ = Math.min(k, num2.length - 1);
           for (var j = Math.max(0, k - self.length + 1); j <= maxJ; j++) {
             var i = k - j | 0;
             a = self.words[i] | 0;
-            b = num.words[j] | 0;
+            b = num2.words[j] | 0;
             r = a * b + rword;
             ncarry += r / 67108864 | 0;
             rword = r & 67108863;
@@ -912,9 +912,9 @@ var require_bn = __commonJS({
         }
         return out.strip();
       }
-      var comb10MulTo = function comb10MulTo2(self, num, out) {
+      var comb10MulTo = function comb10MulTo2(self, num2, out) {
         var a = self.words;
-        var b = num.words;
+        var b = num2.words;
         var o = out.words;
         var c = 0;
         var lo;
@@ -980,7 +980,7 @@ var require_bn = __commonJS({
         var b9 = b[9] | 0;
         var bl9 = b9 & 8191;
         var bh9 = b9 >>> 13;
-        out.negative = self.negative ^ num.negative;
+        out.negative = self.negative ^ num2.negative;
         out.length = 19;
         lo = Math.imul(al0, bl0);
         mid = Math.imul(al0, bh0);
@@ -1467,20 +1467,20 @@ var require_bn = __commonJS({
       if (!Math.imul) {
         comb10MulTo = smallMulTo;
       }
-      function bigMulTo(self, num, out) {
-        out.negative = num.negative ^ self.negative;
-        out.length = self.length + num.length;
+      function bigMulTo(self, num2, out) {
+        out.negative = num2.negative ^ self.negative;
+        out.length = self.length + num2.length;
         var carry = 0;
         var hncarry = 0;
         for (var k = 0; k < out.length - 1; k++) {
           var ncarry = hncarry;
           hncarry = 0;
           var rword = carry & 67108863;
-          var maxJ = Math.min(k, num.length - 1);
+          var maxJ = Math.min(k, num2.length - 1);
           for (var j = Math.max(0, k - self.length + 1); j <= maxJ; j++) {
             var i = k - j;
             var a = self.words[i] | 0;
-            var b = num.words[j] | 0;
+            var b = num2.words[j] | 0;
             var r = a * b;
             var lo = r & 67108863;
             ncarry = ncarry + (r / 67108864 | 0) | 0;
@@ -1501,21 +1501,21 @@ var require_bn = __commonJS({
         }
         return out.strip();
       }
-      function jumboMulTo(self, num, out) {
+      function jumboMulTo(self, num2, out) {
         var fftm = new FFTM();
-        return fftm.mulp(self, num, out);
+        return fftm.mulp(self, num2, out);
       }
-      BN.prototype.mulTo = function mulTo(num, out) {
+      BN.prototype.mulTo = function mulTo(num2, out) {
         var res;
-        var len = this.length + num.length;
-        if (this.length === 10 && num.length === 10) {
-          res = comb10MulTo(this, num, out);
+        var len = this.length + num2.length;
+        if (this.length === 10 && num2.length === 10) {
+          res = comb10MulTo(this, num2, out);
         } else if (len < 63) {
-          res = smallMulTo(this, num, out);
+          res = smallMulTo(this, num2, out);
         } else if (len < 1024) {
-          res = bigMulTo(this, num, out);
+          res = bigMulTo(this, num2, out);
         } else {
-          res = jumboMulTo(this, num, out);
+          res = jumboMulTo(this, num2, out);
         }
         return res;
       };
@@ -1660,25 +1660,25 @@ var require_bn = __commonJS({
         out.length = x.length + y.length;
         return out.strip();
       };
-      BN.prototype.mul = function mul(num) {
+      BN.prototype.mul = function mul(num2) {
         var out = new BN(null);
-        out.words = new Array(this.length + num.length);
-        return this.mulTo(num, out);
+        out.words = new Array(this.length + num2.length);
+        return this.mulTo(num2, out);
       };
-      BN.prototype.mulf = function mulf(num) {
+      BN.prototype.mulf = function mulf(num2) {
         var out = new BN(null);
-        out.words = new Array(this.length + num.length);
-        return jumboMulTo(this, num, out);
+        out.words = new Array(this.length + num2.length);
+        return jumboMulTo(this, num2, out);
       };
-      BN.prototype.imul = function imul(num) {
-        return this.clone().mulTo(num, this);
+      BN.prototype.imul = function imul(num2) {
+        return this.clone().mulTo(num2, this);
       };
-      BN.prototype.imuln = function imuln(num) {
-        assert(typeof num === "number");
-        assert(num < 67108864);
+      BN.prototype.imuln = function imuln(num2) {
+        assert(typeof num2 === "number");
+        assert(num2 < 67108864);
         var carry = 0;
         for (var i = 0; i < this.length; i++) {
-          var w = (this.words[i] | 0) * num;
+          var w = (this.words[i] | 0) * num2;
           var lo = (w & 67108863) + (carry & 67108863);
           carry >>= 26;
           carry += w / 67108864 | 0;
@@ -1689,14 +1689,14 @@ var require_bn = __commonJS({
           this.words[i] = carry;
           this.length++;
         }
-        if (num === 0) {
+        if (num2 === 0) {
           this.length = 1;
           this._normSign();
         }
         return this;
       };
-      BN.prototype.muln = function muln(num) {
-        return this.clone().imuln(num);
+      BN.prototype.muln = function muln(num2) {
+        return this.clone().imuln(num2);
       };
       BN.prototype.sqr = function sqr() {
         return this.mul(this);
@@ -1704,8 +1704,8 @@ var require_bn = __commonJS({
       BN.prototype.isqr = function isqr() {
         return this.imul(this.clone());
       };
-      BN.prototype.pow = function pow(num) {
-        var w = toBitArray(num);
+      BN.prototype.pow = function pow(num2) {
+        var w = toBitArray(num2);
         if (w.length === 0) return new BN(1);
         var res = this;
         for (var i = 0; i < w.length; i++, res = res.sqr()) {
@@ -1848,25 +1848,25 @@ var require_bn = __commonJS({
       BN.prototype.maskn = function maskn(bits) {
         return this.clone().imaskn(bits);
       };
-      BN.prototype.iaddn = function iaddn(num) {
-        assert(typeof num === "number");
-        assert(num < 67108864);
-        if (num < 0) return this.isubn(-num);
+      BN.prototype.iaddn = function iaddn(num2) {
+        assert(typeof num2 === "number");
+        assert(num2 < 67108864);
+        if (num2 < 0) return this.isubn(-num2);
         if (this.negative !== 0) {
-          if (this.length === 1 && (this.words[0] | 0) < num) {
-            this.words[0] = num - (this.words[0] | 0);
+          if (this.length === 1 && (this.words[0] | 0) < num2) {
+            this.words[0] = num2 - (this.words[0] | 0);
             this.negative = 0;
             return this;
           }
           this.negative = 0;
-          this.isubn(num);
+          this.isubn(num2);
           this.negative = 1;
           return this;
         }
-        return this._iaddn(num);
+        return this._iaddn(num2);
       };
-      BN.prototype._iaddn = function _iaddn(num) {
-        this.words[0] += num;
+      BN.prototype._iaddn = function _iaddn(num2) {
+        this.words[0] += num2;
         for (var i = 0; i < this.length && this.words[i] >= 67108864; i++) {
           this.words[i] -= 67108864;
           if (i === this.length - 1) {
@@ -1878,17 +1878,17 @@ var require_bn = __commonJS({
         this.length = Math.max(this.length, i + 1);
         return this;
       };
-      BN.prototype.isubn = function isubn(num) {
-        assert(typeof num === "number");
-        assert(num < 67108864);
-        if (num < 0) return this.iaddn(-num);
+      BN.prototype.isubn = function isubn(num2) {
+        assert(typeof num2 === "number");
+        assert(num2 < 67108864);
+        if (num2 < 0) return this.iaddn(-num2);
         if (this.negative !== 0) {
           this.negative = 0;
-          this.iaddn(num);
+          this.iaddn(num2);
           this.negative = 1;
           return this;
         }
-        this.words[0] -= num;
+        this.words[0] -= num2;
         if (this.length === 1 && this.words[0] < 0) {
           this.words[0] = -this.words[0];
           this.negative = 1;
@@ -1900,11 +1900,11 @@ var require_bn = __commonJS({
         }
         return this.strip();
       };
-      BN.prototype.addn = function addn(num) {
-        return this.clone().iaddn(num);
+      BN.prototype.addn = function addn(num2) {
+        return this.clone().iaddn(num2);
       };
-      BN.prototype.subn = function subn(num) {
-        return this.clone().isubn(num);
+      BN.prototype.subn = function subn(num2) {
+        return this.clone().isubn(num2);
       };
       BN.prototype.iabs = function iabs() {
         this.negative = 0;
@@ -1913,15 +1913,15 @@ var require_bn = __commonJS({
       BN.prototype.abs = function abs() {
         return this.clone().iabs();
       };
-      BN.prototype._ishlnsubmul = function _ishlnsubmul(num, mul, shift) {
-        var len = num.length + shift;
+      BN.prototype._ishlnsubmul = function _ishlnsubmul(num2, mul, shift) {
+        var len = num2.length + shift;
         var i;
         this._expand(len);
         var w;
         var carry = 0;
-        for (i = 0; i < num.length; i++) {
+        for (i = 0; i < num2.length; i++) {
           w = (this.words[i + shift] | 0) + carry;
-          var right = (num.words[i] | 0) * mul;
+          var right = (num2.words[i] | 0) * mul;
           w -= right & 67108863;
           carry = (w >> 26) - (right / 67108864 | 0);
           this.words[i + shift] = w & 67108863;
@@ -1942,10 +1942,10 @@ var require_bn = __commonJS({
         this.negative = 1;
         return this.strip();
       };
-      BN.prototype._wordDiv = function _wordDiv(num, mode) {
-        var shift = this.length - num.length;
+      BN.prototype._wordDiv = function _wordDiv(num2, mode) {
+        var shift = this.length - num2.length;
         var a = this.clone();
-        var b = num;
+        var b = num2;
         var bhi = b.words[b.length - 1] | 0;
         var bhiBits = this._countBits(bhi);
         shift = 26 - bhiBits;
@@ -1999,8 +1999,8 @@ var require_bn = __commonJS({
           mod: a
         };
       };
-      BN.prototype.divmod = function divmod(num, mode, positive) {
-        assert(!num.isZero());
+      BN.prototype.divmod = function divmod(num2, mode, positive) {
+        assert(!num2.isZero());
         if (this.isZero()) {
           return {
             div: new BN(0),
@@ -2008,15 +2008,15 @@ var require_bn = __commonJS({
           };
         }
         var div, mod, res;
-        if (this.negative !== 0 && num.negative === 0) {
-          res = this.neg().divmod(num, mode);
+        if (this.negative !== 0 && num2.negative === 0) {
+          res = this.neg().divmod(num2, mode);
           if (mode !== "mod") {
             div = res.div.neg();
           }
           if (mode !== "div") {
             mod = res.mod.neg();
             if (positive && mod.negative !== 0) {
-              mod.iadd(num);
+              mod.iadd(num2);
             }
           }
           return {
@@ -2024,8 +2024,8 @@ var require_bn = __commonJS({
             mod
           };
         }
-        if (this.negative === 0 && num.negative !== 0) {
-          res = this.divmod(num.neg(), mode);
+        if (this.negative === 0 && num2.negative !== 0) {
+          res = this.divmod(num2.neg(), mode);
           if (mode !== "mod") {
             div = res.div.neg();
           }
@@ -2034,12 +2034,12 @@ var require_bn = __commonJS({
             mod: res.mod
           };
         }
-        if ((this.negative & num.negative) !== 0) {
-          res = this.neg().divmod(num.neg(), mode);
+        if ((this.negative & num2.negative) !== 0) {
+          res = this.neg().divmod(num2.neg(), mode);
           if (mode !== "div") {
             mod = res.mod.neg();
             if (positive && mod.negative !== 0) {
-              mod.isub(num);
+              mod.isub(num2);
             }
           }
           return {
@@ -2047,74 +2047,74 @@ var require_bn = __commonJS({
             mod
           };
         }
-        if (num.length > this.length || this.cmp(num) < 0) {
+        if (num2.length > this.length || this.cmp(num2) < 0) {
           return {
             div: new BN(0),
             mod: this
           };
         }
-        if (num.length === 1) {
+        if (num2.length === 1) {
           if (mode === "div") {
             return {
-              div: this.divn(num.words[0]),
+              div: this.divn(num2.words[0]),
               mod: null
             };
           }
           if (mode === "mod") {
             return {
               div: null,
-              mod: new BN(this.modn(num.words[0]))
+              mod: new BN(this.modn(num2.words[0]))
             };
           }
           return {
-            div: this.divn(num.words[0]),
-            mod: new BN(this.modn(num.words[0]))
+            div: this.divn(num2.words[0]),
+            mod: new BN(this.modn(num2.words[0]))
           };
         }
-        return this._wordDiv(num, mode);
+        return this._wordDiv(num2, mode);
       };
-      BN.prototype.div = function div(num) {
-        return this.divmod(num, "div", false).div;
+      BN.prototype.div = function div(num2) {
+        return this.divmod(num2, "div", false).div;
       };
-      BN.prototype.mod = function mod(num) {
-        return this.divmod(num, "mod", false).mod;
+      BN.prototype.mod = function mod(num2) {
+        return this.divmod(num2, "mod", false).mod;
       };
-      BN.prototype.umod = function umod(num) {
-        return this.divmod(num, "mod", true).mod;
+      BN.prototype.umod = function umod(num2) {
+        return this.divmod(num2, "mod", true).mod;
       };
-      BN.prototype.divRound = function divRound(num) {
-        var dm = this.divmod(num);
+      BN.prototype.divRound = function divRound(num2) {
+        var dm = this.divmod(num2);
         if (dm.mod.isZero()) return dm.div;
         var mod = dm.mod.abs();
-        var half = num.abs().iushrn(1);
-        var r2 = num.words[0] & 1;
+        var half = num2.abs().iushrn(1);
+        var r2 = num2.words[0] & 1;
         var cmp = mod.cmp(half);
         if (cmp < 0 || r2 === 1 && cmp === 0) return dm.div;
         var up = new BN(1);
-        up.negative = this.negative ^ num.negative;
+        up.negative = this.negative ^ num2.negative;
         return dm.div.iadd(up);
       };
-      BN.prototype.modn = function modn(num) {
-        assert(num <= 67108863);
-        var p = (1 << 26) % num;
+      BN.prototype.modn = function modn(num2) {
+        assert(num2 <= 67108863);
+        var p = (1 << 26) % num2;
         var acc = 0;
         for (var i = this.length - 1; i >= 0; i--) {
-          acc = (p * acc + (this.words[i] | 0)) % num;
+          acc = (p * acc + (this.words[i] | 0)) % num2;
         }
         return acc;
       };
-      BN.prototype.idivn = function idivn(num) {
-        assert(num <= 67108863);
+      BN.prototype.idivn = function idivn(num2) {
+        assert(num2 <= 67108863);
         var carry = 0;
         for (var i = this.length - 1; i >= 0; i--) {
           var w = (this.words[i] | 0) + carry * 67108864;
-          this.words[i] = w / num | 0;
-          carry = w % num;
+          this.words[i] = w / num2 | 0;
+          carry = w % num2;
         }
         return this.strip();
       };
-      BN.prototype.divn = function divn(num) {
-        return this.clone().idivn(num);
+      BN.prototype.divn = function divn(num2) {
+        return this.clone().idivn(num2);
       };
       BN.prototype.egcd = function egcd(p) {
         assert(p.negative === 0);
@@ -2232,11 +2232,11 @@ var require_bn = __commonJS({
         }
         return res;
       };
-      BN.prototype.gcd = function gcd(num) {
-        if (this.isZero()) return num.abs();
-        if (num.isZero()) return this.abs();
+      BN.prototype.gcd = function gcd(num2) {
+        if (this.isZero()) return num2.abs();
+        if (num2.isZero()) return this.abs();
         var a = this.clone();
-        var b = num.clone();
+        var b = num2.clone();
         a.negative = 0;
         b.negative = 0;
         for (var shift = 0; a.isEven() && b.isEven(); shift++) {
@@ -2262,8 +2262,8 @@ var require_bn = __commonJS({
         } while (true);
         return b.iushln(shift);
       };
-      BN.prototype.invm = function invm(num) {
-        return this.egcd(num).a.umod(num);
+      BN.prototype.invm = function invm(num2) {
+        return this.egcd(num2).a.umod(num2);
       };
       BN.prototype.isEven = function isEven() {
         return (this.words[0] & 1) === 0;
@@ -2271,8 +2271,8 @@ var require_bn = __commonJS({
       BN.prototype.isOdd = function isOdd() {
         return (this.words[0] & 1) === 1;
       };
-      BN.prototype.andln = function andln(num) {
-        return this.words[0] & num;
+      BN.prototype.andln = function andln(num2) {
+        return this.words[0] & num2;
       };
       BN.prototype.bincn = function bincn(bit) {
         assert(typeof bit === "number");
@@ -2301,8 +2301,8 @@ var require_bn = __commonJS({
       BN.prototype.isZero = function isZero() {
         return this.length === 1 && this.words[0] === 0;
       };
-      BN.prototype.cmpn = function cmpn(num) {
-        var negative = num < 0;
+      BN.prototype.cmpn = function cmpn(num2) {
+        var negative = num2 < 0;
         if (this.negative !== 0 && !negative) return -1;
         if (this.negative === 0 && negative) return 1;
         this.strip();
@@ -2311,29 +2311,29 @@ var require_bn = __commonJS({
           res = 1;
         } else {
           if (negative) {
-            num = -num;
+            num2 = -num2;
           }
-          assert(num <= 67108863, "Number is too big");
+          assert(num2 <= 67108863, "Number is too big");
           var w = this.words[0] | 0;
-          res = w === num ? 0 : w < num ? -1 : 1;
+          res = w === num2 ? 0 : w < num2 ? -1 : 1;
         }
         if (this.negative !== 0) return -res | 0;
         return res;
       };
-      BN.prototype.cmp = function cmp(num) {
-        if (this.negative !== 0 && num.negative === 0) return -1;
-        if (this.negative === 0 && num.negative !== 0) return 1;
-        var res = this.ucmp(num);
+      BN.prototype.cmp = function cmp(num2) {
+        if (this.negative !== 0 && num2.negative === 0) return -1;
+        if (this.negative === 0 && num2.negative !== 0) return 1;
+        var res = this.ucmp(num2);
         if (this.negative !== 0) return -res | 0;
         return res;
       };
-      BN.prototype.ucmp = function ucmp(num) {
-        if (this.length > num.length) return 1;
-        if (this.length < num.length) return -1;
+      BN.prototype.ucmp = function ucmp(num2) {
+        if (this.length > num2.length) return 1;
+        if (this.length < num2.length) return -1;
         var res = 0;
         for (var i = this.length - 1; i >= 0; i--) {
           var a = this.words[i] | 0;
-          var b = num.words[i] | 0;
+          var b = num2.words[i] | 0;
           if (a === b) continue;
           if (a < b) {
             res = -1;
@@ -2344,38 +2344,38 @@ var require_bn = __commonJS({
         }
         return res;
       };
-      BN.prototype.gtn = function gtn(num) {
-        return this.cmpn(num) === 1;
+      BN.prototype.gtn = function gtn(num2) {
+        return this.cmpn(num2) === 1;
       };
-      BN.prototype.gt = function gt(num) {
-        return this.cmp(num) === 1;
+      BN.prototype.gt = function gt(num2) {
+        return this.cmp(num2) === 1;
       };
-      BN.prototype.gten = function gten(num) {
-        return this.cmpn(num) >= 0;
+      BN.prototype.gten = function gten(num2) {
+        return this.cmpn(num2) >= 0;
       };
-      BN.prototype.gte = function gte(num) {
-        return this.cmp(num) >= 0;
+      BN.prototype.gte = function gte(num2) {
+        return this.cmp(num2) >= 0;
       };
-      BN.prototype.ltn = function ltn(num) {
-        return this.cmpn(num) === -1;
+      BN.prototype.ltn = function ltn(num2) {
+        return this.cmpn(num2) === -1;
       };
-      BN.prototype.lt = function lt(num) {
-        return this.cmp(num) === -1;
+      BN.prototype.lt = function lt(num2) {
+        return this.cmp(num2) === -1;
       };
-      BN.prototype.lten = function lten(num) {
-        return this.cmpn(num) <= 0;
+      BN.prototype.lten = function lten(num2) {
+        return this.cmpn(num2) <= 0;
       };
-      BN.prototype.lte = function lte(num) {
-        return this.cmp(num) <= 0;
+      BN.prototype.lte = function lte(num2) {
+        return this.cmp(num2) <= 0;
       };
-      BN.prototype.eqn = function eqn(num) {
-        return this.cmpn(num) === 0;
+      BN.prototype.eqn = function eqn(num2) {
+        return this.cmpn(num2) === 0;
       };
-      BN.prototype.eq = function eq(num) {
-        return this.cmp(num) === 0;
+      BN.prototype.eq = function eq(num2) {
+        return this.cmp(num2) === 0;
       };
-      BN.red = function red(num) {
-        return new Red(num);
+      BN.red = function red(num2) {
+        return new Red(num2);
       };
       BN.prototype.toRed = function toRed(ctx) {
         assert(!this.red, "Already a number in reduction context");
@@ -2394,35 +2394,35 @@ var require_bn = __commonJS({
         assert(!this.red, "Already a number in reduction context");
         return this._forceRed(ctx);
       };
-      BN.prototype.redAdd = function redAdd(num) {
+      BN.prototype.redAdd = function redAdd(num2) {
         assert(this.red, "redAdd works only with red numbers");
-        return this.red.add(this, num);
+        return this.red.add(this, num2);
       };
-      BN.prototype.redIAdd = function redIAdd(num) {
+      BN.prototype.redIAdd = function redIAdd(num2) {
         assert(this.red, "redIAdd works only with red numbers");
-        return this.red.iadd(this, num);
+        return this.red.iadd(this, num2);
       };
-      BN.prototype.redSub = function redSub(num) {
+      BN.prototype.redSub = function redSub(num2) {
         assert(this.red, "redSub works only with red numbers");
-        return this.red.sub(this, num);
+        return this.red.sub(this, num2);
       };
-      BN.prototype.redISub = function redISub(num) {
+      BN.prototype.redISub = function redISub(num2) {
         assert(this.red, "redISub works only with red numbers");
-        return this.red.isub(this, num);
+        return this.red.isub(this, num2);
       };
-      BN.prototype.redShl = function redShl(num) {
+      BN.prototype.redShl = function redShl(num2) {
         assert(this.red, "redShl works only with red numbers");
-        return this.red.shl(this, num);
+        return this.red.shl(this, num2);
       };
-      BN.prototype.redMul = function redMul(num) {
+      BN.prototype.redMul = function redMul(num2) {
         assert(this.red, "redMul works only with red numbers");
-        this.red._verify2(this, num);
-        return this.red.mul(this, num);
+        this.red._verify2(this, num2);
+        return this.red.mul(this, num2);
       };
-      BN.prototype.redIMul = function redIMul(num) {
+      BN.prototype.redIMul = function redIMul(num2) {
         assert(this.red, "redMul works only with red numbers");
-        this.red._verify2(this, num);
-        return this.red.imul(this, num);
+        this.red._verify2(this, num2);
+        return this.red.imul(this, num2);
       };
       BN.prototype.redSqr = function redSqr() {
         assert(this.red, "redSqr works only with red numbers");
@@ -2449,10 +2449,10 @@ var require_bn = __commonJS({
         this.red._verify1(this);
         return this.red.neg(this);
       };
-      BN.prototype.redPow = function redPow(num) {
-        assert(this.red && !num.red, "redPow(normalNum)");
+      BN.prototype.redPow = function redPow(num2) {
+        assert(this.red && !num2.red, "redPow(normalNum)");
         this.red._verify1(this);
-        return this.red.pow(this, num);
+        return this.red.pow(this, num2);
       };
       var primes = {
         k256: null,
@@ -2472,8 +2472,8 @@ var require_bn = __commonJS({
         tmp.words = new Array(Math.ceil(this.n / 13));
         return tmp;
       };
-      MPrime.prototype.ireduce = function ireduce(num) {
-        var r = num;
+      MPrime.prototype.ireduce = function ireduce(num2) {
+        var r = num2;
         var rlen;
         do {
           this.split(r, this.tmp);
@@ -2499,8 +2499,8 @@ var require_bn = __commonJS({
       MPrime.prototype.split = function split(input, out) {
         input.iushrn(this.n, 0, out);
       };
-      MPrime.prototype.imulK = function imulK(num) {
-        return num.imul(this.k);
+      MPrime.prototype.imulK = function imulK(num2) {
+        return num2.imul(this.k);
       };
       function K256() {
         MPrime.call(
@@ -2537,24 +2537,24 @@ var require_bn = __commonJS({
           input.length -= 9;
         }
       };
-      K256.prototype.imulK = function imulK(num) {
-        num.words[num.length] = 0;
-        num.words[num.length + 1] = 0;
-        num.length += 2;
+      K256.prototype.imulK = function imulK(num2) {
+        num2.words[num2.length] = 0;
+        num2.words[num2.length + 1] = 0;
+        num2.length += 2;
         var lo = 0;
-        for (var i = 0; i < num.length; i++) {
-          var w = num.words[i] | 0;
+        for (var i = 0; i < num2.length; i++) {
+          var w = num2.words[i] | 0;
           lo += w * 977;
-          num.words[i] = lo & 67108863;
+          num2.words[i] = lo & 67108863;
           lo = w * 64 + (lo / 67108864 | 0);
         }
-        if (num.words[num.length - 1] === 0) {
-          num.length--;
-          if (num.words[num.length - 1] === 0) {
-            num.length--;
+        if (num2.words[num2.length - 1] === 0) {
+          num2.length--;
+          if (num2.words[num2.length - 1] === 0) {
+            num2.length--;
           }
         }
-        return num;
+        return num2;
       };
       function P224() {
         MPrime.call(
@@ -2580,19 +2580,19 @@ var require_bn = __commonJS({
         );
       }
       inherits(P25519, MPrime);
-      P25519.prototype.imulK = function imulK(num) {
+      P25519.prototype.imulK = function imulK(num2) {
         var carry = 0;
-        for (var i = 0; i < num.length; i++) {
-          var hi = (num.words[i] | 0) * 19 + carry;
+        for (var i = 0; i < num2.length; i++) {
+          var hi = (num2.words[i] | 0) * 19 + carry;
           var lo = hi & 67108863;
           hi >>>= 26;
-          num.words[i] = lo;
+          num2.words[i] = lo;
           carry = hi;
         }
         if (carry !== 0) {
-          num.words[num.length++] = carry;
+          num2.words[num2.length++] = carry;
         }
-        return num;
+        return num2;
       };
       BN._prime = function prime(name) {
         if (primes[name]) return primes[name];
@@ -2675,9 +2675,9 @@ var require_bn = __commonJS({
         }
         return res;
       };
-      Red.prototype.shl = function shl(a, num) {
+      Red.prototype.shl = function shl(a, num2) {
         this._verify1(a);
-        return this.imod(a.ushln(num));
+        return this.imod(a.ushln(num2));
       };
       Red.prototype.imul = function imul(a, b) {
         this._verify2(a, b);
@@ -2743,9 +2743,9 @@ var require_bn = __commonJS({
           return this.imod(inv);
         }
       };
-      Red.prototype.pow = function pow(a, num) {
-        if (num.isZero()) return new BN(1).toRed(this);
-        if (num.cmpn(1) === 0) return a.clone();
+      Red.prototype.pow = function pow(a, num2) {
+        if (num2.isZero()) return new BN(1).toRed(this);
+        if (num2.cmpn(1) === 0) return a.clone();
         var windowSize = 4;
         var wnd = new Array(1 << windowSize);
         wnd[0] = new BN(1).toRed(this);
@@ -2756,12 +2756,12 @@ var require_bn = __commonJS({
         var res = wnd[0];
         var current = 0;
         var currentLen = 0;
-        var start = num.bitLength() % 26;
+        var start = num2.bitLength() % 26;
         if (start === 0) {
           start = 26;
         }
-        for (i = num.length - 1; i >= 0; i--) {
-          var word = num.words[i];
+        for (i = num2.length - 1; i >= 0; i--) {
+          var word = num2.words[i];
           for (var j = start - 1; j >= 0; j--) {
             var bit = word >> j & 1;
             if (res !== wnd[0]) {
@@ -2783,17 +2783,17 @@ var require_bn = __commonJS({
         }
         return res;
       };
-      Red.prototype.convertTo = function convertTo(num) {
-        var r = num.umod(this.m);
-        return r === num ? r.clone() : r;
+      Red.prototype.convertTo = function convertTo(num2) {
+        var r = num2.umod(this.m);
+        return r === num2 ? r.clone() : r;
       };
-      Red.prototype.convertFrom = function convertFrom(num) {
-        var res = num.clone();
+      Red.prototype.convertFrom = function convertFrom(num2) {
+        var res = num2.clone();
         res.red = null;
         return res;
       };
-      BN.mont = function mont(num) {
-        return new Mont(num);
+      BN.mont = function mont(num2) {
+        return new Mont(num2);
       };
       function Mont(m) {
         Red.call(this, m);
@@ -2809,11 +2809,11 @@ var require_bn = __commonJS({
         this.minv = this.r.sub(this.minv);
       }
       inherits(Mont, Red);
-      Mont.prototype.convertTo = function convertTo(num) {
-        return this.imod(num.ushln(this.shift));
+      Mont.prototype.convertTo = function convertTo(num2) {
+        return this.imod(num2.ushln(this.shift));
       };
-      Mont.prototype.convertFrom = function convertFrom(num) {
-        var r = this.imod(num.mul(this.rinv));
+      Mont.prototype.convertFrom = function convertFrom(num2) {
+        var r = this.imod(num2.mul(this.rinv));
         r.red = null;
         return r;
       };
@@ -2855,9 +2855,9 @@ var require_bn = __commonJS({
   }
 });
 
-// node_modules/inherits/inherits_browser.js
+// ../boiler-room-tools/node_modules/inherits/inherits_browser.js
 var require_inherits_browser = __commonJS({
-  "node_modules/inherits/inherits_browser.js"(exports, module) {
+  "../boiler-room-tools/node_modules/inherits/inherits_browser.js"(exports, module) {
     if (typeof Object.create === "function") {
       module.exports = function inherits(ctor, superCtor) {
         if (superCtor) {
@@ -2887,9 +2887,9 @@ var require_inherits_browser = __commonJS({
   }
 });
 
-// node_modules/inherits/inherits.js
+// ../boiler-room-tools/node_modules/inherits/inherits.js
 var require_inherits = __commonJS({
-  "node_modules/inherits/inherits.js"(exports, module) {
+  "../boiler-room-tools/node_modules/inherits/inherits.js"(exports, module) {
     try {
       util = __require("util");
       if (typeof util.inherits !== "function") throw "";
@@ -2901,9 +2901,9 @@ var require_inherits = __commonJS({
   }
 });
 
-// node_modules/safer-buffer/safer.js
+// ../boiler-room-tools/node_modules/safer-buffer/safer.js
 var require_safer = __commonJS({
-  "node_modules/safer-buffer/safer.js"(exports, module) {
+  "../boiler-room-tools/node_modules/safer-buffer/safer.js"(exports, module) {
     "use strict";
     var buffer = __require("buffer");
     var Buffer2 = buffer.Buffer;
@@ -2969,9 +2969,9 @@ var require_safer = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/base/reporter.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/base/reporter.js
 var require_reporter = __commonJS({
-  "node_modules/asn1.js/lib/asn1/base/reporter.js"(exports) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/base/reporter.js"(exports) {
     "use strict";
     var inherits = require_inherits();
     function Reporter(options) {
@@ -3070,9 +3070,9 @@ var require_reporter = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/base/buffer.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/base/buffer.js
 var require_buffer = __commonJS({
-  "node_modules/asn1.js/lib/asn1/base/buffer.js"(exports) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/base/buffer.js"(exports) {
     "use strict";
     var inherits = require_inherits();
     var Reporter = require_reporter().Reporter;
@@ -3187,9 +3187,9 @@ var require_buffer = __commonJS({
   }
 });
 
-// node_modules/minimalistic-assert/index.js
+// ../boiler-room-tools/node_modules/minimalistic-assert/index.js
 var require_minimalistic_assert = __commonJS({
-  "node_modules/minimalistic-assert/index.js"(exports, module) {
+  "../boiler-room-tools/node_modules/minimalistic-assert/index.js"(exports, module) {
     module.exports = assert;
     function assert(val, msg) {
       if (!val)
@@ -3202,9 +3202,9 @@ var require_minimalistic_assert = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/base/node.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/base/node.js
 var require_node = __commonJS({
-  "node_modules/asn1.js/lib/asn1/base/node.js"(exports, module) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/base/node.js"(exports, module) {
     "use strict";
     var Reporter = require_reporter().Reporter;
     var EncoderBuffer = require_buffer().EncoderBuffer;
@@ -3411,16 +3411,16 @@ var require_node = __commonJS({
       state.optional = true;
       return this;
     };
-    Node.prototype.explicit = function explicit(num) {
+    Node.prototype.explicit = function explicit(num2) {
       const state = this._baseState;
       assert(state.explicit === null && state.implicit === null);
-      state.explicit = num;
+      state.explicit = num2;
       return this;
     };
-    Node.prototype.implicit = function implicit(num) {
+    Node.prototype.implicit = function implicit(num2) {
       const state = this._baseState;
       assert(state.explicit === null && state.implicit === null);
-      state.implicit = num;
+      state.implicit = num2;
       return this;
     };
     Node.prototype.obj = function obj() {
@@ -3737,9 +3737,9 @@ var require_node = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/constants/der.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/constants/der.js
 var require_der = __commonJS({
-  "node_modules/asn1.js/lib/asn1/constants/der.js"(exports) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/constants/der.js"(exports) {
     "use strict";
     function reverse(map) {
       const res = {};
@@ -3793,9 +3793,9 @@ var require_der = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/encoders/der.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/encoders/der.js
 var require_der2 = __commonJS({
-  "node_modules/asn1.js/lib/asn1/encoders/der.js"(exports, module) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/encoders/der.js"(exports, module) {
     "use strict";
     var inherits = require_inherits();
     var Buffer2 = require_safer().Buffer;
@@ -3899,11 +3899,11 @@ var require_der2 = __commonJS({
       }
       return this._createEncoderBuffer(objid);
     };
-    function two(num) {
-      if (num < 10)
-        return "0" + num;
+    function two(num2) {
+      if (num2 < 10)
+        return "0" + num2;
       else
-        return num;
+        return num2;
     }
     DERNode.prototype._encodeTime = function encodeTime(time, tag) {
       let str;
@@ -3936,43 +3936,43 @@ var require_der2 = __commonJS({
     DERNode.prototype._encodeNull = function encodeNull() {
       return this._createEncoderBuffer("");
     };
-    DERNode.prototype._encodeInt = function encodeInt(num, values) {
-      if (typeof num === "string") {
+    DERNode.prototype._encodeInt = function encodeInt(num2, values) {
+      if (typeof num2 === "string") {
         if (!values)
           return this.reporter.error("String int or enum given, but no values map");
-        if (!values.hasOwnProperty(num)) {
-          return this.reporter.error("Values map doesn't contain: " + JSON.stringify(num));
+        if (!values.hasOwnProperty(num2)) {
+          return this.reporter.error("Values map doesn't contain: " + JSON.stringify(num2));
         }
-        num = values[num];
+        num2 = values[num2];
       }
-      if (typeof num !== "number" && !Buffer2.isBuffer(num)) {
-        const numArray = num.toArray();
-        if (!num.sign && numArray[0] & 128) {
+      if (typeof num2 !== "number" && !Buffer2.isBuffer(num2)) {
+        const numArray = num2.toArray();
+        if (!num2.sign && numArray[0] & 128) {
           numArray.unshift(0);
         }
-        num = Buffer2.from(numArray);
+        num2 = Buffer2.from(numArray);
       }
-      if (Buffer2.isBuffer(num)) {
-        let size2 = num.length;
-        if (num.length === 0)
+      if (Buffer2.isBuffer(num2)) {
+        let size2 = num2.length;
+        if (num2.length === 0)
           size2++;
         const out2 = Buffer2.alloc(size2);
-        num.copy(out2);
-        if (num.length === 0)
+        num2.copy(out2);
+        if (num2.length === 0)
           out2[0] = 0;
         return this._createEncoderBuffer(out2);
       }
-      if (num < 128)
-        return this._createEncoderBuffer(num);
-      if (num < 256)
-        return this._createEncoderBuffer([0, num]);
+      if (num2 < 128)
+        return this._createEncoderBuffer(num2);
+      if (num2 < 256)
+        return this._createEncoderBuffer([0, num2]);
       let size = 1;
-      for (let i = num; i >= 256; i >>= 8)
+      for (let i = num2; i >= 256; i >>= 8)
         size++;
       const out = new Array(size);
       for (let i = out.length - 1; i >= 0; i--) {
-        out[i] = num & 255;
-        num >>= 8;
+        out[i] = num2 & 255;
+        num2 >>= 8;
       }
       if (out[0] & 128) {
         out.unshift(0);
@@ -4024,9 +4024,9 @@ var require_der2 = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/encoders/pem.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/encoders/pem.js
 var require_pem = __commonJS({
-  "node_modules/asn1.js/lib/asn1/encoders/pem.js"(exports, module) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/encoders/pem.js"(exports, module) {
     "use strict";
     var inherits = require_inherits();
     var DEREncoder = require_der2();
@@ -4048,9 +4048,9 @@ var require_pem = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/encoders/index.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/encoders/index.js
 var require_encoders = __commonJS({
-  "node_modules/asn1.js/lib/asn1/encoders/index.js"(exports) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/encoders/index.js"(exports) {
     "use strict";
     var encoders = exports;
     encoders.der = require_der2();
@@ -4058,9 +4058,9 @@ var require_encoders = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/decoders/der.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/decoders/der.js
 var require_der3 = __commonJS({
-  "node_modules/asn1.js/lib/asn1/decoders/der.js"(exports, module) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/decoders/der.js"(exports, module) {
     "use strict";
     var inherits = require_inherits();
     var bignum = require_bn();
@@ -4314,11 +4314,11 @@ var require_der3 = __commonJS({
       if ((len & 128) === 0) {
         return len;
       }
-      const num = len & 127;
-      if (num > 4)
+      const num2 = len & 127;
+      if (num2 > 4)
         return buf.error("length octect is too long");
       len = 0;
-      for (let i = 0; i < num; i++) {
+      for (let i = 0; i < num2; i++) {
         len <<= 8;
         const j = buf.readUInt8(fail);
         if (buf.isError(j))
@@ -4330,9 +4330,9 @@ var require_der3 = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/decoders/pem.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/decoders/pem.js
 var require_pem2 = __commonJS({
-  "node_modules/asn1.js/lib/asn1/decoders/pem.js"(exports, module) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/decoders/pem.js"(exports, module) {
     "use strict";
     var inherits = require_inherits();
     var Buffer2 = require_safer().Buffer;
@@ -4376,9 +4376,9 @@ var require_pem2 = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/decoders/index.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/decoders/index.js
 var require_decoders = __commonJS({
-  "node_modules/asn1.js/lib/asn1/decoders/index.js"(exports) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/decoders/index.js"(exports) {
     "use strict";
     var decoders = exports;
     decoders.der = require_der3();
@@ -4386,9 +4386,9 @@ var require_decoders = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/api.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/api.js
 var require_api = __commonJS({
-  "node_modules/asn1.js/lib/asn1/api.js"(exports) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/api.js"(exports) {
     "use strict";
     var encoders = require_encoders();
     var decoders = require_decoders();
@@ -4435,9 +4435,9 @@ var require_api = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/base/index.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/base/index.js
 var require_base = __commonJS({
-  "node_modules/asn1.js/lib/asn1/base/index.js"(exports) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/base/index.js"(exports) {
     "use strict";
     var base = exports;
     base.Reporter = require_reporter().Reporter;
@@ -4447,9 +4447,9 @@ var require_base = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1/constants/index.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1/constants/index.js
 var require_constants = __commonJS({
-  "node_modules/asn1.js/lib/asn1/constants/index.js"(exports) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1/constants/index.js"(exports) {
     "use strict";
     var constants = exports;
     constants._reverse = function reverse(map) {
@@ -4466,9 +4466,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/asn1.js/lib/asn1.js
+// ../boiler-room-tools/node_modules/asn1.js/lib/asn1.js
 var require_asn1 = __commonJS({
-  "node_modules/asn1.js/lib/asn1.js"(exports) {
+  "../boiler-room-tools/node_modules/asn1.js/lib/asn1.js"(exports) {
     "use strict";
     var asn1 = exports;
     asn1.bignum = require_bn();
@@ -4480,9 +4480,9 @@ var require_asn1 = __commonJS({
   }
 });
 
-// node_modules/safe-buffer/index.js
+// ../boiler-room-tools/node_modules/safe-buffer/index.js
 var require_safe_buffer = __commonJS({
-  "node_modules/safe-buffer/index.js"(exports, module) {
+  "../boiler-room-tools/node_modules/safe-buffer/index.js"(exports, module) {
     var buffer = __require("buffer");
     var Buffer2 = buffer.Buffer;
     function copyProps(src, dst) {
@@ -4538,9 +4538,9 @@ var require_safe_buffer = __commonJS({
   }
 });
 
-// node_modules/jws/lib/data-stream.js
+// ../boiler-room-tools/node_modules/jws/lib/data-stream.js
 var require_data_stream = __commonJS({
-  "node_modules/jws/lib/data-stream.js"(exports, module) {
+  "../boiler-room-tools/node_modules/jws/lib/data-stream.js"(exports, module) {
     var Buffer2 = require_safe_buffer().Buffer;
     var Stream = __require("stream");
     var util = __require("util");
@@ -4586,9 +4586,9 @@ var require_data_stream = __commonJS({
   }
 });
 
-// node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js
+// ../boiler-room-tools/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js
 var require_param_bytes_for_alg = __commonJS({
-  "node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js"(exports, module) {
+  "../boiler-room-tools/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js"(exports, module) {
     "use strict";
     function getParamSize(keySize) {
       var result = (keySize / 8 | 0) + (keySize % 8 === 0 ? 0 : 1);
@@ -4610,9 +4610,9 @@ var require_param_bytes_for_alg = __commonJS({
   }
 });
 
-// node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js
+// ../boiler-room-tools/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js
 var require_ecdsa_sig_formatter = __commonJS({
-  "node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
+  "../boiler-room-tools/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
     "use strict";
     var Buffer2 = require_safe_buffer().Buffer;
     var getParamBytesForAlg = require_param_bytes_for_alg();
@@ -4750,9 +4750,9 @@ var require_ecdsa_sig_formatter = __commonJS({
   }
 });
 
-// node_modules/buffer-equal-constant-time/index.js
+// ../boiler-room-tools/node_modules/buffer-equal-constant-time/index.js
 var require_buffer_equal_constant_time = __commonJS({
-  "node_modules/buffer-equal-constant-time/index.js"(exports, module) {
+  "../boiler-room-tools/node_modules/buffer-equal-constant-time/index.js"(exports, module) {
     "use strict";
     var Buffer2 = __require("buffer").Buffer;
     var SlowBuffer = __require("buffer").SlowBuffer;
@@ -4784,9 +4784,9 @@ var require_buffer_equal_constant_time = __commonJS({
   }
 });
 
-// node_modules/jwa/index.js
+// ../boiler-room-tools/node_modules/jwa/index.js
 var require_jwa = __commonJS({
-  "node_modules/jwa/index.js"(exports, module) {
+  "../boiler-room-tools/node_modules/jwa/index.js"(exports, module) {
     var Buffer2 = require_safe_buffer().Buffer;
     var crypto = __require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
@@ -5008,9 +5008,9 @@ var require_jwa = __commonJS({
   }
 });
 
-// node_modules/jws/lib/tostring.js
+// ../boiler-room-tools/node_modules/jws/lib/tostring.js
 var require_tostring = __commonJS({
-  "node_modules/jws/lib/tostring.js"(exports, module) {
+  "../boiler-room-tools/node_modules/jws/lib/tostring.js"(exports, module) {
     var Buffer2 = __require("buffer").Buffer;
     module.exports = function toString(obj) {
       if (typeof obj === "string")
@@ -5022,9 +5022,9 @@ var require_tostring = __commonJS({
   }
 });
 
-// node_modules/jws/lib/sign-stream.js
+// ../boiler-room-tools/node_modules/jws/lib/sign-stream.js
 var require_sign_stream = __commonJS({
-  "node_modules/jws/lib/sign-stream.js"(exports, module) {
+  "../boiler-room-tools/node_modules/jws/lib/sign-stream.js"(exports, module) {
     var Buffer2 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
@@ -5097,9 +5097,9 @@ var require_sign_stream = __commonJS({
   }
 });
 
-// node_modules/jws/lib/verify-stream.js
+// ../boiler-room-tools/node_modules/jws/lib/verify-stream.js
 var require_verify_stream = __commonJS({
-  "node_modules/jws/lib/verify-stream.js"(exports, module) {
+  "../boiler-room-tools/node_modules/jws/lib/verify-stream.js"(exports, module) {
     var Buffer2 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
@@ -5212,9 +5212,9 @@ var require_verify_stream = __commonJS({
   }
 });
 
-// node_modules/jws/index.js
+// ../boiler-room-tools/node_modules/jws/index.js
 var require_jws = __commonJS({
-  "node_modules/jws/index.js"(exports) {
+  "../boiler-room-tools/node_modules/jws/index.js"(exports) {
     var SignStream = require_sign_stream();
     var VerifyStream = require_verify_stream();
     var ALGORITHMS = [
@@ -5245,9 +5245,9 @@ var require_jws = __commonJS({
   }
 });
 
-// node_modules/web-push/src/web-push-constants.js
+// ../boiler-room-tools/node_modules/web-push/src/web-push-constants.js
 var require_web_push_constants = __commonJS({
-  "node_modules/web-push/src/web-push-constants.js"(exports, module) {
+  "../boiler-room-tools/node_modules/web-push/src/web-push-constants.js"(exports, module) {
     "use strict";
     var WebPushConstants = {};
     WebPushConstants.supportedContentEncodings = {
@@ -5264,9 +5264,9 @@ var require_web_push_constants = __commonJS({
   }
 });
 
-// node_modules/web-push/src/urlsafe-base64-helper.js
+// ../boiler-room-tools/node_modules/web-push/src/urlsafe-base64-helper.js
 var require_urlsafe_base64_helper = __commonJS({
-  "node_modules/web-push/src/urlsafe-base64-helper.js"(exports, module) {
+  "../boiler-room-tools/node_modules/web-push/src/urlsafe-base64-helper.js"(exports, module) {
     "use strict";
     function validate(base64) {
       return /^[A-Za-z0-9\-_]+$/.test(base64);
@@ -5277,9 +5277,9 @@ var require_urlsafe_base64_helper = __commonJS({
   }
 });
 
-// node_modules/web-push/src/vapid-helper.js
+// ../boiler-room-tools/node_modules/web-push/src/vapid-helper.js
 var require_vapid_helper = __commonJS({
-  "node_modules/web-push/src/vapid-helper.js"(exports, module) {
+  "../boiler-room-tools/node_modules/web-push/src/vapid-helper.js"(exports, module) {
     "use strict";
     var crypto = __require("crypto");
     var asn1 = require_asn1();
@@ -5454,9 +5454,9 @@ var require_vapid_helper = __commonJS({
   }
 });
 
-// node_modules/http_ece/ece.js
+// ../boiler-room-tools/node_modules/http_ece/ece.js
 var require_ece = __commonJS({
-  "node_modules/http_ece/ece.js"(exports, module) {
+  "../boiler-room-tools/node_modules/http_ece/ece.js"(exports, module) {
     "use strict";
     var crypto = __require("crypto");
     var AES_GCM = "aes-128-gcm";
@@ -5905,9 +5905,9 @@ var require_ece = __commonJS({
   }
 });
 
-// node_modules/web-push/src/encryption-helper.js
+// ../boiler-room-tools/node_modules/web-push/src/encryption-helper.js
 var require_encryption_helper = __commonJS({
-  "node_modules/web-push/src/encryption-helper.js"(exports, module) {
+  "../boiler-room-tools/node_modules/web-push/src/encryption-helper.js"(exports, module) {
     "use strict";
     var crypto = __require("crypto");
     var ece = require_ece();
@@ -5958,9 +5958,9 @@ var require_encryption_helper = __commonJS({
   }
 });
 
-// node_modules/web-push/src/web-push-error.js
+// ../boiler-room-tools/node_modules/web-push/src/web-push-error.js
 var require_web_push_error = __commonJS({
-  "node_modules/web-push/src/web-push-error.js"(exports, module) {
+  "../boiler-room-tools/node_modules/web-push/src/web-push-error.js"(exports, module) {
     "use strict";
     function WebPushError(message, statusCode, headers, body, endpoint) {
       Error.captureStackTrace(this, this.constructor);
@@ -5976,9 +5976,9 @@ var require_web_push_error = __commonJS({
   }
 });
 
-// node_modules/ms/index.js
+// ../boiler-room-tools/node_modules/ms/index.js
 var require_ms = __commonJS({
-  "node_modules/ms/index.js"(exports, module) {
+  "../boiler-room-tools/node_modules/ms/index.js"(exports, module) {
     var s = 1e3;
     var m = s * 60;
     var h = m * 60;
@@ -6092,9 +6092,9 @@ var require_ms = __commonJS({
   }
 });
 
-// node_modules/debug/src/common.js
+// ../boiler-room-tools/node_modules/debug/src/common.js
 var require_common = __commonJS({
-  "node_modules/debug/src/common.js"(exports, module) {
+  "../boiler-room-tools/node_modules/debug/src/common.js"(exports, module) {
     function setup(env) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
@@ -6269,9 +6269,9 @@ var require_common = __commonJS({
   }
 });
 
-// node_modules/debug/src/browser.js
+// ../boiler-room-tools/node_modules/debug/src/browser.js
 var require_browser = __commonJS({
-  "node_modules/debug/src/browser.js"(exports, module) {
+  "../boiler-room-tools/node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
     exports.load = load;
@@ -6439,9 +6439,9 @@ var require_browser = __commonJS({
   }
 });
 
-// node_modules/debug/src/node.js
+// ../boiler-room-tools/node_modules/debug/src/node.js
 var require_node2 = __commonJS({
-  "node_modules/debug/src/node.js"(exports, module) {
+  "../boiler-room-tools/node_modules/debug/src/node.js"(exports, module) {
     var tty = __require("tty");
     var util = __require("util");
     exports.init = init;
@@ -6613,9 +6613,9 @@ var require_node2 = __commonJS({
   }
 });
 
-// node_modules/debug/src/index.js
+// ../boiler-room-tools/node_modules/debug/src/index.js
 var require_src = __commonJS({
-  "node_modules/debug/src/index.js"(exports, module) {
+  "../boiler-room-tools/node_modules/debug/src/index.js"(exports, module) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
       module.exports = require_browser();
     } else {
@@ -6624,9 +6624,9 @@ var require_src = __commonJS({
   }
 });
 
-// node_modules/agent-base/dist/helpers.js
+// ../boiler-room-tools/node_modules/agent-base/dist/helpers.js
 var require_helpers = __commonJS({
-  "node_modules/agent-base/dist/helpers.js"(exports) {
+  "../boiler-room-tools/node_modules/agent-base/dist/helpers.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -6694,9 +6694,9 @@ var require_helpers = __commonJS({
   }
 });
 
-// node_modules/agent-base/dist/index.js
+// ../boiler-room-tools/node_modules/agent-base/dist/index.js
 var require_dist = __commonJS({
-  "node_modules/agent-base/dist/index.js"(exports) {
+  "../boiler-room-tools/node_modules/agent-base/dist/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -6850,9 +6850,9 @@ var require_dist = __commonJS({
   }
 });
 
-// node_modules/https-proxy-agent/dist/parse-proxy-response.js
+// ../boiler-room-tools/node_modules/https-proxy-agent/dist/parse-proxy-response.js
 var require_parse_proxy_response = __commonJS({
-  "node_modules/https-proxy-agent/dist/parse-proxy-response.js"(exports) {
+  "../boiler-room-tools/node_modules/https-proxy-agent/dist/parse-proxy-response.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -6946,9 +6946,9 @@ var require_parse_proxy_response = __commonJS({
   }
 });
 
-// node_modules/https-proxy-agent/dist/index.js
+// ../boiler-room-tools/node_modules/https-proxy-agent/dist/index.js
 var require_dist2 = __commonJS({
-  "node_modules/https-proxy-agent/dist/index.js"(exports) {
+  "../boiler-room-tools/node_modules/https-proxy-agent/dist/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7096,9 +7096,9 @@ var require_dist2 = __commonJS({
   }
 });
 
-// node_modules/web-push/src/web-push-lib.js
+// ../boiler-room-tools/node_modules/web-push/src/web-push-lib.js
 var require_web_push_lib = __commonJS({
-  "node_modules/web-push/src/web-push-lib.js"(exports, module) {
+  "../boiler-room-tools/node_modules/web-push/src/web-push-lib.js"(exports, module) {
     "use strict";
     var url = __require("url");
     var https = __require("https");
@@ -7383,26 +7383,26 @@ var require_web_push_lib = __commonJS({
   }
 });
 
-// node_modules/web-push/src/index.js
+// ../boiler-room-tools/node_modules/web-push/src/index.js
 var require_src2 = __commonJS({
-  "node_modules/web-push/src/index.js"(exports, module) {
+  "../boiler-room-tools/node_modules/web-push/src/index.js"(exports, module) {
     "use strict";
     var vapidHelper = require_vapid_helper();
     var encryptionHelper = require_encryption_helper();
     var WebPushLib = require_web_push_lib();
     var WebPushError = require_web_push_error();
     var WebPushConstants = require_web_push_constants();
-    var webPush = new WebPushLib();
+    var webPush2 = new WebPushLib();
     module.exports = {
       WebPushError,
       supportedContentEncodings: WebPushConstants.supportedContentEncodings,
       encrypt: encryptionHelper.encrypt,
       getVapidHeaders: vapidHelper.getVapidHeaders,
       generateVAPIDKeys: vapidHelper.generateVAPIDKeys,
-      setGCMAPIKey: webPush.setGCMAPIKey,
-      setVapidDetails: webPush.setVapidDetails,
-      generateRequestDetails: webPush.generateRequestDetails,
-      sendNotification: webPush.sendNotification.bind(webPush)
+      setGCMAPIKey: webPush2.setGCMAPIKey,
+      setVapidDetails: webPush2.setVapidDetails,
+      generateRequestDetails: webPush2.generateRequestDetails,
+      sendNotification: webPush2.sendNotification.bind(webPush2)
     };
   }
 });
@@ -7439,12 +7439,28 @@ async function loadSubs() {
     return [];
   }
 }
-async function sendToAll(title, body, tag) {
+async function loadJson(path) {
+  const t = await dbxToken();
+  const r = await fetch("https://content.dropboxapi.com/2/files/download", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + t, "Dropbox-API-Arg": JSON.stringify({ path }) }
+  });
+  if (!r.ok) return null;
+  try {
+    return JSON.parse(await r.text());
+  } catch (e) {
+    return null;
+  }
+}
+function setVapid() {
   import_web_push.default.setVapidDetails(
     process.env.VAPID_SUBJECT || "mailto:cloreconstruction@yahoo.com",
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
   );
+}
+async function sendToAll(title, body, tag) {
+  setVapid();
   const subs = await loadSubs();
   const payload = JSON.stringify({ title, body, tag: tag || "boiler-room" });
   let sent = 0, dead = 0;
@@ -7459,6 +7475,37 @@ async function sendToAll(title, body, tag) {
   return { sent, dead, total: subs.length };
 }
 
+// fnsrc/push-rules.mjs
+function hourIn(now, tz) {
+  try {
+    return parseInt(new Intl.DateTimeFormat("en-US", { timeZone: tz || "America/Anchorage", hour: "2-digit", hour12: false }).format(now || /* @__PURE__ */ new Date()), 10) % 24;
+  } catch (e) {
+    return (now || /* @__PURE__ */ new Date()).getHours();
+  }
+}
+function pushWindowOpen(win, hour) {
+  const from = win.from, to = win.to;
+  if (from === to) return true;
+  return from < to ? hour >= from && hour < to : hour >= from || hour < to;
+}
+function pushRule(settings, kind, urgent, hour) {
+  if (!settings || typeof settings !== "object") return { ok: true, why: "no settings" };
+  const k = String(kind || "other"), kinds = settings.kinds && typeof settings.kinds === "object" ? settings.kinds : {};
+  if (kinds[k] === false) return { ok: false, why: k + " is off" };
+  if (settings.urgent === true && !urgent) return { ok: false, why: "only urgent" };
+  if (settings.win && !pushWindowOpen(settings.win, hour)) return { ok: false, why: "outside his hours" };
+  return { ok: true, why: "" };
+}
+var num = (v, d) => {
+  const x = parseInt(v, 10);
+  return x >= 0 && x <= 23 ? x : d;
+};
+function pushAllowed(settings, kind, urgent, now) {
+  if (!settings || typeof settings !== "object") return { ok: true, why: "no settings" };
+  const win = settings.win && typeof settings.win === "object" ? { from: num(settings.win.from, 7), to: num(settings.win.to, 20) } : null;
+  return pushRule({ ...settings, win }, kind, urgent, hourIn(now, settings.tz));
+}
+
 // fnsrc/notify.mjs
 var notify_default = async (req) => {
   if (req.method !== "POST") return new Response("POST only", { status: 405 });
@@ -7468,6 +7515,14 @@ var notify_default = async (req) => {
     b = await req.json();
   } catch (e) {
   }
+  let settings = null;
+  try {
+    settings = await loadJson("/Clore DayLog/App Data/push-settings.json");
+  } catch (e) {
+    settings = null;
+  }
+  const gate = pushAllowed(settings, b.kind, b.urgent === true, /* @__PURE__ */ new Date());
+  if (!gate.ok) return Response.json({ sent: 0, dead: 0, total: 0, skipped: gate.why });
   const res = await sendToAll(String(b.title || "Boiler Room").slice(0, 80), String(b.body || "").slice(0, 200), b.tag);
   return Response.json(res);
 };

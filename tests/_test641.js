@@ -213,7 +213,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   ok('the mail path never pings the lock screen, and the hot-text ping carries no name or words', (await page.evaluate(() => window._notify.length)) === 0 && (() => {
     const src = fs.readFileSync(fileURLToPath(appUrl), 'utf8');
-    return src.includes("title: '🔥 A text needs you'") && !src.includes('🔥 ${from} — needs you');
+    return src.includes("pushOut('text', true, '🔥 A text needs you'") && !src.includes('🔥 ${from} — needs you');   // 🔔 v7.39 — the push rides through pushOut with its kind and urgency; the words are the same
   })());
 
   ok('sorting OFF = no judge call, and every sender is logged plain — nobody is asked (v6.67)', await page.evaluate(async () => {

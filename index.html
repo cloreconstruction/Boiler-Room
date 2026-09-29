@@ -935,6 +935,12 @@
   .pb-h2 { font-size: var(--fs12, 12px); font-weight: var(--fw8, 800); letter-spacing: .8px; color: var(--ink-muted); margin: 12px 0 6px; }
   .pb-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 6px 0 10px; }
   .pb-tile { border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+  /* 🔔 v7.39 — Setup → Notifications: the hours, the switches */
+  .nt-sub { font-weight: var(--fw8, 800); font-size: 13px; letter-spacing: .3px; margin: 12px 0 4px; }
+  .nt-win { align-items: center; gap: 6px; flex-wrap: wrap; }
+  .nt-win .mini-sel { min-height: 36px; font-size: 14px; }
+  .nt-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+  .nt-kinds .pick-chip, .nt-win .pick-chip { min-height: 36px; }
   .pb-tile span { display: block; font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); letter-spacing: .7px; color: var(--ink-muted); }
   .pb-tile b { display: block; font-size: 22px; font-weight: var(--fw8, 800); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .pb-tile i { display: block; font-style: normal; font-size: var(--fs12, 12px); color: var(--ink-2); }
@@ -4250,7 +4256,9 @@
         <button class="btn-primary" id="pushBtn" onclick="pushEnable()">Turn on notifications</button>
         <button class="btn-ghost" onclick="pushTest()">Send a test</button>
       </div>
-      <div class="hint" id="pushStatus" style="margin-top: 8px;">The 🌙 evening reminder and 📥 review alerts buzz this phone. iPhone: add the app to your home screen first (Share → Add to Home Screen), then turn these on from the installed app.</div>
+      <div class="hint" id="pushStatus" style="margin-top: 8px;">Alerts ring this phone in your hours, for the kinds you pick below. iPhone: add the app to your home screen first (Share → Add to Home Screen), then turn these on from the installed app.</div>
+      <!-- 🔔 v7.39 — Eric: "a time selector for 'notifications only between these times' and … turn on or off different type alerts … like 'from eric' or 'only urgent'" -->
+      <div id="ntBox"></div>
     </div>
     <!-- 📧 v6.40 — Eric: "i'll need a place to be able to add or delete or edit the always and
          never for email senders." The two lists the Inbox sweep keeps (v6.12): one row each, ✕ to
@@ -4336,7 +4344,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.38 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.39 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6329,7 +6337,7 @@ function openPanel(name) {
     if (name === 'hours') hOpenInit();
     if (name === 'myhours') { _lockArm = ''; renderMyHours(); }
     if (name === 'budget') { if (isCrew()) { closePanels(); return; } renderBudget(); }   // 💰 v6.84 — Eric's page only
-    if (name === 'settings') { renderWageSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', ');
+    if (name === 'settings') { renderWageSetup(); renderPushSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || '';   // 🔔 v7.39 if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', ');
       if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
       if ($('unlockWho')) $('unlockWho').innerHTML = crew.map(c => `<option>${esc(c)}</option>`).join('');
       renderQbLights(); initSetupCollapse(); }   // 🏠 v6.65 — the portal no longer renders here
@@ -7646,12 +7654,7 @@ function billMaybeSuggest(f, meta) {
       note: `From the statement photo — ${overdue ? `statement said due ${due} (already passed!)` : `due ${due}`}. Check the photo if the number looks off.` } });
     renderPendBanner(); savePendingSoon();
     toast(overdue ? `⚠ 💳 OVERDUE bill spotted — was due ${due}! It's in Review` : `💳 Bill spotted — due ${due}${amt != null && isFinite(+amt) ? ` · ${money(amt)}` : ''}. It's in Review ✓`);
-    if (prefs.pushSecret) {
-      fetch('/.netlify/functions/notify', { method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
-        body: JSON.stringify({ title: '💳 Bill spotted', body: overdue ? 'An overdue bill is waiting in Review' : 'A bill with a due date is waiting in Review', tag: 'bill-due' })
-      }).catch(() => {});
-    }
+    pushOut('bill', !!overdue, '💳 Bill spotted', overdue ? 'An overdue bill is waiting in Review' : 'A bill with a due date is waiting in Review', 'bill-due');   // 🔔 v7.39 — his hours and his switches
   } catch (e) { /* radar is best-effort — never break a photo read */ }
 }
 // 🔁 v5.05 RENEWAL RADAR — a policy/registration/permit with an expiration date becomes a
@@ -8212,26 +8215,14 @@ function saveNoteFrom(boxId, fromPanel) {
   ['nText', 'askText'].forEach(id => { if ($(id)) { $(id).value = ''; fitTa(id); } });
   if (fromPanel) closePanels();
   qnSel = new Set(); qnHeads = false; qnRcpt = false; qnCat = ''; _qnCatMore = false; tagBump(tags); renderTagChips(); renderCatRow();
-  if (isCrew() && nExtra.urg === 'now' && lsGet('daylog-push-secret')) {
-    // 🔥 NOW rings every subscribed phone immediately — the note itself still rides the sync
-    fetch('/.netlify/functions/notify', { method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-push-secret': lsGet('daylog-push-secret') },
-      body: JSON.stringify({ title: `🔥 ${CREW_NAME || 'Crew'} needs it NOW`, body: t.slice(0, 140), tag: 'crew-now' })
-    }).catch(() => {});
-  }
+  if (isCrew() && nExtra.urg === 'now') pushOut('crew', true, `🔥 ${CREW_NAME || 'Crew'} needs it NOW`, 'Open Boiler Room — it is pinned at the top.', 'crew-now');   // 🔔 v7.39 — Eric's hours and switches are checked at the cloud door; no note words on a lock screen (the v6.41 rule)
   qnRoute = ''; qnUrg = ''; renderRouteChips();
   const vis = nExtra.vis || '', wasAsk = qnAsk;
   qnAsk = false; visReset(); // back to the resting state for the next note
   // never let him think a bell went out when the lock ate it
   if (_lockedOut) toast('🔒 Just me — so nobody was rung and this stays on your phone', false);
   if (vis) publishSharedNotes(); // fire it toward the crew folder right away when online
-  if (wasAsk && !isCrew() && prefs.pushSecret) {
-    // 📢 an ask rings the phones right now — the card itself rides the sweep
-    fetch('/.netlify/functions/notify', { method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
-      body: JSON.stringify({ title: '📢 Eric needs an answer', body: 'Open Boiler Room to read it.', tag: 'crew-ask' })   // 📵 v6.42 — no words on a lock screen
-    }).catch(() => {});
-  }
+  if (wasAsk && !isCrew()) pushOut('ask', true, '📢 Eric needs an answer', 'Open Boiler Room to read it.', 'crew-ask', 'crew');   // 📵 v6.42 — no words on a lock screen · 🔔 v7.39 — meant for the crew's phones, which nothing rings yet (parked)
   qnJobPick = ''; renderAllJobChips(); // the wheel snaps back after every send
   notePhotos = []; _qnDraft = ''; renderNotePhotoList(); // hand the File objects to the uploader; metas stay until it's done
   if (routed) renderMyRequests(); // the strip pops up right away, ✓ SENT lit
@@ -8533,10 +8524,7 @@ async function shareSummary(ev, p, name) {
     for (const f of folks) await dbxUpload((f.path_display || f.path_lower) + '/Summaries/' + name, txt);
     sumShared.add(p); lsSet('daylog-sum-shared', JSON.stringify([...sumShared]));
     loadSummaryList();
-    if (prefs.pushSecret) fetch('/.netlify/functions/notify', { method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
-      body: JSON.stringify({ title: '📊 Summary unlocked', body: name.replace(/\.(html|md|pdf)$/, '') + ' is ready — open Summaries to read it', tag: 'sum-share' })
-    }).catch(() => {});
+    pushOut('summary', false, '📊 Summary unlocked', 'A summary is ready — open Summaries to read it', 'sum-share', 'crew');   // 🔔 v7.39 — for the crew's phones (nothing rings them yet)
     toast(`🔓 Unlocked for ${folks.length} crew ✓`);
   } catch (e) { toast("Couldn't unlock — check Dropbox and try again", false); }
 }
@@ -8841,8 +8829,13 @@ function renderBusiness(force) {
     return `<select class="mini-sel" aria-label="from which month" onchange="prefs.bizFrom = this.value; scheduleSave(); renderBusiness();"><option value=""${!prefs.bizFrom ? ' selected' : ''}>from ${esc(bizMonthWord(auto.mk))} — ${esc(auto.why)}</option>${opts.map(mk => `<option value="${mk}"${prefs.bizFrom === mk ? ' selected' : ''}>from ${esc(bizMonthWord(mk))}</option>`).join('')}</select>`; })() : '';
   const deposits = a ? a.lines.filter(l => l.amt > 0 && !/interest/i.test(l.desc)).slice().sort((x, y) => y.d.localeCompare(x.d)) : [];
   const cands = deposits.filter(l => !bizMark(l.id) && (bizPairOut(a, l) || bizPairIn(a, l))), marked = deposits.filter(l => bizMark(l.id));
-  const row = l => { const m = bizMark(l.id), out = bizPairOut(a, l), back = bizPairIn(a, l);
-    return `<div class="biz-line"><span class="biz-ld">${esc(bizDayWord(l.d))}</span><b>${esc(bizMoney(l.amt, true))}</b><span class="biz-lw">${esc(String(l.desc || '').slice(0, 60))}</span>${m ? `<span class="biz-tag">${m.kind === 'parked' ? '⇄ PARKED' + (m.until ? ' — out again ' + esc(bizDayWord(m.until)) : ' — still here') : '↩ RETURNED — money coming back'}</span>` : out ? `<span class="biz-tag lit">⚠ LOOKS PARKED — the same money went back out ${esc(bizDayWord(out.d))}</span>` : back ? `<span class="biz-tag lit">⚠ LOOKS RETURNED — the same money went out ${esc(bizDayWord(back.d))}</span>` : ''}<span class="biz-lb"><button type="button" class="pick-chip${m && m.kind === 'parked' ? ' sel' : ''}" aria-pressed="${!!(m && m.kind === 'parked')}" onclick="bizMarkSet('${escq(k)}', '${escq(l.id)}', 'parked')" title="parked here for a while, then back out — out of the bars, and off the balance line until it leaves">${m && m.kind === 'parked' ? '✓ ' : ''}⇄ Parked</button><button type="button" class="pick-chip${m && m.kind === 'returned' ? ' sel' : ''}" aria-pressed="${!!(m && m.kind === 'returned')}" onclick="bizMarkSet('${escq(k)}', '${escq(l.id)}', 'returned')" title="money coming back that went out before — out of the bars; the balance line keeps it">${m && m.kind === 'returned' ? '✓ ' : ''}↩ Returned</button></span></div>`; };
+  const row = l => { const m = bizMark(l.id), out = bizPairOut(a, l), back = bizPairIn(a, l), isP = !!(m && m.kind === 'parked'), isR = !!(m && m.kind === 'returned');
+    // 📈 v7.39 — Eric, on the parked deposit: "i clicked the button that told it to not count the 50k and it changed the bar part of the
+    // graph but not the line" — he had tapped ↩ Returned, which is bars only. Each plate says what it does to the graph, and the one
+    // the pre-light points at comes first.
+    const pk = `<button type="button" class="pick-chip${isP ? ' sel' : ''}" aria-pressed="${isP}" onclick="bizMarkSet('${escq(k)}', '${escq(l.id)}', 'parked')" title="parked here for a while, then back out">${isP ? '✓ ' : ''}⇄ Parked — off the bars AND the line${out ? ' until ' + esc(bizDayWord(out.d)) : (isP && m.until ? ' until ' + esc(bizDayWord(m.until)) : '')}</button>`;
+    const rt = `<button type="button" class="pick-chip${isR ? ' sel' : ''}" aria-pressed="${isR}" onclick="bizMarkSet('${escq(k)}', '${escq(l.id)}', 'returned')" title="money coming back that went out before">${isR ? '✓ ' : ''}↩ Returned — off the bars only</button>`;
+    return `<div class="biz-line"><span class="biz-ld">${esc(bizDayWord(l.d))}</span><b>${esc(bizMoney(l.amt, true))}</b><span class="biz-lw">${esc(String(l.desc || '').slice(0, 60))}</span>${m ? `<span class="biz-tag">${isP ? '⇄ PARKED — off the bars and the line' + (m.until ? ' until ' + esc(bizDayWord(m.until)) : ' — still here') : '↩ RETURNED — off the bars only, the line keeps it'}</span>` : out ? `<span class="biz-tag lit">⚠ LOOKS PARKED — the same money went back out ${esc(bizDayWord(out.d))}</span>` : back ? `<span class="biz-tag lit">⚠ LOOKS RETURNED — the same money went out ${esc(bizDayWord(back.d))}</span>` : ''}<span class="biz-lb">${back && !out ? rt + pk : pk + rt}</span></div>`; };
   box.innerHTML = `<div id="bizBox"><h3>📈 BUSINESS <span class="hint" style="font-weight: 400; font-size: 13px;">— charts and numbers · yours alone</span>${winX('bizClose()', 'close')}</h3>
     <div class="rev-row" style="flex-wrap: wrap; gap: 8px; margin: 6px 0 12px;"><button class="btn-ghost" style="flex: 1; min-width: 140px;" onclick="openMoneyPage('ticker')">💰 Profit Ticker</button><button class="btn-ghost" style="flex: 1; min-width: 140px;" onclick="openMoneyPage('tracker')">📊 Project Tracker</button></div>
     <div class="pb-card biz-card"><div class="biz-title">🏦 SAVINGS GROWTH${k ? ` <span class="hint" style="font-weight: 400;">— ${esc(bizAcctWord(k))}</span>` : ''}</div>
@@ -8884,6 +8877,75 @@ function b64ToU8(s) {
   const b = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
   return Uint8Array.from([...b].map(c => c.charCodeAt(0)));
 }
+// ================= 🔔 v7.39 — HIS HOURS AND HIS SWITCHES =================
+// Eric, 2026-09-28: "in setup under notifications (besides clients) there should be a time selector for: 'notifications only
+// between these times' and also be able to turn on or off different type alerts, decide which ones, like 'from eric' or 'only
+// urgent'." One rule, obeyed everywhere a push to his own devices starts — in the app (pushOut) and at the cloud door
+// (fnsrc/notify.mjs reads App Data/push-settings.json; fnsrc/push-rules.mjs is the same rule, word for word) — and the cloud
+// mail sorter sleeps by the same hours (mail-rules.json's quiet is the window turned inside out). The window is on his own
+// clock; a kind he turned off never rings; ⚠ only urgent lets through a text that needs him, a crew member's NOW note and an
+// overdue bill. Homeowner pings are their own thing (v6.68: 9–5 Alaska, set on each client's page). A blocked push shows
+// nothing — the thing itself is still pinned in the app. A crew phone keeps its own switches for the day Eric's phone rings
+// crew phones (their subscriptions sit in their own folders, where the sender does not look yet — parked, his go).
+const PUSH_KINDS_ERIC = [['text', '🔥', 'A text that needs you'], ['crew', '👷', 'From the crew — a NOW note, an answer'], ['bill', '💳', 'A bill spotted'], ['weather', '🌧', 'A weather warning'], ['mail', '📧', 'An important email (the cloud sorter)']];
+const PUSH_KINDS_CREW = [['eric', '📨', 'From Eric'], ['ask', '📢', 'Eric needs an answer'], ['board', '📋', 'Something new on your board']];
+function pushWin() { const w = prefs.pushWin && typeof prefs.pushWin === 'object' ? prefs.pushWin : {}; const n = (v, d) => { const x = parseInt(v, 10); return x >= 0 && x <= 23 ? x : d; }; return { from: n(w.from, 7), to: n(w.to, 20) }; }
+function pushKinds() { return prefs.pushKinds && typeof prefs.pushKinds === 'object' ? prefs.pushKinds : {}; }
+function pushSettings() { let tz = 'America/Anchorage'; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) {} return { win: pushWin(), kinds: pushKinds(), urgent: !!prefs.pushUrgent, tz }; }
+// the rule itself — the same words as fnsrc/push-rules.mjs (the suite runs both on one table)
+function pushWindowOpen(win, hour) {
+  const from = win.from, to = win.to;
+  if (from === to) return true;   // all day
+  return from < to ? (hour >= from && hour < to) : (hour >= from || hour < to);   // an overnight window wraps midnight
+}
+function pushRule(settings, kind, urgent, hour) {
+  if (!settings || typeof settings !== 'object') return { ok: true, why: 'no settings' };
+  const k = String(kind || 'other'), kinds = settings.kinds && typeof settings.kinds === 'object' ? settings.kinds : {};
+  if (kinds[k] === false) return { ok: false, why: k + ' is off' };
+  if (settings.urgent === true && !urgent) return { ok: false, why: 'only urgent' };
+  if (settings.win && !pushWindowOpen(settings.win, hour)) return { ok: false, why: 'outside his hours' };
+  return { ok: true, why: '' };
+}
+function pushAllowed(kind, urgent) { return pushRule(pushSettings(), kind, urgent, new Date().getHours()); }
+// every push the app sends walks through here: the secret, the switches, the hours — then the cloud door checks them again
+function pushOut(kind, urgent, title, body, tag, to) {
+  const secret = CREW_NAME ? lsGet('daylog-push-secret') : prefs.pushSecret;
+  if (!secret) return false;   // nothing has ever rung without the secret (⚙ Setup → Crew → the push-secret box)
+  if (to === 'crew') return false;   // meant for the crew's phones — nothing reaches them yet (see above); ringing Eric's own devices about his own note was never right
+  if (!CREW_NAME && !pushAllowed(kind, urgent).ok) return false;   // his own rules, here first; a crew phone's push to Eric is checked at the cloud door only
+  fetch('/.netlify/functions/notify', { method: 'POST', headers: { 'content-type': 'application/json', 'x-push-secret': secret }, body: JSON.stringify({ title, body, tag, kind, urgent: !!urgent }) }).catch(() => {});
+  return true;
+}
+function mailQuietRule() {   // the cloud mail sorter's quiet hours = his window turned inside out; 📧 off or only-urgent = quiet all day
+  const hh = h => String(h).padStart(2, '0') + ':00', w = pushWin();
+  if (pushKinds().mail === false || prefs.pushUrgent) return { from: '00:00', to: '24:00' };
+  if (w.from === w.to) return { from: '00:00', to: '00:00' };   // all day: never quiet
+  return { from: hh(w.to), to: hh(w.from) };
+}
+let _pushPubT = null;
+function pushSettingsPublish() {
+  if (CREW_NAME || !dbx.refreshToken) return;
+  clearTimeout(_pushPubT);
+  _pushPubT = setTimeout(() => { dbxUpload(DBX_ROOT + '/App Data/push-settings.json', JSON.stringify({ v: 1, at: new Date().toISOString(), ...pushSettings() }, null, 1)).catch(() => {}); publishMailRules(); }, 800);
+}
+function pushHourWord(h) { return h === 0 ? '12 AM' : h < 12 ? h + ' AM' : h === 12 ? '12 PM' : (h - 12) + ' PM'; }
+function ntWin(which, v) { const w = pushWin(); w[which] = parseInt(v, 10); prefs.pushWin = w; scheduleSave(); pushSettingsPublish(); renderPushSetup(); }
+function ntAllDay() { const w = pushWin(); prefs.pushWin = { from: w.from, to: w.from }; scheduleSave(); pushSettingsPublish(); renderPushSetup(); toast('🔔 All day — alerts ring at any hour'); }
+function ntKind(k) { const kinds = { ...pushKinds() }; kinds[k] = kinds[k] === false; prefs.pushKinds = kinds; scheduleSave(); pushSettingsPublish(); renderPushSetup(); }
+function ntUrgent() { prefs.pushUrgent = !prefs.pushUrgent; scheduleSave(); pushSettingsPublish(); renderPushSetup(); }
+function renderPushSetup() {
+  const box = $('ntBox'); if (!box) return;
+  const w = pushWin(), kinds = pushKinds(), all = w.from === w.to, list = CREW_NAME ? PUSH_KINDS_CREW : PUSH_KINDS_ERIC;
+  const sel = (id, v, which) => `<select class="mini-sel" id="${id}" aria-label="${which === 'from' ? 'from' : 'until'}" onchange="ntWin('${which}', this.value)">${Array.from({ length: 24 }, (_, h) => `<option value="${h}"${h === v ? ' selected' : ''}>${pushHourWord(h)}</option>`).join('')}</select>`;
+  const chip = (on, word, fn) => `<button type="button" class="pick-chip${on ? ' sel' : ''}" aria-pressed="${on}" onclick="${fn}">${on ? '✓ ON — ' : '○ OFF — '}${word}</button>`;
+  box.innerHTML = `<div class="nt-sub">🕘 Only between these times</div>
+    <div class="frow nt-win">${sel('ntFrom', w.from, 'from')}<span class="hint" style="margin: 0;">to</span>${sel('ntTo', w.to, 'to')}<button type="button" class="pick-chip${all ? ' sel' : ''}" aria-pressed="${all}" onclick="ntAllDay()">${all ? '✓ ' : ''}☀ All day</button></div>
+    <div class="hint" style="margin: 4px 0 0;">${all ? 'Alerts ring at any hour.' : `Alerts ring from ${pushHourWord(w.from)} to ${pushHourWord(w.to)} on this phone's clock — outside that, nothing rings (the thing itself still waits in the app).`}</div>
+    <div class="nt-sub">🔔 Which alerts</div>
+    <div class="nt-kinds">${list.map(([k, ic, word]) => chip(kinds[k] !== false, `${ic} ${word}`, `ntKind('${k}')`)).join('')}</div>
+    <div class="frow" style="margin-top: 8px;">${chip(!!prefs.pushUrgent, '⚠ Only urgent — a text that needs you, a NOW note, an overdue bill', 'ntUrgent()')}</div>
+    <div class="hint" style="margin: 8px 0 0; line-height: 1.5;">${CREW_NAME ? 'These are ready for the day Eric\'s phone rings crew phones — today it does not (that road is still being built), so nothing rings this phone yet.' : `⏱ The crew's hours reminder keeps its own switch and its own hour in the Crew hours window. 🏠 Homeowner pings are set on each client's page and ring 9–5 Alaska. The cloud mail sorter sleeps by these same hours.${prefs.pushSecret ? '' : ' ⚠ The push secret is not on this phone yet — until it is pasted (⚙ Setup → Crew), only the cloud alerts (an important email, the crew\'s hours) can ring.'}`}</div>`;
+}
 async function pushEnable() {
   const st = $('pushStatus');
   try {
@@ -8902,7 +8964,7 @@ async function pushEnable() {
     subs = subs.filter(x => ((x.sub || x).endpoint) !== j.endpoint); // one entry per device
     subs.push({ sub: j, device: navigator.userAgent.slice(0, 60), ts: new Date().toISOString() });
     await dbxUpload(DBX_ROOT + '/App Data/push-subs.json', JSON.stringify(subs, null, 1));
-    st.textContent = `✓ On — this phone gets the 🌙 evening reminder and 📥 review alerts. ${subs.length} device${subs.length === 1 ? '' : 's'} signed up.`;
+    st.textContent = `✓ On — this phone rings for the alerts you pick below, in your hours. ${subs.length} device${subs.length === 1 ? '' : 's'} signed up.`;   // 🔔 v7.39
     toast('Notifications on ✓');
   } catch (e) {
     st.textContent = "⚠ Couldn't turn on: " + (e.message || e) + ' — on iPhone this only works from the installed home-screen app.';
@@ -9962,7 +10024,7 @@ let _mailRulesLast = '';
 function publishMailRules() {
   if (!dbx.refreshToken || CREW_NAME) return;
   const rules = { v: 1, at: new Date().toISOString(), sort: mailSortOn(), ok: mailOk(), no: mailNo(), loud: mailLoud(), hush: mailHush(),
-    personal: mailPersonal(), personalNames: personalFolks(), quiet: prefs.mailQuiet || { from: '20:00', to: '07:00' } };
+    personal: mailPersonal(), personalNames: personalFolks(), quiet: mailQuietRule() };   // 🔔 v7.39 — his hours (Setup → 🔔) turned inside out: the watcher sleeps when he does; 📧 off or only-urgent = quiet all day
   const key = JSON.stringify([rules.sort, rules.ok, rules.no, rules.loud, rules.hush, rules.personal, rules.personalNames, rules.quiet]);
   if (key === _mailRulesLast) return;
   _mailRulesLast = key;
@@ -10444,12 +10506,7 @@ async function inboxSweepOnce() {
         // 📥 v6.90 — a hot text found days late (the catch-up) still pins its card, but it does not ring: "needs you NOW"
         // about something four days old is a false alarm, and a backlog would ring a dozen of them in a minute.
         const late = f.server_modified && Date.now() - +new Date(f.server_modified) > 12 * 3600e3;
-        if (!CREW_NAME && prefs.pushSecret && !late) {
-          fetch('/.netlify/functions/notify', { method: 'POST',
-            headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
-            body: JSON.stringify({ title: '🔥 A text needs you', body: 'It is pinned at the top of Boiler Room.', tag: 'hot-text' })   // 📵 v6.41 — no names, no message words on a lock screen
-          }).catch(() => {});
-        }
+        if (!CREW_NAME && !late) pushOut('text', true, '🔥 A text needs you', 'It is pinned at the top of Boiler Room.', 'hot-text');   // 📵 v6.41 — no names, no message words on a lock screen · 🔔 v7.39 — his hours and his switches
       } else {
         autoLogText(from, body, photos, personal, f.server_modified);
         pendMarkDone(id);           // v5.98 — WRITTEN DOWN, so a restart can't forget it
@@ -12602,17 +12659,13 @@ function answerAsk(id, job) {
   if (!txt) { toast('Type the answer first', false); return; }
   addEntry('Note', `↩ ANSWER: ${txt}`, jobs.includes(job) ? job : curJob, { route: 'Eric', urg: 'now', askRef: +id || id });
   asksAnswered.add(String(id)); lsSet('daylog-asks-answered', JSON.stringify([...asksAnswered].slice(-50)));
-  if (lsGet('daylog-push-secret')) {
-    fetch('/.netlify/functions/notify', { method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-push-secret': lsGet('daylog-push-secret') },
-      body: JSON.stringify({ title: `↩ ${CREW_NAME || 'Crew'} answered`, body: txt.slice(0, 140), tag: 'crew-ask' })
-    }).catch(() => {});
-  }
+  pushOut('crew', false, `↩ ${CREW_NAME || 'Crew'} answered`, 'Open Boiler Room to read it.', 'crew-ask');   // 🔔 v7.39 — no answer words on a lock screen; Eric's hours and switches are checked at the cloud door
   renderCrewAsks();
   toast('↩ Answer sent to Eric ✓');
 }
 let _crFEJob = '', _crFETag = '';
-function renderCrewShared() {
+function renderCrewShared() { thBoxKeep(); renderCrewShared0(); thBoxDraw(); }   // 💬 v7.39
+function renderCrewShared0() {
   const card = $('crewSharedCard');
   if (!card) return;
   // in Eric's 👁 preview, derive the list from his own entries so he sees exactly what would land
@@ -12774,16 +12827,33 @@ function thItem(owner, id) {
   return (_crewLog[owner] || []).find(e => String(e.id) === String(id)) || null;
 }
 // 💬 Respond — one box on both phones. who = the crew member on the other end (Eric's phone); a crew phone always talks to Eric
-function thRespondOpen(owner, id, who, board) {
-  const box = $('thBox-' + owner + '-' + id); if (!box) return;
-  if (box.dataset.open) { box.dataset.open = ''; box.innerHTML = ''; return; }
+// 💬 v7.39 — Eric: "i was typing in the response box and it dissapeared, i don't think i accidently hit enter." He had not: the card
+// redraws itself on every sync (checkCrewLogs → renderCrewFeed on his phone; checkSharedNotes → renderCrewShared on a crew phone,
+// and renderAll on both) and the box lived only in the DOM, words and all. The open box and his words live HERE now; every redraw
+// puts them back (thBoxDraw, from a wrapper round both renders), the caret at the end, the keyboard up; ✕ Never mind lets them go.
+let _thOpen = null, _thDraft = '', _thTyping = false, _thRefocus = false;
+function thBoxKeep() { const el = document.activeElement; if (el && /^thT-/.test(el.id || '')) { _thDraft = el.value; _thRefocus = true; } }   // the box's own blur fires as the redraw removes it — so the wish to refocus is kept apart from the typing flag
+function thBoxDraw() {
+  if (!_thOpen) return;
+  const { owner, id, who, board } = _thOpen, box = $('thBox-' + owner + '-' + id);
+  if (!box) return;   // the item left the card — the words wait until it is back, or until he opens another
   box.dataset.open = '1';
-  box.innerHTML = `<textarea id="thT-${esc(owner)}-${esc(id)}" rows="2" class="grow" style="width: 100%; margin-top: 6px;" placeholder="your response — it stays with this item on both phones"></textarea>
+  box.innerHTML = `<textarea id="thT-${esc(owner)}-${esc(id)}" rows="2" class="grow" style="width: 100%; margin-top: 6px;" placeholder="your response — it stays with this item on both phones" oninput="_thDraft = this.value" onfocus="_thTyping = true" onblur="_thTyping = false"></textarea>
     <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
       <button type="button" class="btn-primary th-send" style="margin: 0;" onclick="thRespondSend('${escq(owner)}', '${escq(String(id))}', '${escq(who || '')}')">↩ Send</button>
       ${board && CREW_NAME ? `<button type="button" class="pick-chip th-done" onclick="thRespondSend('${escq(owner)}', '${escq(String(id))}', '${escq(who || '')}', true)" title="says done AND checks the line off Eric's Board">✓ Done</button>` : ''}
+      <button type="button" class="pick-chip th-never" onclick="thRespondClose()">✕ Never mind</button>
     </div>`;
-  const t = $('thT-' + owner + '-' + id); if (t) t.focus();
+  const t = $('thT-' + owner + '-' + id);
+  if (t) { t.value = _thDraft; if (_thTyping || _thRefocus) { _thRefocus = false; _thTyping = true; try { t.focus(); t.selectionStart = t.selectionEnd = t.value.length; } catch (e) {} } }
+}
+function thRespondClose() { const o = _thOpen; _thOpen = null; _thDraft = ''; _thTyping = false; _thRefocus = false; if (o) { const box = $('thBox-' + o.owner + '-' + o.id); if (box) { box.dataset.open = ''; box.innerHTML = ''; } } }
+function thRespondOpen(owner, id, who, board) {
+  const box = $('thBox-' + owner + '-' + id); if (!box) return;
+  if (_thOpen && _thOpen.owner === owner && String(_thOpen.id) === String(id)) { thRespondClose(); return; }   // the same plate again folds it
+  thRespondClose();   // one box at a time — words typed into another item go only when he opens a different item on purpose
+  _thOpen = { owner, id, who, board }; _thDraft = ''; _thTyping = true;
+  thBoxDraw();
 }
 function thRespondSend(owner, id, who, done) {
   if (crewPreview) { toast('👁 Preview — on a crew phone this sends the response straight to you'); return; }
@@ -12797,7 +12867,7 @@ function thRespondSend(owner, id, who, done) {
   if (done && CREW_NAME) { extra.boardRef = nid; const s = crewBoardDoneSet(); s.add(String(id)); lsSet('daylog-board-done', JSON.stringify([...s].slice(-100))); }   // ✓ Done inside Respond: Eric's Board line ticks off too
   addEntry('Note', '↩ ' + txt.slice(0, 600), job, extra);
   thMark(owner, id);
-  const box = $('thBox-' + owner + '-' + id); if (box) { box.dataset.open = ''; box.innerHTML = ''; }
+  thRespondClose();   // 💬 v7.39
   if (CREW_NAME) renderCrewShared(); else { publishSharedNotes(); renderCrewFeed(); }
   toast(CREW_NAME ? '↩ Sent to Eric — it stays with the item on both phones ✓' : `↩ Sent to ${who === 'crew' ? 'the crew' : (who || owner)} — it stays with the item on both phones ✓`);
 }
@@ -12981,7 +13051,8 @@ function crewFeedSearch(v) {
   renderCrewFeed();
   const b = $('cfSearch'); if (b) { b.focus(); const n = b.value.length; try { b.setSelectionRange(n, n); } catch (e) {} }   // the box keeps his thumb through the redraw
 }
-function renderCrewFeed() {
+function renderCrewFeed() { thBoxKeep(); renderCrewFeed0(); thBoxDraw(); }   // 💬 v7.39 — the open Respond box and its words ride through the redraw
+function renderCrewFeed0() {
   const card = $('crewFeedCard');
   if (!card) return;
   const all = isCrew() ? [] : crewFeedRows();
@@ -18538,12 +18609,7 @@ async function weatherSweep() {
       pri: 2, job: jobsAtRisk[0].job || '', due: today,
       note: `Weather-sensitive work spotted on the board: ${jobsAtRisk.slice(0, 3).map(t => t.text.slice(0, 40)).join(' · ')}. Forecast for Soldotna, tomorrow.` } });
     renderPendBanner(); savePendingSoon();
-    if (prefs.pushSecret) {
-      fetch('/.netlify/functions/notify', { method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
-        body: JSON.stringify({ title: freezing ? '🥶 Weather warning' : '🌧 Weather warning', body: `Tomorrow: ${woe} — and you've got weather-sensitive work on the board`, tag: 'weather' })
-      }).catch(() => {});
-    }
+    pushOut('weather', false, freezing ? '🥶 Weather warning' : '🌧 Weather warning', `Tomorrow: ${woe} — and you've got weather-sensitive work on the board`, 'weather');   // 🔔 v7.39 — his hours and his switches
   } catch (e) { /* forecast is a bonus — never let it break a sync */ }
 }
 let _pendSaveTimer = null;
@@ -20964,8 +21030,7 @@ function brdCrew(id, name) {
   if (x.vis !== 'crew') { const v = Array.isArray(x.vis) ? x.vis.slice() : x.vis ? [x.vis] : []; if (!v.includes(name)) v.push(name); x.vis = v.length === 1 ? v[0] : v; }
   scheduleSave(); publishSharedNotes(); renderLog(); renderReview();
   // generic words on the lock screen — no names, no dollars (standing rule)
-  if (prefs.pushSecret) fetch('/.netlify/functions/notify', { method: 'POST', headers: { 'content-type': 'application/json', 'x-push-secret': prefs.pushSecret },
-    body: JSON.stringify({ title: '📋 Board', body: 'Something new is on your board — open FROM ERIC', tag: 'board' }) }).catch(() => {});
+  pushOut('board', false, '📋 Board', 'Something new is on your board — open WITH ERIC', 'board', 'crew');   // 🔔 v7.39 — for the crew's phones (nothing rings them yet)
   toast(`👷 On ${name}'s board — lands on the next sync ✓`);
 }
 // 👷 on a crew phone: ✓ on a board line Eric sent. Rides back to Eric as a note with boardRef; his phone
@@ -22713,7 +22778,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.38';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.39';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

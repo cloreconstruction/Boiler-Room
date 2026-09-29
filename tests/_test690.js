@@ -45,6 +45,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     window.dbxDownload = async p => { const f = F.files.find(f => f.path_lower === String(p).toLowerCase()); if (f) F.dl[f.name] = (F.dl[f.name] || 0) + 1; return f ? f.txt : null; };
     const realFetch = window.fetch;
     window.fetch = async (u, init) => { if (/functions\/notify/.test(String(u))) { F.rings++; return { ok: true, json: async () => ({}) }; } return realFetch(u, init); };
+    prefs.pushWin = { from: 0, to: 0 };   // 🔔 v7.39 — his hours: all day here, so the ring count does not depend on the clock
     const bs = busyShow; window.busyShow = w => { F.band.push(String(w)); return bs(w); };
     window._settle = async () => { for (let i = 0; i < 400; i++) { await new Promise(r => setTimeout(r, 25)); if (!_sweepBusy && !_sweepNext) return true; } return false; };
   });

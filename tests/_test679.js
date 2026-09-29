@@ -162,7 +162,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   console.log('— 👷 v6.79 Phil: alert him, and his ✓ comes back —');
 
-  ok('👷 Phil on a line puts it on his phone (sendTo + vis), pushes generic words with no name and no dollars, and shows on the line; tap again takes it back', await page.evaluate(async () => {
+  ok('👷 Phil on a line puts it on his phone (sendTo + vis), sends NO push yet (🔔 v7.39: a push for the crew has nowhere to land — it used to ring Eric\'s own phone about his own move), and shows on the line; tap again takes it back', await page.evaluate(async () => {
     const id = _e.thought.id; prefs.pushSecret = 'sec'; window._pushes = [];
     const realFetch = window.fetch;
     window.fetch = (u, o) => { if (/functions\/notify/.test(String(u))) { window._pushes.push(JSON.parse(o.body)); return Promise.resolve({ ok: true }); } return realFetch(u, o); };
@@ -171,7 +171,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     if (!chip) { window.fetch = realFetch; return false; }
     chip.click(); await new Promise(r => setTimeout(r, 20));
     const sent = Array.isArray(_e.thought.sendTo) && _e.thought.sendTo.includes('Phil') && _e.thought.vis === 'Phil' && (window._pubN || 0) > 0 &&
-      window._pushes.length === 1 && window._pushes[0].tag === 'board' && !/Phil|\$|\d{3}/.test(window._pushes[0].title + ' ' + window._pushes[0].body) &&
+      window._pushes.length === 0 &&   // 🔔 v7.39 — pushOut('board', …, 'crew') rings nobody until crew phones can be rung
       document.querySelector(`.bd-line[data-key="e:${id}"] .bd-lamp`).classList.contains('on');   // v6.80 — the line is open (its words are a box), so the 👷 lamp is what shows it on the line
     const bits = brdShareBits(_e.thought);
     const rides = bits.board && bits.board.p === 0 && bits.board.sub.length === 1 && bits.board.sub[0].t === 'get the 2x6s' && bits.board.sub[0].done === true && bits.boardDone === undefined;
@@ -226,11 +226,13 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const rowFive = [...$('crewSharedList').querySelectorAll('.sum-row')].find(r => /frame the deck/.test(r.textContent));
     const rowSix = [...$('crewSharedList').querySelectorAll('.sum-row')].find(r => /plain note/.test(r.textContent));
     [...rowFive.querySelectorAll('button')].find(b => /💬 Respond/.test(b.textContent)).click();
-    [...rowSix.querySelectorAll('button')].find(b => /💬 Respond/.test(b.textContent)).click();
+    const fiveDone = !!document.querySelector('#thBox-Eric-5 .th-done');
+    [...rowSix.querySelectorAll('button')].find(b => /💬 Respond/.test(b.textContent)).click();   // 💬 v7.39 — one box at a time: this folds 5's
     return CREW_NAME === 'Phil' && card.style.display !== 'none' && !!rowFive && rowFive.querySelectorAll('.bd-cube.on').length === 2 && /get the 2x6s/.test(rowFive.textContent) &&
-      !!document.querySelector('#thBox-Eric-5 .th-done') && !document.querySelector('#thBox-Eric-6 .th-done') && ![...rowFive.querySelectorAll('button')].find(b => /tell Eric/.test(b.textContent));
+      fiveDone && !document.querySelector('#thBox-Eric-5 .th-done') && !document.querySelector('#thBox-Eric-6 .th-done') && ![...rowFive.querySelectorAll('button')].find(b => /tell Eric/.test(b.textContent));
   }));
   ok('his ✓ Done (inside Respond) writes a note for Eric carrying the line\'s id, and the row shows ✓ DONE', await p2.evaluate(() => {
+    [...[...$('crewSharedList').querySelectorAll('.sum-row')].find(r => /frame the deck/.test(r.textContent)).querySelectorAll('button')].find(b => /💬 Respond/.test(b.textContent)).click();   // 💬 v7.39 — open 5's box again (6's took its place)
     document.querySelector('#thBox-Eric-5 .th-done').click();
     const e = entries[0];
     const row2 = [...$('crewSharedList').querySelectorAll('.sum-row')].find(r => /frame the deck/.test(r.textContent));

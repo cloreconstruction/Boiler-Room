@@ -40,6 +40,17 @@ export async function loadSubs() {
   catch (e) { return []; }
 }
 
+// 🔔 v7.39 — any small JSON file of his (the push settings); null when it is not there or will not parse
+export async function loadJson(path) {
+  const t = await dbxToken();
+  const r = await fetch('https://content.dropboxapi.com/2/files/download', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + t, 'Dropbox-API-Arg': JSON.stringify({ path }) }
+  });
+  if (!r.ok) return null;
+  try { return JSON.parse(await r.text()); } catch (e) { return null; }
+}
+
 export function setVapid() {
   webPush.setVapidDetails(
     process.env.VAPID_SUBJECT || 'mailto:cloreconstruction@yahoo.com',

@@ -63,7 +63,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     [...card.querySelectorAll('.pick-chip')].find(b => /Parked/.test(b.textContent)).click();
     const s = bizSeries('1234', ''), r = s.rows, m = Object.values(bizStore().marks)[0];
     return r[1].added === 1200 && r[1].adj === 2000 && r[1].actual === 9000 && r[2].added === 900 && r[2].adj === 2900 && r[3].added === 600 && r[3].adj === 3500 && s.avg === Math.round((2300 + 1200 + 900) / 3 * 100) / 100 && m.kind === 'parked' && m.until === '2026-05-02' &&
-      /⇄ PARKED — out again May 2/.test($('revBox').textContent) && _said.some(x => /⇄ Parked — out of the bars, and off the balance line until May 2/.test(x));
+      /⇄ PARKED — off the bars and the line until May 2/.test($('revBox').textContent)   /* 📈 v7.39 words */ && _said.some(x => /⇄ Parked — out of the bars, and off the balance line until May 2/.test(x));
   }), await page.evaluate(() => JSON.stringify({ rows: bizSeries('1234', '').rows.map(r => [r.mk, r.added, r.adj, r.actual]), marks: bizStore().marks, said: _said.slice(-2) })));
   ok('the drawn chart: teal bars with their amounts, the orange line ending with the exact balance, the dashed average with its word, ONE shared axis whose top clears the tallest thing, the month labels, and words for a screen reader', await page.evaluate(() => {
     const svg = document.querySelector('.biz-chart'), h = svg.outerHTML, s = bizSeries('1234', '');
@@ -78,7 +78,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const apr = [...document.querySelectorAll('#revBox .biz-line')].find(l => /Apr 8/.test(l.textContent)); if (!apr) return false;
     [...apr.querySelectorAll('.pick-chip')].find(b => /Returned/.test(b.textContent)).click();
     const r = bizSeries('1234', '').rows[2];
-    return back && r.added === 0 && r.adj === 9900 && /↩ RETURNED — money coming back/.test($('revBox').textContent);
+    return back && r.added === 0 && r.adj === 9900 && /↩ RETURNED — off the bars only, the line keeps it/.test($('revBox').textContent);
   }), await page.evaluate(() => JSON.stringify({ rows: bizSeries('1234', '').rows.map(r => [r.mk, r.added, r.adj]), marks: bizStore().marks })));
   ok('the from-month wheel: his pick starts the chart in January; blank goes back to the month the balance last touched zero', await page.evaluate(() => {
     prefs.bizFrom = '2026-01'; renderBusiness(); const a = bizSeries('1234', prefs.bizFrom);

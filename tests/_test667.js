@@ -178,9 +178,9 @@ const { chromium } = require('playwright');
     $(revJobId(_bill.id)).value === 'Mery'));
 
   ok('the push says only that a bill is waiting — no amount, no vendor', await page.evaluate(() => {
-    prefs.pushSecret = 's'; pendingQueue = []; window._notify = [];
+    prefs.pushSecret = 's'; prefs.pushWin = { from: 0, to: 0 }; pendingQueue = []; window._notify = [];   // 🔔 v7.39 — his hours: all day here, so the check does not depend on the clock
     billMaybeSuggest({ name: 'IMG_0003.jpg' }, { ai: '🏪 Enstar\n💵 $412.55\n🗓 DUE 2026-10-02', ocr: 'Amount due $412.55 Due date 10/02/2026', aiTotal: 412.55, aiDue: '2026-10-02' });
-    delete prefs.pushSecret;
+    delete prefs.pushSecret; prefs.pushWin = null;
     const b = JSON.parse((window._notify[0] || {}).body || '{}');
     return window._notify.length === 1 && !/\$|\d{3}|Enstar/.test(b.body || '') && /bill/i.test(b.body || '');
   }));
