@@ -948,6 +948,9 @@
   .nt-state.cant, .nt-phone.cant { color: var(--warn, #ffa657); }
   .nt-state.rings, .nt-phone.rings { color: var(--ok, #8fd694); }
   .nt-state.quiet, .nt-state.off { color: var(--ink-2); }
+  /* 👷 v7.47 — who on the crew is signed up: a row a person, the state in words (✓ SIGNED UP / ○ NOT SIGNED UP YET) */
+  .nt-crew-row { padding: 7px 2px; border-top: 1px solid var(--grid, #3a3120); font-size: 13.5px; line-height: 1.45; }
+  .nt-crew-row:first-child { border-top: 0; }
   @media (min-width: 701px) { .nt-kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .nt-kinds .pick-chip, .nt-win .pick-chip { min-height: 36px; }
   .pb-tile span { display: block; font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); letter-spacing: .7px; color: var(--ink-muted); }
@@ -4418,7 +4421,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.46 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.47 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -8383,8 +8386,12 @@ function saveNoteFrom(boxId, fromPanel) {
   qnAsk = false; visReset(); // back to the resting state for the next note
   // never let him think a bell went out when the lock ate it
   if (_lockedOut) toast('🔒 Just me — so nobody was rung and this stays on your phone', false);
-  if (vis) publishSharedNotes(); // fire it toward the crew folder right away when online
-  if (wasAsk && !isCrew()) pushOut('ask', true, '📢 Eric needs an answer', 'Open Boiler Room to read it.', 'crew-ask', 'crew');   // 📵 v6.42 — no words on a lock screen · 🔔 v7.39 — meant for the crew's phones, which nothing rings yet (parked)
+  // 👷 v7.47 — the note goes to their folder FIRST, then their phone rings: ⚠ = "Eric needs an answer" (urgent), else "From Eric".
+  // The push carries no words of the note (📵 v6.42) — it names only the kind; the people are the ones he unlocked it for.
+  if (vis) {
+    const ring = () => { if (!isCrew()) pushOut(wasAsk ? 'ask' : 'eric', !!wasAsk, '', '', wasAsk ? 'crew-ask' : 'crew-note', vis === 'crew' ? 'crew' : vis); };
+    Promise.resolve(publishSharedNotes()).then(ring, ring);   // fire it toward the crew folder right away when online
+  }
   qnJobPick = ''; renderAllJobChips(); // the wheel snaps back after every send
   notePhotos = []; _qnDraft = ''; renderNotePhotoList(); // hand the File objects to the uploader; metas stay until it's done
   if (routed) renderMyRequests(); // the strip pops up right away, ✓ SENT lit
@@ -8686,7 +8693,7 @@ async function shareSummary(ev, p, name) {
     for (const f of folks) await dbxUpload((f.path_display || f.path_lower) + '/Summaries/' + name, txt);
     sumShared.add(p); lsSet('daylog-sum-shared', JSON.stringify([...sumShared]));
     loadSummaryList();
-    pushOut('summary', false, '📊 Summary unlocked', 'A summary is ready — open Summaries to read it', 'sum-share', 'crew');   // 🔔 v7.39 — for the crew's phones (nothing rings them yet)
+    pushOut('eric', false, '', '', 'sum-share', 'crew');   // 👷 v7.47 — a summary he unlocked rings as "From Eric" (their switch for it), in the cloud's own words
     toast(`🔓 Unlocked for ${folks.length} crew ✓`);
   } catch (e) { toast("Couldn't unlock — check Dropbox and try again", false); }
 }
@@ -9332,15 +9339,27 @@ const PUSH_KINDS_ERIC = [
   ['bill', '💳', 'A bill spotted', 'a photo that reads as a bill with a due date. Urgent only when it is already past due.', 'app', 'some', 'a bill past its due date'],
   ['weather', '🌧', 'A weather warning', 'tomorrow\'s forecast on top of weather-sensitive work on your list. Never urgent.', 'app', 'never', ''],
   ['mail', '📧', 'An important email', 'an email the sorter judges important — a deadline, a schedule change, money. Never urgent.', 'cloud', 'never', '']];
+// 👷 v7.47 — the nine crew alerts Eric said yes to (2026-09-29: "Yes to all"). The first six are every crew phone's; the last
+// three (an eighth field: 'office') show on an OFFICE phone only. Each is a switch on THAT person's phone; the kinds and the
+// fixed words live at the cloud door (fnsrc/crew-push-core.mjs — keep the two lists the same).
 const PUSH_KINDS_CREW = [
-  ['eric', '📨', 'From Eric', 'a note Eric unlocked for you.', 'eric', 'never', ''],
   ['ask', '⚠', 'Eric needs an answer', 'a note Eric sent you with ⚠ Needs attention. Always urgent.', 'eric', 'always', ''],
-  ['board', '📋', 'Something new on your board', 'a Board line Eric put on your phone.', 'eric', 'never', '']];
+  ['eric', '📨', 'From Eric', 'a note Eric unlocked for you, or for the whole crew.', 'eric', 'never', ''],
+  ['reply', '↩', 'Eric answered you', 'Eric responds to a note you sent him.', 'eric', 'never', ''],
+  ['board', '📋', 'Something new on your board', 'a Board line Eric put on your phone.', 'eric', 'never', ''],
+  ['card', '📇', 'A job card changed', 'an address, a contact, a number or a code changed on a job card you hold.', 'eric', 'never', ''],
+  ['plans', '📐', 'New plans on a job', 'Eric put a new set on the plan rack — so nobody builds from the old one.', 'eric', 'never', ''],
+  ['journal', '📖', 'A job journal is due', 'a job\'s newest journal week is a week old or more (a job quiet three weeks is left out). Weekday mornings at 9, then it rests three days.', 'timer', 'never', '', 'office'],
+  ['client', '🏠', 'A homeowner picked or asked', 'a homeowner makes a pick, a choice or asks a question on their page. It rings once, then rests half an hour.', 'door', 'never', '', 'office'],
+  ['stuck', '🚧', 'The Build List needs a look', 'Eric marks a Build List row ⚠ FIRST or 🚧 stuck.', 'eric', 'never', '', 'office']];
 const PUSH_FROM = {
   app: '📱 Sent by Boiler Room, on whichever of your devices has it open',
   crew: '👷 Sent by the crew member\'s phone, when they tap SEND',
   cloud: '☁ Sent by the cloud, every 15 minutes — the app can be closed',
-  eric: '📨 Sent by Eric\'s phone' };
+  eric: '📨 Sent by Eric\'s phone',
+  timer: '☁ Sent by the cloud on its own clock — nobody has to have the app open',
+  door: '☁ Sent by the cloud the moment the homeowner\'s page saves it' };
+function pushKindsMine() { return CREW_NAME ? PUSH_KINDS_CREW.filter(r => r[7] !== 'office' || amOffice()) : PUSH_KINDS_ERIC; }
 function pushWin() { const w = prefs.pushWin && typeof prefs.pushWin === 'object' ? prefs.pushWin : {}; const n = (v, d) => { const x = parseInt(v, 10); return x >= 0 && x <= 23 ? x : d; }; return { from: n(w.from, 7), to: n(w.to, 20) }; }
 function pushKinds() { return prefs.pushKinds && typeof prefs.pushKinds === 'object' ? prefs.pushKinds : {}; }
 function pushSettings() { let tz = 'America/Anchorage'; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) {} return { win: pushWin(), kinds: pushKinds(), urgent: !!prefs.pushUrgent, tz }; }
@@ -9360,12 +9379,42 @@ function pushRule(settings, kind, urgent, hour) {
 }
 function pushAllowed(kind, urgent) { return pushRule(pushSettings(), kind, urgent, new Date().getHours()); }
 // every push the app sends walks through here: the secret, the switches, the hours — then the cloud door checks them again
+// 👷 v7.47 — THE ROAD TO THE CREW'S PHONES. Eric, 2026-09-29, with the nine crew alerts listed: "Yes to all." A push with `to`
+// ('crew' = everyone on the roster · 'office' = the office crew · a name · a list of names) goes to THOSE people's phones: the
+// cloud door (fnsrc/notify.mjs → crew-push) finds each one's own sign-up in his own folder, obeys HIS hours and switches, and
+// says its own fixed words (no name, no job, no dollars — the title and body sent from here are not used for a crew push).
+// Only Eric's phone sends them; a crew phone's pushes are for Eric, as before. His own switches do not gate a crew push —
+// theirs do. A bursty kind (a job card, the Build List) is also held here to one push every few minutes (pushRest).
+function pushNames(to) {
+  if (CREW_NAME || !to) return [];
+  const roster = (crew || []).filter(Boolean);
+  if (to === 'crew') return roster.slice();
+  if (to === 'office') return roster.filter(n => isOffice(n));
+  const want = (Array.isArray(to) ? to : [to]).map(x => String(x || '').trim().toLowerCase()).filter(Boolean);
+  return roster.filter(n => want.includes(String(n).trim().toLowerCase()));
+}
+const PUSH_REST_MIN = { card: 10, stuck: 10, plans: 5 };
+const _pushRestAt = {};
+function pushRest(kind) {   // true = this kind rang a moment ago — let it rest
+  const min = PUSH_REST_MIN[kind]; if (!min) return false;
+  const now = Date.now(), last = _pushRestAt[kind] || 0;
+  if (now - last < min * 60000) return true;
+  _pushRestAt[kind] = now; return false;
+}
 function pushOut(kind, urgent, title, body, tag, to) {
   const secret = CREW_NAME ? lsGet('daylog-push-secret') : prefs.pushSecret;
-  if (!secret) return false;   // nothing has ever rung without the secret (⚙ Setup → Crew → the push-secret box)
-  if (to === 'crew') return false;   // meant for the crew's phones — nothing reaches them yet (see above); ringing Eric's own devices about his own note was never right
-  if (!CREW_NAME && !pushAllowed(kind, urgent).ok) return false;   // his own rules, here first; a crew phone's push to Eric is checked at the cloud door only
-  fetch('/.netlify/functions/notify', { method: 'POST', headers: { 'content-type': 'application/json', 'x-push-secret': secret }, body: JSON.stringify({ title, body, tag, kind, urgent: !!urgent }) }).catch(() => {});
+  if (!secret) return false;   // nothing has ever rung without the secret (⚙ Setup → 🔔 Notifications → the push-secret box)
+  let msg;
+  if (to) {   // 👷 v7.47 — for the crew's phones: who, and which kind — the words are the cloud's own
+    if (CREW_NAME || crewPreview) return false;
+    const names = pushNames(to);
+    if (!names.length || pushRest(kind)) return false;
+    msg = { to: names, from: 'Eric', kind, tag };
+  } else {
+    if (!CREW_NAME && !pushAllowed(kind, urgent).ok) return false;   // his own rules, here first; a crew phone's push to Eric is checked at the cloud door only
+    msg = { title, body, tag, kind, urgent: !!urgent };
+  }
+  fetch('/.netlify/functions/notify', { method: 'POST', headers: { 'content-type': 'application/json', 'x-push-secret': secret }, body: JSON.stringify(msg) }).catch(() => {});
   return true;
 }
 function mailQuietRule() {   // the cloud mail sorter's quiet hours = his window turned inside out; 📧 off or only-urgent = quiet all day
@@ -9376,9 +9425,11 @@ function mailQuietRule() {   // the cloud mail sorter's quiet hours = his window
 }
 let _pushPubT = null;
 function pushSettingsPublish() {
-  if (CREW_NAME || !dbx.refreshToken) return;
+  if (!dbx.refreshToken || crewPreview) return;
   clearTimeout(_pushPubT);
-  _pushPubT = setTimeout(() => { dbxUpload(DBX_ROOT + '/App Data/push-settings.json', JSON.stringify({ v: 1, at: new Date().toISOString(), ...pushSettings() }, null, 1)).catch(() => {}); publishMailRules(); }, 800);
+  // 👷 v7.47 — a crew phone publishes ITS OWN hours and switches into its own folder (DBX_ROOT is that folder there): the cloud
+  // door reads them before it rings that phone. The mail rules are Eric's alone.
+  _pushPubT = setTimeout(() => { dbxUpload(DBX_ROOT + '/App Data/push-settings.json', JSON.stringify({ v: 1, at: new Date().toISOString(), ...pushSettings() }, null, 1)).catch(() => {}); if (!CREW_NAME) publishMailRules(); }, 800);
 }
 function pushHourWord(h) { return h === 0 ? '12 AM' : h < 12 ? h + ' AM' : h === 12 ? '12 PM' : (h - 12) + ' PM'; }
 function ntWin(which, v) { const w = pushWin(); w[which] = parseInt(v, 10); prefs.pushWin = w; scheduleSave(); pushSettingsPublish(); renderPushSetup(); }
@@ -9391,7 +9442,12 @@ function ntHoursWord() { const w = pushWin(); return w.from === w.to ? 'at any h
 function ntState(row) {   // what this alert will do RIGHT NOW, in words → [the words, a class]
   const k = row[0], src = row[4], urg = row[5], urgWord = row[6];
   if (pushKinds()[k] === false) return ['○ OFF — never rings', 'off'];
-  if (CREW_NAME) return ['⚠ CANNOT RING YET — Eric\'s phone cannot reach crew phones yet', 'cant'];
+  if (CREW_NAME) {   // 👷 v7.47 — a crew phone rings now: by ITS hours and switches, once it is signed up (and, for what Eric's phone sends, once Eric has the push secret in)
+    if (prefs.pushUrgent && urg === 'never') return ['🔕 QUIET — ⚠ Only the urgent ones is on', 'quiet'];
+    if (!ntThisPhone()[1]) return ['○ NOT YET — this phone is not signed up (Turn on notifications, above)', 'cant'];
+    if (src === 'eric' && !ntSecretOn()) return ['⚠ CANNOT RING YET — Eric has not put the push secret in (on his phone: ⚙ Setup → 🔔 Notifications, then 📤 in ⚙ Setup → Crew)', 'cant'];
+    return ['✓ RINGS ' + ntHoursWord(), 'rings'];
+  }
   if (prefs.pushUrgent && urg === 'never') return ['🔕 QUIET — ⚠ Only the urgent ones is on', 'quiet'];
   if (src !== 'cloud' && !ntSecretOn()) return ['⚠ CANNOT RING YET — the push secret is not on this phone (the box below)', 'cant'];
   return ['✓ RINGS ' + ntHoursWord() + (prefs.pushUrgent && urg === 'some' ? ' — only for ' + urgWord : '') + (src === 'crew' ? ' · the crew phones get the secret when you tap 📤 in ⚙ Setup → Crew' : ''), 'rings'];
@@ -9412,12 +9468,46 @@ function ntSecretSet(v) {
   toast('🔑 Push secret saved ✓ — the app\'s own alerts can ring now');
 }
 function ntSecretChange() { _ntSecretEdit = true; renderPushSetup(); const b = $('ntSecret'); if (b) b.focus(); }
+// 👷 v7.47 — WHO ON THE CREW IS SIGNED UP. Eric asked "do they need to set up a push notification on their phone or just me?" —
+// both: he pastes the secret once; each of them taps Turn on notifications once, on his own phone. This block (his phone only)
+// reads each crew folder's own sign-up and hours, so he can SEE who will ring and who has not turned it on yet. Reads only.
+let _ntCrew = null, _ntCrewAt = 0, _ntCrewBusy = false;
+async function ntCrewLoad(force) {
+  if (CREW_NAME || crewPreview || !dbx.refreshToken || !(crew || []).length || _ntCrewBusy) return;
+  if (_ntCrew && !force && Date.now() - _ntCrewAt < 5 * 60000) return;
+  _ntCrewBusy = true;
+  const out = {};
+  await Promise.all(crew.map(async name => {
+    const base = `${CREW_DIR}/${cleanName(name)}/App Data`;
+    let subs = null, set = null;
+    try { subs = JSON.parse(await dbxDownload(base + '/push-subs.json') || 'null'); } catch (e) { subs = null; }
+    try { set = JSON.parse(await dbxDownload(base + '/push-settings.json') || 'null'); } catch (e) { set = null; }
+    const n = v => { const x = parseInt(v, 10); return x >= 0 && x <= 23 ? x : null; };
+    const win = set && set.win ? { from: n(set.win.from), to: n(set.win.to) } : null;
+    out[name] = { n: Array.isArray(subs) ? subs.length : 0, win: win && win.from != null && win.to != null ? win : null, urgent: !!(set && set.urgent), off: set && set.kinds ? Object.keys(set.kinds).filter(k => set.kinds[k] === false).length : 0 };
+  }));
+  _ntCrew = out; _ntCrewAt = Date.now(); _ntCrewBusy = false;
+  if ($('ntCrewBox')) renderPushSetup();
+}
+function ntCrewHtml() {
+  if (CREW_NAME || !(crew || []).length) return '';
+  const rows = crew.map(name => { const c = (_ntCrew || {})[name];
+    if (!c) return `<div class="nt-crew-row" data-who="${esc(name)}"><b>${esc(name)}</b> <span class="hint" style="margin: 0;">${dbx.refreshToken ? '⏳ looking…' : 'connect Dropbox to see'}</span></div>`;
+    const hours = c.win ? (c.win.from === c.win.to ? 'at any hour' : pushHourWord(c.win.from) + ' – ' + pushHourWord(c.win.to)) : '7 AM – 8 PM';
+    return `<div class="nt-crew-row" data-who="${esc(name)}"><b>${esc(name)}</b>${isOffice(name) ? ' <span class="hint" style="margin: 0;">· office</span>' : ''} — ` + (c.n
+      ? `<span class="nt-state rings" style="display: inline;">✓ SIGNED UP — ${c.n} phone${c.n === 1 ? '' : 's'} · rings ${hours}${c.urgent ? ' · only the urgent ones' : ''}${c.off ? ` · ${c.off} alert${c.off === 1 ? '' : 's'} switched off` : ''}</span>`
+      : `<span class="nt-state cant" style="display: inline;">○ NOT SIGNED UP YET — nothing can ring this phone</span>`) + `</div>`; }).join('');
+  return `<div class="nt-sub">👷 The crew's phones</div>
+    <div id="ntCrewBox">${rows}</div>
+    <div class="hint" style="margin: 4px 0 0; line-height: 1.5;">Each of them turns it on ONCE, on his own phone: ⚙ Setup → 🔔 Notifications → Turn on notifications (on an iPhone, from the Home Screen app). After that his phone rings by HIS hours and HIS switches — the alerts are: ⚠ Eric needs an answer · 📨 From Eric · ↩ Eric answered you · 📋 his board · 📇 a job card changed · 📐 new plans, and for the office crew 📖 a journal is due · 🏠 a homeowner picked or asked · 🚧 the Build List needs a look. ${ntSecretOn() ? '' : '<b>What your own phone sends waits on the push secret below.</b> '}<button type="button" class="btn-ghost req-x" onclick="ntCrewLoad(true)">🔄 Look again</button></div>`;
+}
 function renderPushSetup() {
   const box = $('ntBox'); if (!box) return;
-  const w = pushWin(), kinds = pushKinds(), all = w.from === w.to, list = CREW_NAME ? PUSH_KINDS_CREW : PUSH_KINDS_ERIC, urgOn = !!prefs.pushUrgent, sec = ntSecretOn(), ph = ntThisPhone();
+  const w = pushWin(), kinds = pushKinds(), all = w.from === w.to, list = pushKindsMine(), urgOn = !!prefs.pushUrgent, sec = ntSecretOn(), ph = ntThisPhone();
+  ntCrewLoad();   // 👷 v7.47 — his phone: who on the crew is signed up (read once, then every five minutes while he looks)
   const sel = (id, v, which) => `<select class="mini-sel" id="${id}" aria-label="${which === 'from' ? 'from' : 'until'}" onchange="ntWin('${which}', this.value)">${Array.from({ length: 24 }, (_, h) => `<option value="${h}"${h === v ? ' selected' : ''}>${pushHourWord(h)}</option>`).join('')}</select>`;
   const rows = list.map(r => { const st = ntState(r), on = kinds[r[0]] !== false;
-    return `<div class="nt-row" data-kind="${r[0]}"><button type="button" class="pick-chip nt-sw${on ? ' sel' : ''}" aria-pressed="${on}" onclick="ntKind('${r[0]}')">${on ? '✓ ON — ' : '○ OFF — '}${r[1]} ${esc(r[2])}</button>` +
+    return `<div class="nt-row" data-kind="${r[0]}"${r[7] ? ` data-only="${r[7]}"` : ''}><button type="button" class="pick-chip nt-sw${on ? ' sel' : ''}" aria-pressed="${on}" onclick="ntKind('${r[0]}')">${on ? '✓ ON — ' : '○ OFF — '}${r[1]} ${esc(r[2])}${r[7] === 'office' ? ' · 🏢 office' : ''}</button>` +
       `<div class="nt-what"><b>Sets it off:</b> ${esc(r[3])}</div><div class="nt-from">${esc(PUSH_FROM[r[4]])}</div><div class="nt-state ${st[1]}">${esc(st[0])}</div></div>`; }).join('');
   const hoursTail = all ? '' : ` — nothing rings outside ${pushHourWord(w.from)} to ${pushHourWord(w.to)}`;
   const urgWords = CREW_NAME ? 'Urgent means: ⚠ a note Eric sent with ⚠ Needs attention.'
@@ -9436,8 +9526,9 @@ function renderPushSetup() {
     <div class="nt-sub">⚠ Only the urgent ones</div>
     <div class="frow"><button type="button" class="pick-chip nt-urg${urgOn ? ' sel' : ''}" aria-pressed="${urgOn}" onclick="ntUrgent()">${urgOn ? '✓ ON — only the urgent ones ring' : '○ OFF — everything switched on above rings'}</button></div>
     <div class="hint" style="margin: 4px 0 0; line-height: 1.5;">${esc(urgWords)} Your hours still apply either way${hoursTail}.</div>
+    ${ntCrewHtml()}
     ${secretBlock}
-    <div class="hint" style="margin: 10px 0 0; line-height: 1.5;">${CREW_NAME ? 'These are ready for the day Eric\'s phone rings crew phones — today it does not (that road is still being built), so nothing rings this phone yet.' : '⏱ The crew\'s hours reminder keeps its own switch and its own hour in the Crew hours window (☁ the cloud sends it). 🏠 Homeowner pings go to the homeowners\' phones, not yours — they are set on each client\'s page and ring 9–5 Alaska.'}</div>`;
+    <div class="hint" style="margin: 10px 0 0; line-height: 1.5;">${CREW_NAME ? 'This phone rings by YOUR hours and YOUR switches — Eric\'s phone and the cloud send the alerts; nothing on a lock screen ever names a job, a person or a dollar amount. The note itself is in Boiler Room when you open it.' : '⏱ The crew\'s hours reminder keeps its own switch and its own hour in the Crew hours window (☁ the cloud sends it). 🏠 Homeowner pings go to the homeowners\' phones, not yours — they are set on each client\'s page and ring 9–5 Alaska.'}</div>`;
 }
 async function pushEnable() {
   const st = $('pushStatus');
@@ -12425,7 +12516,7 @@ function renderVisChips() {
   const ex = $('visExplain');
   if (ex) ex.innerHTML = mine
     ? '🔒 stays on <b>this phone only</b> — never syncs · 📨 goes to Eric · 🔓 the whole crew sees it, and their Wizards can look it up · ⚠ pins it at the top of Eric\'s page until it is answered' + (lsGet('daylog-push-secret') ? ' and rings his phone, in his hours.' : '.')   // 🔔 v7.42
-    : `🔒 <b>just yours</b> — saved on this phone and in your own Dropbox; no crew phone gets it · 📨 goes to ${buddy ? esc(buddy) + '\'s phone' : 'their phone'}, marked for them · 🔓 every crew phone sees it, and their Wizards can look it up · ⚠ stays up big on their page until somebody answers (it cannot ring their phone yet).`;   // 🔔 v7.42
+    : `🔒 <b>just yours</b> — saved on this phone and in your own Dropbox; no crew phone gets it · 📨 goes to ${buddy ? esc(buddy) + '\'s phone' : 'their phone'}, marked for them · 🔓 every crew phone sees it, and their Wizards can look it up · ⚠ stays up big on their page until somebody answers` + (prefs.pushSecret ? ' and rings their phones, each in his own hours.' : ' (their phones ring once the push secret is in — ⚙ Setup → 🔔 Notifications).') + ` A note you unlock rings them too, as "From Eric".`;   // 🔔 v7.42 · 👷 v7.47 — the crew's phones ring now
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
   // the personal lock: every chip but 🔒 goes dim and dead, with the reason on the glass
   ['qnVisChips', 'nVisChips'].forEach(id => {
@@ -12748,8 +12839,30 @@ function cardStash() {                     // save whatever the form holds, quie
 // takes an edit that is NEWER than his card (never a locked one), stamps the card, and publishes it back to every phone.
 function cardCommit(c) {
   if (!c) return;
-  if (!CREW_NAME) { c.updated = new Date().toISOString(); scheduleSave(); publishSharedNotes(); }
+  if (!CREW_NAME) { c.updated = new Date().toISOString(); scheduleSave(); cardRing(c); }
   else cardEditPush(c);
+}
+// 👷 v7.47 — "a job card changed": the crew's phones ring when a card they HOLD (not locked, something on it) reads differently
+// from the last one they were told about — an address, a person, a number, a code, the notes. The card goes to their folders
+// first; the push says only that a card changed (no job, no code — a lock screen is public). What was last told is kept per
+// card (prefs.cardTold), so saving a card twice with nothing changed rings nobody.
+function cardSig(c) {
+  return JSON.stringify([String(c.addr || '').trim(), (c.people || []).filter(p => p.n || p.tel || p.em).map(p => [p.n || '', p.r || '', p.tel || '', p.em || '']), (c.codes || []).filter(x => x.w || x.c).map(x => [x.w || '', x.c || '']), String(c.notes || '').trim()]);
+}
+// the first time this build meets his cards, what the crew already hold is taken as told — so the first save after the
+// update rings only if something really changed (called when the card window opens, before any word is typed)
+function cardToldSeed() {
+  if (CREW_NAME || (prefs.cardTold && typeof prefs.cardTold === 'object')) return;
+  prefs.cardTold = {};
+  Object.entries(jobCards()).forEach(([k, c]) => { if (c && !c.lock && cardHas(c)) prefs.cardTold[k] = cardSig(c); });
+}
+function cardRing(c) {
+  const k = cardKey(c.job), told = prefs.cardTold || (prefs.cardTold = {});
+  const held = !c.lock && cardHas(c), sig = held ? cardSig(c) : '';
+  const changed = held && told[k] !== sig;
+  if (held) told[k] = sig; else delete told[k];
+  const ring = () => { if (changed) pushOut('card', false, '', '', 'crew-card', 'crew'); };
+  Promise.resolve(publishSharedNotes()).then(ring, ring);
 }
 function cardEditsMine() { try { const m = JSON.parse(lsGet('daylog-card-edits') || '{}'); return m && typeof m === 'object' ? m : {}; } catch (e) { return {}; } }
 async function cardEditPush(c) {
@@ -12813,6 +12926,7 @@ function cardViewHtml(c, mine) {
     ${cardHas(c) ? '' : `<div class="hint">${mine ? 'Nothing on this card yet.' : 'Nothing on this card yet — Eric fills these in and they land here on your next sync.'}</div>`}`;
 }
 function openJobCard(job, edit) {
+  cardToldSeed();   // 👷 v7.47
   const list = cardJobList();
   // 📇 v6.65 — Eric: "theres somewhere else … the hertz tag is always lit up and selected." With
   // nothing picked this card opened on the FIRST job of his list, wearing "✓ SHOWING — Hertz" as
@@ -12946,7 +13060,7 @@ function cardLock() {
   if (CREW_NAME) return;   // 📇 v7.09 — private or crew is Eric's call alone
   const c = cardRead(true); if (!c) return;
   c.lock = !c.lock;
-  scheduleSave(); publishSharedNotes();
+  scheduleSave(); cardRing(c);   // 👷 v7.47 — a card handed to the crew is news for their phones; one taken back is not
   openJobCard(_cardJob);
   toast(c.lock ? `🔒 ${c.job} card is yours only — it comes off every crew phone on the next sync`
     : `👷 ${c.job} card goes out to the crew on the next sync ✓`);
@@ -13363,7 +13477,11 @@ function thRespondSend(owner, id, who, done) {
   addEntry('Note', '↩ ' + txt.slice(0, 600), job, extra);
   thMark(owner, id);
   thRespondClose();   // 💬 v7.39
-  if (CREW_NAME) renderCrewShared(); else { publishSharedNotes(); renderCrewFeed(); }
+  if (CREW_NAME) renderCrewShared();
+  else {   // 👷 v7.47 — "Eric answered you": the response goes to their folder, then their phone rings (no words of it on the lock screen)
+    const tgt = extra.vis === 'crew' ? 'crew' : extra.vis, ring = () => pushOut('reply', false, '', '', 'crew-reply', tgt);
+    Promise.resolve(publishSharedNotes()).then(ring, ring); renderCrewFeed();
+  }
   toast(CREW_NAME ? '↩ Sent to Eric — it stays with the item on both phones ✓' : `↩ Sent to ${who === 'crew' ? 'the crew' : (who || owner)} — it stays with the item on both phones ✓`);
 }
 // a crew phone flushes Eric's item: a copy into this log — the words of both sides — carrying sharedRef (Eric's sweep reads it as "seen")
@@ -14463,6 +14581,7 @@ async function pkStamp(key) {
     delete _pkPend[key];
     await pkSave();
     renderPlanRack();
+    pushOut('plans', false, '', '', 'crew-plans', 'crew');   // 👷 v7.47 — "new plans on a job": every crew phone, so nobody builds off the old set (Eric's phone sends it; the words name no job)
     toast(`📐 ${s.name} is on R${rev} now — old set slid into history ✓`);
   } catch (e) { toast('Couldn\'t put the set up — check the connection', false); }
 }
@@ -17401,6 +17520,7 @@ function matStuckToggle(id) {
   matLog(`${it.stuck ? '🚧 stuck' : '✓ no longer stuck'} — ${it.n}`);
   matChgPush(it, '🚧 stuck', it.stuck ? 'no' : 'yes', it.stuck ? 'yes' : 'no');
   _matDirty = true; renderMatMgr();
+  if (it.stuck) pushOut('stuck', false, '', '', 'crew-stuck', 'office');   // 👷 v7.47 — the office crew's phones: a row was marked stuck (no row, no job in the words)
   if (it.stuck) setTimeout(() => { const b = (_matEdit === id ? $('matNeedS-' + id) : null) || $('matNeed-' + id); if (b) b.focus(); }, 40);
 }
 function matStuckBandHtml(it) {
@@ -17444,6 +17564,7 @@ function matFirstToggle(id) {
   matLog(`${it.first ? '⚠ FIRST' : '○ no longer first'} — ${it.n}`);
   matChgPush(it, '⚠ first', it.first ? 'no' : 'yes', it.first ? 'yes' : 'no');   // 🕘 v7.19
   _matDirty = true; renderMatMgr();
+  if (it.first) pushOut('stuck', false, '', '', 'crew-stuck', 'office');   // 👷 v7.47 — the office crew's phones: a row was marked ⚠ FIRST
 }
 // the two small plates after the lights: ⚠ 1st on every row; ⇄ (checklist ↔ something to buy) while no light is lit yet —
 // the moment a pasted "test winch" still reads "pick needed" is the moment he wants the flip under his thumb
@@ -21634,9 +21755,9 @@ function brdCrew(id, name) {
   }
   x.sendTo = [...to, name];
   if (x.vis !== 'crew') { const v = Array.isArray(x.vis) ? x.vis.slice() : x.vis ? [x.vis] : []; if (!v.includes(name)) v.push(name); x.vis = v.length === 1 ? v[0] : v; }
-  scheduleSave(); publishSharedNotes(); renderLog(); renderReview();
-  // generic words on the lock screen — no names, no dollars (standing rule)
-  pushOut('board', false, '📋 Board', 'Something new is on your board — open WITH ERIC', 'board', 'crew');   // 🔔 v7.39 — for the crew's phones (nothing rings them yet)
+  scheduleSave(); renderLog(); renderReview();
+  // generic words on the lock screen — no names, no dollars (standing rule) · 👷 v7.47 — it rings THAT man's phone, once the line is in his folder
+  { const ring = () => pushOut('board', false, '', '', 'board', name); Promise.resolve(publishSharedNotes()).then(ring, ring); }
   toast(`👷 On ${name}'s board — lands on the next sync ✓`);
 }
 // 👷 on a crew phone: ✓ on a board line Eric sent. Rides back to Eric as a note with boardRef; his phone
@@ -23389,7 +23510,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.46';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.47';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

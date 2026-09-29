@@ -61,7 +61,24 @@ const clean = s => String(s || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40);
 const BOARDS = '/Clore DayLog/App Data/Option Boards';
 const IMG_CT = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', heic: 'image/heic', heif: 'image/heif' };
 
-const portal = async req => {
+// 👷 v7.47 — THE OFFICE HEARS IT. One of the nine crew alerts Eric said yes to (2026-09-29): "a homeowner picked or asked
+// something". When a pick, a choice, a lock or a question has been SAVED, the notify function is asked to ring the office
+// crew — it keeps the fixed words (no homeowner, no job, no dollars), each person's own hours and switches, and a half-hour
+// rest so shopping around rings once. Nothing here waits on it: the answer goes back to the homeowner first, and a bell that
+// did not ring is never their problem. No secret in the site's settings = no bell, as ever.
+function ringOffice(req, context) {
+  if (!process.env.PUSH_SECRET) return;
+  let p;
+  try {
+    p = fetch(new URL('/.netlify/functions/notify', req.url), { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-push-secret': process.env.PUSH_SECRET },
+      body: JSON.stringify({ to: 'office', kind: 'client' }) }).catch(() => {});
+  } catch (e) { return; }
+  if (context && typeof context.waitUntil === 'function') { context.waitUntil(p); return; }
+  return p;   // an older runtime has no waitUntil — then the answer waits for the bell rather than lose it
+}
+
+const portal = async (req, context) => {
   const url = new URL(req.url);
   if (req.method === 'GET') {
     const c = clean(url.searchParams.get('c'));
@@ -222,6 +239,7 @@ const portal = async req => {
         text: pick ? `📋 PICKED — ${item.n}: ${pick}` : remark ? `📋 ${item.n}: ${remark}` : declineOpt != null ? `📋 ${item.n}: ${(item.opts[declineOpt] || {}).no ? '🙅 no-thank-you to' : 'un-declined'} "${(item.opts[declineOpt] || {}).t}"` : `📎 ${item.n}: sent a picture of their pick`,
         ts: now, ...(phPath ? { photo: phPath } : {}) });
       await up(t, apath, JSON.stringify(arr.slice(0, 200)));
+      await ringOffice(req, context);   // 👷 v7.47
       return new Response('ok');
     }
     // 💰 v5.91 — the homeowner tapped a budget CHOICE (vinyl siding vs repaint). Their pick
@@ -256,6 +274,7 @@ const portal = async req => {
           arr.unshift({ tag: 'General', pk: n, k: 1, text: label, ts: new Date().toISOString() });
         }
         await up(t, apath, JSON.stringify(arr.slice(0, 200)));
+        await ringOffice(req, context);   // 👷 v7.47
       }
       return new Response('ok');
     }
@@ -285,6 +304,7 @@ const portal = async req => {
         if (old) { old.text = label; old.ts = new Date().toISOString(); arr = [old, ...arr.filter(a => a !== old)]; }
         else arr.unshift({ tag: 'General', pk: n, k: 1, text: label, ts: new Date().toISOString() });
         await up(t, apath, JSON.stringify(arr.slice(0, 200)));
+        await ringOffice(req, context);   // 👷 v7.47
       }
       return new Response('ok');
     }
@@ -334,6 +354,7 @@ const portal = async req => {
         arr = [old, ...arr.filter(a => a !== old)];
       } else arr.unshift({ tag: 'Materials', pk: key, k: 1, text: label, ts: now });
       await up(t, apath, JSON.stringify(arr.slice(0, 200)));
+      await ringOffice(req, context);   // 👷 v7.47
       return new Response('ok');
     }
     // 💬 a question or remark from the client — lands in Eric's review pile on his next sync
@@ -347,6 +368,7 @@ const portal = async req => {
       if (!Array.isArray(arr)) arr = [];
       arr.unshift({ tag, text, ts: new Date().toISOString() });
       await up(t, path, JSON.stringify(arr.slice(0, 200)));
+      if (tag !== 'Feedback') await ringOffice(req, context);   // 👷 v7.47 — a word about the APP is Eric's to read, not the office's bell
       return new Response('ok');
     }
     const ev = String(b.ev || '').slice(0, 40);

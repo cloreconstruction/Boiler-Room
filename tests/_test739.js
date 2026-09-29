@@ -64,7 +64,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath, pathToFileURL
     prefs.pushWin = null; const d = mailQuietRule();
     return a.from === '00:00' && a.to === '24:00' && b.from === '00:00' && b.to === '24:00' && c.from === '00:00' && c.to === '00:00' && d.from === '20:00' && d.to === '07:00';
   }));
-  ok('pushOut: with no secret nothing goes (as ever); with it, a hot text inside his hours goes out carrying its kind and urgency; a kind he turned off does not; ⚠ only urgent stops a weather warning; outside his hours nothing goes; a push meant for the crew never rings his own devices', await page.evaluate(() => {
+  ok('pushOut: with no secret nothing goes (as ever); with it, a hot text inside his hours goes out carrying its kind and urgency; a kind he turned off does not; ⚠ only urgent stops a weather warning; outside his hours nothing goes; a push meant for the crew goes to the phones of the crew, never his own devices', await page.evaluate(() => {
     const h = new Date().getHours(), r = [];
     prefs.pushSecret = ''; prefs.pushWin = { from: h, to: h }; prefs.pushKinds = {}; prefs.pushUrgent = false; _sent.length = 0;
     r.push(pushOut('text', true, '🔥 A text needs you', 'x', 'hot-text') === false && _sent.length === 0);
@@ -73,7 +73,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath, pathToFileURL
     prefs.pushKinds = { text: false }; r.push(pushOut('text', true, '🔥', 'x', 'hot-text') === false && _sent.length === 1);
     prefs.pushKinds = {}; prefs.pushUrgent = true; r.push(pushOut('weather', false, '🌧', 'x', 'weather') === false && pushOut('bill', true, '💳', 'x', 'bill-due') === true && _sent.length === 2);
     prefs.pushUrgent = false; prefs.pushWin = { from: (h + 2) % 24, to: (h + 4) % 24 }; r.push(pushOut('text', true, '🔥', 'x', 'hot-text') === false && _sent.length === 2);
-    prefs.pushWin = { from: h, to: h }; r.push(pushOut('ask', true, '📢 Eric needs an answer', 'x', 'crew-ask', 'crew') === false && pushOut('board', false, '📋', 'x', 'board', 'crew') === false && _sent.length === 2);
+    // 👷 v7.47 — a push meant for the crew goes to THEIR phones now (it names who, and the kind — the words are the cloud's own); it still never rings his own devices
+    prefs.pushWin = { from: h, to: h }; r.push(pushOut('ask', true, '📢 Eric needs an answer', 'x', 'crew-ask', 'crew') === true && pushOut('board', false, '📋', 'x', 'board', 'Phil') === true && _sent.length === 4 &&
+      JSON.stringify(_sent[2].to) === '["Phil"]' && _sent[2].kind === 'ask' && _sent[3].kind === 'board' && !('title' in _sent[2]) && !('body' in _sent[3]) && pushOut('ask', true, 'x', 'x', 'crew-ask', 'Nobody On The Roster') === false);
     return r.every(Boolean);
   }), await page.evaluate(() => JSON.stringify(_sent)));
   ok('every push the app sends walks through pushOut — the cloud door is called from one place only, and no push carries a note\'s own words', (src.match(/fetch\('\/\.netlify\/functions\/notify'/g) || []).length === 1 && !/body: t\.slice\(0, 140\)/.test(src) && !/body: txt\.slice\(0, 140\)/.test(src) && /pushOut\('text', true, '🔥 A text needs you'/.test(src) && /pushOut\('bill', !!overdue/.test(src) && /pushOut\('weather', false/.test(src));
@@ -81,12 +83,12 @@ const fs = require('fs'), path = require('path'), { fileURLToPath, pathToFileURL
 
   console.log('— 👷 Phil\'s phone —');
   const phil = await open(() => { try { localStorage.setItem('daylog-crew-name', 'Phil'); localStorage.setItem('daylog-crew-root', '/Phil'); localStorage.setItem('daylog-crew-jobs', JSON.stringify(['Oak House'])); localStorage.setItem('daylog-push-secret', 'made-up'); } catch (e) {} });
-  ok('a crew phone keeps its own switches — 📨 From Eric · 📢 Eric needs an answer · 📋 your board — and says in words that nothing rings it yet; its NOW note to Eric still goes out with its kind (Eric\'s rules are checked at the cloud door)', await phil.page.evaluate(() => {
+  ok('a crew phone keeps its own switches — 📨 From Eric · 📢 Eric needs an answer · 📋 your board — and says in words that the phone rings by its own hours and switches; its NOW note to Eric still goes out with its kind (Eric\'s rules are checked at the cloud door)', await phil.page.evaluate(() => {
     window.scheduleSave = () => {};
     window._sent = []; const f0 = window.fetch; window.fetch = (u, init) => { if (/functions\/notify/.test(String(u))) { _sent.push(JSON.parse(init.body)); return Promise.resolve(new Response('{}', { status: 200 })); } return f0(u, init); };
     renderPushSetup(); const t = $('ntBox').textContent.replace(/\s+/g, ' ');
     const went = pushOut('crew', true, '🔥 Phil needs it NOW', 'Open Boiler Room — it is pinned at the top.', 'crew-now');
-    return CREW_NAME === 'Phil' && /✓ ON — 📨 From Eric/.test(t) && /Eric needs an answer/.test(t) && /your board/.test(t) && /nothing rings this phone yet/.test(t) && !/A text that needs you/.test(t) && went === true && _sent.length === 1 && _sent[0].kind === 'crew' && _sent[0].urgent === true && !/pinned/.test(_sent[0].title);
+    return CREW_NAME === 'Phil' && /✓ ON — 📨 From Eric/.test(t) && /Eric needs an answer/.test(t) && /your board/.test(t) && /This phone rings by YOUR hours and YOUR switches/.test(t) && !/A text that needs you/.test(t) && went === true && _sent.length === 1 && _sent[0].kind === 'crew' && _sent[0].urgent === true && !/pinned/.test(_sent[0].title);
   }), await phil.page.evaluate(() => $('ntBox').textContent.replace(/\s+/g, ' ').slice(0, 300)));
 
   console.log('— 💬 the Respond box survives the card\'s redraw —');

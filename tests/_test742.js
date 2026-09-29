@@ -87,19 +87,23 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return /^○ OFF — 🌧 A weather warning$/.test(w.sw) && w.st === '○ OFF — never rings' && g('text').st === '✓ RINGS at any hour' && g('mail').st === '✓ RINGS at any hour' && /Alerts ring at any hour\./.test(t) && /Your hours still apply either way\./.test(t);
   })());
   ok('the top line says whether THIS phone is signed up to ring at all, in words', await page.evaluate(() => { const p = document.querySelector('#ntBox .nt-phone'); return !!p && /^[✓○⚠]/u.test(p.textContent) && /This phone|This browser|Notifications are blocked/.test(p.textContent); }));
-  ok('⑤ UNLOCK IT on his phone says what ⚠ does and does not do: it stays up big on their page — it cannot ring their phone yet', await page.evaluate(() => { closePanels(); renderVisChips(); return /⚠ stays up big on their page until somebody answers \(it cannot ring their phone yet\)\./.test($('visExplain').textContent); }));
+  // 👷 v7.47 — the crew's phones can be rung now, so the words changed: ⚠ rings them (each in his own hours) once the secret is in
+  ok('⑤ UNLOCK IT on his phone says what ⚠ does: it stays up big on their page and rings their phones — or says the bell waits on the push secret', await page.evaluate(() => { closePanels(); renderVisChips(); const t = $('visExplain').textContent;
+    return (prefs.pushSecret ? /⚠ stays up big on their page until somebody answers and rings their phones, each in his own hours\./ : /⚠ stays up big on their page until somebody answers \(their phones ring once the push secret is in/).test(t) && !/cannot ring their phone yet/.test(t); }));
   ok('nothing in the section depends on colour alone: every state leads with a glyph and says itself in words', await page.evaluate(() => { openPanel('settings'); return [...document.querySelectorAll('#ntBox .nt-state, #ntBox .nt-phone')].every(e => /^[✓○🔕⚠]/u.test(e.textContent.trim()) && /[A-Za-z]{4,}/.test(e.textContent)) && [...document.querySelectorAll('#ntBox .pick-chip')].every(b => /[A-Za-z]{3,}/.test(b.textContent)); }));
   ok('at 390px nothing in the section runs off the side', await page.evaluate(() => { const b = $('ntBox').getBoundingClientRect(); return [...document.querySelectorAll('#ntBox *')].every(e => { const r = e.getBoundingClientRect(); return r.width === 0 || r.right <= b.right + 1; }); }));
   await eric.ctx.close();
 
   console.log('— 👷 Phil\'s phone —');
   const phil = await open(() => { try { localStorage.setItem('daylog-crew-name', 'Phil'); localStorage.setItem('daylog-crew-root', '/Phil'); localStorage.setItem('daylog-crew-jobs', JSON.stringify(['Oak House'])); } catch (e) {} });
-  ok('a crew phone: three rows of its own (Eric needs an answer wears the ⚠), every one CANNOT RING YET in words, no push-secret box, and the foot still says nothing rings this phone yet', await phil.page.evaluate(() => {
+  // 👷 v7.47 — a crew phone rings now: six rows on a field phone (nine on an office one — _test747), each saying in words what it
+  // will do; in this test browser the phone is not signed up, and every row says so
+  ok('a crew phone: six rows of its own (Eric needs an answer wears the ⚠ and leads), every one says in words that this phone is not signed up yet, no push-secret box, and the foot says it rings by its own hours and switches', await phil.page.evaluate(() => {
     window.scheduleSave = () => {}; renderPushSetup();
     const rs = [...document.querySelectorAll('#ntBox .nt-row')], t = $('ntBox').textContent.replace(/\s+/g, ' ');
-    return CREW_NAME === 'Phil' && rs.length === 3 && rs.map(r => r.dataset.kind).join('|') === 'eric|ask|board' && /✓ ON — ⚠ Eric needs an answer/.test(t) && /✓ ON — 📨 From Eric/.test(t)
-      && rs.every(r => /^⚠ CANNOT RING YET — Eric's phone cannot reach crew phones yet$/.test(r.querySelector('.nt-state').textContent)) && rs.every(r => /Sent by Eric's phone/.test(r.querySelector('.nt-from').textContent))
-      && !$('ntSecret') && !/push secret/i.test(t) && /nothing rings this phone yet/.test(t) && /Urgent means: ⚠ a note Eric sent with ⚠ Needs attention\./.test(t);
+    return CREW_NAME === 'Phil' && rs.length === 6 && rs.map(r => r.dataset.kind).join('|') === 'ask|eric|reply|board|card|plans' && /✓ ON — ⚠ Eric needs an answer/.test(t) && /✓ ON — 📨 From Eric/.test(t)
+      && rs.every(r => /^○ NOT YET — this phone is not signed up \(Turn on notifications, above\)$/.test(r.querySelector('.nt-state').textContent)) && rs.every(r => /Sent by Eric's phone/.test(r.querySelector('.nt-from').textContent))
+      && !$('ntSecret') && !/push secret/i.test(t) && /This phone rings by YOUR hours and YOUR switches/.test(t) && !/nothing rings this phone yet/.test(t) && /Urgent means: ⚠ a note Eric sent with ⚠ Needs attention\./.test(t);
   }));
   ok('⑤ UNLOCK IT on a crew phone WITHOUT the secret: ⚠ pins it at the top of Eric\'s page — it does not claim to ring him', await phil.page.evaluate(() => { renderVisChips(); const t = $('visExplain').textContent; return /⚠ pins it at the top of Eric's page until it is answered\./.test(t) && !/rings his phone/.test(t); }));
   await phil.ctx.close();

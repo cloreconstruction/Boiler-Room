@@ -25,6 +25,13 @@
 [functions."hours-reminder"]
   schedule = "0 * * * *"
 
+# 📖 v7.47 — "A JOB JOURNAL IS DUE", one of the nine crew alerts (Eric: "Yes to all"). 9 in the morning Alaska time, Monday to
+# Friday — two runs so the hour lands in both summer (17Z) and winter (18Z); the other run sees the wrong hour and holds. It
+# rings the OFFICE crew when a job's newest journal week is a week old or more (a job quiet three weeks is left out), then
+# rests three days. Fixed words: no job, no homeowner, no count. It writes only App Data/journal-reminder-state.json.
+[functions."journal-reminder"]
+  schedule = "0 17,18 * * 1-5"
+
 # 🔒 v6.26 — the repo root IS the live site, so every file in git was also a public URL.
 # CLAUDE.md and the test suites belong in git, not on the web address. 404 them.
 # Eric: "they don't need to be readable on your live website." Blocking here, not in

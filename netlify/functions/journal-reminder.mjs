@@ -7422,36 +7422,6 @@ async function dbxToken() {
   if (!r.ok) throw new Error("dropbox token " + r.status);
   return (await r.json()).access_token;
 }
-async function loadSubs() {
-  const t = await dbxToken();
-  const r = await fetch("https://content.dropboxapi.com/2/files/download", {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + t,
-      "Dropbox-API-Arg": JSON.stringify({ path: "/Clore DayLog/App Data/push-subs.json" })
-    }
-  });
-  if (!r.ok) return [];
-  try {
-    const j = JSON.parse(await r.text());
-    return Array.isArray(j) ? j : [];
-  } catch (e) {
-    return [];
-  }
-}
-async function loadJson(path) {
-  const t = await dbxToken();
-  const r = await fetch("https://content.dropboxapi.com/2/files/download", {
-    method: "POST",
-    headers: { Authorization: "Bearer " + t, "Dropbox-API-Arg": JSON.stringify({ path }) }
-  });
-  if (!r.ok) return null;
-  try {
-    return JSON.parse(await r.text());
-  } catch (e) {
-    return null;
-  }
-}
 var hsafe = (o) => JSON.stringify(o).replace(/[\u007f-￿]/g, (c) => "\\u" + ("000" + c.charCodeAt(0).toString(16)).slice(-4));
 async function dbxRead(t, path) {
   const r = await fetch("https://content.dropboxapi.com/2/files/download", { method: "POST", headers: { Authorization: "Bearer " + t, "Dropbox-API-Arg": hsafe({ path }) } });
@@ -7505,21 +7475,6 @@ function setVapid() {
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
   );
-}
-async function sendToAll(title, body, tag) {
-  setVapid();
-  const subs = await loadSubs();
-  const payload = JSON.stringify({ title, body, tag: tag || "boiler-room" });
-  let sent = 0, dead = 0;
-  for (const s of subs) {
-    try {
-      await import_web_push.default.sendNotification(s.sub || s, payload);
-      sent++;
-    } catch (e) {
-      dead++;
-    }
-  }
-  return { sent, dead, total: subs.length };
 }
 
 // fnsrc/push-rules.mjs
@@ -7604,6 +7559,35 @@ function stateAfter(state, rang, now) {
   });
   return { v: 1, last };
 }
+var JRN_DUE = 7;
+var JRN_DORMANT = 21;
+var JRN_REST_DAYS = 3;
+var JRN_HOUR = 9;
+var DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function alaskaParts(d) {
+  const f = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Anchorage", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false, weekday: "short" }).formatToParts(d);
+  const g = (t) => (f.find((x) => x.type === t) || {}).value || "";
+  return { ymd: `${g("year")}-${g("month")}-${g("day")}`, hour: parseInt(g("hour"), 10) % 24, dow: DOW.indexOf(g("weekday")) };
+}
+var dayNum = (ymd) => Math.round(Date.parse(String(ymd).slice(0, 10) + "T12:00:00Z") / 864e5);
+function journalsDue(pages, ymd) {
+  const today = dayNum(ymd);
+  return (pages || []).filter((p) => {
+    if (!p || typeof p !== "object" || p.show && p.show.journal === false) return false;
+    const rel = String(((p.journal || [])[0] || {}).released || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(rel)) return false;
+    const age = today - dayNum(rel);
+    return age >= JRN_DUE && age < JRN_DORMANT;
+  }).length;
+}
+function journalWhen(now, state) {
+  const p = alaskaParts(now);
+  if (p.dow === 0 || p.dow === 6) return { send: false, why: "weekend", ...p };
+  if (p.hour !== JRN_HOUR) return { send: false, why: "hour", ...p };
+  const last = String((state || {}).last || "").slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(last) && dayNum(p.ymd) - dayNum(last) < JRN_REST_DAYS) return { send: false, why: "rang lately", ...p };
+  return { send: true, why: "due", ...p };
+}
 
 // fnsrc/crew-push.mjs
 var STATE = "/Clore DayLog/App Data/crew-push-state.json";
@@ -7649,35 +7633,34 @@ async function ringCrew(to, kind, from, now = /* @__PURE__ */ new Date()) {
   return { ok: true, to: names.length, sent, phones, skipped };
 }
 
-// fnsrc/notify.mjs
-var notify_default = async (req) => {
-  if (req.method !== "POST") return new Response("POST only", { status: 405 });
-  if (req.headers.get("x-push-secret") !== process.env.PUSH_SECRET) return new Response("nope", { status: 401 });
-  let b = {};
-  try {
-    b = await req.json();
-  } catch (e) {
+// fnsrc/journal-reminder.mjs
+var BASE = "/Clore DayLog/App Data/Client Portal";
+var STATE2 = "/Clore DayLog/App Data/journal-reminder-state.json";
+var journal_reminder_default = async () => {
+  if (!process.env.DBX_REFRESH_TOKEN || !process.env.DBX_APP_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    console.log(JSON.stringify({ ok: false, why: "env" }));
+    return new Response("env");
   }
-  if (b.to != null && b.to !== "" && b.to !== "eric") {
-    try {
-      return Response.json(await ringCrew(b.to, String(b.kind || ""), b.from));
-    } catch (e) {
-      return Response.json({ ok: false, to: 0, sent: 0, why: "could not reach the crew folders" });
+  const now = /* @__PURE__ */ new Date();
+  const t = await dbxToken();
+  const when = journalWhen(now, await dbxReadJson(t, STATE2));
+  let due = 0, res = { to: 0, sent: 0 };
+  if (when.send) {
+    const idx = await dbxReadJson(t, BASE + "/index.json");
+    const codes = (idx && Array.isArray(idx.clients) ? idx.clients : []).map((c) => String(c && c.code || "").replace(/[^a-z0-9-]/gi, "")).filter(Boolean).slice(0, 60);
+    const pages = await Promise.all(codes.map((c) => dbxReadJson(t, `${BASE}/${c}.json`)));
+    due = journalsDue(pages, when.ymd);
+    if (due) {
+      res = await ringCrew("office", "journal", "", now);
+      if (res.sent) await dbxWrite(t, STATE2, JSON.stringify({ last: when.ymd, at: now.toISOString(), sent: res.sent }));
     }
   }
-  let settings = null;
-  try {
-    settings = await loadJson("/Clore DayLog/App Data/push-settings.json");
-  } catch (e) {
-    settings = null;
-  }
-  const gate = pushAllowed(settings, b.kind, b.urgent === true, /* @__PURE__ */ new Date());
-  if (!gate.ok) return Response.json({ sent: 0, dead: 0, total: 0, skipped: gate.why });
-  const res = await sendToAll(String(b.title || "Boiler Room").slice(0, 80), String(b.body || "").slice(0, 200), b.tag);
-  return Response.json(res);
+  const out = { ok: true, why: when.send ? due ? "due" : "none due" : when.why, due, to: res.to || 0, sent: res.sent || 0 };
+  console.log(JSON.stringify(out));
+  return Response.json(out);
 };
 export {
-  notify_default as default
+  journal_reminder_default as default
 };
 /*! Bundled license information:
 

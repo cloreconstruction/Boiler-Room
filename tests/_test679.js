@@ -162,16 +162,18 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   console.log('— 👷 v6.79 Phil: alert him, and his ✓ comes back —');
 
-  ok('👷 Phil on a line puts it on his phone (sendTo + vis), sends NO push yet (🔔 v7.39: a push for the crew has nowhere to land — it used to ring Eric\'s own phone about his own move), and shows on the line; tap again takes it back', await page.evaluate(async () => {
+  // 👷 v7.47 — the crew's phones can be rung now: the line goes to Phil's folder, then HIS phone rings — "board", to Phil alone,
+  // in the cloud's own words (v7.39 had sent nothing: a push for the crew had nowhere to land).
+  ok('👷 Phil on a line puts it on his phone (sendTo + vis), rings PHIL\'s phone — kind "board", to Phil alone, none of the line\'s words — and shows on the line; tap again takes it back', await page.evaluate(async () => {
     const id = _e.thought.id; prefs.pushSecret = 'sec'; window._pushes = [];
     const realFetch = window.fetch;
     window.fetch = (u, o) => { if (/functions\/notify/.test(String(u))) { window._pushes.push(JSON.parse(o.body)); return Promise.resolve({ ok: true }); } return realFetch(u, o); };
     brdOpen('e', id);
     const chip = [...document.querySelectorAll(`.bd-row[data-for="e:${id}"] .pick-chip`)].find(b => /Phil/.test(b.textContent));
     if (!chip) { window.fetch = realFetch; return false; }
-    chip.click(); await new Promise(r => setTimeout(r, 20));
+    chip.click(); await new Promise(r => setTimeout(r, 60));
     const sent = Array.isArray(_e.thought.sendTo) && _e.thought.sendTo.includes('Phil') && _e.thought.vis === 'Phil' && (window._pubN || 0) > 0 &&
-      window._pushes.length === 0 &&   // 🔔 v7.39 — pushOut('board', …, 'crew') rings nobody until crew phones can be rung
+      window._pushes.length === 1 && window._pushes[0].kind === 'board' && JSON.stringify(window._pushes[0].to) === '["Phil"]' && !('title' in window._pushes[0]) && !('body' in window._pushes[0]) &&   // 👷 v7.47
       document.querySelector(`.bd-line[data-key="e:${id}"] .bd-lamp`).classList.contains('on');   // v6.80 — the line is open (its words are a box), so the 👷 lamp is what shows it on the line
     const bits = brdShareBits(_e.thought);
     const rides = bits.board && bits.board.p === 0 && bits.board.sub.length === 1 && bits.board.sub[0].t === 'get the 2x6s' && bits.board.sub[0].done === true && bits.boardDone === undefined;
