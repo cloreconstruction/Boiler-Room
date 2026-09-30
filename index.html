@@ -4559,7 +4559,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.58 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.59 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15554,8 +15554,8 @@ function estPath(code) { return portalRoot() + '/estimates-' + code + '.json'; }
 // ➕ v7.49 — …OR THE BIDS HE ACCEPTED, ADDED TOGETHER. Eric: "I want to be able to select multiple bids, for example, when I am
 // estimating two separate things that need to be done in the same category." More than one bid may wear ✓ now and the category's
 // number is their sum — the raw one here, the client's one in estTotal (each bid by its own markup rule, then added, to the cent).
-// ADDING a bid is its own plate (➕ add this too): ○ use this still means "this one INSTEAD", so two competing bids are never added
-// together by a stray thumb. In a category that offers the homeowner a CHOICE (2 or more bids flagged 👁) the choices stay one-of —
+// USING a second bid is its own plate (☐ use this too — it read ➕ add this too until v7.59, and ➕ is the add-a-line glyph, so he
+// could not find it): ○ use this still means "this one INSTEAD", so two competing bids are never added together by a stray thumb. In a category that offers the homeowner a CHOICE (2 or more bids flagged 👁) the choices stay one-of —
 // the plan is the choice he ticked — and a ticked bid that is NOT a choice is counted in every one of them (estCut does the same,
 // so his board and their page always say the same number).
 function estAccBids(x) { return (x.bids || []).filter(b => b.acc); }
@@ -16478,7 +16478,7 @@ function renderEstimates() {
     ${wayAll || inAll ? `<div class="est-what-row" id="estWhatAll">${wayAll ? `<button type="button" class="est-what" data-what="way" onclick="estWhatOpen(-1, 'way')" aria-label="${money0(wayAll)} on the way on this job — see what it is">📥 ${money0(wayAll)} on the way ›</button>` : ''}${inAll ? `<button type="button" class="est-what" data-what="in" onclick="estWhatOpen(-1, 'in')" aria-label="${money0(inAll)} in on this job — see what it is">📗 ${money0(inAll)} in ›</button>` : ''}<span class="hint" style="margin: 0;">the whole job — tap to see what it is</span></div>` : ''}
     ${guessN ? `<button type="button" class="pick-chip est-guess-filter${_estGuessOnly ? ' sel' : ''}" id="estGuessBtn" aria-pressed="${_estGuessOnly}" onclick="estGuessOnly()">${_estGuessOnly ? `✓ ≈ ONLY THE BEST GUESSES (${guessN}) — tap to show everything` : `≈ ${guessN} best guess${guessN > 1 ? 'es' : ''} — ${money0(guessTot)} with no bid behind it yet · tap to see only those`}</button>` : ''}
     <button type="button" class="btn-ghost est-help-btn" onclick="estHelp()" aria-expanded="${_estHelp}">${_estHelp ? '▾' : '▸'} ? How this works</button>
-    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing. <b>≈ Placeholder — best guess:</b> no bid yet? Open the category, tap ≈ ➕ placeholder, type your own number. The row wears ≈ and a dashed edge until a real bid backs it — type the real number and tap the ≈ plate again, or add the bid and tap ○ use this. Once the category is ✓ ON PAGE their page says it too: ≈ on the number and the word PLACEHOLDER — a rough figure that holds the spot until the real bid comes in, which may be higher or lower. <b>➕ Two separate things in one category:</b> open the category and tap <b>➕ add this too</b> on the second bid — the category's number is the bids added together, and that total is what their page shows. ○ use this instead goes back to one bid; ✓ COUNTED — tap to take it off drops one. In a category that offers the homeowner choices, a bid you add that is not one of the choices is counted in every choice. <b>📥 on the way · $ in:</b> tap either one — on a row, or the two at the top for the whole job — to see what it is made of: each receipt's amount, date, store and category, and 📷 its picture. <b>Every category is always on the list.</b> ✕ remove category takes one off this board and it stays off; ↩ at the foot of the board puts it back. <b>🏷 A receipt on the wrong category:</b> tap 📥 on the way, then 🏷 Wrong category? Move it on that receipt (or the same plate on the bill inside the open category) and pick the right one — their page follows at once. <b>✓ A category that is finished:</b> open it and tap ✓ Mark this category COMPLETE — the estimate is locked, the row says what it came to (under or over), and their page says COMPLETE and counts nothing more as remaining on that line. ↩ Reopen takes it back.</div>
+    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing. <b>≈ Placeholder — best guess:</b> no bid yet? Open the category, tap ≈ ➕ placeholder, type your own number. The row wears ≈ and a dashed edge until a real bid backs it — type the real number and tap the ≈ plate again, or add the bid and tap ○ use this. Once the category is ✓ ON PAGE their page says it too: ≈ on the number and the word PLACEHOLDER — a rough figure that holds the spot until the real bid comes in, which may be higher or lower. <b>☑ Two separate things in one category</b> (two vanities, say): open the category and tap <b>☐ use this too</b> on the second bid — both are used, the category's number is the two added together, and that total is what their page shows. ○ use this instead goes back to one bid; ☑ USING BOTH — tap to take this off drops one. In a category that offers the homeowner choices, a bid you use that is not one of the choices is counted in every choice. <b>📄 A receipt on the way:</b> tap 📄 The receipt to open it (its words, the day, the amount, 📷 its picture — or 🔍 Find the paper for an old filing), 🏷 Wrong category? Move it to put it on the right line. <b>📥 on the way · $ in:</b> tap either one — on a row, or the two at the top for the whole job — to see what it is made of: each receipt's amount, date, store and category, and 📷 its picture. <b>Every category is always on the list.</b> ✕ remove category takes one off this board and it stays off; ↩ at the foot of the board puts it back. <b>🏷 A receipt on the wrong category:</b> tap 📥 on the way, then 🏷 Wrong category? Move it on that receipt (or the same plate on the bill inside the open category) and pick the right one — their page follows at once. <b>✓ A category that is finished:</b> open it and tap ✓ Mark this category COMPLETE — the estimate is locked, the row says what it came to (under or over), and their page says COMPLETE and counts nothing more as remaining on that line. ↩ Reopen takes it back.</div>
     ${(() => { const bills = estBillCands();
       // 📥 v6.02 — Eric: "keep it small until it has something to deal with." Nothing waiting
       // = one thin line you can tap open to file a bill by hand. A bill arrives = it opens
@@ -16540,6 +16540,8 @@ function renderEstimates() {
       const guess = estIsGuess(x);   // ≈ v7.45 — the number this row uses is his own best guess, no bid behind it
       const parts = estParts(x), gParts = estGuessParts(x), accAll = estAccBids(x);   // ➕ v7.49 — the bids its number is made of
       const isChoice = nOpt >= 2;
+      // ☑ v7.59 — how many of its bids a plain category USES, in words: USING BOTH · USING ALL 3 · USING 2 OF 3
+      const useWord = (() => { const n = accAll.length, m = nb; return n === 2 && m === 2 ? 'USING BOTH' : n === m ? `USING ALL ${n}` : `USING ${n} OF ${m}`; })();
       // ✓ v7.50 — a category he marked COMPLETE: the estimate is locked, and what it came to is said in words
       const done = !!x.done, spent = estR2(u + pendUp), under = estR2(tot - spent);
       // the number column: the estimate if there is one, else what is on the way, else what the books show
@@ -16548,7 +16550,7 @@ function renderEstimates() {
         done ? `<b class="est-done-word">✓ COMPLETE</b>${tot > 0 ? (under >= 0 ? ` — came in <b>${money0(under)} under</b> the estimate` : ` — <b style="color: var(--err, #b3452f);">⚠ ${money0(-under)} over the estimate</b>`) : ''}` : '',
         guess ? (gParts.length === parts.length ? '<b class="est-guess-word">≈ PLACEHOLDER — best guess, no bid yet</b>' : `<b class="est-guess-word">≈ PART PLACEHOLDER — ${money0(estGuessAmt(x))} of it is your best guess, no bid yet</b>`) + (x.appr ? ' <span class="est-guess-word">(their page says so too)</span>' : '') : accAll.some(b => b.guess) ? '<b class="est-guess-word">≈ placeholder — no number typed yet</b>' : '',
         x.appr ? '✓ ON THEIR PAGE' : '',
-        parts.length >= 2 ? `<b class="est-sum-word">➕ ${parts.length} bids added together</b>` : '',
+        parts.length >= 2 ? `<b class="est-sum-word">${isChoice ? `☑ their choice + ${parts.length - 1} more bid${parts.length > 2 ? 's' : ''}` : '☑ ' + useWord + ' BIDS'}</b>` : '',   // ☑ v7.59 — the words say select, not add
         tot && rawT !== tot ? `<span style="opacity:.8">bid ${money0(rawT)}</span>` : '',
         !tot && nb ? `${nb} bid${nb > 1 ? 's' : ''}, none picked` : '',
         !done && over ? `<b style="color: var(--err, #b3452f);">over ${money0(over)}</b>` : '',
@@ -16560,15 +16562,23 @@ function renderEstimates() {
         // side on their own line of the row, so a thumb finds them.
         (u || pendUp ? `<span class="est-whats">${u ? `<button type="button" class="est-what" data-what="in" onclick="event.stopPropagation(); estWhatOpen(${ci}, 'in')" aria-label="${money0(u)} in — see what it is">${money0(u)} in ›</button>` : ''}${pendUp ? `<button type="button" class="est-what" data-what="way" onclick="event.stopPropagation(); estWhatOpen(${ci}, 'way')" aria-label="${money0(pendUp)} on the way — see what it is">📥 ${money0(pendUp)} on the way ›</button>` : ''}</span>` : '');
       // ➕ v7.49 — the plate(s) that say whether a bid COUNTS. One bid: ○ use this / ✓ USING THIS ONE, as ever. A second thing in the same
-      // category: ➕ add this too — and then each counted bid reads ✓ COUNTED and one tap takes it off again. Among a category's CHOICES
+      // category: use this too — and then each bid that is used says so and one tap takes it off again. Among a category's CHOICES
       // (2+ flagged 👁) the plate stays one-of: it names the plan; a bid that is not a choice can only be added to them.
+      // ☑ v7.59 — THE PLATE SAYS SELECT, NOT ADD. Eric, with two vanity bids on one line, the first ✓ USING THIS ONE, the second wearing
+      // ○ use this instead · ➕ add this too: "i need to be able to select multiple bids, for example the two bathroom vanities i want
+      // sepereated but both need to be selected." The plate was there — v7.49 built exactly this — but ➕ is the ADD-A-NEW-LINE glyph
+      // everywhere on this board (➕ another bid, ➕ category), so "➕ add this too" read as "add another bid", not "select this one as
+      // well" (v6.93's lesson: name a button by what happens for HIM). Now the pair reads ○ use this instead · ☐ use this too — both
+      // count, and a used bid reads ☑ USING BOTH (☑ USING ALL 3 · ☑ USING 2 OF 3) — tap to take this off. The check box is the
+      // select glyph he knows from the Build List's steps. estBidAlso / estBidAccept and the file are untouched. (`useWord` is set
+      // with the row's other counts, above `sub` — the folded row's words use it too.)
       const usePlate = (b, bi) => {
         const st = 'font-size: var(--fs105, 10.5px); padding: 5px 9px; min-height: 28px; font-weight: var(--fw8, 800);';
         const choiceBid = isChoice && b.opt, addOnly = isChoice && !b.opt;
         if (b.acc) return (accAll.length >= 2 || addOnly) && !choiceBid
-          ? `<button type="button" class="pick-chip sel est-use" data-use="counted" aria-pressed="true" style="${st}" onclick="estBidAlso(${ci}, ${bi})" title="this bid is added into the category's number — tap to take it off">✓ COUNTED — tap to take it off</button>`
+          ? `<button type="button" class="pick-chip sel est-use" data-use="counted" aria-pressed="true" style="${st}" onclick="estBidAlso(${ci}, ${bi})" title="this bid is one of the ones used — the category's number is them added together; tap to take this one off">${addOnly ? '☑ USED WITH EVERY CHOICE — tap to take it off' : `☑ ${useWord} — tap to take this off`}</button>`
           : `<button type="button" class="pick-chip sel est-use" data-use="using" aria-pressed="true" style="${st}" onclick="estBidAccept(${ci}, ${bi})">✓ USING THIS ONE</button>`;
-        const also = `<button type="button" class="pick-chip est-also" data-use="add" aria-pressed="false" style="${st} border-style: dashed;" onclick="estBidAlso(${ci}, ${bi})" title="a separate thing in the same category — this bid is ADDED to what is already counted">➕ add this too</button>`;
+        const also = `<button type="button" class="pick-chip est-also" data-use="add" aria-pressed="false" style="${st} border-style: dashed;" onclick="estBidAlso(${ci}, ${bi})" title="a separate thing in the same category — select this bid as well, and the category's number is the bids added together">${addOnly ? '☐ use this too — with every choice' : accAll.length === 1 ? '☐ use this too — both count' : '☐ use this too'}</button>`;
         if (addOnly) return also;
         return `<button type="button" class="pick-chip est-use" data-use="use" aria-pressed="false" style="${st}" onclick="estBidAccept(${ci}, ${bi})">${accAll.length && !choiceBid ? '○ use this instead' : '○ use this'}</button>` + (accAll.length && !choiceBid ? also : '');
       };
@@ -16587,7 +16597,7 @@ function renderEstimates() {
         <div class="est-bar-fill" style="height: 100%; width: ${barPct}%; background: ${barOver ? 'var(--err, #c0392b)' : 'var(--accent)'};"></div></div><span class="est-bar-word">${done ? '✓ complete' : tot > 0 ? barPct + '% in' : 'no estimate'}</span></div>` : ''}
       ${open ? `
         ${done ? `<div class="est-done-say" id="estDoneSay-${ci}">🔒 <b>COMPLETE</b>${x.done.at ? ' since ' + esc(estDayWord(x.done.at) || x.done.at) : ''} — the estimate is locked${tot > 0 ? ` at <b>${money0(tot)}</b>; it came to <b>${money0(spent)}</b> (${money0(u)} in${pendUp ? ' + ' + money0(pendUp) + ' on the way' : ''})` : ''}. ↩ Reopen it to change a bid.${x.appr ? ' Their page says COMPLETE on this line and counts nothing more as remaining.' : ''}</div>` : ''}
-        ${parts.length >= 2 ? `<div class="est-sum-say" id="estSum-${ci}">➕ <b>${parts.length} bids are added together</b> — ${parts.map(b => money0(estBidRaw(b))).join(' + ')} = <b>${money0(rawT)}</b>${rawT !== tot ? ` → <b>${money0(tot)}</b> to the client` : ''}. That total is this category's number${isChoice ? ' (the choice they make, plus what is counted in every choice)' : ''}.</div>` : ''}
+        ${parts.length >= 2 ? `<div class="est-sum-say" id="estSum-${ci}">☑ <b>${isChoice ? `${parts.length} bids used together` : useWord + ' BIDS'}</b> — ${parts.map(b => money0(estBidRaw(b))).join(' + ')} = <b>${money0(rawT)}</b>${rawT !== tot ? ` → <b>${money0(tot)}</b> to the client` : ''}. That total is this category's number${isChoice ? ' (the choice they make, plus what is used with every choice)' : ''}.</div>` : ''}
         ${(x.bids || []).map((b, bi) => `<div class="est-bid${b.guess ? ' guess' : ''}" data-bi="${bi}" style="margin-top: 8px; padding: 8px; border: 1.5px solid ${b.acc ? 'var(--accent)' : 'var(--border)'}; border-radius: 8px;${b.acc ? '' : ' opacity: .85;'}">
           <div class="frow" style="gap: 5px; align-items: center; flex-wrap: wrap;">
             ${usePlate(b, bi)}
@@ -16623,8 +16633,16 @@ function renderEstimates() {
           // item — his tap decides); without them, the old growth nudge
           const hit = _estSales ? estSalesHit(x, p) : null, nudge = _estSales ? !!hit : (used[x.n] || 0) >= (+p.base || 0) + (+p.a || 0) * 0.5;
           const pe = p.eid != null ? entries.find(k => k.id === p.eid) : null;   // 💵 v7.49 — the receipt behind the bill: 📷 its picture, right here
+          // 📄 v7.59 — Eric, on this row: "here i need to be able to open the receipt and move to another category if its in the wrong
+          // one." 🏷 Move it was here (v7.50); the receipt itself was reachable only when it had a picture — his receipt had none on the
+          // entry (a July File Cabinet filing whose paper sits in Dropbox under its own name), so the row offered nothing to open. Now
+          // every receipt on the way wears 📄 The receipt — the whole entry (its words, day, amount, category; 📷 when it has one, and
+          // 🔍 Find the paper when it was filed without one) — and the money and the day read as money and a day.
+          const receiptPlate = pe ? `<button type="button" class="pick-chip est-pend-open" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="event.stopPropagation(); wizEntryOpen(${pe.id}, '‹ Back to the board'${p.kind === 'labor' ? '' : `, { move: { ci: ${ci}, pi: ${pi} } }`})" title="open the receipt — its words, the day, the amount, its picture; and move it from there">📄 The receipt</button>`
+            : p.eid != null ? `<span class="hint est-pend-noent" style="margin: 0;">📄 its entry is not in this device's log</span>` : '';
           return `<div class="frow est-pend-row" style="gap: 6px; align-items: center; margin-top: 8px; padding: 6px 8px; border: 1.5px dashed var(--accent); border-radius: 8px; flex-wrap: wrap;">
-          <span style="flex: 1; min-width: 150px;">📥 <b>$${(+p.a || 0).toLocaleString()}</b>${p.v ? ' from ' + esc(p.v) : ''} <span class="hint" style="margin: 0;">→ $${estPendMk(p).toLocaleString()} on their page · ${esc(p.ts || '')}${hit ? ' · <b class="est-inv-hit">' + estSalesWord(hit) + ' — is that this one?</b>' : nudge ? ' · <b>📗 a QB run may have caught this</b>' : _estSales ? ' · <span class="est-inv-none">no invoice line for it yet</span>' : ''}</span></span>
+          <span style="flex: 1; min-width: 150px;">📥 <b>${fmtMoney(+p.a || 0)}</b>${p.v ? ' from ' + esc(p.v) : ''} <span class="hint" style="margin: 0;">→ ${fmtMoney(estPendMk(p))} on their page · sent ${esc(estDayWord(p.ts) || p.ts || '')}${hit ? ' · <b class="est-inv-hit">' + estSalesWord(hit) + ' — is that this one?</b>' : nudge ? ' · <b>📗 a QB run may have caught this</b>' : _estSales ? ' · <span class="est-inv-none">no invoice line for it yet</span>' : ''}</span></span>
+          ${receiptPlate}
           ${pe && pe.photoPath ? `<button type="button" class="pick-chip est-pend-ph" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="openEntryPhoto(${pe.id}, event)" aria-label="look at the receipt's picture">📷 picture</button>` : ''}
           ${p.kind === 'labor' ? '' : `<button type="button" class="pick-chip est-pend-mv" style="font-size: var(--fs105, 10.5px); min-height: 28px; border-style: dashed;" onclick="estMoveOpen(${ci}, ${pi})" title="on the wrong category? move it to the right one — their page follows">🏷 Wrong category? Move it</button>`}
           <button type="button" class="pick-chip${lg ? ' sel' : ''}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;${lg ? '' : ' border-style: dashed;'}" onclick="estPendLogan(${ci}, ${pi})" title="has this invoice gone to Logan for processing? Lights itself if it went through TO THE BOOKKEEPER">${lg ? '📗 WITH LOGAN' : '○ sent to Logan?'}</button>
@@ -16794,9 +16812,9 @@ async function estBidAlso(ci, bi) {
   renderEstimates();
   if (x.appr || lampOff) { clearTimeout(_estTimer); _estTimer = null; window._estPub = true; await estSave(); }
   else scheduleEstSave();
-  const parts = estParts(x), raw = estRaw(x), tot = estTotal(x);
-  toast(b.acc
-    ? `➕ ${x.n} counts ${parts.length} bids now — ${parts.map(p => money0(estBidRaw(p))).join(' + ')} = ${money0(raw)}${raw !== tot ? ' (' + money0(tot) + ' to the client)' : ''}${x.appr ? ' · their page has the new number' : ''}`
+  const parts = estParts(x), raw = estRaw(x), tot = estTotal(x), nb = (x.bids || []).length;
+  toast(b.acc   // ☑ v7.59 — the words say select: "uses both bids now"
+    ? `☑ ${x.n} uses ${parts.length === 2 && nb === 2 ? 'both' : parts.length === nb ? 'all ' + nb : parts.length + ' of its ' + nb} bids now — ${parts.map(p => money0(estBidRaw(p))).join(' + ')} = ${money0(raw)}${raw !== tot ? ' (' + money0(tot) + ' to the client)' : ''}${x.appr ? ' · their page has the new number' : ''}`
     : parts.length ? `✓ Taken off — ${x.n} is ${money0(raw)} now${raw !== tot ? ' (' + money0(tot) + ' to the client)' : ''}${x.appr ? ' · their page has the new number' : ''}`
       : `✓ Taken off — ${x.n} has no bid counted now${lampOff ? ', so it is off their page' : ''}`);
 }
@@ -21542,21 +21560,65 @@ function wizLinkEntries(html) {
   return String(html).replace(/\b(entr(?:y|ies))(\s+)((?:#?\d{1,6})(?:(?:\s*,\s*(?:and\s+)?|\s+and\s+|\s*&amp;\s*|\s*,?\s*(?:repeated|also|see)\s+)#?\d{1,6})*)/gi, (m, word, sp, list) =>
     word + sp + list.replace(/#?\d{1,6}/g, n => { const id = +n.replace('#', ''); return entries.some(e => e.id === id) ? `<a href="javascript:void(0)" class="wl-ent" onclick="event.stopPropagation(); wizEntryOpen(${id})" title="open entry ${id}">${n}</a>` : n; }));
 }
-function wizEntryOpen(id, back) {   // 💵 v7.49 — `back`: the word on the way-back plate when it is opened from somewhere other than an answer
+// 🔍 v7.59 — THE PAPER BEHIND AN OLD FILING. Eric, on a receipt on the way that offered nothing to open: "here i need to be able to
+// open the receipt and move to another category if its in the wrong one." His receipt was a July File Cabinet filing: the filer
+// uploaded the paper under its own name — <label> — <category> — <job> — <YYYY-MM-DD HHMM>.<ext> — and wrote the entry with `filedTo`
+// (a folder, in words) but no `photoPath` (that came later, and only for an image); 54 of his Filed entries are like that, three of them
+// on a board. The paper is found by NAME, never guessed: a file whose name starts with the entry's own label AND carries the entry's
+// day (his day, or the UTC day the old filer stamped). Found, an image becomes the entry's photo (it rides the log's 📷 and every board
+// from then on); a PDF is kept as its paper (`e.paper`) and opens inside the app (matOpenDoc). Nothing found is said in words.
+const _paperMiss = {};
+let _wizEntBack = '', _wizEntOpts = null;
+function entryPaperCan(e) { return !!e && e.type === 'Filed' && !e.noReceipt && !e.photoPath && !(e.paper || []).length && !!String(e.details || '').trim(); }
+function entryPaperLabel(e) { return cleanName(String(e.details || '').replace(/\s*×\s*\d+\s*$/, '')).slice(0, 80); }   // "×2" = two files, not the name
+async function entryPaperFind(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  if (!dbx.refreshToken) { toast('Connect Dropbox first (⚙ Setup)', false); return; }
+  const label = entryPaperLabel(e);
+  if (!label) { toast('This entry has no name to look for', false); return; }
+  const ts = e.ts instanceof Date ? e.ts : new Date(e.ts);
+  const days = [...new Set([localDay(ts), ts.toISOString().slice(0, 10)])];
+  busyShow('🔍 LOOKING FOR THE PAPER…');
+  try {
+    const r = await dbxRpc('files/search_v2', { query: label.slice(0, 60), options: { path: DBX_ROOT, max_results: 100, filename_only: true, file_status: 'active' } });
+    if (!r || r.error_summary) throw new Error(r && r.error_summary || 'search');
+    const lab = label.toLowerCase();
+    const files = (r.matches || []).map(m => m.metadata && m.metadata.metadata).filter(f => f && f['.tag'] === 'file')
+      .filter(f => { const n = String(f.name || '').toLowerCase(); return n.startsWith(lab) && days.some(d => n.includes(d)); })
+      .map(f => f.path_display || f.path_lower).filter(Boolean).sort();
+    if (!files.length) { _paperMiss[id] = `no paper named "${label}" dated ${days.join(' or ')} in Dropbox`; busyDone('🔍 NO PAPER FOUND'); wizEntryOpen(id, _wizEntBack, _wizEntOpts); return; }
+    const imgs = files.filter(p => /\.(jpe?g|png|gif|webp|heic|bmp|tiff?)$/i.test(p)), docs = files.filter(p => !imgs.includes(p));
+    if (imgs.length) { e.photoPath = imgs[0]; if (imgs.length > 1) e.photoPaths = imgs.slice(0, 12); else delete e.photoPaths; }
+    if (docs.length) e.paper = docs.slice(0, 5);
+    delete _paperMiss[id];
+    scheduleSave(); renderLog();
+    if (_estD) renderEstimates();   // the board's row gains its 📷 (renderEstimates guards itself when no board is open)
+    busyDone(`🔍 ✓ FOUND ${files.length > 1 ? files.length + ' PAPERS' : 'THE PAPER'}`);
+    wizEntryOpen(id, _wizEntBack, _wizEntOpts);
+    if (imgs.length) openEntryPhoto(id, { stopPropagation() {} }); else matOpenDoc(docs[0]);
+  } catch (err) { busyDone('⚠ THE LOOK FAILED — check the connection'); toast('Could not look in Dropbox — check the connection', false); }
+}
+// `opts.move` = {ci, pi}: opened from a receipt on the way on the estimates board — 🏷 Wrong category? Move it rides in the window too
+function wizEntryOpen(id, back, opts) {   // 💵 v7.49 — `back`: the word on the way-back plate when it is opened from somewhere other than an answer
   const e = entries.find(x => x.id === id);
   if (!e) { toast('That entry is not in the log any more', false); return; }
+  _wizEntBack = back || ''; _wizEntOpts = opts || null;
   let host = $('wizEntHost'); if (!host) { host = document.createElement('div'); host.id = 'wizEntHost'; document.body.appendChild(host); }
   const ts = e.ts instanceof Date ? e.ts : new Date(e.ts), when = ts.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + fmtTime(ts);
   const qty = e.miles != null ? `${(+e.miles).toFixed(1)} mi` : e.amount != null ? fmtMoney(+e.amount) : e.hours != null ? `${(+e.hours).toFixed(1)} hrs` : '';
   const photos = e.photoPaths && e.photoPaths.length ? e.photoPaths : e.photoPath ? [e.photoPath] : [];
+  const papers = Array.isArray(e.paper) ? e.paper.filter(Boolean) : [];
   const locked = typeof isLocked === 'function' ? isLocked(e) : !!e.personal;
+  const mv = opts && opts.move && Number.isInteger(opts.move.ci) && Number.isInteger(opts.move.pi) ? opts.move : null;
   host.innerHTML = `<div class="we-sheet" onclick="if (event.target === this) wizEntryClose()"><div class="we-box" role="dialog" aria-label="log entry ${id}">
     <div class="we-head"><b>ENTRY ${id}</b><span>${esc(when)}</span><button type="button" class="btn-ghost x-plate x-small" style="min-width: 44px;" onclick="wizEntryClose()" aria-label="close the entry" title="close the entry">✕</button></div>
-    <div class="we-meta">${esc(e.type || 'Note')} · ${esc(e.job || '—')}${e.who && e.who !== 'Me' ? ' · ' + esc(e.who) : ''}${qty ? ' · <b>' + qty + '</b>' : ''}${e.mail ? ' · 📧 email' : e.texted ? ' · 💬 text' : ''}${locked ? ' · 🔒 personal — it stays on this phone' : ''}</div>
+    <div class="we-meta">${esc(e.type || 'Note')} · ${esc(e.job || '—')}${e.who && e.who !== 'Me' ? ' · ' + esc(e.who) : ''}${e.category ? ' · 🏷 ' + esc(e.category) : ''}${qty ? ' · <b>' + qty + '</b>' : ''}${e.mail ? ' · 📧 email' : e.texted ? ' · 💬 text' : ''}${locked ? ' · 🔒 personal — it stays on this phone' : ''}</div>
     <div class="we-words">${esc(e.details || '')}</div>
     ${e.ai ? `<div class="we-ai"><b>🔮 read off the photo, and your corrections</b>${esc(String(e.ai).slice(0, 1500))}</div>` : ''}
     ${(e.tags || []).length ? `<div class="we-meta" style="margin-top: 8px;">${e.tags.map(t => '🏷 ' + esc(t)).join(' · ')}</div>` : ''}
-    <div class="rev-row" style="margin-top: 10px; flex-wrap: wrap; gap: 6px;">${photos.length ? `<button type="button" class="btn-primary" onclick="openEntryPhoto(${id}, event)">📷 See the photo${photos.length > 1 ? 's · ' + photos.length : ''}</button>` : ''}<button type="button" class="btn-ghost" onclick="wizEntryClose()">${esc(back || '‹ Back to the answer')}</button></div></div></div>`;
+    ${_paperMiss[id] ? `<div class="we-meta we-paper-miss" style="margin-top: 8px;">🔍 ${esc(_paperMiss[id])}${e.filedTo ? ' — the entry says it was filed under ' + esc(e.filedTo) : ''}</div>` : ''}
+    <div class="rev-row" style="margin-top: 10px; flex-wrap: wrap; gap: 6px;">${photos.length ? `<button type="button" class="btn-primary" onclick="openEntryPhoto(${id}, event)">📷 See the photo${photos.length > 1 ? 's · ' + photos.length : ''}</button>` : ''}${papers.map((p, i) => `<button type="button" class="btn-primary we-paper" onclick="matOpenDoc('${escq(p)}')">📄 Open the paper${papers.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}${entryPaperCan(e) ? `<button type="button" class="btn-primary we-paper-find" onclick="entryPaperFind(${id})" title="the File Cabinet filed the paper under this entry's own name — look for it by that name and this day">🔍 Find the paper in Dropbox</button>` : ''}${mv ? `<button type="button" class="btn-ghost we-move" onclick="wizEntryClose(); estMoveOpen(${mv.ci}, ${mv.pi})">🏷 Wrong category? Move it</button>` : ''}<button type="button" class="btn-ghost" onclick="wizEntryClose()">${esc(back || '‹ Back to the answer')}</button></div></div></div>`;
 }
 function wizEntryClose() { const h = $('wizEntHost'); if (h) h.innerHTML = ''; }
 function wizPendBarInner() {
@@ -24917,7 +24979,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.58';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.59';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

@@ -123,16 +123,16 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   await open();
   await page.evaluate(() => estFold(_estD.cats.findIndex(x => x.n === 'Plumbing')));
   const p0 = await rowOf('Plumbing');
-  ok('one bid counted: it reads ✓ USING THIS ONE; each other bid offers ○ use this instead AND ➕ add this too', p0.num === '$10,800' && JSON.stringify(p0.plates) === JSON.stringify([['✓ USING THIS ONE'], ['○ use this instead', '➕ add this too'], ['○ use this instead', '➕ add this too']]), JSON.stringify(p0));
-  ok('➕ add this too: the category\'s number is the two added together — each with the markup folded in — and the row says so', await (async () => {
+  ok('one bid counted: it reads ✓ USING THIS ONE; each other bid offers ○ use this instead AND ☐ use this too — both count (v7.59: the plate says select, not add)', p0.num === '$10,800' && JSON.stringify(p0.plates) === JSON.stringify([['✓ USING THIS ONE'], ['○ use this instead', '☐ use this too — both count'], ['○ use this instead', '☐ use this too — both count']]), JSON.stringify(p0));
+  ok('☐ use this too: the category\'s number is the two added together — each with the markup folded in — and the row says ☑ USING 2 OF 3 BIDS', await (async () => {
     await page.evaluate(() => document.querySelectorAll('.est-row.est-open .est-bid')[1].querySelector('.est-also').click());
     await page.waitForTimeout(100);
     const r = await rowOf('Plumbing');
-    return r.num === '$14,400' && /➕ 2 bids added together/.test(r.sub) && /bid \$12,000/.test(r.sub) && await page.evaluate(() => { const x = _estD.cats.find(k => k.n === 'Plumbing'); return estRaw(x) === 12000 && estTotal(x) === 14400 && x.bids.filter(b => b.acc).length === 2; });
+    return r.num === '$14,400' && /☑ USING 2 OF 3 BIDS/.test(r.sub) && /bid \$12,000/.test(r.sub) && await page.evaluate(() => { const x = _estD.cats.find(k => k.n === 'Plumbing'); return estRaw(x) === 12000 && estTotal(x) === 14400 && x.bids.filter(b => b.acc).length === 2; });
   })(), JSON.stringify(await rowOf('Plumbing')));
-  ok('the open category says the sum in words: what is added, the total, what the client sees', /^➕ 2 bids are added together — \$9,000 \+ \$3,000 = \$12,000 → \$14,400 to the client\. That total is this category's number\.$/.test((await rowOf('Plumbing')).sum), (await rowOf('Plumbing')).sum);
-  ok('the toast says it too, so an added bid is never a surprise', await page.evaluate(() => _said.some(t => /^➕ Plumbing counts 2 bids now — \$9,000 \+ \$3,000 = \$12,000 \(\$14,400 to the client\)$/.test(t))), await page.evaluate(() => JSON.stringify(_said.slice(-2))));
-  ok('both counted bids read ✓ COUNTED — tap to take it off; the third still offers both ways in', JSON.stringify((await rowOf('Plumbing')).plates) === JSON.stringify([['✓ COUNTED — tap to take it off'], ['✓ COUNTED — tap to take it off'], ['○ use this instead', '➕ add this too']]), JSON.stringify((await rowOf('Plumbing')).plates));
+  ok('the open category says the sum in words: what is added, the total, what the client sees', /^☑ USING 2 OF 3 BIDS — \$9,000 \+ \$3,000 = \$12,000 → \$14,400 to the client\. That total is this category's number\.$/.test((await rowOf('Plumbing')).sum), (await rowOf('Plumbing')).sum);
+  ok('the toast says it too, so an added bid is never a surprise', await page.evaluate(() => _said.some(t => /^☑ Plumbing uses 2 of its 3 bids now — \$9,000 \+ \$3,000 = \$12,000 \(\$14,400 to the client\)$/.test(t))), await page.evaluate(() => JSON.stringify(_said.slice(-2))));
+  ok('both used bids read ☑ USING 2 OF 3 — tap to take this off; the third still offers both ways in (no "both count" now — two are already used)', JSON.stringify((await rowOf('Plumbing')).plates) === JSON.stringify([['☑ USING 2 OF 3 — tap to take this off'], ['☑ USING 2 OF 3 — tap to take this off'], ['○ use this instead', '☐ use this too']]), JSON.stringify((await rowOf('Plumbing')).plates));
   ok('✓ ON THEIR PAGE: their page gets ONE number for the line — the sum — and nothing about the parts; the 🏠 notes ride joined', await (async () => {
     const ci = await ciOf('Plumbing');
     await page.evaluate(async ci => { await estApprove(ci); await estApprove(ci); }, ci);
@@ -140,11 +140,11 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const pg = await pageJson(), b = (pg.budget || []).find(x => x.n === 'Plumbing');
     return !!b && b.est === 14400 && Object.keys(b).sort().join() === 'd,est,n' && b.d === 'rough-in and finish · water heater' && !/bids|parts|acc|9000|3000|10800|3600|markup/i.test(JSON.stringify(pg.budget));
   })(), JSON.stringify((await pageJson()).budget));
-  ok('✓ COUNTED — tap to take it off: back to one bid, and their page follows at once', await (async () => {
+  ok('☑ USING 2 OF 3 — tap to take this off: back to one bid, and their page follows at once', await (async () => {
     await page.evaluate(() => document.querySelectorAll('.est-row.est-open .est-bid')[1].querySelector('.est-use').click());
     await page.waitForTimeout(300);
     const r = await rowOf('Plumbing'), b = ((await pageJson()).budget || []).find(x => x.n === 'Plumbing');
-    return r.num === '$10,800' && !/added together/.test(r.sub) && !r.sum && r.lamp === '✓ ON PAGE' && b.est === 10800 && b.d === 'rough-in and finish' && await page.evaluate(() => _said.some(t => /^✓ Taken off — Plumbing is \$9,000 now \(\$10,800 to the client\) · their page has the new number$/.test(t)));
+    return r.num === '$10,800' && !/USING/.test(r.sub) && !r.sum && r.lamp === '✓ ON PAGE' && b.est === 10800 && b.d === 'rough-in and finish' && await page.evaluate(() => _said.some(t => /^✓ Taken off — Plumbing is \$9,000 now \(\$10,800 to the client\) · their page has the new number$/.test(t)));
   })(), JSON.stringify(await rowOf('Plumbing')));
   ok('○ use this instead still means INSTEAD: with two counted, a tap on the third makes it the only one', await (async () => {
     await page.evaluate(() => document.querySelectorAll('.est-row.est-open .est-bid')[1].querySelector('.est-also').click());
@@ -153,7 +153,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await page.evaluate(() => document.querySelectorAll('.est-row.est-open .est-bid')[2].querySelector('.est-use').click());
     await page.waitForTimeout(300);
     const r = await rowOf('Plumbing');
-    return two === '$14,400' && r.num === '$10,200' && JSON.stringify(r.plates) === JSON.stringify([['○ use this instead', '➕ add this too'], ['○ use this instead', '➕ add this too'], ['✓ USING THIS ONE']]) && ((await pageJson()).budget || []).find(x => x.n === 'Plumbing').est === 10200;
+    return two === '$14,400' && r.num === '$10,200' && JSON.stringify(r.plates) === JSON.stringify([['○ use this instead', '☐ use this too — both count'], ['○ use this instead', '☐ use this too — both count'], ['✓ USING THIS ONE']]) && ((await pageJson()).budget || []).find(x => x.n === 'Plumbing').est === 10200;
   })(), JSON.stringify(await rowOf('Plumbing')));
   ok('each bid keeps its OWN markup rule in the sum: one with the markup already in, one with it riding on top', await (async () => {
     await page.evaluate(() => { _estOpenCats = new Set(); estFold(_estD.cats.findIndex(x => x.n === 'Framing')); });
@@ -190,7 +190,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— 🏠 a category that offers the homeowner a choice —');
   await page.evaluate(() => { _estOpenCats = new Set(); estFold(_estD.cats.findIndex(x => x.n === 'Siding')); });
   const s0 = await rowOf('Siding');
-  ok('the choices stay one-of (✓ USING THIS ONE / ○ use this); a bid that is not a choice can only be ADDED', s0.num === '$8,000' && JSON.stringify(s0.plates) === JSON.stringify([['✓ USING THIS ONE'], ['○ use this'], ['➕ add this too']]), JSON.stringify(s0));
+  ok('the choices stay one-of (✓ USING THIS ONE / ○ use this); a bid that is not a choice can only be USED WITH every choice', s0.num === '$8,000' && JSON.stringify(s0.plates) === JSON.stringify([['✓ USING THIS ONE'], ['○ use this'], ['☐ use this too — with every choice']]), JSON.stringify(s0));
   ok('added, it is counted in EVERY choice: the board shows the plan plus it, and every price on their page carries it', await (async () => {
     await page.evaluate(() => document.querySelectorAll('.est-row.est-open .est-bid')[2].querySelector('.est-also').click());
     await page.waitForTimeout(100);
@@ -198,7 +198,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await page.evaluate(async ci => { await estApprove(ci); await estApprove(ci); }, ci);
     await page.waitForTimeout(300);
     const r = await rowOf('Siding'), b = ((await pageJson()).budget || []).find(x => x.n === 'Siding');
-    return r.num === '$9,000' && /the choice they make, plus what is counted in every choice/.test(r.sum) && JSON.stringify(r.plates) === JSON.stringify([['✓ USING THIS ONE'], ['○ use this'], ['✓ COUNTED — tap to take it off']]) &&
+    return r.num === '$9,000' && /the choice they make, plus what is used with every choice/.test(r.sum) && JSON.stringify(r.plates) === JSON.stringify([['✓ USING THIS ONE'], ['○ use this'], ['☑ USED WITH EVERY CHOICE — tap to take it off']]) &&
       !!b && b.def === 0 && b.opts.map(o => o.t + ':' + o.est).join('|') === 'Vinyl:9000|Repaint:4000' && !('est' in b);
   })(), JSON.stringify([await rowOf('Siding'), ((await pageJson()).budget || []).find(x => x.n === 'Siding')]));
   ok('○ use this on the other choice moves the PLAN and leaves what is counted in every choice alone', await (async () => {
@@ -217,7 +217,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('a board written before this build reads exactly as it did: one bid counted, the same number', await page.evaluate(() => {
     const x = { n: 'Trim', bids: [{ e1: 500, e2: 250, acc: true }, { e1: 900, e2: 0 }] };
     return estParts(x).length === 1 && estRaw(x) === 750 && estTotal(x) === 900 && estAccBid(x) === x.bids[0] && !estIsGuess(x); }));
-  ok('? How this works says it in words', await page.evaluate(() => /➕ Two separate things in one category:/.test($('estHelpBox').textContent) && /Every category is always on the list\./.test($('estHelpBox').textContent) && /tap either one/.test($('estHelpBox').textContent)));
+  ok('? How this works says it in words', await page.evaluate(() => /☑ Two separate things in one category \(two vanities, say\)/.test($('estHelpBox').textContent) && /tap ☐ use this too on the second bid/.test($('estHelpBox').textContent) && /Every category is always on the list\./.test($('estHelpBox').textContent) && /tap either one/.test($('estHelpBox').textContent)));
   await page.evaluate(() => closeEstimates());
   await page.waitForTimeout(200);
 
