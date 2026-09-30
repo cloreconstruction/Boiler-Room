@@ -1899,6 +1899,17 @@
   .jc-map { display: flex; margin: 8px 0 0; }
   .jc-notes { white-space: pre-wrap; font-size: 15px; line-height: 1.45; }
   .jc-edit { width: 100%; min-height: 46px; margin-top: 14px; font-weight: var(--fw8, 800); }
+  /* 📇 v7.60 — Eric: "make address its own little box and people a box. that way its seperated easily by eye." Every part of the
+     card is its own plate now — the heading inside it, room between the plates, a faint brass tint so a plate reads as a plate
+     against the window; the person and code plates sit inside the People and Codes plates. The pick window still wins (3px rim + glow). */
+  .jc-sec { border: 2px solid var(--border); border-radius: 14px; padding: 10px 12px 12px; margin: 0 0 14px;
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface-1)); }
+  .jc-sec > .jc-head { margin: 0 0 8px; }
+  .jc-sec > .jc-person:last-child, .jc-sec > .jc-code:last-child, .jc-sec > .jc-blk:last-child { margin-bottom: 0; }
+  .jc-sec .field:last-child { margin-bottom: 0; }
+  /* 📐 v7.60 — Eric: "add a button just under pick the job and it'll say 'plans' and take me to the plans window on project portal" */
+  .jc-plans { width: 100%; min-height: 48px; margin: -4px 0 14px; font-weight: var(--fw8, 800); font-size: 15px; }
+  .jc-plans.is-off { border-style: dashed; opacity: .8; }
   .jc-coderow { display: grid; grid-template-columns: minmax(0, 1fr) 104px 44px; gap: 6px; align-items: end; }
   .jc-coderow .field { min-width: 0; }
   .jc-coderow .jc-x { width: 44px; padding: 10px 0; margin: 0; }
@@ -4559,7 +4570,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.59 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.60 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -13263,18 +13274,21 @@ function cardEditsTake(name, j) {
     toast(`📇 ${name} updated ${took} job card${took > 1 ? 's' : ''}`);
   }
 }
+// 📇 v7.60 — a part of the card is its own plate (jcSec): the heading inside, room between. Eric: "make address its own little
+// box and people a box. that way its seperated easily by eye."
+const jcSec = (k, head, inner) => `<div class="jc-sec jc-sec-${k}"><div class="jc-head">${head}</div>${inner}</div>`;
 function cardViewHtml(c, mine) {
   const ppl = (c.people || []).filter(p => p.n || p.tel || p.em), cds = (c.codes || []).filter(k => k.w || k.c);
   const tel = t => `<a href="tel:${esc(String(t).replace(/[^0-9+]/g, ''))}" class="jc-tap">📞 ${esc(t)}</a>`;
   const em = m => `<a href="mailto:${esc(m)}" class="jc-tap">✉ ${esc(m)}</a>`;
   return `
-    ${c.addr ? `<div class="jc-head">📍 Address</div><div class="jc-big">${esc(c.addr)}</div>
-      <a href="${esc('https://maps.apple.com/?q=' + encodeURIComponent(c.addr))}" class="jc-tap jc-map">🗺 Open in Maps</a>` : ''}
-    ${ppl.length ? `<div class="jc-head">👤 People</div>` + ppl.map(p => `<div class="jc-person">
+    ${c.addr ? jcSec('addr', '📍 Address', `<div class="jc-big">${esc(c.addr)}</div>
+      <a href="${esc('https://maps.apple.com/?q=' + encodeURIComponent(c.addr))}" class="jc-tap jc-map">🗺 Open in Maps</a>`) : ''}
+    ${ppl.length ? jcSec('ppl', '👤 People', ppl.map(p => `<div class="jc-person">
         <div class="jc-name">${esc(p.n || '(no name)')}${p.r ? ` <span class="jc-role">· ${esc(p.r)}</span>` : ''}</div>
-        ${p.tel || p.em ? `<div class="jc-taps">${p.tel ? tel(p.tel) : ''}${p.em ? em(p.em) : ''}</div>` : ''}</div>`).join('') : ''}
-    ${cds.length ? `<div class="jc-head">🔑 Codes</div>` + cds.map(k => `<div class="jc-code"><span>${esc(k.w || 'code')}</span><b>${esc(k.c || '')}</b></div>`).join('') : ''}
-    ${c.notes ? `<div class="jc-head">📝 Worth knowing</div><div class="jc-notes">${esc(c.notes)}</div>` : ''}
+        ${p.tel || p.em ? `<div class="jc-taps">${p.tel ? tel(p.tel) : ''}${p.em ? em(p.em) : ''}</div>` : ''}</div>`).join('')) : ''}
+    ${cds.length ? jcSec('codes', '🔑 Codes', cds.map(k => `<div class="jc-code"><span>${esc(k.w || 'code')}</span><b>${esc(k.c || '')}</b></div>`).join('')) : ''}
+    ${c.notes ? jcSec('notes', '📝 Worth knowing', `<div class="jc-notes">${esc(c.notes)}</div>`) : ''}
     ${cardHas(c) ? '' : `<div class="hint">${mine ? 'Nothing on this card yet.' : 'Nothing on this card yet — Eric fills these in and they land here on your next sync.'}</div>`}`;
 }
 function openJobCard(job, edit) {
@@ -13346,11 +13360,11 @@ function openJobCard(job, edit) {
     : '';
   // 👷/🔒 the crew line sits on both faces — one tap either way, and it always says which way it is
   const lockBtn = `<button type="button" class="jc-lock${c.lock ? ' on' : ''}" onclick="cardLock()">${c.lock ? '🔒 ERIC ONLY — this card stays off every crew phone and out of their Wizard · tap to hand it to the crew' : '👷 THE CREW GETS THIS ONE — they can look it up and ask their Wizard for it · tap to keep it yours'}</button>`;
+  // 📇 v7.60 — the form wears the same plates as the reading face (jcSec), so the eye finds Address · People · Codes · Notes either way
   const form = `
-    <div class="field"><label>📍 Physical address</label>
-      <input type="text" id="jcAddr" value="${esc(c.addr || '')}" placeholder="38210 K-Beach Rd, Soldotna"></div>
-    <div class="jc-head">👤 People</div>
-    ${ppl.length ? ppl.map((p, i) => `<div class="jc-blk">
+    ${jcSec('addr', '📍 Address', `<div class="field" style="margin: 0;"><label>Physical address</label>
+      <input type="text" id="jcAddr" value="${esc(c.addr || '')}" placeholder="38210 K-Beach Rd, Soldotna"></div>`)}
+    ${jcSec('ppl', '👤 People', (ppl.length ? ppl.map((p, i) => `<div class="jc-blk">
       <div class="frow" style="gap: 6px;">
         <div class="field" style="flex: 2; min-width: 130px; margin: 0;"><label>Name</label><input type="text" id="jcPn${i}" value="${esc(p.n || '')}" placeholder="Dale Rininger"></div>
         <div class="field" style="flex: 1; min-width: 100px; margin: 0;"><label>Who they are</label><input type="text" id="jcPr${i}" value="${esc(p.r || '')}" placeholder="Homeowner · spouse · inspector"></div>
@@ -13360,17 +13374,16 @@ function openJobCard(job, edit) {
         <div class="field" style="flex: 2; min-width: 140px; margin: 0;"><label>Email</label><input type="email" inputmode="email" id="jcPe${i}" value="${esc(p.em || '')}" placeholder="dale@example.com"></div>
       </div>
       <button type="button" class="btn-ghost jc-x" onclick="cardDropPerson(${i})">✕ Take this person off</button>
-    </div>`).join('') : '<div class="hint" style="margin: 0 0 6px;">Nobody on this card yet.</div>'}
-    <button type="button" class="btn-ghost jc-add" onclick="cardAddPerson()">➕ Add a person</button>
-    <div class="jc-head">🔑 Codes</div>
-    ${cds.length ? cds.map((k, i) => `<div class="jc-blk jc-coderow">
+    </div>`).join('') : '<div class="hint" style="margin: 0 0 6px;">Nobody on this card yet.</div>') +
+    `<button type="button" class="btn-ghost jc-add" onclick="cardAddPerson()">➕ Add a person</button>`)}
+    ${jcSec('codes', '🔑 Codes', (cds.length ? cds.map((k, i) => `<div class="jc-blk jc-coderow">
       <div class="field" style="margin: 0;"><label>What it opens</label><input type="text" id="jcCw${i}" value="${esc(k.w || '')}" placeholder="Front door · Gate · Shop · Wifi"></div>
       <div class="field" style="margin: 0;"><label>Code</label><input type="text" id="jcCc${i}" value="${esc(k.c || '')}" placeholder="1379#"></div>
       <button type="button" class="btn-ghost jc-x" onclick="cardDropCode(${i})" aria-label="take this code off" title="take this code off">✕</button>
-    </div>`).join('') : '<div class="hint" style="margin: 0 0 6px;">No codes on this card yet.</div>'}
-    <button type="button" class="btn-ghost jc-add" onclick="cardAddCode()">➕ Add a code</button>
-    <div class="field" style="margin-top: 12px;"><label>📝 Anything else worth knowing here</label>
-      <textarea id="jcNotes" rows="2" class="grow" oninput="fitTa(this)" placeholder="Dog in the back yard · park on the gravel · water shutoff is under the deck">${esc(c.notes || '')}</textarea></div>
+    </div>`).join('') : '<div class="hint" style="margin: 0 0 6px;">No codes on this card yet.</div>') +
+    `<button type="button" class="btn-ghost jc-add" onclick="cardAddCode()">➕ Add a code</button>`)}
+    ${jcSec('notes', '📝 Worth knowing', `<div class="field" style="margin: 0;"><label>Anything else worth knowing here</label>
+      <textarea id="jcNotes" rows="2" class="grow" oninput="fitTa(this)" placeholder="Dog in the back yard · park on the gravel · water shutoff is under the deck">${esc(c.notes || '')}</textarea></div>`)}
     ${mine ? lockBtn : ''}
     <button type="button" class="btn-primary" style="width: 100%; font-weight: var(--fw8, 800); margin-top: 10px; padding: 13px;" onclick="cardSave()">✓ Save this card</button>`;
   // 📇 v7.09 — an office crew phone gets the reading face, the hand-out ticks and ✎ Edit; the 👷/🔒 line stays Eric's alone
@@ -13386,9 +13399,28 @@ function openJobCard(job, edit) {
       : canEdit ? 'Eric\'s job cards — the address, the people, the codes. You can edit them; Eric\'s phone picks your changes up on its next sync.'
       : 'Addresses, numbers, emails and door codes for one job — read-only; ask your Wizard for it out loud too.'}</div>
     ${mine && _crewDbx && _crewDbx.name ? crewDbxHtml(_crewDbx) : ''}
-    ${pick}${job ? headsBar + body : subsDoorHtml()}`;
+    ${pick}${job ? cardPlansHtml(job) + headsBar + body : subsDoorHtml()}`;
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
+}
+// 📐 v7.60 — Eric: "add a button just under pick the job and it'll say 'plans' and take me to the plans window on project portal."
+// The plan rack lives on the job's client page (openPlanRack takes the portal client), so the plate opens it when the job has
+// one, and says so in words when it has none; a field phone (which the rack turns away) gets no plate. The rack's ✕ brings
+// him back to this card (_pkBack), not to the main page.
+let _pkBack = '';
+function cardPlansHtml(job) {
+  if (CREW_NAME && !amOffice()) return '';
+  const i = blClientIdx(job);
+  if (i >= 0) return `<button type="button" class="btn-primary jc-plans" onclick="cardPlans()" title="the plan rack on this job's client page — the plan sets, one per slot">📐 Plans — the plan rack for ${esc(job)}</button>`;
+  return `<button type="button" class="btn-ghost jc-plans is-off" onclick="cardPlans()">📐 Plans — ${CREW_NAME ? 'no client page for this job on this phone' : 'this job has no client page yet, so no plan rack'}</button>`;
+}
+function cardPlans() {
+  const job = _cardJob, i = blClientIdx(job);
+  if (!job) return;
+  if (i < 0) { toast(CREW_NAME ? '📐 No client page for this job on this phone — the plan rack lives there' : '📐 The plan rack lives on the client page — give this job one first (🏠 Project portal → ➕ Give a job a client page)', false); return; }
+  if ((!CREW_NAME || amOffice()) && _jcEdit) cardStash();   // mid-edit: keep the words first
+  _pkBack = '';
+  openPlanRack(i).then(() => { if (_pkIdx === i && _pkD) _pkBack = 'card'; });   // only once the rack is really open
 }
 // read whatever is on screen back onto the card. keepBlank leaves half-typed rows alone so
 // adding a second person never eats the first empty one.
@@ -15359,7 +15391,7 @@ async function openPlanRack(i) {
   // 🏢 v7.09 — Eric: "he should be able to click on Plans". The sets live INSIDE the shared Client Portal folder now
   // (portalRoot()/Plans/<code>/…), so an office phone reads and writes the same rack Eric does; portalGuard above
   // still turns field crew away in words.
-  _pkIdx = i; _pkPend = {}; _pkHistShow = new Set(); _pkArm = '';
+  _pkIdx = i; _pkPend = {}; _pkHistShow = new Set(); _pkArm = ''; _pkBack = '';   // 📐 v7.60 — cardPlans sets _pkBack once the rack is open
   const c = _portalIdx.clients[i];
   toast('⏳ Opening the rack…');
   try { _pkD = JSON.parse(await dbxDownload(pkPath(c.code)) || 'null'); } catch (e) { _pkD = null; }
@@ -15373,6 +15405,7 @@ function closePlanRack() {
   $('revModal').classList.remove('show', 'mat-full');
   modalOpenSync();   // 🏠 v6.65
   _pkIdx = -1; _pkD = null; _pkPend = {};
+  if (_pkBack === 'card') { _pkBack = ''; if (_cardJob) openJobCard(_cardJob); }   // 📐 v7.60 — it was opened from the job card: back to the card
 }
 async function pkSave() {
   const c = _portalIdx.clients[_pkIdx];
@@ -24979,7 +25012,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.59';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.60';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
