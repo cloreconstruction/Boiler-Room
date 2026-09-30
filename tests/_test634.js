@@ -41,11 +41,11 @@ const { chromium } = require('playwright');
   console.log('— ↩ v6.34 take it back, all the way —');
 
   await seedSent();
-  ok('the pending bill row wears BOTH buttons — QB has it, and Take back', await page.evaluate(async () => {
+  ok('the pending bill row wears BOTH buttons — ✓ It\'s on their invoice (📗 v7.58 — the plate said QB HAS IT before; the meaning was always "on the homeowner\'s invoice"), and Take back', await page.evaluate(async () => {
     await openEstimates(0);
     _estOpenCats.add(_estD.cats.findIndex(x => x.n === 'Framing')); renderEstimates();   // unfold the category, as a tap would
     const h = $('revBox').innerHTML;
-    return /QB HAS IT/.test(h) && /↩ Take back/.test(h) && /estPendClear\(\d+, 0, 'back'\)/.test(h);
+    return /✓ It's on their invoice/.test(h) && /↩ Take back/.test(h) && /estPendClear\(\d+, 0, 'back'\)/.test(h);
   }));
 
   ok('↩ Take back pulls it off the board', await page.evaluate(async () => {

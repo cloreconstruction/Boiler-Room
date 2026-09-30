@@ -4559,7 +4559,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.57 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.58 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15919,6 +15919,7 @@ async function openEstimates(i) {
   toast('⏳ Opening the estimates…');
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
   try { _estPage = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (e) { _estPage = null; }
+  await estSalesRead(c);   // 📗 v7.58 — this client's invoice lines, when the books run has written them
   dpSee(c.code, _estPage);   // 💰 v7.51
   if (!_estD || !Array.isArray(_estD.cats)) _estD = { updated: '', cats: [] };
   // 📋 v6.89 — the build list, rolled up under each estimate line (office file only; a job with no board just has no roll-up)
@@ -15979,7 +15980,7 @@ function closeEstimates() {
   estWhatClose();   // 💵 v7.49 — the what-is-in-it window goes with its board
   $('revModal').classList.remove('show', 'mat-full');
   modalOpenSync();   // 🏠 v6.65
-  _estIdx = -1; _estD = null; _estPage = null;
+  _estIdx = -1; _estD = null; _estPage = null; _estSales = null;
 }
 // "in" per board category — every QB phase line lands on its best-matching category, once
 // 💵 v7.49 — the LINES themselves are kept (estUsedLines: the books' own name, the amount, the phase the books have it under), so a tap
@@ -16154,7 +16155,7 @@ function estWhatDraw() {
       say: [labor ? `👷 Labor — week of ${esc(laborWeekLabel(p.wk))} (${+p.hrs || 0} h)` : '', p.ts ? 'sent to their page ' + esc(estDayWord(p.ts) || p.ts) : '', estBillToLogan(p) ? '📗 with Logan' : '', (p.mv || []).length ? '🏷 moved here from ' + esc(p.mv[p.mv.length - 1].from) : ''].filter(Boolean).join(' · ') }); };
   const takenRow = (d, r) => { const t = r.t, labor = t.kind === 'labor';
     return rcpt({ e: r.e, kind: labor ? 'labor' : 'taken', cat: d.x.n, amt: t.a, v: labor ? '' : t.v,
-      say: [labor ? `👷 Labor — week of ${esc(laborWeekLabel(t.wk))} (${+t.hrs || 0} h)` : '', t.ts ? 'sent ' + esc(estDayWord(t.ts) || t.ts) : '', t.cl ? (t.why === 'qb' ? '📗 QuickBooks took it in ' : '✓ you retired it (QB has it) ') + esc(estDayWord(t.cl) || t.cl) : ''].filter(Boolean).join(' · ') }); };
+      say: [labor ? `👷 Labor — week of ${esc(laborWeekLabel(t.wk))} (${+t.hrs || 0} h)` : '', t.ts ? 'sent ' + esc(estDayWord(t.ts) || t.ts) : '', t.inv ? `📗 on invoice #${esc(t.inv)}${t.invD ? ' · ' + esc(estDayWord(t.invD) || t.invD) : ''}${t.why === 'qb' ? ' (matched to the cent)' : ' (your tap)'}` : t.cl ? (t.why === 'qb' ? '📗 the books took it in (the category\'s total grew by it) ' : '✓ you said it is on their invoice ') + esc(estDayWord(t.cl) || t.cl) : ''].filter(Boolean).join(' · ') }); };   // 📗 v7.58 — an invoice line on the trail is named; the old growth clear says what it was
   const logRow = (d, r) => rcpt({ e: r.e, kind: 'log', cat: d.x.n, amt: (estBillParse(r.e) || {}).amt, shown: estPendMk({ a: (estBillParse(r.e) || {}).amt }),
     mover: moverHtml(w.recat === r.e.id, `estRecatOpen(${r.e.id})`, 'estRecatGo()', d.i, `File it under which category instead of ${esc(d.x.n)}?`, 'It is not on their page — only the receipt in your log changes.'),
     say: r.e.budg === 'no' ? '⏏ NOT FOR THEM — you took it off the receipts list' : '○ WAITING — not sent to their page yet' });
@@ -16344,8 +16345,63 @@ function estUpcoming() {
 // Nothing is deleted quietly. Each cleared bill moves to _estD.cleared[] carrying its vendor,
 // amount, entry id, the base it was approved against and the QB figure that retired it — so
 // any number on a client's page can be walked back to the receipt it came from.
+// ================= 📗 v7.58 — A RECEIPT MATCHED TO LOGAN'S INVOICE, TO THE CENT =================
+// Eric: "qb has it, i don't usually know when qb has it other than i sent the reciept to logan. so how are these getting matched?
+// how can we know that its correct" — the truth told to him: the app never saw an invoice; it had ONE total per category from the
+// books run and retired the oldest waiting receipt when that total had grown by as much (v6.27/v6.28) — a dollar-growth guess, and
+// on the real pages (a July snapshot the run does not rebuild) it hardly ever fired. "go." So the books run now writes this
+// client's INVOICE LINES (Client Portal/sales-<code>.json — the contract is in CLAUDE.md) and the app matches a receipt on the way
+// to ONE line, exactly: the same amount to the cent (the receipt's own, or with the job's markup folded in), dated on or after the
+// receipt, under an item that IS this category — then it is retired as "on invoice #n, <day>". The same amount under ANOTHER item
+// is never taken on its own: the row says what it saw and the plate is pre-lit — his tap decides. A page with no lines file keeps
+// the old growth rule; with the file, nothing is retired on a guess. One invoice line retires one receipt, ever.
+let _estSales = null;
+async function estSalesRead(c) {
+  try { const j = JSON.parse(await dbxDownload(portalRoot() + '/sales-' + c.code + '.json') || 'null'); _estSales = j && Array.isArray(j.lines) ? j : null; } catch (e) { _estSales = null; }
+  return _estSales;
+}
+const estSalesKey = l => `${l.inv}|${l.d}|${l.amt.toFixed(2)}|${l.item.toLowerCase()}`;
+function estSalesLines() {
+  return (_estSales && Array.isArray(_estSales.lines) ? _estSales.lines : []).map(l => ({ inv: String((l || {}).inv || '').trim().slice(0, 20), d: String((l || {}).d || '').slice(0, 10), item: String((l || {}).item || '').trim().slice(0, 80), memo: String((l || {}).memo || '').slice(0, 200), amt: Math.round((+(l || {}).amt || 0) * 100) / 100 }))
+    .filter(l => l.amt > 0 && /^\d{4}-\d{2}-\d{2}$/.test(l.d)).map(l => ({ ...l, key: estSalesKey(l) }));
+}
+function estSalesFree() {   // the lines not yet paired with a receipt (a line is spent once; two alike on one invoice are two)
+  const spent = {}; ((_estD && _estD.cleared) || []).forEach(t => { if (t && t.invKey) spent[t.invKey] = (spent[t.invKey] || 0) + 1; });
+  const seen = {};
+  return estSalesLines().filter(l => { seen[l.key] = (seen[l.key] || 0) + 1; return seen[l.key] > (spent[l.key] || 0); });
+}
+const estPendSince = p => { const e = p.eid != null ? entries.find(k => k.id === p.eid) : null, rd = e ? ((estBillParse(e) || {}).d || '') : ''; return /^\d{4}-\d{2}-\d{2}$/.test(rd) ? rd : String(p.ts || '').slice(0, 10); };
+// the line a receipt on the way matches: { line, same } — same = the line's item is this category; the caller decides what to do with the rest
+function estSalesHit(x, p, free) {
+  if (!p || p.kind === 'labor' || !(+p.a > 0)) return null;
+  const raw = Math.round(+p.a * 100) / 100, mk = Math.round(estPendMk(p) * 100) / 100, since = estPendSince(p);
+  const cands = (free || estSalesFree()).filter(l => (Math.abs(l.amt - raw) < 0.006 || Math.abs(l.amt - mk) < 0.006) && (!since || l.d >= since));
+  if (!cands.length) return null;
+  const same = cands.filter(l => l.item && estScore(l.item, x.n) > 0);
+  const pick = (same.length ? same : cands).slice().sort((a, b) => a.d.localeCompare(b.d))[0];
+  return { line: pick, same: same.includes(pick) };
+}
+function estSalesWord(h) { return h ? `📗 exactly ${fmtMoney(h.line.amt)} on invoice #${esc(h.line.inv || '?')} · ${esc(estDayWord(h.line.d) || h.line.d)}${h.line.item ? ' · under ' + esc(h.line.item) : ''}` : ''; }
+// the line pass: every receipt on the way that has its own invoice line, under its own category, is retired — one line, one receipt
+function estAutoClearLines() {
+  const today = localDay(new Date()); let n = 0;
+  const free = estSalesFree();
+  _estD.cats.forEach(x => {
+    if (!Array.isArray(x.pend) || !x.pend.length) return;
+    x.pend = x.pend.filter(p => {
+      const h = estSalesHit(x, p, free); if (!h || !h.same) return true;
+      free.splice(free.indexOf(h.line), 1);
+      _estD.cleared = [{ n: x.n, a: Math.round(+p.a * 100) / 100, v: p.v || '', eid: p.eid, ts: p.ts || '', cl: today, base: Math.round((+p.base || 0) * 100) / 100, saw: h.line.amt, why: 'qb', inv: h.line.inv, invD: h.line.d, invKey: h.line.key, invItem: h.line.item }, ...(_estD.cleared || [])].slice(0, 400);
+      n++; return false;
+    });
+    if (!x.pend.length) delete x.pend;
+  });
+  return n;
+}
+// ================= /📗 v7.58 =================
 function estAutoClear() {
   if (!_estD || !Array.isArray(_estD.cats)) return 0;
+  if (_estSales) return estAutoClearLines();   // 📗 v7.58 — with the invoice lines in hand, nothing is retired on a guess
   const used = estUsedBy();
   const today = localDay(new Date());
   let n = 0;
@@ -16562,14 +16618,17 @@ function renderEstimates() {
           </div>
           ${b.guess ? `<div class="est-guess-say">≈ Your best guess — no bid behind this number yet. When the real bid comes in, type its number here and tap the ≈ plate again — or add the bid and tap ○ use this.</div>` : ''}
         </div>`).join('')}
-        ${(x.pend || []).map((p, pi) => { const lg = estBillToLogan(p); const nudge = (used[x.n] || 0) >= (+p.base || 0) + (+p.a || 0) * 0.5;
+        ${(x.pend || []).map((p, pi) => { const lg = estBillToLogan(p);
+          // 📗 v7.58 — with the invoice lines in hand the pre-light is a LINE (the same amount, dated after the receipt, under another
+          // item — his tap decides); without them, the old growth nudge
+          const hit = _estSales ? estSalesHit(x, p) : null, nudge = _estSales ? !!hit : (used[x.n] || 0) >= (+p.base || 0) + (+p.a || 0) * 0.5;
           const pe = p.eid != null ? entries.find(k => k.id === p.eid) : null;   // 💵 v7.49 — the receipt behind the bill: 📷 its picture, right here
-          return `<div class="frow" style="gap: 6px; align-items: center; margin-top: 8px; padding: 6px 8px; border: 1.5px dashed var(--accent); border-radius: 8px; flex-wrap: wrap;">
-          <span style="flex: 1; min-width: 150px;">📥 <b>$${(+p.a || 0).toLocaleString()}</b>${p.v ? ' from ' + esc(p.v) : ''} <span class="hint" style="margin: 0;">→ $${estPendMk(p).toLocaleString()} on their page · ${esc(p.ts || '')}${nudge ? ' · <b>📗 a QB run may have caught this</b>' : ''}</span></span>
+          return `<div class="frow est-pend-row" style="gap: 6px; align-items: center; margin-top: 8px; padding: 6px 8px; border: 1.5px dashed var(--accent); border-radius: 8px; flex-wrap: wrap;">
+          <span style="flex: 1; min-width: 150px;">📥 <b>$${(+p.a || 0).toLocaleString()}</b>${p.v ? ' from ' + esc(p.v) : ''} <span class="hint" style="margin: 0;">→ $${estPendMk(p).toLocaleString()} on their page · ${esc(p.ts || '')}${hit ? ' · <b class="est-inv-hit">' + estSalesWord(hit) + ' — is that this one?</b>' : nudge ? ' · <b>📗 a QB run may have caught this</b>' : _estSales ? ' · <span class="est-inv-none">no invoice line for it yet</span>' : ''}</span></span>
           ${pe && pe.photoPath ? `<button type="button" class="pick-chip est-pend-ph" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="openEntryPhoto(${pe.id}, event)" aria-label="look at the receipt's picture">📷 picture</button>` : ''}
           ${p.kind === 'labor' ? '' : `<button type="button" class="pick-chip est-pend-mv" style="font-size: var(--fs105, 10.5px); min-height: 28px; border-style: dashed;" onclick="estMoveOpen(${ci}, ${pi})" title="on the wrong category? move it to the right one — their page follows">🏷 Wrong category? Move it</button>`}
           <button type="button" class="pick-chip${lg ? ' sel' : ''}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;${lg ? '' : ' border-style: dashed;'}" onclick="estPendLogan(${ci}, ${pi})" title="has this invoice gone to Logan for processing? Lights itself if it went through TO THE BOOKKEEPER">${lg ? '📗 WITH LOGAN' : '○ sent to Logan?'}</button>
-          <button type="button" class="pick-chip${nudge ? ' sel' : ''}" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="estPendClear(${ci}, ${pi}, 'qb')" title="QuickBooks carries this now — settle it and take it off their receipts list">✓ QB HAS IT — retire</button>
+          <button type="button" class="pick-chip est-pend-inv${nudge ? ' sel' : ''}" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="estPendClear(${ci}, ${pi}, 'qb')" title="Logan has put this receipt on the homeowner's invoice — take it off their receipts list (it stays settled in your log)">✓ It's on their invoice</button>
           <!-- ↩ v6.34 — Eric: "how can i edit, change or take back". Off their page, and the
                receipt goes back to waiting in the log so it can be fixed and sent again. -->
           <button type="button" class="pick-chip" style="font-size: var(--fs105, 10.5px); min-height: 28px; border-style: dashed;" onclick="estPendClear(${ci}, ${pi}, 'back')" title="Wrong amount or wrong job? Off their page, and the receipt is offered again in the log">↩ Take back</button>
@@ -16862,7 +16921,7 @@ async function estQuickUpcoming(id, ev, amt) {   // 💵 v7.10 — `amt`: the gr
         if (missing) raw = JSON.stringify(estFreshBoard());
       }
       if (readFailed || raw == null) {
-        _estIdx = -1; _estD = null; _estPage = null;
+        _estIdx = -1; _estD = null; _estPage = null; _estSales = null;
         toast('Couldn\'t read the estimates board — nothing sent. Try again on a better signal', false);
         return;
       }
@@ -16879,7 +16938,7 @@ async function estQuickUpcoming(id, ev, amt) {   // 💵 v7.10 — `amt`: the gr
       let pageRaw = null, pageFailed = false;
       try { pageRaw = await dbxDownload(portalRoot() + '/' + c.code + '.json'); } catch (err) { pageFailed = true; }
       if (pageFailed || pageRaw == null) {
-        _estIdx = -1; _estD = null; _estPage = null;
+        _estIdx = -1; _estD = null; _estPage = null; _estSales = null;
         toast('Couldn\'t read their page — nothing sent. Try again on a better signal', false);
         return;
       }
@@ -16902,7 +16961,7 @@ async function estQuickUpcoming(id, ev, amt) {   // 💵 v7.10 — `amt`: the gr
     clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
     await estSave();
     const dpWordNow = dpSay((_portalIdx.clients[i] || {}).code);   // 💰 v7.51 — read while the board is still in memory
-    if (!wasOpen) { _estIdx = -1; _estD = null; _estPage = null; }
+    if (!wasOpen) { _estIdx = -1; _estD = null; _estPage = null; _estSales = null; }
     renderLog();
     toast(`🔮 On their page under RECEIPTS RECEIVED — ${cat}, $${shown.toLocaleString()} ✓${dpWordNow}`);
   } finally {
@@ -17013,6 +17072,7 @@ async function openRcptReview(i) {
   // The page is republished ONLY — the board file is not rewritten from here (that stays behind
   // rcptApprove's guards), and the markup default rides the same as everywhere else.
   try { _estPage = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (err) { _estPage = null; }
+  await estSalesRead(c);   // 📗 v7.58
   dpSee(c.code, _estPage);   // 💰 v7.51
   if (_estD && _estPage && !window._qUpBusy) {
     if (!(+_estD.mk >= 0)) _estD.mk = 20;
@@ -17188,7 +17248,7 @@ function rcptAll() {
 function closeRcptReview() {
   $('revModal').classList.remove('show', 'mat-full');
   modalOpenSync();   // 🏠 v6.65
-  _rcptSel = new Set(); _rcptIdx = -1; _estD = null; _estPage = null; _estPaid = null;
+  _rcptSel = new Set(); _rcptIdx = -1; _estD = null; _estPage = null; _estPaid = null; _estSales = null;
   if (typeof renderPortalList === "function") renderPortalList();   // the button’s count is now one lower
   if (_rcptBack) { _rcptBack = false; _revSec = 'money'; openReview(); _revSec = 'money'; renderReview(); }   // 🗂 v6.69 — opened from the sort page: land back on MONEY
 }
@@ -17324,10 +17384,12 @@ async function estPendClear(ci, pi, how = 'qb') {
   const p = x && (x.pend || [])[pi];
   if (!p) return;
   const back = how === 'back';
+  const hit = !back && _estSales ? estSalesHit(x, p) : null;   // 📗 v7.58 — the invoice line the row was pre-lit with rides onto the trail
   x.pend.splice(pi, 1);
   if (!x.pend.length) delete x.pend;
   _estD.cleared = [{ n: x.n, a: +p.a || 0, v: p.v || '', eid: p.eid, ts: p.ts || '',
     ...(p.kind ? { kind: p.kind, wk: p.wk, hrs: p.hrs } : {}),   // 👷 v6.58 — a labor week keeps its week on the trail
+    ...(hit ? { inv: hit.line.inv, invD: hit.line.d, invKey: hit.line.key, invItem: hit.line.item, saw: hit.line.amt } : {}),
     cl: localDay(new Date()), why: back ? 'eric' : 'qb-eric' }, ...(_estD.cleared || [])].slice(0, 400);
   const e = p.eid != null ? entries.find(k => k.id === p.eid) : null;
   if (back && e) { delete e.budg; scheduleSave(); }   // back to waiting — both doors reopen
@@ -17337,7 +17399,7 @@ async function estPendClear(ci, pi, how = 'qb') {
   renderLog();
   toast(back
     ? (e ? '↩ Taken back — off their page, and the receipt is waiting in the log again' : '↩ Taken back — off their page')
-    : '📗 Retired — QuickBooks carries it now; off their receipts list');
+    : hit ? `📗 Off their receipts list — on invoice #${hit.line.inv || '?'}` : '📗 Off their receipts list — you said it is on their invoice');   // 📗 v7.58 — the words say what happened
 }
 // 🗒→🏠 v5.93 — Eric: "the description next to each estimate needs to be viewable by the
 // client… a button next to the text to turn it on for them." Per-bid, default OFF —
@@ -24855,7 +24917,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.57';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.58';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
