@@ -1339,7 +1339,7 @@
   .btn-ghost:disabled { opacity: 0.45; cursor: default; }
   .log-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 2px; border-bottom: 1px solid var(--grid); }
   .log-row > .log-body { flex: 1; min-width: 0; }
-  .log-main { font-size: 14.5px; line-height: 1.45; overflow-wrap: anywhere; }
+  .log-main { font-size: 14.5px; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }   /* 🧾 v7.55 — a note's own lines stay lines (a receipt's items read as a list) */
   .log-meta { font-size: var(--fs115, 11.5px); color: var(--ink-muted); margin-top: 3px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
   .mini-chip { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 6px; font-size: var(--fs11, 11px); line-height: 1.3; }
   .chip-mileage { background: var(--chip-blue-bg); }
@@ -1698,6 +1698,7 @@
   .ew-amt { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 17px; font-variant-numeric: tabular-nums; }
   .ew-amt b { font-weight: var(--fw8, 800); } .ew-amt span { font-size: 13px; color: var(--ink-2); text-align: right; }
   .ew-meta { font-size: 13px; color: var(--ink-2); line-height: 1.5; margin-top: 2px; overflow-wrap: anywhere; }
+  .ew-meta.ew-items { white-space: pre-wrap; color: var(--ink-1); margin-top: 4px; }   /* 🧾 v7.55 — the receipt's items, one a line */
   .ew-dim { opacity: .8; }
   .ew-words { font-size: 14.5px; line-height: 1.4; margin-top: 4px; overflow-wrap: anywhere; }
   .ew-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
@@ -4534,7 +4535,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.54 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.55 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -7947,8 +7948,8 @@ async function aiDescribePhoto(f) {
     : { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: await shrinkForAi(f) } };
   // 🧠 v5.42 — labeling a receipt or a jobsite shot is the ⚡ quick brain's best work
   const { r } = await aiCall({
-      max_tokens: 700,   // 🛒 v7.43 — room for the items
-      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"ONE short plain sentence: what the photo shows and the stage of work — no filler","category":"best match from this list or empty: ' + RCPT_CATS.join(', ') + '","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"rdate":"YYYY-MM-DD purchase/receipt date if visible on a receipt/invoice, else empty","due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"pastDue":amount shown as past due, overdue, or previous balance unpaid, as a number, else null,"balance":total balance or amount outstanding as a number if this is a statement, else null,"acctLast4":"ONLY the last four digits of any account or loan number, else empty","expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty","items":[{"n":"what was bought, in a few plain words — when the receipt prints a store code or an abbreviation you cannot read as a product with confidence, copy that text EXACTLY as printed and set raw to true; never guess what it might be","q":quantity as a number or null,"raw":true if n was copied exactly as printed else false}] (up to 12 lines in the order printed, only for a receipt or an invoice — an empty list for anything else)}',
+      max_tokens: 1000,   // 🛒 v7.43 — room for the items · 🧾 v7.55 — and their prices and codes
+      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"ONE short plain sentence: what the photo shows and the stage of work — no filler","category":"best match from this list or empty: ' + RCPT_CATS.join(', ') + '","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"rdate":"YYYY-MM-DD purchase/receipt date if visible on a receipt/invoice, else empty","due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"pastDue":amount shown as past due, overdue, or previous balance unpaid, as a number, else null,"balance":total balance or amount outstanding as a number if this is a statement, else null,"acctLast4":"ONLY the last four digits of any account or loan number, else empty","expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty","items":[{"n":"what was bought, in a few plain words — many receipts print a SHORT CODE LINE and then a FULLER DESCRIPTION LINE for the same item (Home Depot, Lowe\'s): use the fuller description, spelled out in plain words; when only a store code or an abbreviation is printed and you cannot read it as a product with confidence, copy that text EXACTLY as printed and set raw to true; never guess what it might be","q":quantity as a number or null,"each":price of one as a number when printed, else null,"total":the line total as a number when printed, else null,"sku":"the item\'s own code as printed on its line — a UPC, SKU, item, model or internet number of five or more characters — else empty","raw":true if n was copied exactly as printed else false}] (up to 12 lines in the order printed, only for a receipt or an invoice — an empty list for anything else)}',
       messages: [{ role: 'user', content: [
         srcBlock,
         { type: 'text', text: isPdf ? 'Label this document.' : 'Label this photo.' }
@@ -7968,13 +7969,27 @@ async function aiDescribePhoto(f) {
 // because of the store sku and it can't figure out what it was, just put exactly what it ways on the reciept." One line of items, names
 // and quantities only (no dollar sign ever sits on it — the 💵 line is the one amount every reader parses); an item the Wizard could not
 // read as a product rides in quotes, exactly as the receipt printed it.
+// 🧾 v7.55 — Eric, with a Home Depot receipt: "is there a way sonnet or someone can read the lines or skus and make better sense of
+// it? like … be able to sort out 'prm blnkt' and know to keep 'premium moving blankt' and could list it out in bullet point or listed
+// much easier to read and see". The read now pairs a store's short code line with the fuller description printed under it, and
+// carries each item's price and its code. The items are a LIST — one line each: `• name × q @ $each — $total · SKU code`.
+// A dollar figure on an item line is safe: every reader of the amount keys on the 💵 line (estBillParse reads `💵 $` alone, and
+// grindAmtOf falls back to the first $ in the words only when there is no 💵 line — which comes first anyway). A name never
+// carries a $ of its own (it is stripped), so the price on the line is always the read's, never a word of the name.
 function receiptItemsLine(p) {
+  const num = v => { const n = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')); return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; };
+  const money = n => '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const list = (Array.isArray(p.items) ? p.items : []).map(it => (typeof it === 'string' ? { n: it } : (it || {})))
-    .map(it => ({ n: String(it.n || '').replace(/\s+/g, ' ').replace(/\$/g, '').trim().slice(0, 60), q: +it.q > 0 && +it.q !== 1 ? +it.q : 0, raw: !!it.raw })).filter(it => it.n);
+    .map(it => ({ n: String(it.n || '').replace(/\s+/g, ' ').replace(/\$/g, '').trim().slice(0, 60), q: +it.q > 0 && +it.q !== 1 ? +it.q : 0, each: num(it.each), total: num(it.total), sku: String(it.sku || '').replace(/\s+/g, ' ').trim().slice(0, 24), raw: !!it.raw })).filter(it => it.n);
   if (!list.length) return '';
-  const shown = list.slice(0, 12).map(it => (it.raw ? '"' + it.n + '"' : it.n) + (it.q ? ' × ' + it.q : ''));
-  return '🛒 ' + shown.join(' · ') + (list.length > 12 ? ' · + ' + (list.length - 12) + ' more' : '');
+  const line = it => {
+    const money1 = it.total ? money(it.total) : (it.each && !it.q ? money(it.each) : '');
+    return '• ' + (it.raw ? '"' + it.n + '"' : it.n) + (it.q ? ' × ' + it.q : '') + (it.q && it.each ? ' @ ' + money(it.each) : '') + (money1 ? ' — ' + money1 : '') + (it.sku ? ' · SKU ' + it.sku : '');
+  };
+  return `🛒 ${list.length} item${list.length === 1 ? '' : 's'}:\n` + list.slice(0, 12).map(line).join('\n') + (list.length > 12 ? '\n• + ' + (list.length - 12) + ' more' : '');
 }
+// the items block off a saved read (the 🛒 line and its bullet lines), for the windows that show a receipt
+function receiptItemsOf(ai) { const m = String(ai || '').match(/🛒 [^\n]*(?:\n• [^\n]*)*/); return m ? m[0] : ''; }
 function receiptLines(p) {
   const money = n => '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
   const dayOnly = /^\d{4}-\d{2}-\d{2}$/;
@@ -16007,8 +16022,8 @@ function estWhatDraw() {
     const e = o.e, bp = e ? (estBillParse(e) || {}) : {};
     const day = estDayWord(bp.d) || (e ? estDayWord(e.ts) : ''), store = String(o.v || bp.v || '').trim();
     const filed = e ? String(e.category || '').trim() : '';
-    const items = e ? ((String(e.ai || '').match(/🛒 ([^\n]+)/) || [])[1] || '') : '';
-    const words = e ? String(e.details || '').replace(/\s+/g, ' ').trim() : '';
+    const items = e ? receiptItemsOf(e.ai) : '';   // 🧾 v7.55 — the list, one item a line
+    const words = e ? String(e.details || '').replace(e.ai && String(e.details || '').includes(String(e.ai)) ? String(e.ai) : receiptItemsOf(e.details), '').replace(/\s+/g, ' ').trim() : '';   // his OWN words: the read (day · store · amount · the items) is drawn apart, not twice
     const nPh = e ? ((e.photoPaths || []).length || (e.photoPath ? 1 : 0)) : 0;
     const meta = [day ? '📅 ' + esc(day) : '', store ? '🏪 ' + esc(store) : '', `🏷 ${esc(filed || o.cat)}${filed && filed.toLowerCase() !== String(o.cat).trim().toLowerCase() ? ' <span class="ew-dim">(on the ' + esc(o.cat) + ' line)</span>' : ''}`].filter(Boolean).join(' · ');
     return `<div class="ew-row" data-kind="${o.kind}"${e ? ` data-eid="${e.id}"` : ''}>
@@ -16016,7 +16031,7 @@ function estWhatDraw() {
       <div class="ew-meta">${meta}</div>
       ${o.say ? `<div class="ew-meta">${o.say}</div>` : ''}
       ${words ? `<div class="ew-words">${esc(words.slice(0, 140))}${words.length > 140 ? '…' : ''}</div>` : ''}
-      ${items ? `<div class="ew-meta">🛒 ${esc(items.slice(0, 160))}${items.length > 160 ? '…' : ''}</div>` : ''}
+      ${items ? (() => { const ls = items.split('\n'), show = ls.slice(0, 7); return `<div class="ew-meta ew-items">${esc(show.join('\n'))}${ls.length > 7 ? '\n• + ' + (ls.length - 7) + ' more — 📄 The whole entry has them all' : ''}</div>`; })() : ''}
       ${e ? `<div class="ew-btns">${nPh ? `<button type="button" class="btn-primary ew-ph" onclick="openEntryPhoto(${e.id}, event)">📷 Look at the receipt${nPh > 1 ? ' · ' + nPh : ''}</button>` : '<span class="hint ew-noph" style="margin: 0; align-self: center;">no picture on this one</span>'}
         <button type="button" class="btn-ghost ew-ent" onclick="wizEntryOpen(${e.id}, '‹ Back to the list')">📄 The whole entry</button></div>`
         : `<div class="ew-meta ew-dim">${o.kind === 'labor' ? '👷 a week of crew labor, priced from the weekly recap — no receipt behind it' : '✍ typed in by hand — no receipt behind it'}</div>`}
@@ -24736,7 +24751,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.54';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.55';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

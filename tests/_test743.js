@@ -71,11 +71,11 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const busy = await page.evaluate(() => /READING/.test(($('wizReadBtn') || {}).textContent || '') || /READING THE PHOTO/.test(($('busyBand') || {}).textContent || ''));
     await wait(() => page.evaluate(() => /✓ READ/.test(($('wizReadBtn') || {}).textContent || '')));
     const r = await page.evaluate(() => ({ v: $('askText').value, reads: _reads, plate: $('wizReadBtn').textContent.trim(), ai: (fcMeta.get(notePhotos[0]) || {}).ai, said: _said.join(' | ') }));
-    return busy && r.reads === 1 && r.v === '📅 2026-09-20\n🏪 Spenard Builders\n💵 $412.55\n🛒 2x4x8 stud × 12 · deck screws 5 lb · "PT 4X4-8 GC" × 2' && r.ai === r.v && /^🧙 ✓ READ — the words are in ③ SAY IT/.test(r.plate) && /the words are in ③ SAY IT/.test(r.said);
+    return busy && r.reads === 1 && r.v === '📅 2026-09-20\n🏪 Spenard Builders\n💵 $412.55\n🛒 3 items:\n• 2x4x8 stud × 12\n• deck screws 5 lb\n• "PT 4X4-8 GC" × 2' /* 🧾 v7.55 — the items are a list, one a line */ && r.ai === r.v && /^🧙 ✓ READ — the words are in ③ SAY IT/.test(r.plate) && /the words are in ③ SAY IT/.test(r.said);
   })(), await page.evaluate(() => JSON.stringify({ v: $('askText').value, reads: _reads })));
   ok('an item the Wizard could not read as a product rides EXACTLY as the receipt printed it, in quotes — the others in plain words; a quantity of one is not written', await page.evaluate(() => {
-    const line = $('askText').value.split('\n')[3];
-    return /"PT 4X4-8 GC" × 2/.test(line) && /2x4x8 stud × 12/.test(line) && / · deck screws 5 lb · /.test(line) && !/"2x4x8/.test(line);
+    const ls = $('askText').value.split('\n');   // 🧾 v7.55 — a list: the 🛒 line, then one item a line
+    return ls[3] === '🛒 3 items:' && ls[4] === '• 2x4x8 stud × 12' && ls[5] === '• deck screws 5 lb' && ls[6] === '• "PT 4X4-8 GC" × 2' && !/"2x4x8/.test(ls[4]);
   }));
   ok('reading again does not double the words: the second read takes the first one\'s place, and his own words around it stay', await (async () => {
     await page.evaluate(() => { $('askText').value = 'for the back deck\n' + $('askText').value; READ.total = 420; $('wizReadBtn').click(); });
@@ -86,15 +86,21 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     saveNoteFrom('askText'); await new Promise(r => setTimeout(r, 60));
     const e = entries.find(x => /Spenard Builders/.test(x.ai || ''));
     const p = e && estBillParse(e);
-    return !!e && /🛒 2x4x8 stud/.test(e.ai) && /for the back deck/.test(e.details) && !!p && p.amt === 420 && grindAmtOf(e) === 420;
+    return !!e && /🛒 3 items:\n• 2x4x8 stud/.test(e.ai) && /for the back deck/.test(e.details) && !!p && p.amt === 420 && grindAmtOf(e) === 420;
   }));
-  ok('receiptLines by itself: no items → no 🛒 line; more than twelve → "+ n more"; a dollar sign never rides on the items line; plain strings are taken as names', await page.evaluate(() => {
+  ok('receiptLines by itself (🧾 v7.55): no items → no 🛒 line; more than twelve → "+ n more"; a $ typed INTO a name never rides (the price on the line is the read\'s own); plain strings are taken as names', await page.evaluate(() => {
     const a = receiptLines({ vendor: 'A', total: 5, rdate: '2026-09-01' });
     const many = receiptLines({ vendor: 'A', total: 5, items: Array.from({ length: 15 }, (_, i) => ({ n: 'thing ' + (i + 1), q: 1 })) });
     const money = receiptLines({ vendor: 'A', total: 5, items: [{ n: 'caulk $4.99 ea', q: 3 }, 'shims'] });
-    return !/🛒/.test(a) && /🛒 thing 1 · /.test(many) && / · \+ 3 more$/.test(many) && !/thing 13/.test(many) && /🛒 caulk 4\.99 ea × 3 · shims$/.test(money) && (money.match(/\$/g) || []).length === 1;
+    return !/🛒/.test(a) && /🛒 15 items:\n• thing 1\n/.test(many) && /\n• \+ 3 more$/.test(many) && !/thing 13/.test(many) && /🛒 2 items:\n• caulk 4\.99 ea × 3\n• shims$/.test(money) && (money.match(/\$/g) || []).length === 1;
   }));
-  ok('the Wizard is TOLD to copy what it cannot read: the prompt asks for the items, says EXACTLY as printed and never guess, and has the room for them', /"items":\[\{"n":"what was bought, in a few plain words/.test(src) && /copy that text EXACTLY as printed and set raw to true; never guess/.test(src) && /max_tokens: 700,   \/\/ 🛒 v7\.43/.test(src));
+  ok('🧾 v7.55 — an item carries its price and its code: × q @ $each — $total · SKU; one of one shows its price alone; the 💵 line is still the ONE amount the readers parse', await page.evaluate(() => {
+    const t = receiptLines({ vendor: 'Home Store', total: 148.69, rdate: '2026-09-29', items: [{ n: 'HDX premium moving blanket 72x80', q: 2, each: 15.98, total: 31.96, sku: '810142297783' }, { n: 'Milwaukee AX 12" 5 TPI blades, 5-pack', q: 1, each: 24.97, total: 24.97, sku: '045242591428' }, { n: 'PRM BLNKT', raw: true, total: 9.98 }] });
+    const ls = t.split('\n');
+    const e = { ai: t, details: t }, p = estBillParse(e);
+    return ls[3] === '🛒 3 items:' && ls[4] === '• HDX premium moving blanket 72x80 × 2 @ $15.98 — $31.96 · SKU 810142297783' && ls[5] === '• Milwaukee AX 12" 5 TPI blades, 5-pack — $24.97 · SKU 045242591428' && ls[6] === '• "PRM BLNKT" — $9.98' && p.amt === 148.69 && grindAmtOf(e) === 148.69 && receiptItemsOf(t) === ls.slice(3).join('\n');
+  }));
+  ok('the Wizard is TOLD to copy what it cannot read: the prompt asks for the items, says EXACTLY as printed and never guess, and has the room for them', /"items":\[\{"n":"what was bought, in a few plain words/.test(src) && /copy that text EXACTLY as printed and set raw to true; never guess/.test(src) && /max_tokens: 1000,   \/\/ 🛒 v7\.43/.test(src) && /use the fuller description, spelled out in plain words/.test(src) && /"sku":"the item\\'s own code as printed/.test(src));   // 🧾 v7.55 — and the code line + description line pairing, the price, the sku
   ok('with no Claude key the plate says what it needs, and a tap reads nothing', await (async () => {
     await page.evaluate(() => { lsSet('daylog-aikey', ''); stage('receipt two.png'); });
     const r = await page.evaluate(() => { const before = _reads; _said.length = 0; const why = document.querySelector('#qnReadRow .wiz-read-why').textContent; $('wizReadBtn').click(); return { why, same: _reads === before, said: _said.join(' | ') }; });
