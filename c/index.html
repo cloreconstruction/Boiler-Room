@@ -134,6 +134,11 @@
   .bud-ph-tag { margin-top: 3px; font-size: 11.5px; font-weight: 800; letter-spacing: .5px; color: var(--gold); line-height: 1.35; }
   .bud-ph-note { border: 2px dashed var(--gold); border-radius: 10px; padding: 9px 12px; margin: 8px 0 4px; font-size: 13.5px; line-height: 1.45; }
   .bud-ph-note b { color: var(--gold); letter-spacing: .4px; }
+  /* ✓ v7.50 — a line Clore Construction marked COMPLETE: the word, a solid edge down its side, and the part of the bar that was
+     never needed struck through — the glyph, the word and the edge, never the colour alone */
+  .bud-row.bud-done { border-left: 4px solid var(--gold); padding: 4px 0 4px 10px; }
+  .bud-done-tag { margin-top: 3px; font-size: 11.5px; font-weight: 800; letter-spacing: .5px; line-height: 1.35; }
+  .bud-bar.done { background: repeating-linear-gradient(135deg, color-mix(in srgb, currentColor 26%, transparent) 0 3px, transparent 3px 7px) !important; }
 </style>
 </head>
 <body>
@@ -729,16 +734,23 @@ function budgetHtml(d) {
   const behind = inv > 0 && phTot < inv * 0.9;
   let totE = 0, totU = 0, totUp = 0, totLeft = 0, totOver = 0, anyOpts = false, anyOpen = false;
   let nPh = 0, totPh = 0;   // ≈ v7.46 — the placeholder lines: how many, and how much of the estimate they are
+  let nFin = 0;             // ✓ v7.50 — the lines that are COMPLETE
   const rowAt = d.budget.map((b, bi) => {
     const est = bEst(b);
+    // ✓ v7.50 — A LINE THAT IS FINISHED. When the builder marks a category COMPLETE, the line says so and NOTHING MORE is counted as
+    // remaining on it — so the big number is what is truly still ahead, not what an estimate once allowed for. No claim is made
+    // about dollars saved: "billed so far" comes from the books' split, which can be behind. A finished line is no placeholder
+    // any more (no bid is coming to replace its number), and its choices rest.
+    const fin = !!b.done;
+    if (fin) nFin++;
     // ≈ v7.46 — is the number this line COUNTS a placeholder? (a plain line's own mark; on a line with choices, the mark of the
     // option the total rides right now — their pick, else the planned one)
-    const isPh = Array.isArray(b.opts) ? !!((b.opts[bPicked(b) != null ? bPicked(b) : bDef(b)] || {}).g) : !!b.g;
+    const isPh = !fin && (Array.isArray(b.opts) ? !!((b.opts[bPicked(b) != null ? bPicked(b) : bDef(b)] || {}).g) : !!b.g);
     if (isPh) { nPh++; totPh += est; }
     const used = Math.max(0, usedBy[b.n] || 0);
     const up = +b.up || 0; // 🧾 receipts received against this line — not on an invoice yet (they are listed on the receipts card)
     // 📐 v7.45 — what is still ahead on this line: its estimate, less what has been billed to it, less the receipts that wait
-    const left = Math.max(0, Math.round((est - used - up) * 100) / 100);
+    const left = fin ? 0 : Math.max(0, Math.round((est - used - up) * 100) / 100);
     const over = used + up > est ? Math.round((used + up - est) * 100) / 100 : 0;
     totE += est; totU += used; totUp += up; totLeft += left; totOver += over;
     const pct = est > 0 ? Math.min(100, Math.round(used / est * 100)) : 0;
@@ -748,35 +760,36 @@ function budgetHtml(d) {
     if (Array.isArray(b.opts)) {
       anyOpts = true;
       picked = bPicked(b); // null until THEY have chosen — nothing shows pre-chosen
-      if (picked == null) anyOpen = true;
+      if (picked == null && !fin) anyOpen = true;
       const def = bDef(b);
-      const lkd = picked != null && b.lk; // 🔒 locked: taps rest until they change their mind
+      const lkd = (picked != null && b.lk) || fin; // 🔒 locked: taps rest until they change their mind — and on a finished line for good
       optRows = `<div>` +
-        (picked == null ? `<div class="opt-prompt">⬇ CHOOSE YOUR ${bEsc(b.n).toUpperCase()} OPTION — tap the way you want to go</div>` : '') +
+        (picked == null && !fin ? `<div class="opt-prompt">⬇ CHOOSE YOUR ${bEsc(b.n).toUpperCase()} OPTION — tap the way you want to go</div>` : '') +
         b.opts.map((o, oi) => `<button type="button" class="opt-pick${oi === picked ? ' sel' : ''}${lkd ? ' lkd' : ''}" ${lkd ? 'disabled' : `onclick="event.stopPropagation(); pickOpt(${bi}, ${oi})"`} aria-pressed="${oi === picked}">
           <span class="op-row"><span class="op-l">${oi === picked ? '✓' : '○'} ${bEsc(o.t)}</span><span class="op-r">${o.g ? '≈ ' : ''}${money(o.est)}${oi === picked ? ' · YOUR PICK' : picked == null && oi === def ? ' · in the total for now' : ''}</span></span>
           ${o.g ? `<span class="op-d op-ph">≈ placeholder — a rough number until the real bid comes in</span>` : ''}
           ${o.d ? `<span class="op-d">${bEsc(o.d)}</span>` : ''}
         </button>`).join('') +
-        (picked == null ? '' : lkd
+        (picked == null || fin ? '' : lkd
           ? `<div class="opt-locked">🔒 LOCKED IN — Clore Construction has your choice</div>
              <button type="button" class="opt-unlock" onclick="event.stopPropagation(); lockOpt(${bi}, false)">↩ change my mind</button>`
           : `<button type="button" class="opt-lockbtn" onclick="event.stopPropagation(); lockOpt(${bi}, true)">🔒 LOCK IT IN — tell them this is my choice</button>`) +
-        `<div class="opt-hint">${picked == null
+        `<div class="opt-hint">${fin ? 'This part of the job is finished — the choice is closed.' : picked == null
           ? 'Nothing is locked in yet — the estimate above uses the planned option until you tap your choice. Try them and watch the totals; Clore Construction sees where you land.'
           : lkd ? 'Your choice is locked and on their desk. ↩ Change my mind reopens it any time.'
           : 'Tap around all you like — when you\'re sure, LOCK IT IN sends Clore Construction the definite word.'}</div></div>`;
     }
-    return `<div class="bud-row${isPh ? ' bud-ph' : ''}" style="margin: 10px 0;">
+    return `<div class="bud-row${isPh ? ' bud-ph' : ''}${fin ? ' bud-done' : ''}" style="margin: 10px 0;">
       <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px;">
-        <span style="font-weight: 700;">${bEsc(b.n)}${b.opts ? (picked != null ? ' — YOUR CHOICE' : ' — CHOOSE YOUR OPTION') : ''}</span>
-        <span class="bud-left" style="font-weight: 700; white-space: nowrap;">${over ? `<b style="color:#c0392b;">⚠ over by ${money(over)}</b>` : `${isPh ? '≈ ' : ''}${money(left)} remaining`}</span>
+        <span style="font-weight: 700;">${bEsc(b.n)}${b.opts ? (picked != null ? ' — YOUR CHOICE' : fin ? '' : ' — CHOOSE YOUR OPTION') : ''}</span>
+        <span class="bud-left" style="font-weight: 700; white-space: nowrap;">${over ? `<b style="color:#c0392b;">⚠ over by ${money(over)}</b>` : fin ? '✓ COMPLETE' : `${isPh ? '≈ ' : ''}${money(left)} remaining`}</span>
       </div>
+      ${fin ? `<div class="bud-done-tag">✓ COMPLETE — this part of the job is finished; nothing more is expected on this line</div>` : ''}
       ${isPh ? `<div class="bud-ph-tag">≈ PLACEHOLDER — a rough number until the real bid comes in</div>` : ''}
       <div class="bud-math" style="font-size: 12.5px; opacity: .8; margin-top: 2px;">estimate ${isPh ? '≈ ' : ''}${money(est)} · ${behind && !used ? 'what is billed is not split out by line yet' : money(used) + ' billed so far'}${up ? ` · 🧾 ${money(up)} in receipts not invoiced yet` : ''}</div>
       ${!b.opts && b.d ? `<div class="opt-desc" style="margin-left: 0;">${bEsc(b.d)}</div>` : ''}
       ${optRows}
-      <div style="margin-top: 4px; height: 10px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; display: flex;">
+      <div class="bud-bar${fin ? ' done' : ''}"${fin ? ' title="finished — the part that is struck through was not needed"' : ''} style="margin-top: 4px; height: 10px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; display: flex;">
         <div style="height: 100%; width: ${pct}%; background: ${over ? '#c0392b' : 'var(--acc, #b8860b)'};" title="billed so far"></div>
         ${pctUp ? `<div style="height: 100%; width: ${pctUp}%; background: var(--acc, #b8860b); opacity: .45;" title="receipts received — not on an invoice yet"></div>` : ''}
       </div>
@@ -790,14 +803,14 @@ function budgetHtml(d) {
   const phNote = nPh ? `<div class="bud-ph-note" id="budPhNote"><b>≈ ${nPh === nAll ? (nAll === 1 ? 'THIS IS A PLACEHOLDER NUMBER' : 'THESE ARE PLACEHOLDER NUMBERS') : nPh + ' OF THESE ' + nAll + (nPh === 1 ? ' IS A PLACEHOLDER NUMBER' : ' ARE PLACEHOLDER NUMBERS')}</b> — a rough figure that holds the spot until the real bid comes in. It will be replaced by the real number, which may be higher or lower.</div>` : '';
   return `<div class="card" id="budgetCard" onclick="ping('budget')"><h3>ESTIMATED REMAINING COSTS</h3>
     <div class="bud-total">${nPh ? '≈ ' : ''}${money(totLeft)}</div>
-    <div class="bud-total-l">STILL AHEAD ON THE APPROVED WORK · ESTIMATE ${nPh ? '≈ ' : ''}${money(totE)}${nPh ? ` · ≈ ${money(totPh)} OF IT IS PLACEHOLDER NUMBERS` : ''} · ${behind && !totU ? 'WHAT IS BILLED IS NOT SPLIT OUT BY LINE YET' : money(totU) + ' BILLED SO FAR'}${totUp ? ` · 🧾 ${money(totUp)} IN RECEIPTS NOT INVOICED YET` : ''}${totOver ? ` · <b style="color:#c0392b;">⚠ OVER BY ${money(totOver)}</b>` : ''}</div>
+    <div class="bud-total-l">STILL AHEAD ON THE APPROVED WORK · ESTIMATE ${nPh ? '≈ ' : ''}${money(totE)}${nPh ? ` · ≈ ${money(totPh)} OF IT IS PLACEHOLDER NUMBERS` : ''} · ${behind && !totU ? 'WHAT IS BILLED IS NOT SPLIT OUT BY LINE YET' : money(totU) + ' BILLED SO FAR'}${totUp ? ` · 🧾 ${money(totUp)} IN RECEIPTS NOT INVOICED YET` : ''}${nFin ? ` · ✓ ${nFin} ${nFin === 1 ? 'LINE' : 'LINES'} COMPLETE` : ''}${totOver ? ` · <b style="color:#c0392b;">⚠ OVER BY ${money(totOver)}</b>` : ''}</div>
     ${phNote}
     ${rows}
-    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"Remaining" is each estimate, less what has been billed to that line so far${totUp ? ' and less the receipts still waiting for an invoice' : ''}. The bar fills as a line is billed; "billed" updates as the books do.${behind ? ' <b class="bud-behind">Some of what has been invoiced is not matched to a line here yet, so what truly remains may be less than shown.</b>' : ''}${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}</div></div>`;
+    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"Remaining" is each estimate, less what has been billed to that line so far${totUp ? ' and less the receipts still waiting for an invoice' : ''}. The bar fills as a line is billed; "billed" updates as the books do.${nFin ? ' A line marked ✓ COMPLETE is finished: nothing more is counted as remaining on it.' : ''}${behind ? ' <b class="bud-behind">Some of what has been invoiced is not matched to a line here yet, so what truly remains may be less than shown.</b>' : ''}${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}</div></div>`;
 }
 async function pickOpt(bi, oi) {
   const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null;
-  if (!b || !Array.isArray(b.opts) || !b.opts[oi] || b.lk) return; // 🔒 locked rows don't budge
+  if (!b || !Array.isArray(b.opts) || !b.opts[oi] || b.lk || b.done) return; // 🔒 locked rows don't budge — nor does a finished line (✓ v7.50)
   const prev = bPicked(b); // null if they hadn't chosen yet
   if (prev === oi) return;
   b.pick = oi;
@@ -816,7 +829,7 @@ async function pickOpt(bi, oi) {
 // 🔒 v5.93 — the definite word: lock the choice (or reopen it) and tell the builder
 async function lockOpt(bi, on) {
   const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null;
-  if (!b || !Array.isArray(b.opts) || bPicked(b) == null) return;
+  if (!b || !Array.isArray(b.opts) || bPicked(b) == null || b.done) return;
   const prev = !!b.lk;
   if (prev === !!on) return;
   if (on) b.lk = true; else delete b.lk;
