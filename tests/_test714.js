@@ -54,7 +54,7 @@ const { chromium } = require('playwright');
     closePortalWin(); return r;
   });
   ok('on Eric\'s portal 📋 Copy link and 📊 What they look at now wear the dashed only-you edge', pf.dashed.includes('📋 Copy link') && pf.dashed.includes('📊 What they look at'), JSON.stringify(pf.dashed));
-  ok('what Phil gets stays plain: Plans · Journal · Build List · View as this client', pf.plain.join('|') === '📐 Plans|📖 Journal|📋 Build List|👁 View as this client', pf.plain.join('|'));
+  ok('what Phil gets stays plain: Plans · Journal · Build List · View as this client', pf.plain.join('|') === '📐 Plans|📖 Journal|📋 Build List|👷 Subs on this job|👁 View as this client', pf.plain.join('|'));   // 👷 v7.51 — every fold has 👷 Subs on this job now (every phone sees the subs)
 
   console.log('— ✍ v7.14 the journal: no switches, the draft knows where to pull from —');
   const jr = await page.evaluate(async () => {

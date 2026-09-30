@@ -1703,6 +1703,59 @@
   .ew-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
   .ew-btns .btn-ghost, .ew-btns .btn-primary { flex: 1 1 140px; min-height: 44px; font-size: 13.5px; }
   .ew-none { padding: 18px 4px; font-size: 14px; color: var(--ink-2); }
+  /* 👷 v7.51 — SUBS ON THIS JOB. Eric: "I need to list out the subs and be able to edit, add, and delete. Then all the crew knows who
+     to call on what job." It wears the job card's own furniture (the bright job wheel, a plate a person, taps a finger tall). */
+  .sb-add { width: 100%; min-height: 48px; font-weight: var(--fw8, 800); margin: 0 0 8px; }
+  .sb-by { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; }
+  .sb-by .pick-chip { min-height: 40px; }
+  .sb-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .sb-n { font-size: 13px; letter-spacing: 0; opacity: .8; }
+  .sb-tag { display: inline-block; margin-left: 4px; padding: 1px 8px; border: 1px solid var(--border); border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+  .sb-taps .sb-call { flex: 2 1 58%; }
+  .sb-taps .sb-text { flex: 1 1 30%; }
+  .sb-note { font-size: 13.5px; line-height: 1.4; margin-top: 6px; overflow-wrap: anywhere; }
+  .sb-dim { color: var(--ink-2); }
+  .sb-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .sb-acts .btn-ghost { flex: 1 1 120px; min-height: 44px; font-size: 13.5px; }
+  .sb-off.armed, .sb-del.armed { border-color: var(--err, #ff8a70) !important; font-weight: var(--fw8, 800); }
+  .sb-form { border: 2px solid var(--accent) !important; padding: 10px !important; margin: 0 0 12px !important; }
+  .sb-form select, .sb-form input { min-height: 46px; font-size: 16px; }
+  .pf-acts .btn-ghost.pf-subs { grid-column: 1 / -1; }
+  @media (min-width: 701px) { .sb-box { max-width: 760px; margin: 0 auto; } }   /* on a PC the list keeps a readable width */
+  /* 💰 v7.51 — THE DOWN-PAYMENT METER. Eric: "I want it to show me when we're getting close to being at or over that down payment (so
+     that I can stop the job and wait for more money)." Ten cells, the percent and the words — ✓ UNDER · ⚠ GETTING CLOSE · ⛔ STOP —
+     and the edge grows with it; never the colour alone. His phone only. */
+  .dp-host { margin: 0 0 8px; flex: 1 1 100%; }
+  .dp-box { border: 2px solid var(--border); border-radius: 12px; padding: 9px 11px; background: var(--surface-1); color: var(--ink-1); }
+  .dp-box.dp-unset { border-style: dashed; padding: 4px; }
+  .dp-box.dp-close { border-color: var(--warn, #ffa657); border-width: 3px; }
+  .dp-box.dp-over { border: 4px solid var(--err, #ff8a70); }
+  .dp-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; letter-spacing: .4px; }
+  .dp-bar { display: inline-flex; gap: 3px; flex: none; }
+  .dp-cell { width: 14px; height: 12px; border-radius: 3px; border: 1.5px solid var(--accent); opacity: .5; }
+  .dp-cell.on { background: var(--accent); opacity: 1; }
+  .dp-close .dp-cell { border-color: var(--warn, #ffa657); }
+  .dp-close .dp-cell.on { background: var(--warn, #ffa657); }
+  .dp-over .dp-cell { border-color: var(--err, #ff8a70); }
+  .dp-over .dp-cell.on { background: var(--err, #ff8a70); }
+  .jm-dp .dp-cell { width: 9px; height: 11px; }
+  .dp-pct { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .dp-word { font-weight: var(--fw8, 800); font-size: 14px; letter-spacing: .4px; margin-top: 3px; }
+  .dp-under .dp-word { color: var(--good, #8fd694); }
+  .dp-close .dp-word { color: var(--warn, #ffa657); }
+  .dp-over .dp-word { color: var(--err, #ff8a70); }
+  .dp-line { font-size: 13.5px; line-height: 1.45; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .dp-dim { color: var(--ink-2); font-size: 12.5px; }
+  .dp-src { opacity: .8; }
+  .dp-box .btn-ghost.dp-edit, .dp-box .btn-ghost.dp-setbtn { width: 100%; min-height: 44px; margin-top: 6px; text-align: left; }
+  .dp-box.dp-unset .btn-ghost.dp-setbtn { margin-top: 0; border: 0; }
+  .dp-form label { display: block; font-size: 12.5px; font-weight: var(--fw7, 700); margin: 6px 0 4px; }
+  .dp-form input { flex: 1 1 auto; min-width: 0; width: 100%; min-height: 46px; font-size: 17px; font-weight: var(--fw8, 800); }
+  .dp-form .btn-primary, .dp-form .btn-ghost { flex: none; min-height: 46px; }
+  #cpMeter:empty { display: none; }
+  #cpMeter .dp-host { margin: 0; }
+  #cpMeter .dp-box { border-radius: 0; border-left: 0; border-right: 0; padding: 6px 10px; }
+  #cpMeter .dp-dim, #cpMeter .dp-edit { display: none; }
   /* 🏷 v7.50 — the way to the right line, under the receipt it moves */
   .ew-move { margin-top: 8px; padding: 10px; border: 2px dashed var(--accent); border-radius: 10px; }
   .ew-move select { width: 100%; min-height: 46px; font-size: 16px; }
@@ -3290,6 +3343,8 @@
 </div>
 <div id="cliPrev">
   <button class="cp-banner" onclick="clientPreviewClose()">👁 CLIENT PREVIEW · TAP HERE TO COME BACK</button>
+  <!-- 💰 v7.51 — the down-payment meter, at the top of the client's page as HE looks at it: in the app's own frame, above their page — never inside it -->
+  <div id="cpMeter"></div>
   <!-- v5.35 — iPhones size an iframe to its content; the WRAPPER scrolls, or long pages (journal!) can't move -->
   <div class="cp-scroll"><iframe id="cpFrame" title="Client page preview"></iframe></div>
   <!-- v5.34 — second exit for the PC: a corner ✕ that can't be missed (Esc works too) -->
@@ -4468,7 +4523,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.50 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.51 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -12837,8 +12892,10 @@ async function publishSharedNotes() {
     // 📇 v6.17 — the job cards ride out with everything else: addresses, numbers, door codes.
     // A card Eric marked 🔒 is not filtered downstream, it is never written into this file.
     const cards = cardBook();
-    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, seen, unlocks, trucks: truckBook, cards }, null, 1);
-    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(seen) + ':' + JSON.stringify(unlocks) + ':' + JSON.stringify(truckBook) + ':' + JSON.stringify(cards);
+    // 👷 v7.51 — the subs ride out too: the whole list, every job, to every crew member (Eric: "crew and can see all subs on all jobs")
+    const subsB = subsPublish();
+    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, seen, unlocks, trucks: truckBook, cards, subs: subsB }, null, 1);
+    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(seen) + ':' + JSON.stringify(unlocks) + ':' + JSON.stringify(truckBook) + ':' + JSON.stringify(cards) + ':' + JSON.stringify(subsB);
     if (_sharedCache[name] === key) continue; // nothing changed for this person
     try {
       await dbxUpload(`${CREW_DIR}/${cleanName(name)}/shared.json`, body);
@@ -13107,9 +13164,11 @@ function openJobCard(job, edit) {
     ${mine ? lockBtn : ''}
     <button type="button" class="btn-primary" style="width: 100%; font-weight: var(--fw8, 800); margin-top: 10px; padding: 13px;" onclick="cardSave()">✓ Save this card</button>`;
   // 📇 v7.09 — an office crew phone gets the reading face, the hand-out ticks and ✎ Edit; the 👷/🔒 line stays Eric's alone
-  const body = !canEdit ? cardViewHtml(c, false)
-    : _jcEdit ? form
-    : cardViewHtml(c, mine) + share +
+  // 👷 v7.51 — who to call on THIS job sits on its card, on every phone (the list itself is 👷 Subs on this job)
+  // (the form wears it too, under ✓ Save — a job with subs and an empty card opens on the form, and who to call must still be there)
+  const body = !canEdit ? cardViewHtml(c, false) + subsCardHtml(job)
+    : _jcEdit ? form + subsCardHtml(job)
+    : cardViewHtml(c, mine) + subsCardHtml(job) + share +
       `<button type="button" class="btn-ghost jc-edit" onclick="openJobCard(_cardJob, true)">✎ Edit this card — names, numbers, codes, notes</button>` + (mine ? lockBtn : '');
   $('revBox').innerHTML = `<h3>📇 Job Card
     ${winX('closeReview()', 'close')}</h3>
@@ -13117,7 +13176,7 @@ function openJobCard(job, edit) {
       : canEdit ? 'Eric\'s job cards — the address, the people, the codes. You can edit them; Eric\'s phone picks your changes up on its next sync.'
       : 'Addresses, numbers, emails and door codes for one job — read-only; ask your Wizard for it out loud too.'}</div>
     ${mine && _crewDbx && _crewDbx.name ? crewDbxHtml(_crewDbx) : ''}
-    ${pick}${job ? headsBar + body : ''}`;
+    ${pick}${job ? headsBar + body : subsDoorHtml()}`;
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
 }
@@ -13163,6 +13222,349 @@ function cardBook() {
   return out;
 }
 // ================= /JOB CARD =================
+// ================= 👷 v7.51 — SUBS ON THIS JOB =================
+// Eric: "probably under the project portal need a button that says 'Subs on this job', and then I need to list out the subs and
+// be able to edit, add, and delete. Then all the crew knows who to call on what job because I'm going to have multiple plumbers
+// going at the same time." Asked who sees it and who may change it: "crew and can see all subs on all jobs, phil and office can edit".
+// THE BOOK: { subs: { id: {id, co, who, trade, ph, em, note, at, by, gone} }, on: { id: {id, job, sid, note, at, by, gone} } } —
+//   a SUB is typed ONCE (the company, the person, the trade, the numbers) and ON puts it on a job, with a word for that job. A
+//   trade is a construction category, so the list reads in the one order (the build). Every record carries `at`: where two phones
+//   meet, the newer one wins; a record taken off is kept as `gone` for a while, so it stays off on every phone.
+// THE ROAD is the job card's own. Eric's phone keeps the book in his prefs and sends ALL of it — every job — to every crew folder
+//   in shared.json; an OFFICE crew phone changes it on its own screen and writes its changes into ITS OWN folder
+//   (App Data/subs-edits.json), which Eric's crew sweep reads and takes (the newer of the two); a FIELD phone reads, and calls.
+// THE WALL: a sub is a vendor. Nothing of this book is ever written to a homeowner's page.
+let crewSubs = (() => { try { const j = JSON.parse(lsGet('daylog-crew-subs') || 'null'); return j && typeof j === 'object' ? j : null; } catch (e) { return null; } })();
+const SUBS_GONE_DAYS = 90, SUBS_EDIT_DAYS = 45;
+function subsHeal(b) {   // a book in the one shape, whatever came in
+  const o = (b && typeof b === 'object' && !Array.isArray(b)) ? b : {};
+  if (!o.subs || typeof o.subs !== 'object' || Array.isArray(o.subs)) o.subs = {};
+  if (!o.on || typeof o.on !== 'object' || Array.isArray(o.on)) o.on = {};
+  return o;
+}
+function subsMine() { return (prefs.subs = subsHeal(prefs.subs)); }   // Eric's phone: the book itself
+function subsEditsMine() { try { return subsHeal(JSON.parse(lsGet('daylog-subs-edits') || 'null')); } catch (e) { return subsHeal(null); } }
+function subsBookNow() {   // the book THIS phone reads: Eric's own — or, on a crew phone, the copy he sent with this phone's own changes on top
+  if (!CREW_NAME) return subsMine();
+  let base; try { base = subsHeal(JSON.parse(JSON.stringify(crewSubs || {}))); } catch (e) { base = subsHeal(null); }
+  const mine = subsEditsMine();
+  ['subs', 'on'].forEach(k => Object.entries(mine[k]).forEach(([id, r]) => { const b = base[k][id]; if (r && (!b || String(r.at || '') > String(b.at || ''))) base[k][id] = r; }));
+  return base;
+}
+const subsLive = list => Object.values(list || {}).filter(r => r && !r.gone);
+const subsS = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+function subsClean(kind, r) {   // one record in its shape and its sizes — whichever phone it came from
+  if (!r || typeof r !== 'object') return null;
+  const id = subsS(r.id, 40), at = subsS(r.at, 40);
+  if (!id || !at || isNaN(+new Date(at))) return null;
+  const base = { id, at, by: subsS(r.by, 40) || 'Eric', ...(r.gone ? { gone: true } : {}) };
+  return kind === 'subs'
+    ? { ...base, co: subsS(r.co, 80), who: subsS(r.who, 80), trade: subsS(r.trade, 60), ph: subsS(r.ph, 40), em: subsS(r.em, 120), note: subsS(r.note, 300) }
+    : { ...base, job: subsS(r.job, 120), sid: subsS(r.sid, 40), note: subsS(r.note, 300) };
+}
+function subsSort(rows) {   // by trade in the one order (a trade of his own after the list's), then by name
+  const nm = r => String(r.s.co || r.s.who || '');
+  return rows.map((r, i) => [r, i]).sort((a, b) => (catRank(a[0].s.trade) - catRank(b[0].s.trade)) || String(a[0].s.trade || '').localeCompare(String(b[0].s.trade || '')) || nm(a[0]).localeCompare(nm(b[0])) || (a[1] - b[1])).map(x => x[0]);
+}
+function subsRows(job) {   // [{ l: the link, s: the sub }] — one job's, or (no job) every job's
+  const b = subsBookNow(), k = job ? cardKey(job) : '';
+  return subsLive(b.on).filter(l => !k || cardKey(l.job) === k).map(l => ({ l, s: b.subs[l.sid] })).filter(r => r.s && !r.s.gone);
+}
+function subsOn(job) { return subsSort(subsRows(job)); }
+function subsCount(job) { return subsRows(job).length; }
+function subsJobsOf(sid) { return subsLive(subsBookNow().on).filter(l => l.sid === sid).map(l => l.job); }
+function subsCanEdit() { return !crewPreview && (!CREW_NAME || amOffice()); }   // Eric, and an office phone; the 👁 preview is a look, not a phone
+function subsId(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function subsTradeWord(t) { return String(t || '').trim() || 'No trade on it'; }
+// a change, from whichever phone may make one
+function subsPut(kind, rec) {
+  if (!subsCanEdit()) return null;
+  const r = subsClean(kind, { ...rec, at: new Date().toISOString(), by: CREW_NAME || 'Eric' });
+  if (!r) return null;
+  if (!CREW_NAME) { subsMine()[kind][r.id] = r; scheduleSave(); subsPublishSoon(); }
+  else { const m = subsEditsMine(); m[kind][r.id] = r; lsSet('daylog-subs-edits', JSON.stringify(m)); subsEditsUpload(); }
+  return r;
+}
+let _subsPubT = null;
+function subsPublishSoon() { clearTimeout(_subsPubT); _subsPubT = setTimeout(() => { _subsPubT = null; publishSharedNotes(); }, 600); }
+// Eric's phone → every crew folder: the whole book, every job, less what was taken off long ago
+function subsPublish() {
+  const b = subsMine(), cut = new Date(Date.now() - SUBS_GONE_DAYS * 86400000).toISOString();
+  ['subs', 'on'].forEach(k => Object.entries(b[k]).forEach(([id, r]) => { if (!r || (r.gone && String(r.at || '') < cut)) delete b[k][id]; }));
+  return { subs: b.subs, on: b.on };
+}
+// an office phone → its own folder, one write at a time (each is a read-modify-write)
+let _subsUpLine = Promise.resolve();
+function subsEditsUpload() {
+  if (!CREW_NAME || !dbx.refreshToken) return _subsUpLine;
+  _subsUpLine = _subsUpLine.then(async () => {
+    try {
+      const p = DBX_ROOT + '/App Data/subs-edits.json';
+      let cur = null; try { cur = JSON.parse(await dbxDownload(p) || 'null'); } catch (e) { cur = null; }
+      const out = subsHeal(cur), mine = subsEditsMine(), cut = new Date(Date.now() - SUBS_EDIT_DAYS * 86400000).toISOString();
+      ['subs', 'on'].forEach(k => {
+        Object.entries(mine[k]).forEach(([id, r]) => { const b = out[k][id]; if (r && (!b || String(r.at || '') >= String(b.at || ''))) out[k][id] = r; });
+        Object.entries(out[k]).forEach(([id, r]) => { if (!r || String(r.at || '') < cut) delete out[k][id]; });   // Eric took those long ago
+      });
+      await dbxUpload(p, JSON.stringify({ by: CREW_NAME, at: new Date().toISOString(), subs: out.subs, on: out.on }, null, 1));
+    } catch (e) { toast('⚠ The change did not reach Eric — check the connection; it goes with the next one', false); }
+  });
+  return _subsUpLine;
+}
+// a crew phone: Eric's book just arrived — a change of this phone's that his book now carries (or has something newer than) is done
+function subsEditsOverlay() {
+  const m = subsEditsMine(), base = subsHeal(crewSubs); let drop = false;
+  ['subs', 'on'].forEach(k => Object.entries(m[k]).forEach(([id, r]) => { const b = base[k][id]; if (!r || (b && String(b.at || '') >= String(r.at || ''))) { delete m[k][id]; drop = true; } }));
+  if (drop) lsSet('daylog-subs-edits', JSON.stringify(m));
+}
+// Eric's phone: an office phone's changes, read off its folder on the crew sweep — the newer of the two stands
+function subsEditsTake(name, j) {
+  if (CREW_NAME || !j || typeof j !== 'object') return 0;
+  const inb = subsHeal({ subs: j.subs, on: j.on }), b = subsMine(), soon = new Date(Date.now() + 10 * 60000).toISOString();
+  let took = 0;
+  ['subs', 'on'].forEach(k => Object.values(inb[k]).forEach(raw => {
+    const r = subsClean(k, raw); if (!r) return;
+    const cur = b[k][r.id];
+    if (cur && String(cur.at || '') >= r.at) return;   // this phone holds the same, or newer
+    if (r.at > soon) return;                           // a clock that far ahead is not a change
+    if (k === 'subs' && !r.gone && !r.co && !r.who) return;
+    b[k][r.id] = { ...r, by: name };
+    took++;
+  }));
+  if (took) { scheduleSave(); publishSharedNotes(); subsFresh(); toast(`👷 ${name} changed the subs list (${took})`); }
+  return took;
+}
+// the book changed under the screen (a sync, another phone's change): the list follows — but NEVER while he is typing in the form
+// (a redraw would take the words out from under his thumbs; ✓ Save and ✕ Never mind both redraw, so the list catches up then)
+function subsFresh() {
+  if ($('subsBox') && !_subsForm) renderSubs();
+  subsPlatesSync();
+}
+// the count on every 👷 plate that is on the screen (the portal is still open under the list)
+function subsPlatesSync() {
+  document.querySelectorAll('.pf-subs[data-job]').forEach(b => { const n = subsCount(b.dataset.job); b.textContent = '👷 Subs on this job' + (n ? ' · ' + n : ''); });
+}
+// ---- the window ----
+let _subsJob = '', _subsBy = 'job', _subsForm = null, _subsArm = '', _subsArmT = null;
+function subsJobList() {
+  const have = [], add = j => { j = String(j || '').trim(); if (j && j !== '—' && !isPersonalJob(j) && !have.some(x => cardKey(x) === cardKey(j))) have.push(j); };
+  (CREW_NAME ? jobs : personalFirst(jobs)).forEach(add);
+  subsRows('').forEach(r => add(r.l.job));
+  return have;
+}
+function openSubs(job) {
+  const list = subsJobList(), want = String(job == null ? '' : job).trim();
+  _subsJob = !want || want === '*' ? '*' : (list.find(j => cardKey(j) === cardKey(want)) || want);
+  _subsForm = null; _subsArm = ''; _subsBy = 'job';
+  if (_jcEdit) { cardStash(); _jcEdit = false; }   // the job card was mid-edit under this: its words are kept first
+  renderSubs(true);
+  $('revModal').classList.add('show', 'mat-full');
+  document.body.classList.add('modal-open');
+}
+function subsPick(v) { _subsJob = v === '*' ? '*' : String(v || '*'); _subsForm = null; _subsArm = ''; renderSubs(); }
+function subsBy(v) { _subsBy = v === 'trade' ? 'trade' : 'job'; renderSubs(); }
+function subsArmSet(k) {
+  _subsArm = k; clearTimeout(_subsArmT);
+  if (k) _subsArmT = setTimeout(() => { if (_subsArm === k) { _subsArm = ''; subsFormKeep(); renderSubs(); } }, 4000);   // (what is typed in the form rides through)
+}
+function subsRowHtml(r, tag) {
+  const s = r.s, l = r.l, edit = subsCanEdit() && !_subsForm;
+  const tel = String(s.ph || '').replace(/[^0-9+]/g, '');
+  const also = subsJobsOf(s.id).filter(j => cardKey(j) !== cardKey(l.job));
+  const armed = _subsArm === 'off:' + l.id;
+  return `<div class="sb-row jc-person" data-sid="${esc(s.id)}" data-lid="${esc(l.id)}">
+    <div class="jc-name">${esc(s.co || s.who || '(no name)')}${s.co && s.who ? ` <span class="jc-role">· ${esc(s.who)}</span>` : ''}${tag ? ` <span class="sb-tag">${esc(tag)}</span>` : ''}</div>
+    ${tel || s.em ? `<div class="jc-taps sb-taps">${tel ? `<a href="tel:${esc(tel)}" class="jc-tap sb-call">📞 ${esc(s.ph)}</a><a href="sms:${esc(tel)}" class="jc-tap sb-text">💬 Text</a>` : ''}${s.em ? `<a href="mailto:${esc(s.em)}" class="jc-tap sb-mail">✉ ${esc(s.em)}</a>` : ''}</div>` : '<div class="hint sb-nonum" style="margin: 4px 0 0;">no number on this one yet</div>'}
+    ${l.note ? `<div class="sb-note">📝 on this job: ${esc(l.note)}</div>` : ''}
+    ${s.note ? `<div class="sb-note sb-dim">about them: ${esc(s.note)}</div>` : ''}
+    ${also.length ? `<div class="sb-note sb-dim sb-also">also on: ${also.map(esc).join(' · ')}</div>` : ''}
+    ${edit ? `<div class="sb-acts"><button type="button" class="btn-ghost sb-ed" onclick="subsEditOpen('${escq(l.id)}')">✎ Edit</button><button type="button" class="btn-ghost sb-off${armed ? ' armed' : ''}" onclick="subsOff('${escq(l.id)}')">${armed ? '⚠ SURE? Tap again — off this job' : '✕ Off this job'}</button></div>` : ''}
+  </div>`;
+}
+function subsGroupsHtml(rows, keyOf, headOf, tagOf) {   // rows under headings, in the order the rows came in
+  const out = [], seen = new Map();
+  rows.forEach(r => { const k = keyOf(r); if (!seen.has(k)) { seen.set(k, []); out.push(k); } seen.get(k).push(r); });
+  return out.map(k => `<div class="jc-head sb-head">${esc(headOf(seen.get(k)[0]))} <span class="sb-n">${seen.get(k).length}</span></div>` + seen.get(k).map(r => subsRowHtml(r, tagOf ? tagOf(r) : '')).join('')).join('');
+}
+function subsTradeOptions(cur) {
+  const known = catKnown(cur);
+  return `<option value=""${cur ? '' : ' selected'}>— pick the trade —</option>${catOptionsHtml(CATS_IN_ORDER, known ? CATS_IN_ORDER.find(n => n.toLowerCase() === String(cur).trim().toLowerCase()) : '')}<option value="__other"${cur && !known ? ' selected' : ''}>✎ another trade…</option>`;
+}
+function subsFormHtml() {
+  const f = _subsForm; if (!f) return '';
+  const b = subsBookNow(), s = f.sid ? (b.subs[f.sid] || {}) : {}, v = f.v || {};
+  const val = k => esc(v[k] != null ? v[k] : (s[k] || ''));
+  const trade = v.trade != null ? v.trade : (s.trade || ''), other = !!trade && !catKnown(trade);
+  const onJob = new Set(subsRows(f.job).map(r => r.s.id));
+  const pickable = subsSort(subsLive(b.subs).filter(x => !onJob.has(x.id)).map(x => ({ s: x, l: {} })));
+  const groups = []; pickable.forEach(r => { const t = subsTradeWord(r.s.trade); let g = groups.find(x => x[0] === t); if (!g) groups.push(g = [t, []]); g[1].push(r.s); });
+  const nOn = f.sid ? subsJobsOf(f.sid).length : 0, armed = _subsArm === 'del:' + f.sid;
+  return `<div class="sb-form jc-blk" id="subsForm">
+    <div class="jc-head" style="margin-top: 4px;">${f.lid ? '✎ Edit this sub' : `➕ Add a sub to ${esc(f.job)}`}</div>
+    ${!f.lid && pickable.length ? `<div class="field"><label>One you already have — pick it and the boxes fill themselves</label>
+      <select id="sbPick" onchange="subsFormPick(this.value)"><option value="">— a new sub —</option>${groups.map(g => `<optgroup label="${esc(g[0])}">${g[1].map(x => `<option value="${esc(x.id)}"${x.id === f.sid ? ' selected' : ''}>${esc(x.co || x.who)}${x.co && x.who ? ' · ' + esc(x.who) : ''}</option>`).join('')}</optgroup>`).join('')}</select></div>` : ''}
+    <div class="field"><label>The trade</label><select id="sbTrade" onchange="subsTradeChange(this.value)">${subsTradeOptions(trade)}</select></div>
+    ${other ? `<div class="field"><label>Which trade</label><input type="text" id="sbTradeOther" value="${esc(trade)}" placeholder="Crane · Cleaning · Septic pumping"></div>` : ''}
+    <div class="frow" style="gap: 6px;">
+      <div class="field" style="flex: 1; min-width: 130px; margin: 0;"><label>Company</label><input type="text" id="sbCo" value="${val('co')}" placeholder="company name"></div>
+      <div class="field" style="flex: 1; min-width: 110px; margin: 0;"><label>Who to ask for</label><input type="text" id="sbWho" value="${val('who')}" placeholder="the person"></div>
+    </div>
+    <div class="frow" style="gap: 6px; margin-top: 6px;">
+      <div class="field" style="flex: 1; min-width: 120px; margin: 0;"><label>Phone</label><input type="tel" inputmode="tel" id="sbPh" value="${val('ph')}" placeholder="907-555-0100"></div>
+      <div class="field" style="flex: 1; min-width: 130px; margin: 0;"><label>Email</label><input type="email" inputmode="email" id="sbEm" value="${val('em')}" placeholder="their email"></div>
+    </div>
+    <div class="field" style="margin-top: 6px;"><label>On THIS job — what they are here for</label><input type="text" id="sbJobNote" value="${esc(v.jobNote != null ? v.jobNote : (f.lid ? ((b.on[f.lid] || {}).note || '') : ''))}" placeholder="rough-in only · the upstairs bath"></div>
+    <div class="field"><label>About them — shows on every job they are on</label><input type="text" id="sbNote" value="${val('note')}" placeholder="text first · mornings only"></div>
+    ${f.sid && nOn > (f.lid ? 1 : 0) ? `<div class="hint" style="margin: 0 0 6px;">👷 This sub is on ${nOn} job${nOn === 1 ? '' : 's'} — a change to the name, the trade or the numbers shows on every one of them.</div>` : ''}
+    <div class="frow" style="gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+      <button type="button" class="btn-primary" id="sbSave" style="flex: 2 1 160px; min-height: 46px; font-weight: var(--fw8, 800);" onclick="subsSave()">✓ Save — ${f.lid ? 'it is changed' : 'on this job'}</button>
+      <button type="button" class="btn-ghost" style="flex: 1 1 110px; min-height: 46px;" onclick="subsFormClose()">✕ Never mind</button>
+    </div>
+    ${f.lid && f.sid ? `<button type="button" class="btn-ghost sb-del${armed ? ' armed' : ''}" style="width: 100%; margin-top: 8px; min-height: 44px; color: var(--err, #c0392b);" onclick="subsDelete('${escq(f.sid)}')">${armed ? `⚠ SURE? Tap again — off EVERY job (${nOn})` : '🗑 Delete this sub from every job'}</button>` : ''}
+  </div>`;
+}
+function renderSubs(force) {
+  const box = $('revBox'); if (!box) return;
+  if (!force && !$('subsBox')) return;   // only while this window is on the screen
+  const keep = $('revModal') ? $('revModal').scrollTop : 0, keepBox = box.scrollTop;
+  const list = subsJobList(), all = _subsJob === '*', edit = subsCanEdit();
+  if (!all && !list.some(j => cardKey(j) === cardKey(_subsJob))) list.unshift(_subsJob);
+  const rows = all ? subsRows('') : subsOn(_subsJob);
+  const total = subsRows('').length;
+  let body;
+  if (!rows.length) body = `<div class="hint sb-none" style="margin: 10px 0;">${all ? (edit ? '○ No subs on any job yet — pick a job above, then ➕ Add a sub.' : '○ No subs on any job yet — Eric and the office fill this in.') : `○ No subs on ${esc(_subsJob)} yet.${edit ? '' : ' Eric and the office fill this in.'}`}</div>`;
+  else if (!all) body = subsGroupsHtml(rows, r => subsTradeWord(r.s.trade).toLowerCase(), r => subsTradeWord(r.s.trade));
+  else if (_subsBy === 'trade') body = subsGroupsHtml(subsSort(rows), r => subsTradeWord(r.s.trade).toLowerCase(), r => subsTradeWord(r.s.trade), r => '🏠 ' + r.l.job);
+  else { const order = list.map(cardKey); body = subsGroupsHtml(subsSort(rows).map((r, i) => [r, i]).sort((a, b) => (order.indexOf(cardKey(a[0].l.job)) - order.indexOf(cardKey(b[0].l.job))) || (a[1] - b[1])).map(x => x[0]), r => cardKey(r.l.job), r => '🏠 ' + r.l.job, r => subsTradeWord(r.s.trade)); }
+  box.innerHTML = `<div id="subsBox" class="sb-box"><h3>👷 Subs on ${all ? 'every job' : 'this job'}
+    ${winX('closeReview()', 'close')}</h3>
+    <div class="hint" style="margin: 0 0 8px;">${edit ? 'Who to call, job by job. Every crew phone gets the whole list — every job — on its next sync. It never goes on a homeowner\'s page.' : 'Who to call, job by job — every job is here. Eric and the office keep this list; it lands on your phone with every sync.'}</div>
+    <div class="jc-pick">
+      <label for="subsJob" class="jc-pick-lbl">▸ PICK THE JOB</label>
+      <select id="subsJob" class="jc-pick-sel" onchange="subsPick(this.value)">
+        <option value="*"${all ? ' selected' : ''}>📋 Every job · ${total} sub${total === 1 ? '' : 's'}</option>
+        ${list.map(j => `<option value="${esc(j)}"${!all && cardKey(j) === cardKey(_subsJob) ? ' selected' : ''}>${esc(j)}${subsCount(j) ? ' · ' + subsCount(j) : ''}</option>`).join('')}
+      </select>
+      <div class="jc-pick-now" id="subsNow">${all ? `✓ SHOWING — every job · ${total} sub${total === 1 ? '' : 's'} on the jobs` : `✓ SHOWING — ${esc(_subsJob)} · ${rows.length} sub${rows.length === 1 ? '' : 's'}`}</div>
+    </div>
+    ${all && rows.length ? `<div class="sb-by"><button type="button" class="pick-chip${_subsBy === 'job' ? ' sel' : ''}" aria-pressed="${_subsBy === 'job'}" onclick="subsBy('job')">${_subsBy === 'job' ? '✓ ' : ''}BY JOB</button><button type="button" class="pick-chip${_subsBy === 'trade' ? ' sel' : ''}" aria-pressed="${_subsBy === 'trade'}" onclick="subsBy('trade')">${_subsBy === 'trade' ? '✓ ' : ''}BY TRADE — who is where</button></div>` : ''}
+    ${_subsForm ? subsFormHtml() : (edit && !all ? `<button type="button" class="btn-primary sb-add" id="subsAdd" onclick="subsAddOpen()">➕ Add a sub to ${esc(_subsJob)}</button>` : '')}
+    <div id="subsList">${body}</div>
+    <div class="rev-row" style="margin-top: 14px;"><button type="button" class="btn-ghost x-plate" style="flex: 1;" onclick="closeReview()">‹ Back</button></div></div>`;
+  if (!force) { box.scrollTop = keepBox; if ($('revModal')) $('revModal').scrollTop = keep; }
+  subsPlatesSync();
+}
+function subsFormKeep() {   // what is typed rides through a redraw of the form
+  if (!_subsForm || !$('subsForm')) return;
+  const g = id => { const el = $(id); return el ? String(el.value || '') : null; };
+  const t = g('sbTrade'), o = g('sbTradeOther');
+  _subsForm.v = { co: g('sbCo'), who: g('sbWho'), ph: g('sbPh'), em: g('sbEm'), note: g('sbNote'), jobNote: g('sbJobNote'), trade: t === '__other' ? (o != null ? o : ((_subsForm.v || {}).trade || '')) : (t || '') };
+}
+function subsAddOpen() {
+  if (!subsCanEdit() || _subsJob === '*') return;
+  _subsForm = { lid: '', sid: '', job: _subsJob, v: null }; _subsArm = '';
+  renderSubs();
+  const el = $('sbCo'); if (el) { if ($('subsForm').scrollIntoView) $('subsForm').scrollIntoView({ block: 'start' }); el.focus(); }
+}
+function subsEditOpen(lid) {
+  if (!subsCanEdit()) return;
+  const l = subsBookNow().on[lid]; if (!l || l.gone) return;
+  _subsForm = { lid, sid: l.sid, job: l.job, v: null }; _subsArm = '';
+  if (_subsJob === '*') _subsJob = l.job;
+  renderSubs();
+  if ($('subsForm') && $('subsForm').scrollIntoView) $('subsForm').scrollIntoView({ block: 'start' });
+}
+function subsFormPick(sid) {   // one he already has: the boxes fill with it (what was typed for THIS job stays)
+  if (!_subsForm) return;
+  const jobNote = $('sbJobNote') ? $('sbJobNote').value : '';
+  _subsForm.sid = String(sid || ''); _subsForm.v = { jobNote };
+  renderSubs();
+}
+function subsTradeChange(v) {
+  if (!_subsForm) return;
+  subsFormKeep();
+  _subsForm.v.trade = v === '__other' ? ' ' : v;   // ' ' = another trade, not typed yet (the box opens)
+  renderSubs();
+  if (v === '__other' && $('sbTradeOther')) { $('sbTradeOther').value = ''; $('sbTradeOther').focus(); }
+}
+function subsFormClose() { _subsForm = null; _subsArm = ''; renderSubs(); }
+function subsSave() {
+  const f = _subsForm; if (!f || !subsCanEdit()) return;
+  subsFormKeep();
+  const v = f.v || {}, b = subsBookNow();
+  const rec = { co: subsS(v.co, 80), who: subsS(v.who, 80), trade: subsS(v.trade, 60), ph: subsS(v.ph, 40), em: subsS(v.em, 120), note: subsS(v.note, 300) };
+  if (!rec.co && !rec.who) { toast('Give it a company or a name first', false); const el = $('sbCo'); if (el) el.focus(); return; }
+  // typed again by accident? the same company and person IS the one he already has — never a twin. What the list already holds
+  // about them stands; a box that was empty there takes what was typed now.
+  const keys = ['co', 'who', 'trade', 'ph', 'em', 'note'];
+  let sid = f.sid, twin = null;
+  if (!sid) { twin = subsLive(b.subs).find(x => String(x.co || '').toLowerCase() === rec.co.toLowerCase() && String(x.who || '').toLowerCase() === rec.who.toLowerCase()) || null; if (twin) sid = twin.id; }
+  const old = sid ? b.subs[sid] : null;
+  const next = twin ? Object.fromEntries(keys.map(k => [k, String(twin[k] || '') || rec[k]])) : rec;
+  const changed = !old || old.gone || keys.some(k => String(old[k] || '') !== next[k]);
+  if (!sid) sid = subsId('s');
+  if (changed) subsPut('subs', { id: sid, ...next });
+  Object.assign(rec, next);
+  const jobNote = subsS(v.jobNote, 300);
+  let lid = f.lid;
+  if (!lid) { const had = subsLive(b.on).find(l => l.sid === sid && cardKey(l.job) === cardKey(f.job)); if (had) lid = had.id; }
+  const oldL = lid ? b.on[lid] : null;
+  if (!oldL || oldL.gone || String(oldL.note || '') !== jobNote) subsPut('on', { id: lid || subsId('j'), job: f.job, sid, note: jobNote });
+  _subsForm = null; _subsArm = '';
+  renderSubs();
+  toast(`👷 ${rec.co || rec.who} — ${f.lid ? 'changed' : 'on ' + f.job} ✓${CREW_NAME ? ' · Eric\'s phone gets it on its next sync' : ' · the crew get it on their next sync'}`);
+}
+function subsOff(lid) {
+  if (!subsCanEdit()) return;
+  const b = subsBookNow(), l = b.on[lid]; if (!l || l.gone) return;
+  if (_subsArm !== 'off:' + lid) { subsArmSet('off:' + lid); renderSubs(); return; }
+  subsArmSet('');
+  const s = b.subs[l.sid] || {};
+  subsPut('on', { ...l, gone: true });
+  renderSubs();
+  toast(`✕ ${s.co || s.who || 'That sub'} is off ${l.job}${subsJobsOf(l.sid).length ? ' — still on ' + subsJobsOf(l.sid).length + ' other job' + (subsJobsOf(l.sid).length === 1 ? '' : 's') : ''}`);
+}
+function subsDelete(sid) {
+  if (!subsCanEdit()) return;
+  const b = subsBookNow(), s = b.subs[sid]; if (!s || s.gone) return;
+  if (_subsArm !== 'del:' + sid) { subsFormKeep(); subsArmSet('del:' + sid); renderSubs(); return; }
+  subsArmSet('');
+  subsLive(b.on).filter(l => l.sid === sid).forEach(l => subsPut('on', { ...l, gone: true }));
+  subsPut('subs', { ...s, gone: true });
+  _subsForm = null;
+  renderSubs();
+  toast(`🗑 ${s.co || s.who} is off every job`);
+}
+// the job card's own section: who to call on THIS job, and the door to the whole list
+function subsCardHtml(job) {
+  if (!job) return '';
+  const rows = subsOn(job), edit = subsCanEdit();
+  return `<div class="jc-head sb-cardhead">👷 Subs on this job</div>
+    ${rows.length ? rows.map(r => { const s = r.s, tel = String(s.ph || '').replace(/[^0-9+]/g, '');
+      return `<div class="jc-person sb-card" data-sid="${esc(s.id)}"><div class="jc-name">${esc(s.co || s.who || '(no name)')}${s.co && s.who ? ` <span class="jc-role">· ${esc(s.who)}</span>` : ''} <span class="sb-tag">${esc(subsTradeWord(s.trade))}</span></div>
+        ${r.l.note ? `<div class="sb-note">📝 ${esc(r.l.note)}</div>` : ''}
+        ${tel ? `<div class="jc-taps sb-taps"><a href="tel:${esc(tel)}" class="jc-tap sb-call">📞 ${esc(s.ph)}</a><a href="sms:${esc(tel)}" class="jc-tap sb-text">💬 Text</a></div>` : ''}</div>`; }).join('')
+      : `<div class="hint" style="margin: 0 0 6px;">No subs on this job yet.</div>`}
+    <button type="button" class="btn-ghost jc-add sb-open" onclick="openSubs('${escq(job)}')">👷 ${edit ? 'Open the subs list — add, edit, take off' : 'Open the subs list — every job'}</button>`;
+}
+// with no job picked on the 📇 Job Card (or no card handed out yet) the door to the whole list is still there — only when there is a sub to show
+function subsDoorHtml() {
+  const n = subsRows('').length;
+  return n ? `<button type="button" class="btn-ghost jc-add sb-open sb-door" onclick="openSubs('*')">👷 Subs on every job — who to call · ${n}</button>` : '';
+}
+// the plate in a job's fold of the 🏠 Project portal — on every phone (the portal names the client; the list is kept by the app's job)
+function subsPlateHtml(c) {
+  if (!c) return '';
+  const job = portalAppJob(c), n = subsCount(job);
+  return `<button type="button" class="btn-ghost pf-subs" data-job="${esc(job)}" onclick="openSubs('${escq(job)}')">👷 Subs on this job${n ? ' · ' + n : ''}</button>`;
+}
+// what the Wizard is handed: who to call, job by job
+function subsAskRows() {
+  return subsSort(subsRows('')).map(r => { const o = { job: r.l.job, trade: subsTradeWord(r.s.trade) };
+    if (r.s.co) o.company = r.s.co; if (r.s.who) o.person = r.s.who; if (r.s.ph) o.phone = r.s.ph; if (r.s.em) o.email = r.s.em;
+    if (r.l.note) o.onThisJob = r.l.note; if (r.s.note) o.about = r.s.note; return o; });
+}
+// ================= /SUBS =================
 let crewShared = [];
 async function checkSharedNotes() {
   if (!CREW_NAME || !dbx.refreshToken) return;
@@ -13176,6 +13578,8 @@ async function checkSharedNotes() {
     // Whatever he took off the sweep simply isn't in the file, so this can only ever hold
     // what he meant to send.
     if (j.cards && typeof j.cards === 'object' && !Array.isArray(j.cards)) { crewCards = j.cards; cardEditsOverlay(); }   // 📇 v7.09 — this phone's own edits stay on top until Eric has them
+    // 👷 v7.51 — the subs, every job: kept on the phone (they read with no signal), this phone's own changes on top until Eric has them
+    if (j.subs && typeof j.subs === 'object' && !Array.isArray(j.subs)) { crewSubs = subsHeal(j.subs); lsSet('daylog-crew-subs', JSON.stringify(crewSubs)); subsEditsOverlay(); subsFresh(); }
     // 🚚 v5.51 — take Eric's truck book, keep the NEWER odometer per truck (his sweep vs
     // a trip just ended on this phone). Trucks Eric added appear; ones he removed go.
     if (Array.isArray(j.trucks) && j.trucks.length) {
@@ -14079,6 +14483,8 @@ async function checkCrewLogs() {
       try { const t = await dbxDownload(f.path_lower + '/app data/entries.json'); if (t) j = JSON.parse(t); } catch (e) {}
       // 📇 v7.09 — an office phone's job-card edits ride back in its own folder
       if (isOffice(f.name)) { try { const t2 = await dbxDownload(f.path_lower + '/app data/card-edits.json'); if (t2) cardEditsTake(f.name, JSON.parse(t2)); } catch (e) {} }
+      // 👷 v7.51 — and so do its changes to the subs list (Eric: "phil and office can edit")
+      if (isOffice(f.name)) { try { const t3 = await dbxDownload(f.path_lower + '/app data/subs-edits.json'); if (t3) subsEditsTake(f.name, JSON.parse(t3)); } catch (e) {} }
       if (!j) continue;
       const name = f.name;
       crewFeedTake(name, f.path_display || f.path_lower, j.entries);   // 👷 v7.13 — the FROM THE CREW card reads the same log
@@ -14186,13 +14592,136 @@ function renderPortalFold(box, offRoot) {
           <button class="btn-ghost" onclick="openJournal(${i})">📖 Journal</button>
           <button class="btn-ghost" onclick="openMaterials(${i})">📋 Build List</button>
           <button class="btn-ghost" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
-        </div>` : `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>`) : ''}
+          ${subsPlateHtml(c)}
+        </div>` : `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>
+        <div class="pf-acts">${subsPlateHtml(c)}</div>`) : ''}
       </div>`;
     }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="findPortalRoot(true).then(() => renderPortalList())">🔄 Look again</button>
       ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — Plans, the Journal and the Build List are yours to work. The money stays on Eric\'s phone.</span>'
         : amOffice() ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE, but the shared <b>Client Portal</b> folder has not turned up on this phone yet — accept the Dropbox share, then tap 🔄 Look again.</span>' : ''}</div>`
       : '<span class="hint">Eric hasn\'t turned any client pages on yet.</span>';
 }
+// ================= 💰 v7.51 — THE DOWN-PAYMENT METER =================
+// Eric: "I get a … down payment before any project starts and I would like a meter at the top of each client page that only the
+// office can see. When I'm entering receipts for estimated upcoming cost plus overdue invoices, I want it to show me when we're
+// getting close to being at or over that down payment (so that I can stop the job and wait for more money)." His figures are his:
+// none is in this file — the down payment is typed in, job by job, and kept in his own prefs.
+// WHAT IS OUT = the receipts received and not on an invoice yet, as their page prints them (the markup folded in — it is what
+//   they will be billed) + the invoices they have not paid (the books' open balance, as of the last QuickBooks run).
+// THE METER = what is out against the down payment he holds for that job: ✓ UNDER · ⚠ GETTING CLOSE (from three quarters of
+//   it) · ⛔ AT or OVER — stop and wait for money. Ten cells, the percent and the words — never the colour alone.
+// WHERE: the job's row and its fold in the 🏠 Project portal, the top of its 💰 estimates board and of its 🧾 receipts window, and
+//   the top of the 👁 client viewer — in the APP's own frame round their page, never inside the page. A receipt sent to their
+//   page says in its toast when the job is close or over.
+// THE WALL: his phone only — no crew phone and no 👁 crew preview draws it; the down payment lives in prefs.downPay, never in a
+//   file a homeowner's page is served from, never in a push.
+const DP_CLOSE = 0.75;
+let _dpSeen = (() => { try { const j = JSON.parse(lsGet('daylog-dpseen') || 'null'); return j && typeof j === 'object' && !Array.isArray(j) ? j : {}; } catch (e) { return {}; } })();
+let _dpEdit = '';
+const dpR2 = n => Math.round((+n || 0) * 100) / 100;
+function dpMine() { return !CREW_NAME && !crewPreview; }
+function dpHeld(code) { const d = ((prefs.downPay && typeof prefs.downPay === 'object') ? prefs.downPay : {})[code]; return d && +d.a > 0 ? +d.a : 0; }
+function dpSet(code, v) {
+  if (!dpMine() || !code) return;
+  const n = dpR2(parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, '')));
+  if (!prefs.downPay || typeof prefs.downPay !== 'object' || Array.isArray(prefs.downPay)) prefs.downPay = {};
+  if (n > 0) prefs.downPay[code] = { a: n, at: new Date().toISOString() }; else delete prefs.downPay[code];
+  scheduleSave();
+}
+// the receipts that wait, as their page prints them (a page written before v7.45 kept an approved line's receipts inside the line)
+function dpPageNumbers(pg) {
+  if (!pg || typeof pg !== 'object') return null;
+  const u = pg.upcoming;
+  let way = (u && Array.isArray(u.items) ? u.items : []).reduce((s, i) => s + (+((i || {}).a) || 0), 0);
+  if (!(u && u.all)) (Array.isArray(pg.budget) ? pg.budget : []).forEach(b => { if (b && +b.up > 0) way += +b.up; });
+  return { way: dpR2(way), open: Math.max(0, dpR2(pg.open)) };
+}
+function dpSee(code, pg) {   // their page was just read, or just written: what the meter stands on when the board is shut
+  const n = dpMine() && code ? dpPageNumbers(pg) : null;
+  if (!n) return false;
+  const old = _dpSeen[code];
+  _dpSeen[code] = { way: n.way, open: n.open, at: localDay(new Date()) };
+  lsSet('daylog-dpseen', JSON.stringify(_dpSeen));
+  return !old || old.way !== n.way || old.open !== n.open;
+}
+function dpNumbers(code) {   // live off the board while THIS job's board is in memory; else what was last read off their page
+  const i = _estIdx >= 0 ? _estIdx : _rcptIdx;
+  const c = i >= 0 ? (((_portalIdx || {}).clients) || [])[i] : null;
+  if (c && c.code === code && _estD && _estPage) return { way: (estUpcoming() || { tot: 0 }).tot || 0, open: Math.max(0, dpR2(_estPage.open)), live: true };
+  return _dpSeen[code] || null;
+}
+function dpCalc(code) {
+  const held = dpHeld(code);
+  if (!held) return { state: 'unset', held: 0 };
+  const n = dpNumbers(code);
+  if (!n) return { state: 'wait', held };
+  const out = dpR2((+n.way || 0) + (+n.open || 0)), pct = out / held;
+  return { state: pct >= 1 ? 'over' : pct >= DP_CLOSE ? 'close' : 'under', held, way: +n.way || 0, open: +n.open || 0, out, pct, room: dpR2(held - out) };
+}
+function dpPctWord(m) { return Math.round(m.pct * 100) + '%'; }
+function dpCells(m) {
+  const on = m.state === 'over' ? 10 : Math.max(m.out > 0 ? 1 : 0, Math.min(10, Math.round(m.pct * 10)));
+  return Array.from({ length: 10 }, (_, i) => `<span class="dp-cell${i < on ? ' on' : ''}"></span>`).join('');
+}
+function dpWord(m) {
+  return m.state === 'over' ? (m.room < 0 ? `⛔ OVER BY ${fmtMoney(-m.room)} — stop and wait for money` : '⛔ AT THE DOWN PAYMENT — stop and wait for money')
+    : m.state === 'close' ? '⚠ GETTING CLOSE' : '✓ UNDER';
+}
+function dpMeterHtml(code, where) {
+  if (!dpMine() || !code) return '';
+  const m = dpCalc(code), edit = _dpEdit === code + ':' + where;
+  const form = `<div class="dp-form"><label for="dpIn-${esc(where)}">💰 The down payment you hold for this job</label>
+      <div class="frow" style="gap: 6px; flex-wrap: nowrap;"><input type="text" inputmode="decimal" id="dpIn-${esc(where)}" value="${m.held ? m.held : ''}" placeholder="$" onkeydown="if(event.key==='Enter'){event.preventDefault();dpEditSave('${escq(code)}','${escq(where)}');}">
+      <button type="button" class="btn-primary dp-save" onclick="dpEditSave('${escq(code)}','${escq(where)}')">✓ Save</button>
+      <button type="button" class="btn-ghost dp-x" onclick="dpEditClose()" aria-label="never mind">✕</button></div>
+      <div class="hint" style="margin: 4px 0 0;">Only you see this. It is kept on your side — never on their page. Empty the box and save to take the meter off this job.</div></div>`;
+  if (m.state === 'unset') return `<div class="dp-box dp-unset" data-dp="${esc(code)}" data-state="unset">${edit ? form : `<button type="button" class="btn-ghost dp-setbtn" onclick="dpEditOpen('${escq(code)}','${escq(where)}')">💰 ○ No down payment set for this job — tap to set one</button>`}</div>`;
+  if (m.state === 'wait') return `<div class="dp-box dp-wait" data-dp="${esc(code)}" data-state="wait"><div class="dp-top"><b>💰 DOWN PAYMENT</b></div><div class="dp-word">⏳ reading their page…</div><div class="dp-line"><b>${fmtMoney(m.held)}</b> held</div>
+    ${edit ? form : `<button type="button" class="btn-ghost dp-edit" onclick="dpEditOpen('${escq(code)}','${escq(where)}')">✎ Change the down payment</button>`}</div>`;
+  const word = dpWord(m);
+  return `<div class="dp-box dp-${m.state}" data-dp="${esc(code)}" data-state="${m.state}" role="group" aria-label="down payment meter — ${esc(word)} — ${dpPctWord(m)} of the down payment is out">
+    <div class="dp-top"><b>💰 DOWN PAYMENT</b><span class="dp-bar" aria-hidden="true">${dpCells(m)}</span><b class="dp-pct">${dpPctWord(m)}</b></div>
+    <div class="dp-word">${word}</div>
+    <div class="dp-line dp-sum"><b>${fmtMoney(m.out)}</b> out of <b>${fmtMoney(m.held)}</b> held${m.room > 0 ? ` · ${fmtMoney(m.room)} of room` : ''}</div>
+    <div class="dp-line dp-dim">🧾 ${fmtMoney(m.way)} receipts not invoiced + 📄 ${fmtMoney(m.open)} invoices not paid <span class="dp-src">(the invoices: as of the last QuickBooks run)</span></div>
+    ${edit ? form : `<button type="button" class="btn-ghost dp-edit" onclick="dpEditOpen('${escq(code)}','${escq(where)}')">✎ Change the down payment</button>`}
+  </div>`;
+}
+// on the job's own row in the portal: one glance across every job
+function dpLampHtml(code) {
+  if (!dpMine()) return '';
+  const m = dpCalc(code);
+  if (m.state === 'unset' || m.state === 'wait') return '';
+  const word = dpPctWord(m) + ' OF THE DOWN PAYMENT' + (m.state === 'over' ? ' — STOP' : m.state === 'close' ? ' — CLOSE' : '');
+  return `<span class="jm jm-dp dp-${m.state}${m.state === 'over' ? ' jm-dead' : ''}" data-dp-lamp="${esc(code)}" title="💰 down payment — ${esc(word)}" aria-label="down payment ${esc(word)}">
+    <span class="jm-glyph" aria-hidden="true">💰</span><span class="jm-bar dp-bar">${dpCells(m)}</span><span class="jm-word">${m.state === 'over' ? '⛔ ' : m.state === 'close' ? '⚠ ' : '✓ '}${word}</span></span>`;
+}
+function dpHost(code, where) { return dpMine() && code ? `<div class="dp-host" data-dp-host="${esc(code)}" data-dp-where="${esc(where)}">${dpMeterHtml(code, where)}</div>` : ''; }
+function dpRedraw() {   // every meter that is on the screen, and the lamp on the job's row
+  document.querySelectorAll('[data-dp-host]').forEach(h => { h.innerHTML = dpMeterHtml(h.dataset.dpHost, h.dataset.dpWhere || 'x'); });
+  document.querySelectorAll('[data-dp-lamp]').forEach(l => { const t = document.createElement('div'); t.innerHTML = dpLampHtml(l.dataset.dpLamp); if (t.firstElementChild) l.replaceWith(t.firstElementChild); else l.remove(); });
+}
+function dpEditOpen(code, where) { if (!dpMine()) return; _dpEdit = code + ':' + where; dpRedraw(); const el = $('dpIn-' + where); if (el) { el.focus(); if (el.select) el.select(); } }
+function dpEditClose() { _dpEdit = ''; dpRedraw(); }
+function dpEditSave(code, where) {
+  const el = $('dpIn-' + where);
+  if (!el || !dpMine()) return;
+  const had = dpHeld(code), typed = String(el.value || '').trim();
+  if (!typed && !had) { toast('Type the amount first', false); el.focus(); return; }
+  dpSet(code, typed);
+  _dpEdit = '';
+  dpRedraw();
+  if (!document.querySelector(`[data-dp-lamp="${code}"]`) && $('portalWin') && $('portalWin').classList.contains('show')) renderPortalList();   // the row had no lamp yet
+  const m = dpCalc(code);
+  toast(dpHeld(code) ? `💰 Down payment saved — ${fmtMoney(dpHeld(code))} held${m.pct != null ? ' · ' + dpPctWord(m) + ' of it is out' : ''}` : '💰 The down payment is off this job — no meter');
+}
+// what a toast adds when money was just put on their page and the job is close to its down payment, or over it
+function dpSay(code) {
+  if (!dpMine() || !code) return '';
+  const m = dpCalc(code);
+  return m.state === 'over' ? ` · ⛔ ${dpPctWord(m)} of the down payment is out — stop and wait for money` : m.state === 'close' ? ` · ⚠ ${dpPctWord(m)} of the down payment is out — getting close` : '';
+}
+// ================= /DOWN-PAYMENT METER =================
 // ═══════════ 📊 v6.31 — THE JOURNAL METER ═══════════
 // Eric: "next to each project name id like a meter that is 7 spaces long and whenever i post
 // to the project journal it'll reset, so i can see how many days of the week old each journal
@@ -14291,16 +14820,18 @@ async function refreshQbAges() {
 async function refreshJrnAges(clients) {
   if (!clients || !clients.length) return;
   prefs.jrnRel = prefs.jrnRel || {};
-  let moved = false;
+  let moved = false, dpMoved = false;
   await Promise.all(clients.map(async c => {
     if (!c || !c.code) return;
     try {
       const d = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null');
       const rel = ((d && (d.journal || [])[0] || {}).released || '').slice(0, 10);
       if (rel && prefs.jrnRel[c.code] !== rel) { prefs.jrnRel[c.code] = rel; moved = true; }
+      if (d && dpSee(c.code, d) && dpHeld(c.code)) dpMoved = true;   // 💰 v7.51 — the same read feeds the down-payment meter (his phone only)
     } catch (e) { /* leave the cached date alone — a bad signal is not news */ }
   }));
-  if (moved) { scheduleSave(); const b = $('portalList'); if (b) renderPortalList(); }   // 📖 v7.09 — an office phone repaints too
+  if (moved) scheduleSave();
+  if (moved || dpMoved) { const b = $('portalList'); if (b) renderPortalList(); }   // 📖 v7.09 — an office phone repaints too
 }
 async function renderPortalList() {
   const box = $('portalList');
@@ -14392,8 +14923,10 @@ async function renderPortalList() {
     return `
     <div class="sum-row" style="cursor: default; flex-wrap: wrap; gap: 6px; ${open ? '' : 'padding-bottom: 4px;'}">
       <button type="button" class="sum-title" style="flex: 1 1 100%; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; font-weight: var(--fw7, 700);"
-        onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}${jrnMeterHtml(c.code)}${qbMeterHtml(c.code)}</button>
+        onclick="portalFold(${i})" aria-expanded="${open}">${open ? '▾' : '▸'} 🏠 ${esc(c.job)}${jrnMeterHtml(c.code)}${qbMeterHtml(c.code)}${dpLampHtml(c.code)}</button>
       ${open ? `
+      <!-- 💰 v7.51 — the down-payment meter leads the job's fold (his phone only; the dashed edge = the office crew do not see it) -->
+      <div class="dp-wrap${om}" style="flex: 1 1 100%;">${dpHost(c.code, 'portal')}</div>
       <!-- 📐 v6.05 — a grid, not a scatter: every plate the same width, in even rows, so the
            fold reads as one panel instead of seven differently-sized buttons stair-stepping
            down the phone. -->
@@ -14404,6 +14937,7 @@ async function renderPortalList() {
         <button class="btn-ghost${om}" onclick="openEstimates(${i})">💰 Estimates</button>
         <button class="btn-ghost${om}" onclick="portalCopy(${i})">📋 Copy link</button>
         <button class="btn-ghost${om}" onclick="portalIntel(${i})">📊 What they look at</button>
+        ${subsPlateHtml(c)}
         <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
         <button class="btn-ghost pf-wide${om}" onclick="openPageVis(${i})">🎛 What they see — turn parts of their page on or off</button>
         <!-- 🧾 v6.30 — beside "view as a client", as Eric asked: the tagged receipts still
@@ -15095,6 +15629,7 @@ async function openEstimates(i) {
   toast('⏳ Opening the estimates…');
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
   try { _estPage = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (e) { _estPage = null; }
+  dpSee(c.code, _estPage);   // 💰 v7.51
   if (!_estD || !Array.isArray(_estD.cats)) _estD = { updated: '', cats: [] };
   // 📋 v6.89 — the build list, rolled up under each estimate line (office file only; a job with no board just has no roll-up)
   try { _estMatRoll = estMatRoll(JSON.parse(await dbxDownload(portalRoot() + '/materials-office-' + c.code + '.json') || 'null')); } catch (e) { _estMatRoll = {}; }
@@ -15593,6 +16128,7 @@ function renderEstimates() {
   $('revBox').innerHTML = `<div class="est-board"><h3>💰 ${esc(c.job)} — estimates
     ${winX('closeEstimates()', 'close estimates')}</h3>
     <div style="margin: 0 0 8px; font-size: 14px; line-height: 1.4;">${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}${needN ? ` · <b style="color: var(--warn, #ffa657);">⚠ ${needN} need${needN > 1 ? '' : 's'} you</b>` : ''}${doneN ? ` · <b class="est-done-word" id="estDoneN">✓ ${doneN} complete</b>` : ''} <span class="hint" style="margin: 0;">· 💹 markup ${estMk()}%</span></div>
+    ${dpHost(c.code, 'est')}
     ${wayAll || inAll ? `<div class="est-what-row" id="estWhatAll">${wayAll ? `<button type="button" class="est-what" data-what="way" onclick="estWhatOpen(-1, 'way')" aria-label="${money0(wayAll)} on the way on this job — see what it is">📥 ${money0(wayAll)} on the way ›</button>` : ''}${inAll ? `<button type="button" class="est-what" data-what="in" onclick="estWhatOpen(-1, 'in')" aria-label="${money0(inAll)} in on this job — see what it is">📗 ${money0(inAll)} in ›</button>` : ''}<span class="hint" style="margin: 0;">the whole job — tap to see what it is</span></div>` : ''}
     ${guessN ? `<button type="button" class="pick-chip est-guess-filter${_estGuessOnly ? ' sel' : ''}" id="estGuessBtn" aria-pressed="${_estGuessOnly}" onclick="estGuessOnly()">${_estGuessOnly ? `✓ ≈ ONLY THE BEST GUESSES (${guessN}) — tap to show everything` : `≈ ${guessN} best guess${guessN > 1 ? 'es' : ''} — ${money0(guessTot)} with no bid behind it yet · tap to see only those`}</button>` : ''}
     <button type="button" class="btn-ghost est-help-btn" onclick="estHelp()" aria-expanded="${_estHelp}">${_estHelp ? '▾' : '▸'} ? How this works</button>
@@ -15980,9 +16516,9 @@ async function estBillApprove(id) {
   // page until some later lamp tap happened to publish.
   clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
   await estSave();
-  toast(x.appr
+  toast((x.appr
     ? `📥 On their page under ${x.n} — $${mkAmt.toLocaleString()} billed, on the way ✓`
-    : `🔮 On their page under RECEIPTS RECEIVED — ${x.n}, $${mkAmt.toLocaleString()} ✓`);
+    : `🔮 On their page under RECEIPTS RECEIVED — ${x.n}, $${mkAmt.toLocaleString()} ✓`) + dpSay((_portalIdx.clients[_estIdx] || {}).code));   // 💰 v7.51
 }
 // 🔮 v6.27 — ONE TAP from the log. Eric asked for the 🧾 tag to put the cost straight on the
 // client's page; his call on the gate was "keep your tap, but make it one tap from the log".
@@ -16075,9 +16611,10 @@ async function estQuickUpcoming(id, ev, amt) {   // 💵 v7.10 — `amt`: the gr
     const shown = estPendMk(x.pend[x.pend.length - 1]);
     clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
     await estSave();
+    const dpWordNow = dpSay((_portalIdx.clients[i] || {}).code);   // 💰 v7.51 — read while the board is still in memory
     if (!wasOpen) { _estIdx = -1; _estD = null; _estPage = null; }
     renderLog();
-    toast(`🔮 On their page under RECEIPTS RECEIVED — ${cat}, $${shown.toLocaleString()} ✓`);
+    toast(`🔮 On their page under RECEIPTS RECEIVED — ${cat}, $${shown.toLocaleString()} ✓${dpWordNow}`);
   } finally {
     window._qUpBusy = false;
   }
@@ -16186,6 +16723,7 @@ async function openRcptReview(i) {
   // The page is republished ONLY — the board file is not rewritten from here (that stays behind
   // rcptApprove's guards), and the markup default rides the same as everywhere else.
   try { _estPage = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (err) { _estPage = null; }
+  dpSee(c.code, _estPage);   // 💰 v7.51
   if (_estD && _estPage && !window._qUpBusy) {
     if (!(+_estD.mk >= 0)) _estD.mk = 20;
     if (estUpcomingStale()) {
@@ -16339,6 +16877,7 @@ function renderRcptReview() {
   $('revBox').innerHTML = `<div class="est-board"><h3>🧾 ${esc(c.job)} — receipts waiting
     ${winX('closeRcptReview()', 'close receipts')}</h3>
     <div class="hint" style="margin: 0 0 8px;">🏢 Office-side. Check the ones that are right, then send them together. Each lands on their page under <b>RECEIPTS RECEIVED — NOT ON AN INVOICE YET</b> with the ${mk}% already folded in — they never see the markup or the vendor. ${list.length ? `<b>${list.length} waiting.</b>` : '<b>Nothing waiting — every tagged receipt on this job is already through.</b>'}</div>
+    ${dpHost(c.code, 'rcpt')}
     ${rows}
     ${list.length ? `<div class="g-step" style="margin-top: 12px;">
       <div style="font-size: 13px; font-weight: var(--fw8, 800);">${okCount ? `☑ ${okCount} checked · they will see ${money(total)}` : '☐ Nothing checked yet'}</div>
@@ -16416,7 +16955,7 @@ async function rcptApprove() {
     _rcptSel = new Set();
     renderRcptReview();
     renderLog();
-    toast(`🔮 ${picked.length} on their page under RECEIPTS RECEIVED — they see$${shown.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ✓`);
+    toast(`🔮 ${picked.length} on their page under RECEIPTS RECEIVED — they see$${shown.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ✓${dpSay(c.code)}`);   // 💰 v7.51 — and how the job stands against its down payment, when it is close or over
   } finally {
     window._qUpBusy = false;
   }
@@ -16455,9 +16994,9 @@ async function estBillHand() {
   // page until some later lamp tap happened to publish.
   clearTimeout(_estTimer); _estTimer = null; window._estPub = true;
   await estSave();
-  toast(x.appr
+  toast((x.appr
     ? `📥 On their page under ${x.n} — $${mkAmt.toLocaleString()} billed, on the way ✓`
-    : `🔮 On their page under RECEIPTS RECEIVED — ${x.n}, $${mkAmt.toLocaleString()} ✓`);
+    : `🔮 On their page under RECEIPTS RECEIVED — ${x.n}, $${mkAmt.toLocaleString()} ✓`) + dpSay((_portalIdx.clients[_estIdx] || {}).code));   // 💰 v7.51
 }
 function estBillSkip(id) {
   const e = entries.find(x => x.id === id);
@@ -16721,6 +17260,7 @@ async function estPublish(c, cut) {
     pg.updated = localDay(new Date());
     await dbxUpload(portalRoot() + '/' + c.code + '.json', JSON.stringify(pg, null, 1));
     _estPage = pg;
+    dpSee(c.code, pg); dpRedraw();   // 💰 v7.51 — what is out just changed: the meter follows, wherever it is on the screen
     if (changed && !wasOld) cpPush(c.code, 'budget');   // 🔔 v6.68
   } catch (e) { toast('Saved here, but their page didn\'t take the update — try the lamp again', false); }
 }
@@ -16855,6 +17395,7 @@ function clientPreviewOpen(i) {
   // should be able to click on the client viewer." The v6.61 owner mode (the owner flag on the frame, the bars, the v6.96 dashed edges) is
   // gone; which parts show is set on the portal's 🎛 What they see window. &pv=1 keeps these looks out of their tallies.
   $('cpFrame').src = portalUrl(i) + '&pv=1';
+  if ($('cpMeter')) $('cpMeter').innerHTML = dpHeld(_portalIdx.clients[i].code) ? dpHost(_portalIdx.clients[i].code, 'view') : '';   // 💰 v7.51 — his phone only; a job with no down payment set shows nothing here
   $('cliPrev').classList.add('show');
 }
 // 🎛 v7.40 — pageShowSet / pageBoardSet: the page's own switches, written through Eric's Dropbox. They were reached from
@@ -16960,6 +17501,7 @@ function cpReload() { const fr = $('cpFrame'); if (fr && fr.src && fr.src !== 'a
 function clientPreviewClose() {
   $('cliPrev').classList.remove('show');
   $('cpFrame').src = 'about:blank';
+  if ($('cpMeter')) $('cpMeter').innerHTML = '';   // 💰 v7.51
   // 📐 v5.83 — the rack borrows this banner for CURRENT/SUPERSEDED words; hand it back
   const b = document.querySelector('.cp-banner');
   if (b) b.textContent = '👁 CLIENT PREVIEW · TAP HERE TO COME BACK';
@@ -20463,6 +21005,9 @@ function buildAskContext(question) {
   const cardCtx = cardRows.length
     ? `\nJOB CARDS (the book of addresses, phone numbers, emails, and gate/door/lockbox codes, one card per job — answer "what is <job>'s address and door code" straight from here and give the code plainly; if a job has no card, say so and say to add one under 📇 Job cards): ${JSON.stringify(cardRows)}`
     : '';
+  // 👷 v7.51 — who to call, job by job: the subs ride in every question ("who is the plumber on Rininger")
+  const subRows = subsAskRows().filter(r => jobOk(r.job)).slice(0, 120);
+  const subsCtx = subRows.length ? `\nSUBS ON THE JOBS (the subcontractors working each job — the trade, the company, who to ask for, the number; answer "who is the plumber on <job>" straight from here, and when more than one sub of a trade is working say which job each is on): ${JSON.stringify(subRows)}` : '';
   const followCtx = (!CREW_NAME && _lastAnswer && Date.now() - _lastAnswer.at < 15 * 60000)
     ? `\nPREVIOUS EXCHANGE (moments ago — use it to resolve follow-up questions and pronouns):\nQ: ${_lastAnswer.q}\nA: ${String(_lastAnswer.text).slice(0, 900)}`
     : '';
@@ -20481,7 +21026,7 @@ function buildAskContext(question) {
   // 🧙 v7.16 — a pocket leftover already rides in POCKET NOT DONE: on the board list too, it came out twice ("8 items twice", 09-25)
   const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).filter(l => l.k !== 'p' && !(l.src && ['flushed', 'over', 'swept'].includes(l.src.pocket)) && jobOk(l.job)).slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
   const boardDoneCtx = live.filter(e => jobOk(e.job) && e.board && e.board.done && +new Date(e.board.done) >= Date.now() - 7 * 86400000).slice(0, 40).map(e => ({ job: e.job, t: brdWords(e.details), by: e.board.by || 'Eric', day: localDay(new Date(e.board.done)) }));
-  return `TODAY: ${new Date().toString()}${drefLine}${jobLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos.filter(o => jobOk(o.j)))}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nLINES ERIC TOOK OFF HIS LISTS (✕ v7.16 — he said each is no longer relevant: leave it, and anything that is plainly the same item, out of summaries, lists and to-dos from now on; talk about one only if he asks about it by name; newest first): ${JSON.stringify((prefs.wizGone || []).slice(0, 60).map(g => g.line))}\nRECENT LOG (his own notes and records first, newest first; then the newest texts and emails; then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
+  return `TODAY: ${new Date().toString()}${drefLine}${jobLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${subsCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos.filter(o => jobOk(o.j)))}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nLINES ERIC TOOK OFF HIS LISTS (✕ v7.16 — he said each is no longer relevant: leave it, and anything that is plainly the same item, out of summaries, lists and to-dos from now on; talk about one only if he asks about it by name; newest first): ${JSON.stringify((prefs.wizGone || []).slice(0, 60).map(g => g.line))}\nRECENT LOG (his own notes and records first, newest first; then the newest texts and emails; then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
 }
 // 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
 // offers their photos, a follow-up within 15 minutes remembers the exchange, and
@@ -22702,6 +23247,8 @@ function renameJob(from, to) {
   if (prefs.jobCats && prefs.jobCats[jobCatKey(from)] && !prefs.jobCats[jobCatKey(to)]) { prefs.jobCats[jobCatKey(to)] = prefs.jobCats[jobCatKey(from)]; delete prefs.jobCats[jobCatKey(from)]; }
   if (prefs.cards && prefs.cards[cardKey(from)] && !prefs.cards[cardKey(to)]) { const c = prefs.cards[cardKey(from)]; c.job = to; prefs.cards[cardKey(to)] = c; delete prefs.cards[cardKey(from)]; }
   if (prefs.recapJobs) Object.keys(prefs.recapJobs).forEach(k => { if (prefs.recapJobs[k] === from) prefs.recapJobs[k] = to; });
+  // 👷 v7.51 — its subs follow it (stamped, so the crew's copies follow too)
+  if (prefs.subs && prefs.subs.on && typeof prefs.subs.on === 'object') { const now = new Date().toISOString(); Object.values(prefs.subs.on).forEach(l => { if (l && cardKey(l.job) === cardKey(from)) { l.job = to; l.at = now; } }); }
   if (typeof todoFilter !== 'undefined' && todoFilter === from) todoFilter = to;
   if (lsGet('daylog-cardjob') === from) lsSet('daylog-cardjob', to);
   if (typeof _cardJob !== 'undefined' && _cardJob === from) _cardJob = to;
@@ -24004,7 +24551,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.50';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.51';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

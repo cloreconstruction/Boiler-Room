@@ -202,7 +202,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
     openPageVis(0);
     return { crew: CREW_NAME, office: amOffice(), btns, shown, src, noWin: !$('pvBox') && !$('revModal').classList.contains('show'), said: _said.join(' | '), ups: _ups.length };
   });
-  ok('Phil\'s fold is Plans · Journal · Build List · View as this client — no 🎛 plate', phil.crew === 'Phil' && phil.office && phil.btns.join('|') === '📐 Plans|📖 Journal|📋 Build List|👁 View as this client', JSON.stringify(phil.btns));
+  ok('Phil\'s fold is Plans · Journal · Build List · View as this client — no 🎛 plate', phil.crew === 'Phil' && phil.office && phil.btns.join('|') === '📐 Plans|📖 Journal|📋 Build List|👁 View as this client|👷 Subs on this job', JSON.stringify(phil.btns));   // 👷 v7.51 — every fold has 👷 Subs on this job now (every phone sees the subs)
   ok('👁 View as this client on his phone opens the viewer on the plain page (pv=1, never owner=1)', phil.shown && /\/c\/\?c=oak-111aaa&pv=1$/.test(phil.src), phil.src);
   ok('the switches are Eric\'s: openPageVis on a crew phone draws nothing, writes nothing, and says so in words', phil.noWin && phil.ups === 0 && /Eric.s to set/.test(phil.said), phil.said);
   await p2ctx.close();
