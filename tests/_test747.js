@@ -64,7 +64,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath, pathToFileURL
   const post = (body, secret = 'made-up-secret') => notify(new Request('http://x/.netlify/functions/notify', { method: 'POST', headers: { 'content-type': 'application/json', 'x-push-secret': secret }, body: JSON.stringify(body) }));
   ok('without the secret the door stays shut', (await post({ to: 'crew', kind: 'eric' }, 'wrong')).status === 401);
   const r1 = await (async () => { const st = box(); const j = await (await post({ to: 'crew', kind: 'eric', from: 'Eric', title: 'HIS OWN WORDS $500', body: 'Josten' })).json(); return { j, st }; })();
-  ok('a push for the crew reads each person\'s OWN folder — his sign-up, his hours, his switches — and never Eric\'s own sign-up file', r1.j.to === 3 && r1.j.skipped.Kevin === 'outside his hours' && r1.j.skipped.Ann === 'not signed up' && r1.j.skipped.Phil === 'no phone took it' &&
+  // Ann has no settings file, so CREW_DEFAULTS (7 AM–8 PM Alaska) speak for her — and the hours are looked at before the sign-up:
+  // run at night she reads "outside his hours", by day "not signed up". Both are the truth (found by the full run of 2026-09-29 after 8 PM).
+  const nightAK = hourAK < 7 || hourAK >= 20;
+  ok('a push for the crew reads each person\'s OWN folder — his sign-up, his hours, his switches — and never Eric\'s own sign-up file', r1.j.to === 3 && r1.j.skipped.Kevin === 'outside his hours' && r1.j.skipped.Ann === (nightAK ? 'outside his hours' : 'not signed up') && r1.j.skipped.Phil === 'no phone took it' &&
     r1.st.reads.includes(`${CREW}/Phil/App Data/push-subs.json`) && r1.st.reads.includes(`${CREW}/Phil/App Data/push-settings.json`) && !r1.st.reads.includes(`${CREW}/Kevin/App Data/push-subs.json`) && !r1.st.reads.includes('/Clore DayLog/App Data/push-subs.json') && !('Old Stuff' in r1.j.skipped), JSON.stringify(r1.j));
   ok('it writes nothing for a note (no state to keep) — and the answer carries counts and fixed words only, none of what was sent along', r1.st.ups.length === 0 && !/HIS OWN WORDS|Josten|\$/.test(JSON.stringify(r1.j)));
   ok('a kind he switched off on his own phone does not ring him', await (async () => { box(); const j = await (await post({ to: ['Phil'], kind: 'board', from: 'Eric' })).json(); return j.to === 1 && j.skipped.Phil === 'board is off' && j.sent === 0; })());

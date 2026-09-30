@@ -4534,7 +4534,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.53 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.54 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6905,21 +6905,46 @@ function blLightGuess(text, it) {
   for (const [k, re] of BL_LIGHT_WORDS) if (letters.includes(k) && re.test(String(text || ''))) return k;
   return '';
 }
+// 🧾 v7.54 — A RECEIPT NAMES THE ROW BY ITS SKU. Eric: "yes" to the offer: a row can carry a SKU / model (v7.08, the Wizard fills it
+// from a product photo) and the Wizard's receipt read prints the store's codes exactly as printed (v7.43's 🛒 line) — so a
+// receipt ground on a job can name the row it paid for by the EXACT code, never by a guess at a word. The same characters, case
+// and spacing aside, five or more of them (a four-digit run is a price or a phone number as often as a part). Bought = 🛒
+// Ordered pre-lit; a row already ordered = 📦 Received pre-lit (the receipt in hand). His tap decides, as v7.53 laid down.
+const blSkuNorm = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+function blRowsBySku(text, items) {
+  const t = blSkuNorm(text);
+  return items.filter(it => { const k = blSkuNorm(it.sku); return k.length >= 5 && t.includes(k); });
+}
+function blSkuLight(it) {   // the light a receipt points at: bought, or — already ordered — in hand
+  const can = k => !matBoxOn(it, k) && !(matLightPlan(it, k) || {}).refuse && matBoxes(it).some(b => b[0] === k);
+  return can('O') ? 'O' : can('R') ? 'R' : '';
+}
+function blSkuRows() {   // every row on the board whose SKU is in his words, with its category
+  const out = [], text = blNoteText();
+  ((_qnBLBoard && _qnBLBoard.rooms) || []).forEach(r => blRowsBySku(text, (r.items || []).filter(x => x && x.id)).forEach(it => out.push({ it, room: String(r.name || '') })));
+  return out;
+}
+function blSkuJump(room, id) {   // from the categories window straight to that row, its light pre-lit
+  const known = (_qnBLRooms || []).find(r => r.name.toLowerCase() === String(room || '').toLowerCase()); if (!known) return;
+  qnBLRoom = known.name; qnBL = true; qnBLRow = null;
+  blRowTap(id);
+}
 function blLightWord(it, k) { const b = matBoxes(it).find(x => x[0] === k); return b ? `${b[2]} ${b[1]}` : k; }
 // step two of the window: ➕ a new row, or one of the rows already in this category — then the light
 function blRowStep() {
   const room = qnBLRoom, items = blRoomItems(room), text = blNoteText();
-  const named = blRowsNamed(text, items), first = String(text.split('\n').map(s => s.trim()).filter(Boolean)[0] || text).trim().slice(0, 80);
+  const byName = blRowsNamed(text, items), bySku = blRowsBySku(text, items);   // 🧾 v7.54 — a receipt's code names a row too
+  const named = [...bySku, ...byName.filter(it => !bySku.includes(it))], first = String(text.split('\n').map(s => s.trim()).filter(Boolean)[0] || text).trim().slice(0, 80);
   const order = [...named, ...items.filter(it => !named.includes(it))];
   const sel = qnBLRow && items.find(it => it.id === qnBLRow.id) ? qnBLRow : null;
-  const rowPlate = it => { const on = !!(sel && sel.id === it.id), isNamed = named.includes(it);
-    return `<button type="button" class="pick-chip bl-row${on ? ' sel' : ''}${isNamed ? ' bl-named' : ''}" data-bl-row="${esc(it.id)}" onclick="blRowTap('${escq(it.id)}')" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(it.n || '(no name)')} <span style="display: block; font-weight: 400; opacity: .85; font-size: var(--fs11, 11px);">${matItemDone(it) ? '✓ finished' : esc(matRowWord(it))}${isNamed ? ' · <b>named in your note</b>' : ''}</span></button>`; };
+  const rowPlate = it => { const on = !!(sel && sel.id === it.id), isNamed = named.includes(it), how = [bySku.includes(it) ? 'its SKU is on this receipt' : '', byName.includes(it) ? 'named in your note' : ''].filter(Boolean).join(' · ');
+    return `<button type="button" class="pick-chip bl-row${on ? ' sel' : ''}${isNamed ? ' bl-named' : ''}" data-bl-row="${esc(it.id)}" onclick="blRowTap('${escq(it.id)}')" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(it.n || '(no name)')} <span style="display: block; font-weight: 400; opacity: .85; font-size: var(--fs11, 11px);">${matItemDone(it) ? '✓ finished' : esc(matRowWord(it))}${isNamed ? ' · <b>' + esc(how) + '</b>' : ''}</span></button>`; };
   let lights = '';
   if (sel) {
     const it = items.find(x => x.id === sel.id);
     const letters = matBoxes(it).map(b => b[0]).filter(k => k !== 'A' && !matBoxOn(it, k));
     const plate = k => { const plan = matLightPlan(it, k), on = sel.light === k, more = plan && !plan.refuse ? plan.on.filter(x => x !== k) : [];
-      return `<button type="button" class="pick-chip bl-light${on ? ' sel' : ''}" data-bl-light="${k}" onclick="blLightTap('${k}')" aria-pressed="${on}"${plan && plan.refuse ? ' disabled title="' + esc(plan.refuse) + '"' : ''}>${on ? '✓ ' : ''}${esc(blLightWord(it, k))} <span style="display: block; font-weight: 400; opacity: .85; font-size: var(--fs11, 11px);">${plan && plan.refuse ? esc(plan.refuse) : more.length ? 'lights ' + esc(more.map(x => blLightWord(it, x)).join(' · ')) + ' with it' : on && sel.why ? 'your note says "' + esc(sel.why) + '"' : '&nbsp;'}</span></button>`; };
+      return `<button type="button" class="pick-chip bl-light${on ? ' sel' : ''}" data-bl-light="${k}" onclick="blLightTap('${k}')" aria-pressed="${on}"${plan && plan.refuse ? ' disabled title="' + esc(plan.refuse) + '"' : ''}>${on ? '✓ ' : ''}${esc(blLightWord(it, k))} <span style="display: block; font-weight: 400; opacity: .85; font-size: var(--fs11, 11px);">${plan && plan.refuse ? esc(plan.refuse) : [on && sel.why ? (sel.whyKind === 'sku' ? esc(sel.why) : 'your note says "' + esc(sel.why) + '"') : '', more.length ? 'lights ' + esc(more.map(x => blLightWord(it, x)).join(' · ')) + ' with it' : ''].filter(Boolean).join(' · ') || '&nbsp;'}</span></button>`; };
     lights = `<div class="bl-ph-h" style="margin-top: 10px;">💡 THE LIGHT — where does <b>${esc(it.n)}</b> move to?</div>
       <div class="hint" style="margin: 0 0 6px;">${letters.length ? `Lit now: ${esc(matLitWords(it))}. ${sel.light ? 'The one your note points at is lit — tap another, or none.' : 'Tap the light it moves to, or leave them.'}` : 'Every light on this row is lit already — your words go on the row, the lights stay.'}</div>
       <div class="chips-row cat-grid" id="blLightGrid" style="align-content: flex-start; margin-bottom: 6px;">
@@ -6946,9 +6971,10 @@ function blRowStep() {
 function blRowTap(id) {
   const it = blRoomItems(qnBLRoom).find(x => x.id === id); if (!it) return;
   if (qnBLRow && qnBLRow.id === id) { qnBLRow = null; blRowStep(); return; }   // the same plate again lets it go
-  const text = blNoteText(), k = blLightGuess(text, it);
-  const m = k ? (BL_LIGHT_WORDS.find(x => x[0] === k)[1].exec(text) || [])[0] : '';
-  qnBLRow = { id: it.id, name: String(it.n || '').slice(0, 80), room: qnBLRoom, light: k, why: m ? String(m).toLowerCase() : '' };
+  const text = blNoteText(); let k = blLightGuess(text, it), whyKind = 'word';
+  let m = k ? (BL_LIGHT_WORDS.find(x => x[0] === k)[1].exec(text) || [])[0] : '';
+  if (!k && blRowsBySku(text, [it]).length) { k = blSkuLight(it); if (k) { m = k === 'O' ? 'its SKU is on this receipt — bought' : 'its SKU is on this receipt — in hand'; whyKind = 'sku'; } }   // 🧾 v7.54
+  qnBLRow = { id: it.id, name: String(it.n || '').slice(0, 80), room: qnBLRoom, light: k, why: m ? (whyKind === 'sku' ? String(m) : String(m).toLowerCase()) : '', whyKind };
   blRowStep();
 }
 function blLightTap(k) {
@@ -7023,6 +7049,7 @@ function blModalOpen() {
     ${winX('blModalClose()', 'close')}</h3>
     <div class="hint" style="margin: 0 0 8px;">The <b>${esc(_qnBLJob)}</b> Build List. SEND files the note in your log as always <b>and</b> puts it here as a ✅ checklist item — ⇄ on the row turns it into something to buy. The first line is the row's name; the rest is its note. <b>A category that already has rows asks next whether it goes onto one of them</b> — and moves that row's light. <b>Pick a construction category and a note with a dollar amount goes onto the homeowner's RECEIPTS RECEIVED list too</b> — the job's markup folded in, no stop in the receipts window.</div>
     <div style="max-height: 52vh; overflow-y: auto; margin-bottom: 10px;">
+    ${(() => { const hits = blSkuRows(); return hits.length ? `<div class="bl-ph-h">🧾 On this receipt — a row's SKU is on it</div><div class="chips-row cat-grid" id="blSkuGrid" style="align-content: flex-start; margin-bottom: 6px;">${hits.map(h => `<button type="button" class="pick-chip bl-row bl-named" data-bl-sku="${esc(h.it.id)}" onclick="blSkuJump('${escq(h.room)}', '${escq(h.it.id)}')">🧾 ${esc(h.it.n || '(no name)')} <span style="display: block; font-weight: 400; opacity: .85; font-size: var(--fs11, 11px);">${esc(h.room)} · ${matItemDone(h.it) ? '✓ finished' : esc(matRowWord(h.it))} · <b>SKU ${esc(String(h.it.sku).slice(0, 24))}</b></span></button>`).join('')}</div>` : ''; })()}
     ${rooms.length ? `<div class="bl-ph-h">📋 On this Build List now</div><div class="chips-row cat-grid" id="blRoomGrid" style="align-content: flex-start; margin-bottom: 6px;">${rooms.map(chip).join('')}</div>` : `<div class="hint" style="margin: 0 0 8px;">This Build List has no categories yet — pick a construction category below, or name your own.</div>`}
     <!-- 🏗 v7.10 — Eric: "I want all the construction categories on there, well organized, so I can just click." The estimates
          board's 55 categories, by build phase, always — the pick becomes a Build List category (and the row's cost line). -->
@@ -24709,7 +24736,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.53';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.54';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
