@@ -41,9 +41,14 @@ const { chromium } = require('playwright');
     return k.indexOf('hotStrip') < k.indexOf('txtDigest') && k.indexOf('txtDigest') < k.indexOf('nudgeStrip');
   }));
 
-  ok('📚 BOOKS UPDATED stays near the top — it is money, not texts', await page.evaluate(() => {
+  // 📚 v7.52 — Eric: "Move this either to the bottom of the main page or somewhere that makes more sense." It sat between the grinder
+  // and the running log since v6.22; it is at the top of the 🏠 Project portal window now (its subject), and the main page keeps
+  // only a badge on the 🏠 plate. So: NOT on the main page any more.
+  ok('📚 BOOKS UPDATED is off the main page (v7.52) — it lives in the Project portal window; the 🏠 plate has the badge for it', await page.evaluate(() => {
     const k = [...document.querySelector('.wrap').children].map(e => e.id).filter(Boolean);
-    return k.indexOf('qbFreshStrip') > k.indexOf('qnCard') && k.indexOf('qbFreshStrip') < k.indexOf('runLogCard');
+    const offMain = k.indexOf('qbFreshStrip') < 0 && !!$('scPortalN') && !!$('scPortalN').closest('.sc-btn');
+    openPortalWin(); const inPortal = !!$('qbFreshStrip') && !!$('qbFreshStrip').closest('#portalWin') && !!(($('qbFreshStrip').compareDocumentPosition($('portalList'))) & Node.DOCUMENT_POSITION_FOLLOWING); closePortalWin();
+    return offMain && inPortal;
   }));
 
   console.log('— 🧙 the Wizard rides on the writing box —');

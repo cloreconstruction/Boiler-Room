@@ -38,14 +38,21 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     window.dbxUpload = async p => { window._writes.push(p); return {}; };
     window._rows = () => [...document.querySelectorAll('#qbfBody .qbf-row')].map(r => ({ state: r.dataset.state, glyph: r.querySelector('.qbf-w').textContent.trim(), t: r.textContent.replace(/\s+/g, ' ').trim() }));
     window._wait = async () => { for (let i = 0; i < 80; i++) { await new Promise(r => setTimeout(r, 25)); if (_qbfCheck && _qbfCheck.ok) return; } };
+    // 📚 v7.52 — the banner lives at the top of the 🏠 Project portal window now (Eric: "Move this … somewhere that makes more sense");
+    // the window is opened once here so #qbFreshStrip is on the screen; the job list itself is not the thing under test (and it would read the pages)
+    window.renderPortalList = async () => {};
+    openPortalWin();
   });
 
   const r = await page.evaluate(async () => {
     await checkQbFresh(); await _wait(); await new Promise(z => setTimeout(z, 60));
     const banner = $('qbFreshStrip').textContent.replace(/\s+/g, ' ').trim();
+    const inPortal = !!$('qbFreshStrip').closest('#portalWin') && !document.querySelector('.wrap > #qbFreshStrip');
+    const badge = $('scPortalN').textContent.trim();
     openQbFresh(); await new Promise(z => setTimeout(z, 250));
-    return { banner, tally: $('qbfTally').textContent.replace(/\s+/g, ' ').trim(), rows: _rows(), foot: $('qbfBody').textContent.replace(/\s+/g, ' '), writes: _writes.length, fits: $('revBox').scrollWidth <= $('revBox').clientWidth + 1 };
+    return { banner, inPortal, badge, tally: $('qbfTally').textContent.replace(/\s+/g, ' ').trim(), rows: _rows(), foot: $('qbfBody').textContent.replace(/\s+/g, ' '), writes: _writes.length, fits: $('revBox').scrollWidth <= $('revBox').clientWidth + 1 };
   });
+  ok('📚 v7.52 — the banner sits at the top of the 🏠 Project portal window, not on the main page; the main page wears ⚠2 on the 🏠 plate', r.inPortal && r.badge === '⚠2', JSON.stringify({ inPortal: r.inPortal, badge: r.badge }));
   const row = j => r.rows.find(x => x.t.includes(j)) || {};
   ok('a page the run REWROTE reads ✓ UPDATED — and the window has checked that it matches the books', row('Oak House').state === 'updated' && row('Oak House').glyph === '✓' && /UPDATED .* — the page matches the books · invoiced \$1,201 · paid \$1,000 · open \$201/.test(row('Oak House').t), JSON.stringify(row('Oak House')));
   ok('a page the run checked and LEFT ALONE reads ✓ CURRENT — not "NOT UPDATED": nothing moved in QuickBooks and the page matches the books to the cent', row('Elm Cabin').state === 'current' && row('Elm Cabin').glyph === '✓' && /CURRENT — nothing moved in QuickBooks; the page matches the books · invoiced \$800 · paid \$800 · open \$0/.test(row('Elm Cabin').t) && !/NOT UPDATED/.test(r.foot), JSON.stringify(row('Elm Cabin')));
@@ -62,7 +69,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     _files[R + '/index.json'] = JSON.stringify({ clients: [{ code: 'oak-111aaa', job: 'Oak House' }, { code: 'elm-222bbb', job: 'Elm Cabin' }, { code: 'fir-333ccc', job: 'Fir Garage' }, { code: 'ash-444ddd', job: 'Ash Remodel' }] });
     _portalIdx = null; await qbFreshVerify(true); renderQbFresh();
     const b = $('qbFreshStrip').textContent.replace(/\s+/g, ' ').trim();
-    return /📚 BOOKS UPDATED/.test(b) && /3 of 4 client budgets match the books · 1 not in QuickBooks yet — every page is current/.test(b) && !!$('qbFreshStrip').querySelector('.qb-fresh.ok');
+    return /📚 BOOKS UPDATED/.test(b) && /3 of 4 client budgets match the books · 1 not in QuickBooks yet — every page is current/.test(b) && !!$('qbFreshStrip').querySelector('.qb-fresh.ok') && $('scPortalN').textContent === '';   // 📚 v7.52 — a clean run wears no badge
   }));
 
   ok('the pages are read once per run for the banner (not on every sync), again when he opens the window, and never after he has cleared it', await page.evaluate(async () => {
@@ -70,7 +77,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await checkQbFresh(); await new Promise(z => setTimeout(z, 120)); const sameRun = _dl[p] === n0;
     openQbFresh(); await new Promise(z => setTimeout(z, 200)); const onOpen = _dl[p] === n0 + 1;
     qbFreshDismiss(); const n1 = _dl[p]; await checkQbFresh(); await new Promise(z => setTimeout(z, 120));
-    return sameRun && onOpen && _dl[p] === n1 && $('qbFreshStrip').innerHTML === '';
+    return sameRun && onOpen && _dl[p] === n1 && $('qbFreshStrip').innerHTML === '' && $('scPortalN').textContent === '';   // 📚 v7.52 — seen = the badge goes too
   }));
 
   ok('if the pages cannot be read, nothing is called good or bad on a guess: the run\'s own words stand, softened — NOT REWRITTEN, "could not be read to check"', await page.evaluate(async () => {

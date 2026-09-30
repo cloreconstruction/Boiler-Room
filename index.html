@@ -3385,7 +3385,8 @@
        they land in ⚙ Setup with the right section already unfolded. Say the word and they go.
        v5.40 — Eric moved them to the VERY top, above the hot strip. -->
   <div class="sc-row" id="scRow">
-    <button type="button" class="sc-btn" onclick="openPortalWin()">🏠 <span>Project portal</span></button>
+    <!-- 📚 v7.52 — the badge: ⚠ and how many client pages need a look after a books run (renderQbFresh); empty when none, or once he has seen it -->
+    <button type="button" class="sc-btn" onclick="openPortalWin()">🏠 <span>Project portal<span class="sc-n" id="scPortalN"></span></span></button>
     <button type="button" class="sc-btn" onclick="crewViewMenu()">👷 <span>Crew portal<span class="sc-n" id="scCrewN"></span></span></button>
     <!-- 📇 v6.17 — addresses, numbers, emails, door codes. One tap, out of the way. -->
     <button type="button" class="sc-btn" onclick="openJobCards()">📇 <span>Job cards</span></button>
@@ -3400,7 +3401,7 @@
        job cards and project portal buttons. Put the texts and needs you windows at the
        bottom." So the box he writes in every day is the first thing under the three plates,
        and 🔥 needs-you / 📬 texts / 📌 nudges moved to the foot of the page. 📚 BOOKS UPDATED
-       stays up here — it is money, not texts, and it only shows the morning after a QB run. -->
+       stayed up here until v7.52 — it is in the 🏠 Project portal window now, at his ask. -->
 
   <!-- 🎒 v6.75 — THE POCKET LIST, where Eric wants it: "put it just above the 1 pick the job
        window" (v6.73 had it under the grinder; v6.12's one-screen rule got a little more room).
@@ -3579,8 +3580,11 @@
 
   <!-- 📚 v6.18 — BOOKS UPDATED. Eric: "I would like a way to know that all the client portal
        budgets have been updated." Appears the morning the QB run lands, says how many pages
-       got refreshed and names any that didn't, then goes quiet once he taps ✓ Got it. -->
-  <div id="qbFreshStrip"></div>
+       got refreshed and names any that didn't, then goes quiet once he taps ✓ Got it.
+       📚 v7.52 — Eric, with a picture of it sitting here between the grinder and the running log: "Move this either to the bottom
+       of the main page or somewhere that makes more sense." It is about the client pages, so it lives at the TOP of the 🏠 Project
+       portal window now (openPortalWin draws #qbFreshStrip there, right above the jobs and their 📗 books cubes); the main page
+       keeps only a small ⚠ badge on the 🏠 Project portal plate while a page needs a look (#scPortalN). -->
 
   <!-- 📜 v5.80 — Eric: "Detach that running log from the grinder window. Make them separate."
        The one log is its OWN card now, right below the grinder. v5.78 still holds inside it:
@@ -4523,7 +4527,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.51 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.52 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -11651,12 +11655,14 @@ function openPortalWin() {
   if (!w || !box) return;
   box.innerHTML = `${winX('closePortalWin()')}<h3>🏠 Project portal</h3>
     <div class="hint" style="margin: 0 0 8px;">One live page per job, at an unguessable address. Tap a job to unfold its buttons; text the link once and it updates as the books do. 🔄 rotate kills the old link instantly.</div>
+    <div id="qbFreshStrip"></div>
     <div id="portalList"><button class="btn-ghost" onclick="renderPortalList()">🔄 Load the projects</button> <span class="hint">Tap if the list doesn't fill itself in.</span></div>
     <!-- ← v6.81 — Eric: "At the bottom of the project portal, I need a back button. I keep pushing 'Build the page.'" Under the list, in every state. -->
     <button type="button" class="btn-ghost x-plate" style="width: 100%; margin-top: 14px;" onclick="closePortalWin()">← Back to the main page</button>`;
   w.classList.add('show');
   document.body.classList.add('modal-open');
   w.scrollTop = 0;
+  renderQbFresh();   // 📚 v7.52 — the books banner lives here now, above the jobs
   renderPortalList();
 }
 function closePortalWin() {
@@ -20097,11 +20103,20 @@ async function checkQbFresh() {
   const stamp = qbFreshStamp(qbFresh);
   if (qbFresh && stamp && qbFreshSeen() !== stamp) qbFreshVerify().then(() => renderQbFresh()).catch(() => {});
 }
+// 📚 v7.52 — Eric: "Move this either to the bottom of the main page or somewhere that makes more sense." The banner is about the
+// client pages, so it is drawn at the top of the 🏠 Project portal window (#qbFreshStrip lives there since v7.52) — and the main
+// page keeps a small badge on the 🏠 plate (#scPortalN: ⚠ + how many pages need a look) so a bad run is still seen at a glance.
 function renderQbFresh() {
+  const stamp = qbFreshStamp(qbFresh);
+  const live = !!(qbFresh && stamp && qbFreshSeen() !== stamp);
+  const badge = $('scPortalN');
+  if (badge) {   // (a page the app has not checked yet is not a fault — the badge counts only what is known to need him)
+    const n = live ? qbFreshCount().miss.filter(r => r.state !== 'unchecked').length : 0;
+    badge.textContent = n ? '⚠' + n : ''; badge.title = n ? `${n} client page${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} a look after the books run — open the Project portal` : '';
+  }
   const box = $('qbFreshStrip');
   if (!box) return;
-  const stamp = qbFreshStamp(qbFresh);
-  if (!qbFresh || !stamp || qbFreshSeen() === stamp) { box.innerHTML = ''; return; }
+  if (!live) { box.innerHTML = ''; return; }
   const { done, all, miss, quiet } = qbFreshCount();
   const when = qbFresh.ranAt ? new Date(qbFresh.ranAt).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : (qbFresh.importDate || '');
   const clean = all > 0 && !miss.length;
@@ -24551,7 +24566,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.51';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.52';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
