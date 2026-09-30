@@ -9,6 +9,7 @@
 // GET  ?c=<code>&manifest=1 -> a web-app manifest for THAT page (🔔 v6.68 — iPhone pings need a Home Screen copy)
 // POST {c, push:{sub}}      -> 🔔 v6.68 this phone's push subscription, into the client's OWN push file
 // POST {c, push:{off:endpoint}} -> …and out again
+// POST {c, hold:{n, on, p?}}  -> ⏳ v7.61 their Save-for-later on a line (or a part p of it) the builder offered; held rides the page
 // Data lives in /Clore DayLog/App Data/Client Portal/ — written by Eric's app and Claude,
 // served here so the public page never touches Dropbox directly and codes stay unguessable.
 // 🧬 v6.68 — this source came back under git the same way pushlib did in v6.27: it is the shipped
@@ -303,6 +304,49 @@ const portal = async (req, context) => {
         const old = arr.find(a => a && a.pk === n);
         if (old) { old.text = label; old.ts = new Date().toISOString(); arr = [old, ...arr.filter(a => a !== old)]; }
         else arr.unshift({ tag: 'General', pk: n, k: 1, text: label, ts: new Date().toISOString() });
+        await up(t, apath, JSON.stringify(arr.slice(0, 200)));
+        await ringOffice(req, context);   // 👷 v7.47
+      }
+      return new Response('ok');
+    }
+    // ⏳ v7.61 — SAVE FOR LATER. Eric: "click a button next to categories that I put the button on and it'll say 'save for later'
+    // … so it can be saved for last or next year and save money now. make it so it comes off the estimated and onto a for later
+    // window." Their tap holds a line (or a part of one) the builder OFFERED — the page carries `later: 1` on the line, or the part
+    // under `lp` — and writes `held` + `heldAt` on it, so the line comes off their remaining costs and their choice survives every
+    // republish (Eric's app carries it over like a pick). One review-pile entry per line, updated in place, as a pick is.
+    if (b.hold && typeof b.hold === 'object') {
+      const n = String(b.hold.n || '').slice(0, 60);
+      const on = !!b.hold.on;
+      const pi = Number.isInteger(b.hold.p) ? b.hold.p : -1;
+      if (!n) return new Response('bad', { status: 400 });
+      const ppath = `${BASE}/${c}.json`;
+      let pg = null;
+      try { pg = JSON.parse(await dl(t, ppath) || 'null'); } catch (e) {}
+      const entry = pg && Array.isArray(pg.budget) ? pg.budget.find(x => x && x.n === n) : null;
+      if (!entry) return new Response('nope', { status: 404 });
+      if (entry.done) return new Response('bad', { status: 400 });   // a finished line cannot be held
+      let target = entry, what = n, amt = 0;
+      if (pi >= 0) {
+        const part = Array.isArray(entry.lp) ? entry.lp[pi] : null;
+        if (!part) return new Response('nope', { status: 404 });
+        target = part; what = `${n}: ${String(part.t || '')}`; amt = +part.est || 0;
+      } else {
+        if (!entry.later) return new Response('bad', { status: 400 });   // the builder did not offer it on this line
+        amt = Array.isArray(entry.opts) ? +((entry.opts[Number.isInteger(entry.pick) && entry.opts[entry.pick] ? entry.pick : (Number.isInteger(entry.def) ? entry.def : 0)] || {}).est) || 0 : +entry.est || 0;
+      }
+      if (!!target.held !== on) {
+        const now = new Date().toISOString();
+        if (on) { target.held = 1; target.heldAt = now.slice(0, 10); } else { delete target.held; delete target.heldAt; }
+        await up(t, ppath, JSON.stringify(pg, null, 1));
+        const apath = `${BASE}/asks-${c}.json`;
+        let arr = [];
+        try { arr = JSON.parse(await dl(t, apath) || '[]'); } catch (e) {}
+        if (!Array.isArray(arr)) arr = [];
+        const label = on ? `⏳ SAVED FOR LATER — ${what} ($${amt.toLocaleString()})` : `↩ BACK IN THE PLAN — ${what} ($${amt.toLocaleString()})`;
+        const key = 'hold:' + n + (pi >= 0 ? '#' + pi : '');
+        const old = arr.find(a => a && a.pk === key);
+        if (old) { old.k = (+old.k || 1) + 1; old.text = `${label} · changed their mind ${old.k - 1}×`; old.ts = now; arr = [old, ...arr.filter(a => a !== old)]; }
+        else arr.unshift({ tag: 'General', pk: key, k: 1, text: label, ts: now });
         await up(t, apath, JSON.stringify(arr.slice(0, 200)));
         await ringOffice(req, context);   // 👷 v7.47
       }

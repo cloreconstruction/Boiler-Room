@@ -130,6 +130,13 @@
      numbers so that people don't panic when they're too high or weirdly low." A placeholder wears ≈ in front of its number, the
      word PLACEHOLDER under its name and a dashed edge down its side — the glyph, the word and the edge, never the colour alone —
      and the card says what ≈ means before its first line. */
+  /* 🧱 v7.61 — every line of ESTIMATED REMAINING COSTS is its own plate. Eric, with the card on a phone (the bars reading as
+     dividers, the lines running together): "need better seperation on the categories" — the same ask as his own board got in
+     v7.57. An edge all round, a radius, room between, a faint plate colour; the placeholder's dashed edge and the finished
+     line's solid edge stay as that plate's left edge; the bar wears an outline so it reads as a gauge, never as a rule. */
+  .bud-row { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px !important; margin: 10px 0 !important;
+    background: color-mix(in srgb, var(--ink) 4%, var(--card)); }
+  .bud-row .bud-bar { outline: 1px solid color-mix(in srgb, currentColor 22%, transparent); outline-offset: 1px; margin-top: 8px !important; }
   .bud-row.bud-ph { border-left: 4px dashed var(--gold); padding: 4px 0 4px 10px; }
   .bud-ph-tag { margin-top: 3px; font-size: 11.5px; font-weight: 800; letter-spacing: .5px; color: var(--gold); line-height: 1.35; }
   .bud-ph-note { border: 2px dashed var(--gold); border-radius: 10px; padding: 9px 12px; margin: 8px 0 4px; font-size: 13.5px; line-height: 1.45; }
@@ -139,6 +146,24 @@
   .bud-row.bud-done { border-left: 4px solid var(--gold); padding: 4px 0 4px 10px; }
   .bud-done-tag { margin-top: 3px; font-size: 11.5px; font-weight: 800; letter-spacing: .5px; line-height: 1.35; }
   .bud-bar.done { background: repeating-linear-gradient(135deg, color-mix(in srgb, currentColor 26%, transparent) 0 3px, transparent 3px 7px) !important; }
+  /* ⏳ v7.61 — SAVE FOR LATER. Eric: "click a button next to categories that I put the button on and it'll say 'save for later'
+     … so it can be saved for last or next year and save money now. make it so it comes off the estimated and onto a for later
+     window." The button is on a line (or a part of one) only where Clore Construction offered it; a tap moves it to the
+     ⏳ SAVED FOR LATER card, where ↩ puts it back. 🔄 UPDATED — a line whose number changed says so, with the builder's why. */
+  .bud-later-btn { display: block; width: 100%; margin-top: 7px; min-height: 44px; border: 2px dashed var(--gold); border-radius: 10px;
+    background: none; color: var(--ink); font-weight: 800; font-size: 13.5px; padding: 9px 12px; cursor: pointer; font-family: inherit; text-align: center; }
+  .bud-part { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; padding: 7px 10px;
+    border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
+  .bud-part .bud-later-btn { width: auto; margin: 0; min-height: 40px; padding: 7px 12px; }
+  .bud-upd { margin-top: 4px; padding: 6px 10px; border: 1.5px dashed var(--gold); border-radius: 8px; font-size: 12.5px; line-height: 1.4; }
+  .bud-upd b { color: var(--gold); letter-spacing: .4px; }
+  .lt-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap; margin: 10px 0; padding: 9px 12px;
+    border: 1.5px solid var(--line); border-radius: 12px; }
+  .lt-name { font-weight: 700; font-size: 14px; }
+  .lt-amt { font-weight: 800; white-space: nowrap; font-size: 14px; }
+  .lt-meta { font-size: 12px; color: var(--ink2); margin-top: 3px; width: 100%; }
+  .lt-back { display: block; width: 100%; margin-top: 6px; min-height: 40px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink);
+    font-weight: 700; font-size: 13px; padding: 7px 12px; cursor: pointer; font-family: inherit; }
 </style>
 </head>
 <body>
@@ -704,8 +729,8 @@ function upcomingHtml(d) {
     <div class="bud-total-l">${items.length ? 'ALREADY BOUGHT OR DONE FOR YOUR JOB — COMING ON YOUR NEXT INVOICE' : 'NOTHING WAITING — ALL CAUGHT UP'}</div>
     ${body}</div>`;
 }
-function budgetHtml(d) {
-  if (!Array.isArray(d.budget) || !d.budget.length) return '';
+// what the books have billed to each line, by name (lifted out of budgetHtml in v7.61 so the ⏳ SAVED FOR LATER card reads the same figures)
+function budgetUsedBy(d) {
   // 🔎 v5.88 — Eric's category names find the books' names by token match (prefix, 3+ letters)
   const toks = s => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 2 && !['and', 'or', 'the', 'to', 'of'].includes(w));
   const hit = (a, b) => a === b || (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a)));
@@ -724,9 +749,19 @@ function budgetHtml(d) {
   (d.phases || []).forEach(p => (p.cats || []).forEach(c => {
     const qn = String(c[0] || ''), amt = +c[1] || 0;
     let best = null, bs = 0;
-    d.budget.forEach(b => { const s = score(qn, b.n); if (s > bs) { bs = s; best = b.n; } });
+    (d.budget || []).forEach(b => { const s = score(qn, b.n); if (s > bs) { bs = s; best = b.n; } });
     if (best && bs > 0) usedBy[best] = (usedBy[best] || 0) + amt;
   }));
+  return usedBy;
+}
+// ⏳ v7.61 — the parts of a line the builder offered to hold, and what THEY hold: a whole line (held, on an offered line) or a part
+const bParts = b => Array.isArray(b.lp) ? b.lp.filter(p => p && p.t) : [];
+const bHeldLine = b => !!(b && b.held && b.later && !b.done);
+const bHeldParts = b => bParts(b).filter(p => p.held);
+const dayWord = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(+m[1], +m[2] - 1, +m[3], 12).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''; };
+function budgetHtml(d) {
+  if (!Array.isArray(d.budget) || !d.budget.length) return '';
+  const usedBy = budgetUsedBy(d);
   // 🧾 v7.45 — NEVER MORE SURE THAN THE PAGE IS. "Billed so far" per line comes from the books' split by category, and that
   // split can be behind what has been invoiced. When more than a tenth of what is invoiced is not split out by line, the card
   // says so in words — what truly remains may be LESS than shown — and a line with nothing split out yet does not claim $0.00.
@@ -735,14 +770,22 @@ function budgetHtml(d) {
   let totE = 0, totU = 0, totUp = 0, totLeft = 0, totOver = 0, anyOpts = false, anyOpen = false;
   let nPh = 0, totPh = 0;   // ≈ v7.46 — the placeholder lines: how many, and how much of the estimate they are
   let nFin = 0;             // ✓ v7.50 — the lines that are COMPLETE
+  let nHeld = 0, totHeld = 0, nUpd = 0;   // ⏳ v7.61 — what they SAVED FOR LATER (off this card, onto its own); 🔄 lines whose number changed
   const rowAt = d.budget.map((b, bi) => {
-    const est = bEst(b);
+    // ⏳ v7.61 — a line THEY saved for later is not on this card and counts nothing here: it sits on ⏳ SAVED FOR LATER (laterHtml)
+    const heldParts = bHeldParts(b), heldAmt = Math.round(heldParts.reduce((s, p) => s + (+p.est || 0), 0) * 100) / 100;
+    if (bHeldLine(b)) { nHeld++; totHeld += Math.max(0, Math.round((bEst(b) - Math.max(0, usedBy[b.n] || 0) - (+b.up || 0)) * 100) / 100); return ''; }
+    if (heldParts.length) { nHeld += heldParts.length; totHeld += heldAmt; }
+    const est = Math.max(0, Math.round((bEst(b) - heldAmt) * 100) / 100);   // a part they hold comes off the line's estimate
     // ✓ v7.50 — A LINE THAT IS FINISHED. When the builder marks a category COMPLETE, the line says so and NOTHING MORE is counted as
     // remaining on it — so the big number is what is truly still ahead, not what an estimate once allowed for. No claim is made
     // about dollars saved: "billed so far" comes from the books' split, which can be behind. A finished line is no placeholder
     // any more (no bid is coming to replace its number), and its choices rest.
     const fin = !!b.done;
     if (fin) nFin++;
+    // 🔄 v7.61 — the number on this line CHANGED: say so, with the day, what it was, what it is now, and the builder's why
+    const chg = b.chg && typeof b.chg === 'object' && b.chg.d ? b.chg : null;
+    if (chg && !fin) nUpd++;
     // ≈ v7.46 — is the number this line COUNTS a placeholder? (a plain line's own mark; on a line with choices, the mark of the
     // option the total rides right now — their pick, else the planned one)
     const isPh = !fin && (Array.isArray(b.opts) ? !!((b.opts[bPicked(b) != null ? bPicked(b) : bDef(b)] || {}).g) : !!b.g);
@@ -786,9 +829,12 @@ function budgetHtml(d) {
       </div>
       ${fin ? `<div class="bud-done-tag">✓ COMPLETE — this part of the job is finished; nothing more is expected on this line</div>` : ''}
       ${isPh ? `<div class="bud-ph-tag">≈ PLACEHOLDER — a rough number until the real bid comes in</div>` : ''}
-      <div class="bud-math" style="font-size: 12.5px; opacity: .8; margin-top: 2px;">estimate ${isPh ? '≈ ' : ''}${money(est)} · ${behind && !used ? 'what is billed is not split out by line yet' : money(used) + ' billed so far'}${up ? ` · 🧾 ${money(up)} in receipts not invoiced yet` : ''}</div>
+      ${chg && !fin ? `<div class="bud-upd"><b>🔄 UPDATED ${bEsc(dayWord(chg.d) || chg.d)}</b> — was ${money(chg.from)}, now ${money(chg.to)}${chg.why ? ` · ${bEsc(chg.why)}` : ''}</div>` : ''}
+      <div class="bud-math" style="font-size: 12.5px; opacity: .8; margin-top: 2px;">estimate ${isPh ? '≈ ' : ''}${money(est)} · ${behind && !used ? 'what is billed is not split out by line yet' : money(used) + ' billed so far'}${up ? ` · 🧾 ${money(up)} in receipts not invoiced yet` : ''}${heldParts.length ? ` · ⏳ ${money(heldAmt)} saved for later` : ''}</div>
       ${!b.opts && b.d ? `<div class="opt-desc" style="margin-left: 0;">${bEsc(b.d)}</div>` : ''}
       ${optRows}
+      ${fin ? '' : bParts(b).map((p, pi) => p.held ? '' : `<div class="bud-part"><span>⏳ <b>${bEsc(p.t)}</b> · ${money(p.est)}</span> <button type="button" class="bud-later-btn" onclick="event.stopPropagation(); holdPart(${bi}, ${pi}, true)" aria-label="save ${bEsc(p.t)} for later">Save for later</button></div>`).join('')}
+      ${b.later && !fin ? `<button type="button" class="bud-later-btn bud-later-line" onclick="event.stopPropagation(); holdLine(${bi}, true)">⏳ Save this for later — it comes off the remaining costs</button>` : ''}
       <div class="bud-bar${fin ? ' done' : ''}"${fin ? ' title="finished — the part that is struck through was not needed"' : ''} style="margin-top: 4px; height: 10px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; display: flex;">
         <div style="height: 100%; width: ${pct}%; background: ${over ? '#c0392b' : 'var(--acc, #b8860b)'};" title="billed so far"></div>
         ${pctUp ? `<div style="height: 100%; width: ${pctUp}%; background: var(--acc, #b8860b); opacity: .45;" title="receipts received — not on an invoice yet"></div>` : ''}
@@ -797,16 +843,74 @@ function budgetHtml(d) {
   });
   // 🗂 v7.48 — drawn in the one order (the build, phase by phase); the sums above do not care about the order
   const rows = inOrder(d.budget.map((b, bi) => bi), bi => (d.budget[bi] || {}).n).map(bi => rowAt[bi]).join('');
-  totLeft = Math.round(totLeft * 100) / 100; totOver = Math.round(totOver * 100) / 100; totPh = Math.round(totPh * 100) / 100;
+  totLeft = Math.round(totLeft * 100) / 100; totOver = Math.round(totOver * 100) / 100; totPh = Math.round(totPh * 100) / 100; totHeld = Math.round(totHeld * 100) / 100;
   // ≈ v7.46 — what ≈ means, said once, before the first line: so a number that looks too high or oddly low is read as what it is
   const nAll = d.budget.length;
   const phNote = nPh ? `<div class="bud-ph-note" id="budPhNote"><b>≈ ${nPh === nAll ? (nAll === 1 ? 'THIS IS A PLACEHOLDER NUMBER' : 'THESE ARE PLACEHOLDER NUMBERS') : nPh + ' OF THESE ' + nAll + (nPh === 1 ? ' IS A PLACEHOLDER NUMBER' : ' ARE PLACEHOLDER NUMBERS')}</b> — a rough figure that holds the spot until the real bid comes in. It will be replaced by the real number, which may be higher or lower.</div>` : '';
   return `<div class="card" id="budgetCard" onclick="ping('budget')"><h3>ESTIMATED REMAINING COSTS</h3>
     <div class="bud-total">${nPh ? '≈ ' : ''}${money(totLeft)}</div>
-    <div class="bud-total-l">STILL AHEAD ON THE APPROVED WORK · ESTIMATE ${nPh ? '≈ ' : ''}${money(totE)}${nPh ? ` · ≈ ${money(totPh)} OF IT IS PLACEHOLDER NUMBERS` : ''} · ${behind && !totU ? 'WHAT IS BILLED IS NOT SPLIT OUT BY LINE YET' : money(totU) + ' BILLED SO FAR'}${totUp ? ` · 🧾 ${money(totUp)} IN RECEIPTS NOT INVOICED YET` : ''}${nFin ? ` · ✓ ${nFin} ${nFin === 1 ? 'LINE' : 'LINES'} COMPLETE` : ''}${totOver ? ` · <b style="color:#c0392b;">⚠ OVER BY ${money(totOver)}</b>` : ''}</div>
+    <div class="bud-total-l">STILL AHEAD ON THE APPROVED WORK · ESTIMATE ${nPh ? '≈ ' : ''}${money(totE)}${nPh ? ` · ≈ ${money(totPh)} OF IT IS PLACEHOLDER NUMBERS` : ''} · ${behind && !totU ? 'WHAT IS BILLED IS NOT SPLIT OUT BY LINE YET' : money(totU) + ' BILLED SO FAR'}${totUp ? ` · 🧾 ${money(totUp)} IN RECEIPTS NOT INVOICED YET` : ''}${nFin ? ` · ✓ ${nFin} ${nFin === 1 ? 'LINE' : 'LINES'} COMPLETE` : ''}${nHeld ? ` · ⏳ ${money(totHeld)} SAVED FOR LATER — NOT COUNTED HERE` : ''}${nUpd ? ` · 🔄 ${nUpd} UPDATED` : ''}${totOver ? ` · <b style="color:#c0392b;">⚠ OVER BY ${money(totOver)}</b>` : ''}</div>
     ${phNote}
     ${rows}
-    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"Remaining" is each estimate, less what has been billed to that line so far${totUp ? ' and less the receipts still waiting for an invoice' : ''}. The bar fills as a line is billed; "billed" updates as the books do.${nFin ? ' A line marked ✓ COMPLETE is finished: nothing more is counted as remaining on it.' : ''}${behind ? ' <b class="bud-behind">Some of what has been invoiced is not matched to a line here yet, so what truly remains may be less than shown.</b>' : ''}${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}</div></div>`;
+    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"Remaining" is each estimate, less what has been billed to that line so far${totUp ? ' and less the receipts still waiting for an invoice' : ''}. The bar fills as a line is billed; "billed" updates as the books do.${nFin ? ' A line marked ✓ COMPLETE is finished: nothing more is counted as remaining on it.' : ''}${behind ? ' <b class="bud-behind">Some of what has been invoiced is not matched to a line here yet, so what truly remains may be less than shown.</b>' : ''}${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}${d.budget.some(b => b && !b.done && (b.later || bParts(b).length)) ? ' ⏳ Save for later holds a part of the job for last, or for next year — it comes off these costs and onto the SAVED FOR LATER card below; you can put it back any time.' : ''}${nUpd ? ' 🔄 UPDATED marks a line whose number changed, with the day and the reason.' : ''}</div></div>`;
+}
+// ⏳ v7.61 — SAVED FOR LATER: the parts of the job THEY chose to hold — off ESTIMATED REMAINING COSTS, listed here with the way back
+function laterHtml(d) {
+  if (!Array.isArray(d.budget) || !d.budget.length) return '';
+  const usedBy = budgetUsedBy(d), rows = [];
+  d.budget.forEach((b, bi) => {
+    if (!b || b.done) return;
+    if (bHeldLine(b)) { const used = Math.max(0, usedBy[b.n] || 0), up = +b.up || 0, est = bEst(b);
+      rows.push({ t: b.n, a: Math.max(0, Math.round((est - used - up) * 100) / 100), at: b.heldAt, bi, pi: -1, meta: `estimate ${money(est)}${used ? ' · ' + money(used) + ' already billed' : ''}${up ? ' · 🧾 ' + money(up) + ' in receipts already' : ''}` }); }
+    bParts(b).forEach((p, pi) => { if (p.held) rows.push({ t: `${b.n} — ${p.t}`, a: +p.est || 0, at: p.heldAt, bi, pi, meta: `part of the ${b.n} line` }); });
+  });
+  if (!rows.length) return '';
+  const tot = Math.round(rows.reduce((s, r) => s + r.a, 0) * 100) / 100;
+  return `<div class="card" id="laterCard" onclick="ping('later')"><h3>⏳ SAVED FOR LATER</h3>
+    <div class="bud-total">${money(tot)}</div>
+    <div class="bud-total-l">YOU CHOSE TO HOLD ${rows.length === 1 ? 'THIS' : 'THESE'} FOR LATER — NOT COUNTED IN THE REMAINING COSTS</div>
+    ${inOrder(rows, r => r.t.split(' — ')[0]).map(r => `<div class="lt-row"><span class="lt-name">⏳ ${bEsc(r.t)}</span><span class="lt-amt">${money(r.a)}</span>
+      <div class="lt-meta">saved for later${r.at ? ' ' + bEsc(dayWord(r.at) || r.at) : ''} · ${bEsc(r.meta)}</div>
+      <button type="button" class="lt-back" onclick="event.stopPropagation(); ${r.pi < 0 ? `holdLine(${r.bi}, false)` : `holdPart(${r.bi}, ${r.pi}, false)`}">↩ Put it back in the plan</button></div>`).join('')}
+    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">These are parts of the job you chose to save for last, or for next year, so nothing is spent on them now. They are not counted in ESTIMATED REMAINING COSTS above. Clore Construction sees your choice; put one back any time and it counts again.</div></div>`;
+}
+function budgetRedraw() {
+  const card = document.getElementById('budgetCard');
+  if (card) card.outerHTML = budgetHtml(_d);
+  const lc = document.getElementById('laterCard'), lh = laterHtml(_d);
+  if (lc) { if (lh) lc.outerHTML = lh; else lc.remove(); }
+  else if (lh) { const bc = document.getElementById('budgetCard'); if (bc) bc.insertAdjacentHTML('afterend', lh); }
+}
+// their tap: hold a line (or a part of one) for later, or put it back — the page moves at once, the office hears on the next sync
+async function holdLine(bi, on) {
+  const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null;
+  if (!b || !b.later || b.done || !!b.held === !!on) return;
+  const prev = { held: b.held, at: b.heldAt };
+  if (on) { b.held = 1; b.heldAt = new Date().toISOString().slice(0, 10); } else { delete b.held; delete b.heldAt; }
+  budgetRedraw();
+  if (PV) return;   // Eric previewing — show the motion, save nothing
+  try {
+    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ c: code, hold: { n: b.n, on: !!on } }) });
+    if (!r.ok) throw new Error();
+  } catch (e) {   // the tap didn't reach the office — put it back honestly
+    if (prev.held) { b.held = 1; if (prev.at) b.heldAt = prev.at; } else { delete b.held; delete b.heldAt; }
+    budgetRedraw();
+  }
+}
+async function holdPart(bi, pi, on) {
+  const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null, p = b && Array.isArray(b.lp) ? b.lp[pi] : null;
+  if (!b || !p || b.done || !!p.held === !!on) return;
+  const prev = { held: p.held, at: p.heldAt };
+  if (on) { p.held = 1; p.heldAt = new Date().toISOString().slice(0, 10); } else { delete p.held; delete p.heldAt; }
+  budgetRedraw();
+  if (PV) return;
+  try {
+    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ c: code, hold: { n: b.n, on: !!on, p: pi } }) });
+    if (!r.ok) throw new Error();
+  } catch (e) {
+    if (prev.held) { p.held = 1; if (prev.at) p.heldAt = prev.at; } else { delete p.held; delete p.heldAt; }
+    budgetRedraw();
+  }
 }
 async function pickOpt(bi, oi) {
   const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null;
@@ -953,6 +1057,7 @@ async function boot() {
     // 👁 v6.64 — Eric: "what about the estimates? is that only on there once i enter an estimate
     // in?" Yes: the card exists for the homeowner only once a lamp is lit with a number on it.
     h += bh || '';
+    h += laterHtml(d);   // ⏳ v7.61 — what they saved for later, right under the remaining costs (only when they hold something)
   }
   if (d.show && d.show.phases && (d.phases || []).length) {
     h += `<div class="card" id="phasesCard"><h3>WORK BY PHASE — tap a phase for detail</h3>` +
