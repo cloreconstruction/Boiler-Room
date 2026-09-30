@@ -852,7 +852,7 @@ function budgetHtml(d) {
     <div class="bud-total-l">STILL AHEAD ON THE APPROVED WORK · ESTIMATE ${nPh ? '≈ ' : ''}${money(totE)}${nPh ? ` · ≈ ${money(totPh)} OF IT IS PLACEHOLDER NUMBERS` : ''} · ${behind && !totU ? 'WHAT IS BILLED IS NOT SPLIT OUT BY LINE YET' : money(totU) + ' BILLED SO FAR'}${totUp ? ` · 🧾 ${money(totUp)} IN RECEIPTS NOT INVOICED YET` : ''}${nFin ? ` · ✓ ${nFin} ${nFin === 1 ? 'LINE' : 'LINES'} COMPLETE` : ''}${nHeld ? ` · ⏳ ${money(totHeld)} SAVED FOR LATER — NOT COUNTED HERE` : ''}${nUpd ? ` · 🔄 ${nUpd} UPDATED` : ''}${totOver ? ` · <b style="color:#c0392b;">⚠ OVER BY ${money(totOver)}</b>` : ''}</div>
     ${phNote}
     ${rows}
-    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"Remaining" is each estimate, less what has been billed to that line so far${totUp ? ' and less the receipts still waiting for an invoice' : ''}. The bar fills as a line is billed; "billed" updates as the books do.${nFin ? ' A line marked ✓ COMPLETE is finished: nothing more is counted as remaining on it.' : ''}${behind ? ' <b class="bud-behind">Some of what has been invoiced is not matched to a line here yet, so what truly remains may be less than shown.</b>' : ''}${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}${d.budget.some(b => b && !b.done && (b.later || bParts(b).length)) ? ' ⏳ Save for later holds a part of the job for last, or for next year — it comes off these costs and onto the SAVED FOR LATER card below; you can put it back any time.' : ''}${nUpd ? ' 🔄 UPDATED marks a line whose number changed, with the day and the reason.' : ''}</div></div>`;
+    <div style="font-size: 12px; opacity: .7; margin-top: 6px;">"Remaining" is each estimate, less what has been billed to that line so far${totUp ? ' and less the receipts still waiting for an invoice' : ''}. The bar fills as a line is billed; "billed" updates as the books do.${nFin ? ' A line marked ✓ COMPLETE is finished: nothing more is counted as remaining on it.' : ''}${behind ? ' <b class="bud-behind">Some of what has been invoiced is not matched to a line here yet, so what truly remains may be less than shown.</b>' : ''}${anyOpen ? ' A choice is still open above — the totals update the moment you tap yours.' : anyOpts ? ' Lines marked YOUR CHOICE change the totals when you tap a different way to go.' : ''}${d.budget.some(b => b && !b.done && (b.later || bParts(b).length)) ? ' ⏳ Save for later holds a part of the job for last, or for next year — it comes off these costs and onto the SAVED FOR LATER card at the bottom of this page; you can put it back any time.' : ''}${nUpd ? ' 🔄 UPDATED marks a line whose number changed, with the day and the reason.' : ''}</div></div>`;
 }
 // ⏳ v7.61 — SAVED FOR LATER: the parts of the job THEY chose to hold — off ESTIMATED REMAINING COSTS, listed here with the way back
 function laterHtml(d) {
@@ -879,7 +879,7 @@ function budgetRedraw() {
   if (card) card.outerHTML = budgetHtml(_d);
   const lc = document.getElementById('laterCard'), lh = laterHtml(_d);
   if (lc) { if (lh) lc.outerHTML = lh; else lc.remove(); }
-  else if (lh) { const bc = document.getElementById('budgetCard'); if (bc) bc.insertAdjacentHTML('afterend', lh); }
+  else if (lh) { const bell = document.getElementById('bellCard'), bc = document.getElementById('budgetCard'); if (bell) bell.insertAdjacentHTML('beforebegin', lh); else if (bc) bc.insertAdjacentHTML('afterend', lh); }   // ⏳ v7.62 — at the bottom, above the pings switch
 }
 // their tap: hold a line (or a part of one) for later, or put it back — the page moves at once, the office hears on the next sync
 async function holdLine(bi, on) {
@@ -1057,7 +1057,6 @@ async function boot() {
     // 👁 v6.64 — Eric: "what about the estimates? is that only on there once i enter an estimate
     // in?" Yes: the card exists for the homeowner only once a lamp is lit with a number on it.
     h += bh || '';
-    h += laterHtml(d);   // ⏳ v7.61 — what they saved for later, right under the remaining costs (only when they hold something)
   }
   if (d.show && d.show.phases && (d.phases || []).length) {
     h += `<div class="card" id="phasesCard"><h3>WORK BY PHASE — tap a phase for detail</h3>` +
@@ -1066,6 +1065,10 @@ async function boot() {
         <div class="ph-cats">${(p.cats || []).map(c => `${esc(c[0])} — ${money(c[1])}`).join('<br>')}</div>
       </div>`).join('') + `</div>`;
   }
+  // ⏳ v7.62 — what they saved for later: the LAST card about the job, at the bottom (Eric: "make it go to a window at the bottom
+  // that is not counted in the total remaining cost but they still need to be able to see it and put it back on if needed");
+  // v7.61 had it right under the remaining costs. Only while they hold something.
+  if (sh('budget')) h += laterHtml(d);
   h += bellHtml();   // 🔔 v6.68 — the pings switch, last card before the foot
   h += `<button class="theme-btn" style="display: block; margin: 22px auto 0;" onclick="openFeedback()">💬 App feedback — what works, what doesn't</button>
     <div class="foot">${sh('ask') ? 'Questions? Use 💬 Ask / Remark above, or call or text Eric directly.' : 'Questions? Call or text Eric directly.'}</div>`;
