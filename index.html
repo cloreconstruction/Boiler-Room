@@ -1723,6 +1723,13 @@
   .sb-form select, .sb-form input { min-height: 46px; font-size: 16px; }
   .pf-acts .btn-ghost.pf-subs { grid-column: 1 / -1; }
   @media (min-width: 701px) { .sb-box { max-width: 760px; margin: 0 auto; } }   /* on a PC the list keeps a readable width */
+  /* 👷 v7.56 — ⚡ pick by trade: a plate a sub under each trade, lit when on this job; ➕ a new one right there */
+  .sb-pickrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+  #subsList .sb-pickrow .pick-chip { min-height: 44px; font-size: 14px; }   /* (the id outranks the skins' 40px chip rule) */
+  .sb-pickrow .pick-chip .sb-dim { font-weight: 400; opacity: .85; }
+  .sb-pickrow .pick-chip.sel .sb-dim { color: inherit; opacity: .8; }   /* on the lit plate the small words take the plate's own ink */
+  .sb-pickrow .sb-pickadd { border-style: dashed; }
+  #subsSetupBox .sb-master { margin-bottom: 8px; }
   /* 💰 v7.51 — THE DOWN-PAYMENT METER. Eric: "I want it to show me when we're getting close to being at or over that down payment (so
      that I can stop the job and wait for more money)." Ten cells, the percent and the words — ✓ UNDER · ⚠ GETTING CLOSE · ⛔ STOP —
      and the edge grows with it; never the colour alone. His phone only. */
@@ -4289,6 +4296,14 @@
         <button class="btn-ghost" onclick="addJobSettings()">+ Add job</button>
       </div>
     </div>
+    <!-- 👷 v7.56 — Eric: "i want to add all the subs names and numbers in setup and then just click through the list for each
+         category when i make a new job or in project portal. and can change it as bids come in." The master list of subs lives
+         here (the same book v7.51 keeps — prefs.subs); a job's subs window has ⚡ PICK BY TRADE to tap through it. -->
+    <div class="set-section" id="setSubs">
+      <h4>👷 Subs</h4>
+      <div class="hint" style="margin: 0 0 10px;">Every sub you use — the company, who to ask for, the number, the trade. Type each one ONCE here; then on any job, 👷 Subs on this job → ⚡ Pick by trade taps through them, trade by trade. Change a job's pick whenever a bid comes in. Never on a homeowner's page.</div>
+      <div id="subsSetupBox"></div>
+    </div>
     <div class="set-section" id="setTrucks">
       <h4>Trucks</h4>
       <div class="hint" style="margin: 0 0 10px;">Your trucks for mileage. Each one remembers its last odometer reading so miles compute automatically.</div>
@@ -4535,7 +4550,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.55 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.56 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6565,7 +6580,7 @@ function openPanel(name) {
     if (name === 'hours') hOpenInit();
     if (name === 'myhours') { _lockArm = ''; renderMyHours(); }
     if (name === 'budget') { if (isCrew()) { closePanels(); return; } renderBudget(); }   // 💰 v6.84 — Eric's page only
-    if (name === 'settings') { renderWageSetup(); renderPushSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', ');   // 🔔 v7.39 renderPushSetup · 🔒 v7.42 — that note had landed mid-line and cut the personal-names box off; it fills again
+    if (name === 'settings') { renderWageSetup(); renderPushSetup(); renderSubsSetup(); if ($('sPushSec')) $('sPushSec').value = prefs.pushSecret || ''; if ($('sPersonal')) $('sPersonal').value = personalFolks().join(', ');   // 🔔 v7.39 renderPushSetup · 🔒 v7.42 — that note had landed mid-line and cut the personal-names box off; it fills again
       if ($('sPreviewAs')) $('sPreviewAs').innerHTML = crew.map(c => `<option${(prefs.previewAs || crew[0]) === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
       if ($('unlockWho')) $('unlockWho').innerHTML = crew.map(c => `<option>${esc(c)}</option>`).join('');
       renderQbLights(); initSetupCollapse(); }   // 🏠 v6.65 — the portal no longer renders here
@@ -13538,20 +13553,92 @@ function subsJobList() {
   subsRows('').forEach(r => add(r.l.job));
   return have;
 }
-function openSubs(job) {
+function openSubs(job, view) {
   const list = subsJobList(), want = String(job == null ? '' : job).trim();
   _subsJob = !want || want === '*' ? '*' : (list.find(j => cardKey(j) === cardKey(want)) || want);
-  _subsForm = null; _subsArm = ''; _subsBy = 'job';
+  _subsForm = null; _subsArm = '';
+  // 👷 v7.56 — a job with no subs yet opens on ⚡ PICK BY TRADE when there is a list to pick from (asked for outright with view = 'pick')
+  _subsBy = subsCanEdit() && _subsJob !== '*' && (view === 'pick' || (view !== 'list' && !subsCount(_subsJob) && subsLive(subsBookNow().subs).length)) ? 'pick' : 'job';
   if (_jcEdit) { cardStash(); _jcEdit = false; }   // the job card was mid-edit under this: its words are kept first
   renderSubs(true);
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
 }
-function subsPick(v) { _subsJob = v === '*' ? '*' : String(v || '*'); _subsForm = null; _subsArm = ''; renderSubs(); }
-function subsBy(v) { _subsBy = v === 'trade' ? 'trade' : 'job'; renderSubs(); }
+function subsPick(v) { _subsJob = v === '*' ? '*' : String(v || '*'); _subsForm = null; _subsArm = ''; if (_subsBy === 'pick' && (_subsJob === '*' || !subsCanEdit())) _subsBy = 'job'; renderSubs(); }
+function subsBy(v) { _subsBy = v === 'trade' ? 'trade' : v === 'pick' && _subsJob !== '*' && subsCanEdit() ? 'pick' : 'job'; renderSubs(); }
+// ================= 👷 v7.56 — THE SUBS IN SETUP; ⚡ PICK BY TRADE =================
+// Eric: "i want to add all the subs names and numbers in setup and then just click through the list for each category when i make
+// a new job or in project portal. and can change it as bids come in." The master list (the same book — prefs.subs.subs) gets its
+// own place in ⚙ Setup → 👷 Subs: add, edit, delete, grouped by trade in the one order. A job's window gets ⚡ PICK BY TRADE: every
+// trade that has a sub on the list, in build order, with a plate a sub — lit when that sub is on THIS job; one tap puts him on,
+// one tap takes him off (his note for the job rides the link, so a tap off and on again starts it fresh). Two of a trade can be
+// on at once (two plumbers); a trade with nobody on the list offers ➕ right there. The Setup → Jobs pills wear 👷 for a new job.
+let _subsPickAll = false;
+function subsDraw() { renderSubs(); renderSubsSetup(); }
+function subsMasterRows() { return subsSort(subsLive(subsBookNow().subs).map(s => ({ s, l: {} }))); }
+function subsMasterAdd(trade, onJob) {   // onJob = from a job's ⚡ pick view: the new sub goes onto that job as it is saved
+  if (!subsCanEdit()) return;
+  _subsForm = { lid: '', sid: '', job: '', master: true, onJob: String(onJob || ''), v: trade ? { trade } : null }; _subsArm = '';
+  subsDraw();
+  const el = $('sbCo'); if (el) { if ($('subsForm').scrollIntoView) $('subsForm').scrollIntoView({ block: 'start' }); el.focus(); }
+}
+function subsMasterEdit(sid) {
+  if (!subsCanEdit()) return;
+  const s = subsBookNow().subs[sid]; if (!s || s.gone) return;
+  _subsForm = { lid: '', sid, job: '', master: true, v: null }; _subsArm = '';
+  subsDraw();
+  if ($('subsForm') && $('subsForm').scrollIntoView) $('subsForm').scrollIntoView({ block: 'start' });
+}
+function renderSubsSetup() {
+  const box = $('subsSetupBox'), panel = $('panel-settings'); if (!box) return;
+  if (!(panel && panel.classList.contains('open'))) { box.innerHTML = ''; return; }   // drawn only while ⚙ Setup is open (the box is in the page all the time)
+  if (!subsCanEdit()) { box.innerHTML = `<div class="hint">${CREW_NAME ? 'Eric and the office keep the subs list — it is on every job under 👷 Subs on this job.' : 'The subs list is kept on the phone, not in the 👁 preview.'}</div>`; return; }
+  const rows = subsMasterRows(), form = _subsForm && _subsForm.master ? subsFormHtml() : '';
+  const plate = r => { const s = r.s, tel = String(s.ph || '').replace(/[^0-9+]/g, ''), on = subsJobsOf(s.id), armed = _subsArm === 'del:' + s.id;
+    return `<div class="sb-row jc-person sb-master" data-sid="${esc(s.id)}">
+      <div class="jc-name">${esc(s.co || s.who || '(no name)')}${s.co && s.who ? ` <span class="jc-role">· ${esc(s.who)}</span>` : ''}</div>
+      ${tel || s.em ? `<div class="jc-taps sb-taps">${tel ? `<a href="tel:${esc(tel)}" class="jc-tap sb-call">📞 ${esc(s.ph)}</a><a href="sms:${esc(tel)}" class="jc-tap sb-text">💬 Text</a>` : ''}${s.em ? `<a href="mailto:${esc(s.em)}" class="jc-tap sb-mail">✉ ${esc(s.em)}</a>` : ''}</div>` : '<div class="hint sb-nonum" style="margin: 4px 0 0;">no number on this one yet</div>'}
+      ${s.note ? `<div class="sb-note sb-dim">about them: ${esc(s.note)}</div>` : ''}
+      <div class="sb-note sb-dim sb-onjobs">${on.length ? '🏠 on: ' + on.map(esc).join(' · ') : '○ on no job yet — pick them on a job under ⚡ Pick by trade'}</div>
+      ${_subsForm ? '' : `<div class="sb-acts"><button type="button" class="btn-ghost sb-ed" onclick="subsMasterEdit('${escq(s.id)}')">✎ Edit</button><button type="button" class="btn-ghost sb-del${armed ? ' armed' : ''}" onclick="subsDelete('${escq(s.id)}')">${armed ? `⚠ SURE? Tap again — off EVERY job (${on.length})` : '🗑 Delete'}</button></div>`}
+    </div>`; };
+  const groups = []; rows.forEach(r => { const t = subsTradeWord(r.s.trade); let g = groups.find(x => x[0] === t); if (!g) groups.push(g = [t, []]); g[1].push(r); });
+  box.innerHTML = `${form || `<button type="button" class="btn-primary sb-add" id="subsSetupAdd" onclick="subsMasterAdd()">➕ Add a sub</button>`}
+    <div id="subsSetupList">${rows.length ? groups.map(([t, rs]) => `<div class="jc-head sb-head">${esc(t)} <span class="sb-n">${rs.length}</span></div>` + rs.map(plate).join('')).join('')
+      : '<div class="hint sb-none" style="margin: 10px 0;">○ No subs on the list yet — ➕ Add a sub, or add one on a job under 👷 Subs on this job.</div>'}</div>`;
+}
+// ⚡ the click-through: every trade that has a sub on the list, in the one order; a plate a sub, lit when on this job
+function subsPickHtml() {
+  const job = _subsJob, b = subsBookNow();
+  const onJob = new Map(); subsLive(b.on).filter(l => cardKey(l.job) === cardKey(job)).forEach(l => onJob.set(l.sid, l));
+  const rows = subsMasterRows();
+  const groups = []; rows.forEach(r => { const t = subsTradeWord(r.s.trade); let g = groups.find(x => x[0] === t); if (!g) groups.push(g = [t, []]); g[1].push(r.s); });
+  // a construction category with nobody on the list yet is offered too (in its place), so the walk covers the whole build
+  const have = new Set(groups.map(g => g[0].toLowerCase()));
+  const all = [...groups.map(g => ({ t: g[0], subs: g[1] })), ...CATS_IN_ORDER.filter(n => !have.has(n.toLowerCase())).map(n => ({ t: n, subs: [] }))];
+  all.sort((a, b) => (catRank(a.t) - catRank(b.t)) || a.t.localeCompare(b.t));
+  const shown = _subsPickAll ? all : all.filter(g => g.subs.length);
+  const nOn = onJob.size;
+  return `<div class="sb-pick" id="subsPick">
+    <div class="hint" style="margin: 0 0 8px;">Tap a sub to put them on <b>${esc(job)}</b>; tap again to take them off. Two of a trade can be on at once. <b>${nOn} on this job.</b></div>
+    ${shown.map(g => `<div class="jc-head sb-head">${esc(g.t)} <span class="sb-n">${g.subs.filter(s => onJob.has(s.id)).length ? '✓ ' + g.subs.filter(s => onJob.has(s.id)).length + ' on' : g.subs.length ? '○ nobody picked' : '○ none on the list'}</span></div>
+      <div class="chips-row sb-pickrow">${g.subs.map(s => { const on = onJob.has(s.id); return `<button type="button" class="pick-chip sb-pickbtn${on ? ' sel' : ''}" data-pick="${esc(s.id)}" aria-pressed="${on}" onclick="subsPickToggle('${escq(s.id)}')">${on ? '✓ ' : ''}${esc(s.co || s.who)}${s.co && s.who ? ` <span class="sb-dim">· ${esc(s.who)}</span>` : ''}${s.ph ? ` <span class="sb-dim">· ${esc(s.ph)}</span>` : ''}</button>`; }).join('')}
+        <button type="button" class="pick-chip sb-pickadd" onclick="subsMasterAdd('${escq(g.t)}', '${escq(job)}')">➕ a ${esc(g.t)} sub</button></div>`).join('')}
+    <button type="button" class="btn-ghost" style="width: 100%; margin-top: 8px; min-height: 44px;" onclick="_subsPickAll = !_subsPickAll; renderSubs();">${_subsPickAll ? '▾ Only the trades with a sub on the list' : `▸ Every construction category (${all.length}) — add a sub to one with none`}</button>
+  </div>`;
+}
+function subsPickToggle(sid) {
+  if (!subsCanEdit() || _subsJob === '*') return;
+  const b = subsBookNow(), s = b.subs[sid]; if (!s || s.gone) return;
+  const had = subsLive(b.on).find(l => l.sid === sid && cardKey(l.job) === cardKey(_subsJob));
+  if (had) { subsPut('on', { ...had, gone: true }); toast(`✕ ${s.co || s.who} is off ${_subsJob}`); }
+  else { subsPut('on', { id: subsId('j'), job: _subsJob, sid, note: '' }); toast(`✓ ${s.co || s.who} is on ${_subsJob}${CREW_NAME ? ' · Eric\'s phone gets it on its next sync' : ' · the crew get it on their next sync'}`); }
+  renderSubs();
+}
+// ================= /👷 v7.56 =================
 function subsArmSet(k) {
   _subsArm = k; clearTimeout(_subsArmT);
-  if (k) _subsArmT = setTimeout(() => { if (_subsArm === k) { _subsArm = ''; subsFormKeep(); renderSubs(); } }, 4000);   // (what is typed in the form rides through)
+  if (k) _subsArmT = setTimeout(() => { if (_subsArm === k) { _subsArm = ''; subsFormKeep(); subsDraw(); } }, 4000);   // (what is typed in the form rides through)
 }
 function subsRowHtml(r, tag) {
   const s = r.s, l = r.l, edit = subsCanEdit() && !_subsForm;
@@ -13586,8 +13673,8 @@ function subsFormHtml() {
   const groups = []; pickable.forEach(r => { const t = subsTradeWord(r.s.trade); let g = groups.find(x => x[0] === t); if (!g) groups.push(g = [t, []]); g[1].push(r.s); });
   const nOn = f.sid ? subsJobsOf(f.sid).length : 0, armed = _subsArm === 'del:' + f.sid;
   return `<div class="sb-form jc-blk" id="subsForm">
-    <div class="jc-head" style="margin-top: 4px;">${f.lid ? '✎ Edit this sub' : `➕ Add a sub to ${esc(f.job)}`}</div>
-    ${!f.lid && pickable.length ? `<div class="field"><label>One you already have — pick it and the boxes fill themselves</label>
+    <div class="jc-head" style="margin-top: 4px;">${f.master ? (f.sid ? '✎ Edit this sub' : '➕ Add a sub to your list') : f.lid ? '✎ Edit this sub' : `➕ Add a sub to ${esc(f.job)}`}</div>
+    ${!f.lid && !f.master && pickable.length ? `<div class="field"><label>One you already have — pick it and the boxes fill themselves</label>
       <select id="sbPick" onchange="subsFormPick(this.value)"><option value="">— a new sub —</option>${groups.map(g => `<optgroup label="${esc(g[0])}">${g[1].map(x => `<option value="${esc(x.id)}"${x.id === f.sid ? ' selected' : ''}>${esc(x.co || x.who)}${x.co && x.who ? ' · ' + esc(x.who) : ''}</option>`).join('')}</optgroup>`).join('')}</select></div>` : ''}
     <div class="field"><label>The trade</label><select id="sbTrade" onchange="subsTradeChange(this.value)">${subsTradeOptions(trade)}</select></div>
     ${other ? `<div class="field"><label>Which trade</label><input type="text" id="sbTradeOther" value="${esc(trade)}" placeholder="Crane · Cleaning · Septic pumping"></div>` : ''}
@@ -13599,14 +13686,14 @@ function subsFormHtml() {
       <div class="field" style="flex: 1; min-width: 120px; margin: 0;"><label>Phone</label><input type="tel" inputmode="tel" id="sbPh" value="${val('ph')}" placeholder="907-555-0100"></div>
       <div class="field" style="flex: 1; min-width: 130px; margin: 0;"><label>Email</label><input type="email" inputmode="email" id="sbEm" value="${val('em')}" placeholder="their email"></div>
     </div>
-    <div class="field" style="margin-top: 6px;"><label>On THIS job — what they are here for</label><input type="text" id="sbJobNote" value="${esc(v.jobNote != null ? v.jobNote : (f.lid ? ((b.on[f.lid] || {}).note || '') : ''))}" placeholder="rough-in only · the upstairs bath"></div>
-    <div class="field"><label>About them — shows on every job they are on</label><input type="text" id="sbNote" value="${val('note')}" placeholder="text first · mornings only"></div>
+    ${f.master ? '' : `<div class="field" style="margin-top: 6px;"><label>On THIS job — what they are here for</label><input type="text" id="sbJobNote" value="${esc(v.jobNote != null ? v.jobNote : (f.lid ? ((b.on[f.lid] || {}).note || '') : ''))}" placeholder="rough-in only · the upstairs bath"></div>`}
+    <div class="field"${f.master ? ' style="margin-top: 6px;"' : ''}><label>About them — shows on every job they are on</label><input type="text" id="sbNote" value="${val('note')}" placeholder="text first · mornings only"></div>
     ${f.sid && nOn > (f.lid ? 1 : 0) ? `<div class="hint" style="margin: 0 0 6px;">👷 This sub is on ${nOn} job${nOn === 1 ? '' : 's'} — a change to the name, the trade or the numbers shows on every one of them.</div>` : ''}
     <div class="frow" style="gap: 8px; margin-top: 8px; flex-wrap: wrap;">
-      <button type="button" class="btn-primary" id="sbSave" style="flex: 2 1 160px; min-height: 46px; font-weight: var(--fw8, 800);" onclick="subsSave()">✓ Save — ${f.lid ? 'it is changed' : 'on this job'}</button>
+      <button type="button" class="btn-primary" id="sbSave" style="flex: 2 1 160px; min-height: 46px; font-weight: var(--fw8, 800);" onclick="subsSave()">✓ Save${f.master ? '' : ' — ' + (f.lid ? 'it is changed' : 'on this job')}</button>
       <button type="button" class="btn-ghost" style="flex: 1 1 110px; min-height: 46px;" onclick="subsFormClose()">✕ Never mind</button>
     </div>
-    ${f.lid && f.sid ? `<button type="button" class="btn-ghost sb-del${armed ? ' armed' : ''}" style="width: 100%; margin-top: 8px; min-height: 44px; color: var(--err, #c0392b);" onclick="subsDelete('${escq(f.sid)}')">${armed ? `⚠ SURE? Tap again — off EVERY job (${nOn})` : '🗑 Delete this sub from every job'}</button>` : ''}
+    ${(f.lid || f.master) && f.sid ? `<button type="button" class="btn-ghost sb-del${armed ? ' armed' : ''}" style="width: 100%; margin-top: 8px; min-height: 44px; color: var(--err, #c0392b);" onclick="subsDelete('${escq(f.sid)}')">${armed ? `⚠ SURE? Tap again — off EVERY job (${nOn})` : '🗑 Delete this sub from every job'}</button>` : ''}
   </div>`;
 }
 function renderSubs(force) {
@@ -13614,6 +13701,7 @@ function renderSubs(force) {
   if (!force && !$('subsBox')) return;   // only while this window is on the screen
   const keep = $('revModal') ? $('revModal').scrollTop : 0, keepBox = box.scrollTop;
   const list = subsJobList(), all = _subsJob === '*', edit = subsCanEdit();
+  const pickView = !all && edit && _subsBy === 'pick';   // 👷 v7.56 — ⚡ tap through the list, trade by trade
   if (!all && !list.some(j => cardKey(j) === cardKey(_subsJob))) list.unshift(_subsJob);
   const rows = all ? subsRows('') : subsOn(_subsJob);
   const total = subsRows('').length;
@@ -13634,8 +13722,9 @@ function renderSubs(force) {
       <div class="jc-pick-now" id="subsNow">${all ? `✓ SHOWING — every job · ${total} sub${total === 1 ? '' : 's'} on the jobs` : `✓ SHOWING — ${esc(_subsJob)} · ${rows.length} sub${rows.length === 1 ? '' : 's'}`}</div>
     </div>
     ${all && rows.length ? `<div class="sb-by"><button type="button" class="pick-chip${_subsBy === 'job' ? ' sel' : ''}" aria-pressed="${_subsBy === 'job'}" onclick="subsBy('job')">${_subsBy === 'job' ? '✓ ' : ''}BY JOB</button><button type="button" class="pick-chip${_subsBy === 'trade' ? ' sel' : ''}" aria-pressed="${_subsBy === 'trade'}" onclick="subsBy('trade')">${_subsBy === 'trade' ? '✓ ' : ''}BY TRADE — who is where</button></div>` : ''}
-    ${_subsForm ? subsFormHtml() : (edit && !all ? `<button type="button" class="btn-primary sb-add" id="subsAdd" onclick="subsAddOpen()">➕ Add a sub to ${esc(_subsJob)}</button>` : '')}
-    <div id="subsList">${body}</div>
+    ${!all && edit ? `<div class="sb-by"><button type="button" class="pick-chip${!pickView ? ' sel' : ''}" aria-pressed="${!pickView}" onclick="subsBy('job')">${!pickView ? '✓ ' : ''}📋 THE LIST</button><button type="button" class="pick-chip${pickView ? ' sel' : ''}" id="subsPickBtn" aria-pressed="${pickView}" onclick="subsBy('pick')">${pickView ? '✓ ' : ''}⚡ PICK BY TRADE — who is on this job</button></div>` : ''}
+    ${_subsForm ? subsFormHtml() : (edit && !all && !pickView ? `<button type="button" class="btn-primary sb-add" id="subsAdd" onclick="subsAddOpen()">➕ Add a sub to ${esc(_subsJob)}</button>` : '')}
+    <div id="subsList">${pickView && !_subsForm ? subsPickHtml() : body}</div>
     <div class="rev-row" style="margin-top: 14px;"><button type="button" class="btn-ghost x-plate" style="flex: 1;" onclick="closeReview()">‹ Back</button></div></div>`;
   if (!force) { box.scrollTop = keepBox; if ($('revModal')) $('revModal').scrollTop = keep; }
   subsPlatesSync();
@@ -13670,10 +13759,10 @@ function subsTradeChange(v) {
   if (!_subsForm) return;
   subsFormKeep();
   _subsForm.v.trade = v === '__other' ? ' ' : v;   // ' ' = another trade, not typed yet (the box opens)
-  renderSubs();
+  subsDraw();
   if (v === '__other' && $('sbTradeOther')) { $('sbTradeOther').value = ''; $('sbTradeOther').focus(); }
 }
-function subsFormClose() { _subsForm = null; _subsArm = ''; renderSubs(); }
+function subsFormClose() { _subsForm = null; _subsArm = ''; subsDraw(); }
 function subsSave() {
   const f = _subsForm; if (!f || !subsCanEdit()) return;
   subsFormKeep();
@@ -13691,13 +13780,19 @@ function subsSave() {
   if (!sid) sid = subsId('s');
   if (changed) subsPut('subs', { id: sid, ...next });
   Object.assign(rec, next);
+  if (f.master) {   // 👷 v7.56 — the list in Setup: the sub itself, no job — unless it was added from a job's ⚡ pick view, then onto that job too
+    if (f.onJob && !subsLive(b.on).some(l => l.sid === sid && cardKey(l.job) === cardKey(f.onJob))) subsPut('on', { id: subsId('j'), job: f.onJob, sid, note: '' });
+    _subsForm = null; _subsArm = ''; subsDraw();
+    toast(`👷 ${rec.co || rec.who} — ${f.sid ? 'changed' : f.onJob ? 'on your list and on ' + f.onJob : 'on your subs list'} ✓${CREW_NAME ? ' · Eric\'s phone gets it on its next sync' : ' · the crew get it on their next sync'}`);
+    return;
+  }
   const jobNote = subsS(v.jobNote, 300);
   let lid = f.lid;
   if (!lid) { const had = subsLive(b.on).find(l => l.sid === sid && cardKey(l.job) === cardKey(f.job)); if (had) lid = had.id; }
   const oldL = lid ? b.on[lid] : null;
   if (!oldL || oldL.gone || String(oldL.note || '') !== jobNote) subsPut('on', { id: lid || subsId('j'), job: f.job, sid, note: jobNote });
   _subsForm = null; _subsArm = '';
-  renderSubs();
+  subsDraw();
   toast(`👷 ${rec.co || rec.who} — ${f.lid ? 'changed' : 'on ' + f.job} ✓${CREW_NAME ? ' · Eric\'s phone gets it on its next sync' : ' · the crew get it on their next sync'}`);
 }
 function subsOff(lid) {
@@ -13713,13 +13808,13 @@ function subsOff(lid) {
 function subsDelete(sid) {
   if (!subsCanEdit()) return;
   const b = subsBookNow(), s = b.subs[sid]; if (!s || s.gone) return;
-  if (_subsArm !== 'del:' + sid) { subsFormKeep(); subsArmSet('del:' + sid); renderSubs(); return; }
+  if (_subsArm !== 'del:' + sid) { subsFormKeep(); subsArmSet('del:' + sid); subsDraw(); return; }
   subsArmSet('');
   subsLive(b.on).filter(l => l.sid === sid).forEach(l => subsPut('on', { ...l, gone: true }));
   subsPut('subs', { ...s, gone: true });
   _subsForm = null;
-  renderSubs();
-  toast(`🗑 ${s.co || s.who} is off every job`);
+  subsDraw();
+  toast(`🗑 ${s.co || s.who} is off every job — and off your list`);
 }
 // the job card's own section: who to call on THIS job, and the door to the whole list
 function subsCardHtml(job) {
@@ -23469,7 +23564,7 @@ function renderJobsManager() {
   const sorted = jobs.map((j, i) => ({ j, i })).sort((a, b) => a.j.localeCompare(b.j));
   $('jobList').innerHTML = sorted.map(({ j, i }) => i === _jobRen
     ? `<span class="job-pill"><input type="text" id="jobRenBox" value="${esc(j)}" aria-label="new name for ${esc(j)}" style="min-width: 170px;" onkeydown="if(event.key==='Enter'){event.preventDefault();jobRenameDone(${i}, this.value);} if(event.key==='Escape'){_jobRen=-1;renderJobsManager();}"><button class="jm-del" title="Save the new name" aria-label="save the new name" onclick="jobRenameDone(${i}, $('jobRenBox').value)">✓</button><button class="jm-del" title="Never mind" aria-label="never mind" onclick="_jobRen=-1;renderJobsManager()">✕</button></span>`
-    : `<span class="job-pill">${esc(j)}<button class="jm-del" title="Rename ${esc(j)}" aria-label="rename ${esc(j)}" onclick="jobRenameStart(${i})">✎</button><button class="jm-del" title="Remove ${esc(j)}" onclick="deleteJob(${i})"${jobs.length <= 1 ? ' disabled' : ''}>✕</button></span>`
+    : `<span class="job-pill">${esc(j)}${!CREW_NAME && !isPersonalJob(j) ? `<button class="jm-del" title="Subs on ${esc(j)} — pick by trade" aria-label="subs on ${esc(j)}" onclick="openSubs('${escq(j)}', 'pick')">👷</button>` : ''}<button class="jm-del" title="Rename ${esc(j)}" aria-label="rename ${esc(j)}" onclick="jobRenameStart(${i})">✎</button><button class="jm-del" title="Remove ${esc(j)}" onclick="deleteJob(${i})"${jobs.length <= 1 ? ' disabled' : ''}>✕</button></span>`   // 👷 v7.56 — a new job's subs, picked by trade
   ).join('');
 }
 function addTruckSettings() {
@@ -24751,7 +24846,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.55';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.56';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

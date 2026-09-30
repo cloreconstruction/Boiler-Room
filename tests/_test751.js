@@ -139,7 +139,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const armed = await page.evaluate(() => /^⚠ SURE\? Tap again — off EVERY job \(2\)$/.test(document.querySelector('#subsForm .sb-del').textContent.trim()));
     await page.evaluate(() => document.querySelector('#subsForm .sb-del').click());
     await page.waitForTimeout(100);
-    return armed && await page.evaluate(() => subsCount('Oak House') === 3 && subsCount('Internal / Admin') === 0 && !subsRows('').some(r => r.s.co === 'Pipe Pros') && _said.some(t => /^🗑 Pipe Pros is off every job$/.test(t)));
+    return armed && await page.evaluate(() => subsCount('Oak House') === 3 && subsCount('Internal / Admin') === 0 && !subsRows('').some(r => r.s.co === 'Pipe Pros') && _said.some(t => /^🗑 Pipe Pros is off every job — and off your list$/.test(t)));
   })());
   ok('a ⚠ SURE? that lets go by itself (four seconds) keeps what he typed in the form since', await (async () => {
     await page.evaluate(() => { subsPick('Oak House'); [...document.querySelectorAll('.sb-row')].find(r => /Spark Bros/.test(r.textContent)).querySelector('.sb-ed').click(); });

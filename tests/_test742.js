@@ -34,7 +34,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('🔒 Setup opens with the personal-names box FILLED again (a v7.39 note had landed mid-line and cut that code off)', await page.evaluate(() => {
     openPanel('settings'); const v = $('sPersonal').value;
     return v === 'Ann, Bo';
-  }) && /renderPushSetup\(\); if \(\$\('sPushSec'\)\) \$\('sPushSec'\)\.value = prefs\.pushSecret \|\| ''; if \(\$\('sPersonal'\)\) \$\('sPersonal'\)\.value = personalFolks\(\)\.join\(', '\);/.test(src));
+  }) && /* 👷 v7.56 — renderSubsSetup() joined the line; the guard is that the personal-names fill still follows on the SAME line */ /renderPushSetup\(\); renderSubsSetup\(\); if \(\$\('sPushSec'\)\) \$\('sPushSec'\)\.value = prefs\.pushSecret \|\| ''; if \(\$\('sPersonal'\)\) \$\('sPersonal'\)\.value = personalFolks\(\)\.join\(', '\);/.test(src));
 
   ok('every alert is a ROW: its switch in words, what sets it off, who sends it, and what it will do right now — five of them on his phone', await (async () => {
     const r = await rows();
