@@ -146,13 +146,17 @@ const { chromium } = require('playwright');
     return ok1 && /💹 markup 20% · tap to file one by hand/.test($('revBox').textContent);
   }));
 
-  ok('in Calm Brass the chips and buttons on the board are thumb-sized and the rows are hairlines', await page.evaluate(() => {
+  // 🧱 v7.57 — Eric: "i need better seperation between the categories, the progress bars can look like line breaks in the page."
+  // The hairline rows of v6.66 are cards now: an edge all round, a radius, room between — and the bar wears a word beside it.
+  ok('in Calm Brass the chips and buttons on the board are thumb-sized and every category is its own plate — an edge all round, room between (v7.57; the rows were hairlines before)', await page.evaluate(() => {
     const lamp = document.querySelector('.est-row:not([hidden]) .est-lamp');
     const btn = document.querySelector('.est-board .est-help-btn');
-    const row = document.querySelector('.est-row:not([hidden]):not(.est-open)');
-    const s = getComputedStyle(row);
+    const rows = [...document.querySelectorAll('.est-row:not([hidden]):not(.est-open)')], row = rows[0], s = getComputedStyle(row);
+    const gap = rows.length > 1 ? rows[1].getBoundingClientRect().top - row.getBoundingClientRect().bottom : 8;
+    const bar = document.querySelector('.est-barrow'), word = bar && bar.querySelector('.est-bar-word');
     return parseFloat(getComputedStyle(lamp).minHeight) >= 36 && parseFloat(getComputedStyle(btn).minHeight) >= 44 &&
-      s.borderTopWidth === '0px' && s.borderBottomWidth === '1px' && parseFloat(getComputedStyle(row.querySelector('.est-name')).fontSize) >= 16 && parseFloat(getComputedStyle(row.querySelector('.est-num')).fontSize) >= 17;
+      s.borderTopWidth === '1px' && s.borderBottomWidth === '1px' && parseFloat(s.borderTopLeftRadius) >= 10 && gap >= 6 && parseFloat(getComputedStyle(row.querySelector('.est-name')).fontSize) >= 16 && parseFloat(getComputedStyle(row.querySelector('.est-num')).fontSize) >= 17 &&
+      (!bar || (!!word && /(\d+% in|✓ complete|no estimate)/.test(word.textContent)));
   }));
 
   ok('never colour alone: every lamp on the board carries a word', await page.evaluate(() =>
