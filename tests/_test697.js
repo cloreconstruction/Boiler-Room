@@ -62,6 +62,8 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   ok('pick KITCHEN: the window shuts, the chip reads "📋 KITCHEN — tap to change", step ④ is done and its folded line says where the note is going', await page.evaluate(() => {
     [...$('blRoomGrid').querySelectorAll('button')][0].click();
+    // 📎 v7.53 — a category that already holds rows asks a second question (a new row, or one of these?); ➕ A NEW ROW is what this suite always meant
+    if ($('blNewRow')) $('blNewRow').click();
     const step = document.querySelector('#qnCard .g-step[data-step="4"]');
     $('askText').value = 'x'; updateStepFlow(); const sum = step.querySelector('.g-step-sum').textContent; $('askText').value = ''; updateStepFlow();
     return !$('catModal').classList.contains('show') && /📋 KITCHEN — tap to change/.test(_chip().textContent) && _chip().getAttribute('aria-pressed') === 'true' && /📋 Build List → KITCHEN/.test(sum) && qnBLRoom === 'KITCHEN';

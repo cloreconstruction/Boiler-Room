@@ -2445,6 +2445,13 @@
   .jrn-rel-back.armed { color: var(--err, #c0392b); font-weight: var(--fw8, 800); border-color: var(--err, #c0392b); }
   /* 🏗 v7.10 — the WHERE window's construction categories, a heading a phase */
   .bl-ph-h { font-size: var(--fs115, 11.5px); font-weight: var(--fw8, 800); letter-spacing: .5px; text-transform: uppercase; color: var(--accent); margin: 8px 0 5px; padding-left: 8px; border-left: 3px solid var(--accent); }
+  /* 📎 v7.53 — the grinder's second question: a row already on the list, and the light it moves to. Two lines a plate — the
+     name, then its state in words; the row his note names wears a dashed edge AND says so (never the edge alone). */
+  .cat-grid .pick-chip.bl-row, .cat-grid .pick-chip.bl-light { flex-direction: column; height: auto; min-height: 64px; gap: 2px; }
+  .cat-grid .pick-chip.bl-row > span, .cat-grid .pick-chip.bl-light > span { width: 100%; }
+  .pick-chip.bl-named:not(.sel) { border-style: dashed; border-width: 2.5px; }
+  .pick-chip.bl-light[disabled] { opacity: .55; cursor: not-allowed; }
+  .pick-chip.bl-new { display: block; min-height: 56px; padding: 10px 12px; white-space: normal; line-height: 1.3; font-weight: var(--fw8, 800); }
   /* a category's heading: the name, its counts in plain case, its tools — never floated over the first row again */
   .mat-rm-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
   .mat-rm-head .mat-counts { text-transform: none; letter-spacing: 0; font-size: var(--fs12, 12px); line-height: 1.45; }
@@ -4527,7 +4534,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.52 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.53 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6852,7 +6859,7 @@ function catModalOpen() {
     </div>`;
   $('catModal').classList.add('show');
 }
-function catModalClose() { $('catModal').classList.remove('show'); if (qnBL && !qnBLRoom) { qnBL = false; _qnBLJob = ''; } renderTagChips(); }   // v6.97 — the same window also asks where on the Build List; shut without a pick = off
+function catModalClose() { $('catModal').classList.remove('show'); if (qnBL && !qnBLRoom) { qnBL = false; qnBLRow = null; _qnBLJob = ''; } renderTagChips(); }   // v6.97 — the same window also asks where on the Build List; shut without a pick = off
 // ================= 📋 v6.97 — THE GRINDER → THE BUILD LIST =================
 // Eric: "how can i put something into the grinder and have it land on the build list?" There was no door — a Build List
 // row came only from the board itself or 📋 Paste a list. Offered, and he said "go": a 📋 Build List chip in ④ TAG IT beside
@@ -6863,6 +6870,120 @@ function catModalClose() { $('catModal').classList.remove('show'); if (qnBL && !
 // Eric's Dropbox). Rows go onto the board ONE AT A TIME (`_blLine`) — each is a read-modify-write of the office file, and
 // two in the same breath would write over each other.
 let qnBL = false, qnBLRoom = '', _qnBLJob = '', _qnBLRooms = [], _blLine = Promise.resolve();
+// ================= 📎 v7.53 — THE GRINDER LANDS ON A ROW THAT IS ALREADY THERE =================
+// Eric, after "Kitchen sink has arrived. I will check for damage and put it in storage" → 📋 Build List → KITCHEN made a NEW
+// row beside the Kitchen sink that was already on the list: "Is there a way that I can say, 'The kitchen sink has arrived,'
+// and do the Build List in the kitchen, and it will just put it onto the correct item that's already created and just advance
+// the light?" — "Yes build that." So when the category he picks already holds rows, the window asks a second question: a new
+// row, or one of THESE — the row whose NAME is in his words (the exact name, nothing fuzzier) is lit first — and under the row
+// he taps, its lights that are not lit yet, the one his words point at (arrived → 📦 Received, ordered → 🛒, installed → 🔧…)
+// pre-lit. HIS TAP DECIDES both (the standing rule: pre-light, never auto-commit). SEND then puts his words on that row's note
+// and its 🕘 history and moves the light (the v7.20 chain: 📦 Received lights 👆 Picked and 🛒 Ordered with it) — no new row.
+// ↩ Undo puts the row back exactly as it was. A 🏠 row's light reaches the homeowner's page the way it always does: on the
+// board's next 📤 publish (the grinder writes ONLY the office file, as v6.97 laid down).
+let qnBLRow = null, _qnBLBoard = null, _blLast = null;   // the row it lands on {id, name, room, light}; the board read for the window; the last landing (for ↩)
+const BL_LIGHT_WORDS = [   // the words in his note that point at a light — the first that fits wins; his tap confirms
+  ['I', /\b(installed|hung|mounted|set in place|in place|put in the wall|installation (is )?done)\b/i],
+  ['R', /\b(arrived|arrives|arrive|delivered|delivery came|received|receive|showed up|came in|is here|are here|got here|picked (it |them )?up|in hand)\b/i],
+  ['O', /\b(ordered|on order|placed the order|order placed|order is in)\b/i],
+  ['S', /\b(scheduled|schedule[sd]? (it |them )?for|on the calendar|set for)\b/i],
+  ['P', /\b(picked|chose|chosen|selected|decided on|going with)\b/i],
+  ['D', /\b(done|finished|completed|complete)\b/i]];
+function blNoteText() { const b = $('askText'); return b ? String(b.value || '') : ''; }
+function blRoomItems(room) {
+  const r = ((_qnBLBoard && _qnBLBoard.rooms) || []).find(x => String(x.name || '').toLowerCase() === String(room || '').toLowerCase());
+  return r ? (r.items || []).filter(x => x && x.id) : [];
+}
+// the rows whose whole name is in his words — the exact name, case aside; never a guess at a word or two
+function blRowsNamed(text, items) {
+  const t = String(text || '').toLowerCase().replace(/\s+/g, ' ');
+  return items.filter(it => { const n = String(it.n || '').trim().toLowerCase().replace(/\s+/g, ' '); return n.length >= 3 && t.includes(n); });
+}
+function blLightGuess(text, it) {
+  if (!it) return '';
+  const letters = matBoxes(it).map(b => b[0]).filter(k => k !== 'A' && !matBoxOn(it, k) && !(matLightPlan(it, k) || {}).refuse);   // a light the row refuses (a step still open) is never pre-lit
+  for (const [k, re] of BL_LIGHT_WORDS) if (letters.includes(k) && re.test(String(text || ''))) return k;
+  return '';
+}
+function blLightWord(it, k) { const b = matBoxes(it).find(x => x[0] === k); return b ? `${b[2]} ${b[1]}` : k; }
+// step two of the window: ➕ a new row, or one of the rows already in this category — then the light
+function blRowStep() {
+  const room = qnBLRoom, items = blRoomItems(room), text = blNoteText();
+  const named = blRowsNamed(text, items), first = String(text.split('\n').map(s => s.trim()).filter(Boolean)[0] || text).trim().slice(0, 80);
+  const order = [...named, ...items.filter(it => !named.includes(it))];
+  const sel = qnBLRow && items.find(it => it.id === qnBLRow.id) ? qnBLRow : null;
+  const rowPlate = it => { const on = !!(sel && sel.id === it.id), isNamed = named.includes(it);
+    return `<button type="button" class="pick-chip bl-row${on ? ' sel' : ''}${isNamed ? ' bl-named' : ''}" data-bl-row="${esc(it.id)}" onclick="blRowTap('${escq(it.id)}')" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(it.n || '(no name)')} <span style="display: block; font-weight: 400; opacity: .85; font-size: var(--fs11, 11px);">${matItemDone(it) ? '✓ finished' : esc(matRowWord(it))}${isNamed ? ' · <b>named in your note</b>' : ''}</span></button>`; };
+  let lights = '';
+  if (sel) {
+    const it = items.find(x => x.id === sel.id);
+    const letters = matBoxes(it).map(b => b[0]).filter(k => k !== 'A' && !matBoxOn(it, k));
+    const plate = k => { const plan = matLightPlan(it, k), on = sel.light === k, more = plan && !plan.refuse ? plan.on.filter(x => x !== k) : [];
+      return `<button type="button" class="pick-chip bl-light${on ? ' sel' : ''}" data-bl-light="${k}" onclick="blLightTap('${k}')" aria-pressed="${on}"${plan && plan.refuse ? ' disabled title="' + esc(plan.refuse) + '"' : ''}>${on ? '✓ ' : ''}${esc(blLightWord(it, k))} <span style="display: block; font-weight: 400; opacity: .85; font-size: var(--fs11, 11px);">${plan && plan.refuse ? esc(plan.refuse) : more.length ? 'lights ' + esc(more.map(x => blLightWord(it, x)).join(' · ')) + ' with it' : on && sel.why ? 'your note says "' + esc(sel.why) + '"' : '&nbsp;'}</span></button>`; };
+    lights = `<div class="bl-ph-h" style="margin-top: 10px;">💡 THE LIGHT — where does <b>${esc(it.n)}</b> move to?</div>
+      <div class="hint" style="margin: 0 0 6px;">${letters.length ? `Lit now: ${esc(matLitWords(it))}. ${sel.light ? 'The one your note points at is lit — tap another, or none.' : 'Tap the light it moves to, or leave them.'}` : 'Every light on this row is lit already — your words go on the row, the lights stay.'}</div>
+      <div class="chips-row cat-grid" id="blLightGrid" style="align-content: flex-start; margin-bottom: 6px;">
+        <button type="button" class="pick-chip bl-light${!sel.light ? ' sel' : ''}" data-bl-light="" onclick="blLightTap('')" aria-pressed="${!sel.light}">${!sel.light ? '✓ ' : ''}○ Leave the lights <span style="display: block; font-weight: 400; opacity: .85; font-size: var(--fs11, 11px);">only the words go on the row</span></button>
+        ${letters.map(plate).join('')}</div>`;
+    var doneBtn = `<button type="button" class="btn-primary" style="width: 100%; min-height: 48px; font-weight: var(--fw8, 800); margin: 0 0 8px;" onclick="blRowDone()">✓ Done — SEND puts it on ${esc(it.n)}${sel.light ? ' · ' + esc(blLightWord(it, sel.light)) : ''}</button>`;   // outside the scroller, so it is always in reach
+  }
+  $('catBox').innerHTML = `<h3>📋 ${esc(room)} — a new row, or one already here?
+    ${winX('blModalClose()', 'close')}</h3>
+    <div class="hint" style="margin: 0 0 8px;">This category already has ${items.length} row${items.length === 1 ? '' : 's'}. Put your words on one of them and move its light — or add a new row.</div>
+    <div style="max-height: 56vh; overflow-y: auto; margin-bottom: 10px;">
+      <button type="button" class="pick-chip bl-new" id="blNewRow" style="width: 100%; text-align: left; margin-bottom: 8px;" onclick="blRowNew()">➕ A NEW ROW — “${esc(first || '(the first line of your note)')}” <span style="display: block; font-weight: 400; opacity: .85; font-size: var(--fs11, 11px);">a checklist row, as before — ⇄ on the board makes it something to buy</span></button>
+      <div class="bl-ph-h">📎 ALREADY ON THE LIST — tap the one it belongs to</div>
+      <div class="chips-row cat-grid" id="blRowGrid" style="align-content: flex-start; margin-bottom: 6px;">${order.map(rowPlate).join('')}</div>
+      ${lights}
+    </div>
+    ${sel ? doneBtn : ''}
+    <div class="frow" style="gap: 8px;">
+      <button type="button" class="btn-ghost" style="flex: 1;" onclick="qnBLRow = null; blModalOpen();">‹ Back to the categories</button>
+      <button type="button" class="btn-ghost" style="flex: 1; color: var(--err, #c0392b);" onclick="qnBLOff()">✕ Not for the Build List</button></div>`;
+  $('catModal').classList.add('show');
+  if (sel && $('blLightGrid') && $('blLightGrid').scrollIntoView) $('blLightGrid').scrollIntoView({ block: 'nearest' });
+}
+function blRowTap(id) {
+  const it = blRoomItems(qnBLRoom).find(x => x.id === id); if (!it) return;
+  if (qnBLRow && qnBLRow.id === id) { qnBLRow = null; blRowStep(); return; }   // the same plate again lets it go
+  const text = blNoteText(), k = blLightGuess(text, it);
+  const m = k ? (BL_LIGHT_WORDS.find(x => x[0] === k)[1].exec(text) || [])[0] : '';
+  qnBLRow = { id: it.id, name: String(it.n || '').slice(0, 80), room: qnBLRoom, light: k, why: m ? String(m).toLowerCase() : '' };
+  blRowStep();
+}
+function blLightTap(k) {
+  if (!qnBLRow) return;
+  const it = blRoomItems(qnBLRoom).find(x => x.id === qnBLRow.id); if (!it) return;
+  if (k) { const plan = matLightPlan(it, k); if (!plan || plan.refuse) { if (plan && plan.refuse) toast(plan.refuse, false); return; } }
+  qnBLRow.light = k === qnBLRow.light ? '' : k; qnBLRow.why = '';
+  blRowStep();
+}
+function blRowDone() {
+  if (!qnBLRow) return;
+  $('catModal').classList.remove('show'); renderTagChips();
+  const it = blRoomItems(qnBLRoom).find(x => x.id === qnBLRow.id);
+  toast(`📋 ${qnBLRoom} → ${qnBLRow.name}${qnBLRow.light && it ? ' · ' + blLightWord(it, qnBLRow.light) : ''} — SEND puts it there ✓`);
+}
+function blRowNew() { qnBLRow = null; $('catModal').classList.remove('show'); renderTagChips(); toast(`📋 ${qnBLRoom} — SEND puts it on the ${_qnBLJob} Build List as a new row ✓`); }
+function blHist(D, txt) { D.hist = D.hist || []; D.hist.push({ ts: new Date().toISOString(), who: CREW_NAME || 'Eric', txt: String(txt).slice(0, 160) }); if (D.hist.length > 400) D.hist = D.hist.slice(-400); }
+// the landing itself: his words onto the row's note and history, the light moved along the chain. `D` is the board (open or read).
+function blLandOnRow(D, it, e, row) {
+  const words = String(e.details || '').trim(), day = new Date();
+  const stamp = `${day.getMonth() + 1}/${day.getDate()}`;
+  const was = String(it.sel || '');
+  it.sel = (was ? was + ' · ' : '') + stamp + ': ' + words.slice(0, 300);
+  if (it.sel.length > 900) it.sel = it.sel.slice(0, 900);
+  matChgPush(it, 'note', was, it.sel);
+  let lit = '';
+  if (row.light) {
+    const plan = matLightPlan(it, row.light);
+    if (plan && !plan.refuse && plan.on.length) { matLightApply(it, plan, txt => blHist(D, txt)); lit = blLightWord(it, row.light); }
+    else if (plan && plan.refuse) toast(plan.refuse, false);
+  }
+  blHist(D, `⚙ from the grinder → ${row.room} · ${it.n}${lit ? ': ' + lit : ''} — ${words.slice(0, 80)}`);
+  return lit;
+}
+// ================= /📎 v7.53 =================
 function blClientIdx(job) {
   const cl = (_portalIdx && Array.isArray(_portalIdx.clients)) ? _portalIdx.clients : [];
   return job && job !== '—' ? cl.findIndex(c => portalAppJob(c) === job) : -1;
@@ -6870,11 +6991,11 @@ function blClientIdx(job) {
 function qnBLChipHtml() {
   if (CREW_NAME) return '';
   return `<button type="button" class="pick-chip lockchip${qnBL ? ' sel is-down' : ''}" id="qnBLChip" onclick="qnBLToggle()" aria-pressed="${qnBL}"
-      title="Files the note in your log as always AND puts it on this job's Build List as a checklist item">${qnBL ? (qnBLRoom ? '📋 ' + esc(qnBLRoom) + ' — tap to change' : '📋 BUILD LIST — tap to pick where') : '📋 Build List'}</button>`;
+      title="Files the note in your log as always AND puts it on this job's Build List as a checklist item">${qnBL ? (qnBLRoom ? '📋 ' + esc(qnBLRoom) + (qnBLRow ? ' → ' + esc(qnBLRow.name) + (qnBLRow.light ? ' · ' + esc(blLightWord(blRoomItems(qnBLRoom).find(x => x.id === qnBLRow.id) || { hm: true }, qnBLRow.light)) : '') : '') + ' — tap to change' : '📋 BUILD LIST — tap to pick where') : '📋 Build List'}</button>`;   // 📎 v7.53 — the row it lands on, and the light
 }
-function qnBLOff(quiet) { qnBL = false; qnBLRoom = ''; _qnBLJob = ''; $('catModal').classList.remove('show'); renderTagChips(); if (!quiet) toast('📋 Off — this one is just a note'); }
+function qnBLOff(quiet) { qnBL = false; qnBLRoom = ''; qnBLRow = null; _qnBLJob = ''; $('catModal').classList.remove('show'); renderTagChips(); if (!quiet) toast('📋 Off — this one is just a note'); }
 // the job on the wheel changed under a pick: the categories belong to the OTHER job, so the pick lets go
-function qnBLJobChanged() { if (qnBL && _qnBLJob && _qnBLJob !== qnJobPick) { qnBL = false; qnBLRoom = ''; _qnBLJob = ''; renderTagChips(); toast('📋 The Build List pick was for another job — tap 📋 again for this one', false); } }
+function qnBLJobChanged() { if (qnBL && _qnBLJob && _qnBLJob !== qnJobPick) { qnBL = false; qnBLRoom = ''; qnBLRow = null; _qnBLJob = ''; renderTagChips(); toast('📋 The Build List pick was for another job — tap 📋 again for this one', false); } }
 async function qnBLToggle() {
   if (CREW_NAME) return;
   const job = (qnJobPick && jobs.includes(qnJobPick)) ? qnJobPick : '';
@@ -6888,6 +7009,7 @@ async function qnBLToggle() {
     if (i < 0) { busyDone('📋 NO CLIENT PAGE FOR THIS JOB'); toast(`${job} has no client page yet — 🏠 Project portal builds one, and its Build List comes with it`, false); return; }
     const D = await matBoardRead(_portalIdx.clients[i]);
     _qnBLRooms = (D.rooms || []).map(r => ({ name: String(r.name || ''), n: (r.items || []).length })).filter(r => r.name);
+    _qnBLBoard = D; qnBLRow = null;   // 📎 v7.53 — the rows too: the window can offer the one it belongs to
     _qnBLJob = job; qnBL = true;
     busyDone('📋 ✓ BUILD LIST');
     renderTagChips(); blModalOpen();
@@ -6899,7 +7021,7 @@ function blModalOpen() {
     return `<button type="button" class="pick-chip${on ? ' sel' : ''}" onclick="qnBLPick('${escq(r.name)}')" aria-pressed="${on}">${on ? '✓' : '📋'} ${esc(r.name)} <span style="display: block; font-weight: 400; opacity: .8; font-size: var(--fs11, 11px);">${r.n} row${r.n === 1 ? '' : 's'}</span></button>`; };
   $('catBox').innerHTML = `<h3>📋 Where on the Build List?
     ${winX('blModalClose()', 'close')}</h3>
-    <div class="hint" style="margin: 0 0 8px;">The <b>${esc(_qnBLJob)}</b> Build List. SEND files the note in your log as always <b>and</b> puts it here as a ✅ checklist item — ⇄ on the row turns it into something to buy. The first line is the row's name; the rest is its note. <b>Pick a construction category and a note with a dollar amount goes onto the homeowner's RECEIPTS RECEIVED list too</b> — the job's markup folded in, no stop in the receipts window.</div>
+    <div class="hint" style="margin: 0 0 8px;">The <b>${esc(_qnBLJob)}</b> Build List. SEND files the note in your log as always <b>and</b> puts it here as a ✅ checklist item — ⇄ on the row turns it into something to buy. The first line is the row's name; the rest is its note. <b>A category that already has rows asks next whether it goes onto one of them</b> — and moves that row's light. <b>Pick a construction category and a note with a dollar amount goes onto the homeowner's RECEIPTS RECEIVED list too</b> — the job's markup folded in, no stop in the receipts window.</div>
     <div style="max-height: 52vh; overflow-y: auto; margin-bottom: 10px;">
     ${rooms.length ? `<div class="bl-ph-h">📋 On this Build List now</div><div class="chips-row cat-grid" id="blRoomGrid" style="align-content: flex-start; margin-bottom: 6px;">${rooms.map(chip).join('')}</div>` : `<div class="hint" style="margin: 0 0 8px;">This Build List has no categories yet — pick a construction category below, or name your own.</div>`}
     <!-- 🏗 v7.10 — Eric: "I want all the construction categories on there, well organized, so I can just click." The estimates
@@ -6913,12 +7035,13 @@ function blModalOpen() {
       <button type="button" class="btn-ghost" style="flex: 1; color: var(--err, #c0392b);" onclick="qnBLOff()">✕ Not for the Build List</button></div>`;
   $('catModal').classList.add('show');
 }
-function blModalClose() { $('catModal').classList.remove('show'); if (qnBL && !qnBLRoom) { qnBL = false; _qnBLJob = ''; } renderTagChips(); }
+function blModalClose() { $('catModal').classList.remove('show'); if (qnBL && !qnBLRoom) { qnBL = false; qnBLRow = null; _qnBLJob = ''; } renderTagChips(); }   // 📎 v7.53 — shut on step two with a row half-picked: the category stands, the row pick too (the chip says it)
 function qnBLPick(name) {
   name = String(name || '').trim().slice(0, 40);
   if (!name) { const b = $('blNewRoom'); if (b) b.focus(); return; }
   const known = (_qnBLRooms || []).find(r => r.name.toLowerCase() === name.toLowerCase());
-  qnBLRoom = known ? known.name : name; qnBL = true;
+  qnBLRoom = known ? known.name : name; qnBL = true; qnBLRow = null;
+  if (known && blRoomItems(qnBLRoom).length) { blRowStep(); return; }   // 📎 v7.53 — rows are already here: a new one, or one of these?
   $('catModal').classList.remove('show'); renderTagChips();
   toast(`📋 ${qnBLRoom} — SEND puts it on the ${_qnBLJob} Build List ✓`);
 }
@@ -6935,30 +7058,40 @@ function blPutRow(D, room, e) {
   const it = { id: 'm' + D.seq, n: name, t: 'Misc', s: 'todo', eid: e.id, src: 'grinder', gat: new Date().toISOString() };
   if (note) it.sel = note;
   r.items.push(it);
-  D.hist = D.hist || []; D.hist.push({ ts: new Date().toISOString(), who: 'Eric', txt: `⚙ from the grinder → ${r.name}: ${name}`.slice(0, 160) }); if (D.hist.length > 400) D.hist = D.hist.slice(-400);
+  blHist(D, `⚙ from the grinder → ${r.name}: ${name}`);
   return { it, room: r.name };
 }
 const blBoardOpen = i => !!(_matD && _matIdx === i && $('revModal').classList.contains('show') && $('revModal').classList.contains('mat-full'));
-function grindToBuildList(e, job, room) {
-  const job1 = _blLine.then(() => grindToBuildListNow(e, job, room));
+const blOfficeWrite = (c, D) => dbxUpload(portalRoot() + '/materials-office-' + c.code + '.json', JSON.stringify({ full: true, updated: D.updated, seq: D.seq, rooms: D.rooms, hist: D.hist || [] }));
+const blFindRow = (D, id) => { for (const r of (D.rooms || [])) { const f = (r.items || []).find(x => x.id === id); if (f) return { it: f, room: r.name }; } return null; };
+function grindToBuildList(e, job, room, row) {   // 📎 v7.53 — `row` = the row it lands ON ({id, name, room, light}); none = a new row, as v6.97
+  const job1 = _blLine.then(() => grindToBuildListNow(e, job, room, row));
   _blLine = job1.catch(() => {});
   return job1;
 }
-async function grindToBuildListNow(e, job, room) {
+async function grindToBuildListNow(e, job, room, row) {
   if (!e || e.personal || CREW_NAME) return false;
   const i = blClientIdx(job); if (i < 0) return false;
   const c = _portalIdx.clients[i];
   busyShow('📋 PUTTING IT ON THE BUILD LIST…');
   try {
-    let put;
-    if (blBoardOpen(i)) { put = blPutRow(_matD, room, e); _matDirty = true; renderMatMgr(); }   // that board is open on this screen: the row lands in it and it saves itself
-    else {
-      const D = await matBoardRead(c); delete D._log;
-      put = blPutRow(D, room, e); D.updated = localDay(new Date());
-      await dbxUpload(portalRoot() + '/materials-office-' + c.code + '.json', JSON.stringify({ full: true, updated: D.updated, seq: D.seq, rooms: D.rooms, hist: D.hist || [] }));
+    let put, lit = '', onRow = null;
+    const open = blBoardOpen(i);
+    const D = open ? _matD : await matBoardRead(c); if (!open) delete D._log;
+    const found = row ? blFindRow(D, row.id) : null;
+    if (row && !found) toast(`⚠ "${row.name}" is not on the ${job} Build List any more — your note went on as a new row under ${room}`, false);
+    if (found) {   // 📎 v7.53 — onto the row that is already there: the words, the light; the row kept as it was for ↩
+      _blLast = { eid: e.id, code: c.code, id: found.it.id, was: JSON.parse(JSON.stringify(found.it)) };
+      lit = blLandOnRow(D, found.it, e, { ...row, room: found.room });
+      put = { it: found.it, room: found.room }; onRow = found.it;
+      if (open) { _matDirty = true; if (found.it.hm && lit) _matPubDirty = true; renderMatMgr(); }
+    } else {
+      put = blPutRow(D, room, e);
+      if (open) { _matDirty = true; renderMatMgr(); }   // that board is open on this screen: the row lands in it and it saves itself
     }
-    e.matRef = { code: c.code, id: put.it.id, room: put.room }; scheduleSave(); renderLog();
-    busyDone(`📋 ✓ ON THE BUILD LIST — ${put.room}`);
+    if (!open) { D.updated = localDay(new Date()); await blOfficeWrite(c, D); }
+    e.matRef = { code: c.code, id: put.it.id, room: put.room, ...(onRow ? { on: String(onRow.n || '').slice(0, 80), light: lit || '' } : {}) }; scheduleSave(); renderLog();
+    busyDone(`📋 ✓ ON THE BUILD LIST — ${put.room}${onRow ? ' · ' + String(onRow.n || '').slice(0, 40) + (lit ? ' · ' + lit : '') : ''}`);
     return true;
   } catch (err) {
     busyDone('⚠ NOT ON THE BUILD LIST');
@@ -6966,15 +7099,19 @@ async function grindToBuildListNow(e, job, room) {
     return false;
   }
 }
-// ↩ the note was taken back: its row comes off the board too (after the put has landed, never around it)
+// ↩ the note was taken back: its row comes off the board too (after the put has landed, never around it);
+// 📎 v7.53 — a note that landed ON a row puts that row back exactly as it was (the words off its note, the light where it stood)
 function grindBuildListUndo(e, job) {
   const job1 = _blLine.then(async () => {
     if (!e || !e.matRef) return;
     const i = blClientIdx(job); if (i < 0) return; const c = _portalIdx.clients[i], id = e.matRef.id;
     const strip = D => (D.rooms || []).forEach(r => { r.items = (r.items || []).filter(x => !(x.id === id && x.eid === e.id)); });
-    if (blBoardOpen(i)) { strip(_matD); _matDirty = true; renderMatMgr(); return; }
-    const D = await matBoardRead(c); delete D._log; strip(D); D.updated = localDay(new Date());
-    await dbxUpload(portalRoot() + '/materials-office-' + c.code + '.json', JSON.stringify({ full: true, updated: D.updated, seq: D.seq, rooms: D.rooms, hist: D.hist || [] }));
+    const back = D => { const f = blFindRow(D, id); if (!f || !_blLast || _blLast.eid !== e.id || _blLast.id !== id) return false;
+      Object.keys(f.it).forEach(k => delete f.it[k]); Object.assign(f.it, JSON.parse(JSON.stringify(_blLast.was))); blHist(D, `↩ took back the grinder note on ${f.it.n} — the row is as it was`); _blLast = null; return true; };
+    const fix = D => e.matRef.on ? back(D) : strip(D);
+    if (blBoardOpen(i)) { fix(_matD); _matDirty = true; if (e.matRef.on && e.matRef.light) _matPubDirty = true; renderMatMgr(); return; }
+    const D = await matBoardRead(c); delete D._log; fix(D); D.updated = localDay(new Date());
+    await blOfficeWrite(c, D);
   });
   _blLine = job1.catch(() => {});
   return job1;
@@ -7021,7 +7158,7 @@ function updateStepFlow() {
       el.classList.toggle('fold', n === 4 ? !(qnSel.size || _gOpen[4]) : (!done[n] && !_gOpen[n]));
       const sum = el.querySelector('.g-step-sum');
       if (sum) sum.textContent = n === 4
-        ? ((qnSel.size ? '· 🏷 ' + [...qnSel].join(', ') : '· none picked') + (qnBL && qnBLRoom ? ' · 📋 Build List → ' + qnBLRoom : ''))
+        ? ((qnSel.size ? '· 🏷 ' + [...qnSel].join(', ') : '· none picked') + (qnBL && qnBLRoom ? ' · 📋 Build List → ' + qnBLRoom + (qnBLRow ? ' · ' + qnBLRow.name : '') : ''))
         : (qnVis === 'crew' ? '· 🔓 all crew' : qnVisNames.size ? '· 📨 just ' + [...qnVisNames].join(', ') : '· 🔒 just you') + (attnOn() ? ' · ⚠ needs attention' : '');   // ⚠ v7.13
     }
   });
@@ -8518,8 +8655,9 @@ function saveNoteFrom(boxId, fromPanel) {
   }
   if (!e) e = addEntry('Note', t, noteJob, nExtra);
   // 📋 v6.97 — where on the Build List this one goes (never a personal note, never from a crew phone, never the old Note panel)
-  const _bl = (!fromPanel && qnBL && qnBLRoom && _qnBLJob === noteJob && !e.personal && !isCrew()) ? { job: noteJob, room: qnBLRoom, cat: isBuildCat(qnBLRoom), amt: grindAmtOf(e) } : null;   // 💵 v7.10 — a construction category + a dollar amount = their Upcoming too
-  qnBL = false; qnBLRoom = ''; _qnBLJob = '';
+  const _bl = (!fromPanel && qnBL && qnBLRoom && _qnBLJob === noteJob && !e.personal && !isCrew()) ? { job: noteJob, room: qnBLRoom, cat: isBuildCat(qnBLRoom), amt: grindAmtOf(e), row: qnBLRow ? { ...qnBLRow } : null } : null;   // 💵 v7.10 — a construction category + a dollar amount = their Upcoming too · 📎 v7.53 — `row` = it lands ON a row already there
+  const _blWord = _bl ? ' · 📋 Build List → ' + _bl.room + (_bl.row ? ' · ' + _bl.row.name + (_bl.row.light ? ' · ' + blLightWord(blRoomItems(_bl.room).find(x => x.id === _bl.row.id) || { hm: true }, _bl.row.light) : '') : '') : '';
+  qnBL = false; qnBLRoom = ''; qnBLRow = null; _qnBLJob = '';
   aiRegisterLate(photos, 'entry', e.id);
   ['nText', 'askText'].forEach(id => { if ($(id)) { $(id).value = ''; fitTa(id); } });
   if (fromPanel) closePanels();
@@ -8550,9 +8688,9 @@ function saveNoteFrom(boxId, fromPanel) {
   const toPage = !!(_bl && _bl.cat && _bl.amt > 0);   // 💵 v7.10 — it goes onto the homeowner's page: no undo (a page is "someone", like a routed note)
   if (updated === 'pocket') toast(`🎒 From the pocket, through the grinder · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''}${vis ? ' · ' + (vis === 'crew' ? '🔓 all crew' : '📨 ' + vis) : ''} ✓`);   // ⚙ v7.18 — an undo would delete the pocket note itself
   else if (updated) toast(`📧 Filed · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''} ✓`);   // 📥 v6.71 — an undo here would delete the email itself
-  else if (toPage) toast(`Note saved · ${noteJob} · 📋 Build List → ${_bl.room} · 💵 → their receipts list ✓`);
-  else if (!routed && !wasAsk && !vis) toastUndo(`Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''}${_bl ? ' · 📋 Build List → ' + _bl.room : ''} ✓`, () => {
-    if (_bl) grindBuildListUndo(e, _bl.job);   // 📋 v6.97 — the row comes off the board with the note
+  else if (toPage) toast(`Note saved · ${noteJob}${_blWord} · 💵 → their receipts list ✓`);
+  else if (!routed && !wasAsk && !vis) toastUndo(`Note saved · ${noteJob}${tags.length ? ' · 🏷 ' + tags.join(', ') : ''}${_blWord} ✓`, () => {
+    if (_bl) grindBuildListUndo(e, _bl.job);   // 📋 v6.97 — the row comes off the board with the note · 📎 v7.53 — a row it landed on goes back as it was
     if (_fromPocket) { pocket().unshift(_fromPocket); renderPocket(); }   // ⚙ v7.18 — a pocket item comes back onto the pocket
     const i = entries.findIndex(x => x.id === e.id);
     if (i >= 0) entries.splice(i, 1);
@@ -8563,7 +8701,7 @@ function saveNoteFrom(boxId, fromPanel) {
     toast('↩ Took it back — your words are in the box again');
   });
   if (photos.length) attachEntryPhotos(e, photos, `Job Notes/${cleanName(noteJob)}`);
-  if (_bl) grindToBuildList(e, _bl.job, _bl.room);   // 📋 v6.97
+  if (_bl) grindToBuildList(e, _bl.job, _bl.room, _bl.row);   // 📋 v6.97 · 📎 v7.53
   // 💵 v7.10 — Eric: "once I click the build list in the category I want 20% added automatically in it goes directly to the
   // homeowner's upcoming cost page. I don't want it to stop and get sorted again." A construction category is the cost line;
   // the amount is what the photo read (💵) or the first $ in his words; estQuickUpcoming is the same one-tap road the log's
@@ -18246,7 +18384,14 @@ function matLightArmSet(id, k) {
 }
 function matLightDisarm() { _matLightArm = null; clearTimeout(_matLightT); }
 const matLightArmed = (id, k) => !!(_matLightArm && _matLightArm.id === id && _matLightArm.k === k);
+// 📎 v7.53 — the change itself, apart from the screen: the grinder moves a row's light on a board that may not be open (its
+// ledger line goes wherever `log` sends it); matLightDo is the board's own door and does exactly what it did.
 function matLightDo(it, plan) {
+  matLightApply(it, plan, matLog);
+  _matDirty = true; if (it.hm) _matPubDirty = true;
+  renderMatMgr();
+}
+function matLightApply(it, plan, log) {
   const before = matLitWords(it), buy = matIsBuy(it);
   const want = new Set(matBoxes(it).map(b => b[0]).filter(x => matBoxOn(it, x)));
   plan.on.forEach(x => want.add(x)); plan.off.forEach(x => want.delete(x));
@@ -18262,10 +18407,8 @@ function matLightDo(it, plan) {
     if (plan.state) it.s = plan.state;
   }
   const w = xs => xs.map(x => (matBoxes(it).find(b => b[0] === x) || [])[1] || x).join(', ');
-  matLog(`${plan.on.length ? '☒ ' + w(plan.on) : ''}${plan.on.length && plan.off.length ? ' · ' : ''}${plan.off.length ? '☐ ' + w(plan.off) : ''}${plan.state === 'work' ? '⚙ in work' : ''} — ${it.n}`);
+  (log || matLog)(`${plan.on.length ? '☒ ' + w(plan.on) : ''}${plan.on.length && plan.off.length ? ' · ' : ''}${plan.off.length ? '☐ ' + w(plan.off) : ''}${plan.state === 'work' ? '⚙ in work' : ''} — ${it.n}`);
   matChgPush(it, 'lights', before, matLitWords(it));   // 🕘 v7.19 — one tap, one line: what was lit → what is lit
-  _matDirty = true; if (it.hm) _matPubDirty = true;
-  renderMatMgr();
 }
 function matBoxTap(id, k) {
   const it = matFindItem(id); if (!it) return;
@@ -24266,7 +24409,7 @@ function logRowHtml(e) {
     return `<div class="log-row" onclick="this.classList.toggle('x')">
       <div class="log-body">
         <div class="log-main">${esc(e.details)}${e.photoPath ? ` <span style="cursor: pointer; white-space: nowrap;" title="Tap to view the photo${e.photoPaths && e.photoPaths.length > 1 ? 's' : ''}" onclick="openEntryPhoto(${e.id}, event)">📷${e.photoPaths && e.photoPaths.length > 1 ? '×' + e.photoPaths.length : ''}</span>` : ''}${qty ? ` <strong>· ${qty}</strong>` : ''}</div>
-        <div class="log-meta"><span class="mini-chip ${chipClass[e.type]}" title="${e.type}">${chipIcon[e.type]}</span><span>${when}</span><span>·</span><span>${esc(e.job)}</span>${truckBit}${whoBit}${headsBit}${e.matRef ? `<span>·</span><span style="cursor: pointer; font-weight: var(--fw7, 700);" title="It is on this job's Build List under ${esc(e.matRef.room || '')} — tap to open the board" onclick="openBuildListOf('${escq(e.matRef.code)}', event)">📋 Build List → ${esc(e.matRef.room || '')}</span>` : ''}${tagBit}${thrBit}${visBit}<span>·</span><span>→ ${esc(e.filedTo)}</span>${sharedBit}${ocrBit}${aiBit}${rcLamp}${budgBit}${nbBit}${vvBit}</div>
+        <div class="log-meta"><span class="mini-chip ${chipClass[e.type]}" title="${e.type}">${chipIcon[e.type]}</span><span>${when}</span><span>·</span><span>${esc(e.job)}</span>${truckBit}${whoBit}${headsBit}${e.matRef ? `<span>·</span><span style="cursor: pointer; font-weight: var(--fw7, 700);" title="It is on this job's Build List under ${esc(e.matRef.room || '')}${e.matRef.on ? ' — on the row ' + esc(e.matRef.on) : ''} — tap to open the board" onclick="openBuildListOf('${escq(e.matRef.code)}', event)">📋 Build List → ${esc(e.matRef.room || '')}${e.matRef.on ? ' · ' + esc(e.matRef.on) + (e.matRef.light ? ' · ' + esc(e.matRef.light) : '') : ''}</span>` : ''}${tagBit}${thrBit}${visBit}<span>·</span><span>→ ${esc(e.filedTo)}</span>${sharedBit}${ocrBit}${aiBit}${rcLamp}${budgBit}${nbBit}${vvBit}</div>
       </div>
       <div class="log-savedcell"><button class="log-edit" title="Edit this entry" onclick="openLogEdit(${e.id}, event)">✏️</button>${sync}</div>
     </div>`;
@@ -24566,7 +24709,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.52';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.53';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
