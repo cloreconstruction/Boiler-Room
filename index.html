@@ -1773,6 +1773,12 @@
   .sch-pasterow { flex: 1 1 100%; }
   .sch-pasterow textarea { width: 100%; font-size: 16px; min-height: 140px; }
   .jc-sched { width: 100%; min-height: 48px; margin: -6px 0 14px; font-weight: var(--fw8, 800); font-size: 15px; }
+  /* 📅 v7.68 — the read-only step on a crew phone; the WHERE WE ARE plates; a sub's booked weeks on his plate */
+  .sch-edit-ro { border-style: dashed; font-size: 14px; }
+  .sch-page { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .sch-page .sch-tool { white-space: normal; line-height: 1.3; font-size: 13.5px; }
+  .sch-page .sch-tool[disabled] { opacity: .5; }
+  .sb-sched { margin-top: 4px; line-height: 1.5; }
   .pf-sched { width: 100%; min-height: 48px; margin: 0 0 10px; font-weight: var(--fw8, 800); }
   @media (min-width: 701px) { .sch-box { max-width: 1100px; margin: 0 auto; } }
   .sb-pickrow .pick-chip.sel .sb-dim { color: inherit; opacity: .8; }   /* on the lit plate the small words take the plate's own ink */
@@ -4658,7 +4664,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.67 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.68 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -13204,8 +13210,9 @@ async function publishSharedNotes() {
     const cards = cardBook();
     // 👷 v7.51 — the subs ride out too: the whole list, every job, to every crew member (Eric: "crew and can see all subs on all jobs")
     const subsB = subsPublish();
-    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, seen, unlocks, trucks: truckBook, cards, subs: subsB }, null, 1);
-    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(seen) + ':' + JSON.stringify(unlocks) + ':' + JSON.stringify(truckBook) + ':' + JSON.stringify(cards) + ':' + JSON.stringify(subsB);
+    const schedB = schedPublish();   // 📅 v7.68 — the plan, every job, less his notes: the crew read the weeks
+    const body = JSON.stringify({ from: 'Eric', updated: new Date().toISOString().slice(0, 10), notes: list, todos: tlist, asks, acks, seen, unlocks, trucks: truckBook, cards, subs: subsB, sched: schedB }, null, 1);
+    const key = name + ':' + JSON.stringify(list) + ':' + JSON.stringify(tlist) + ':' + JSON.stringify(asks) + ':' + JSON.stringify(acks) + ':' + JSON.stringify(seen) + ':' + JSON.stringify(unlocks) + ':' + JSON.stringify(truckBook) + ':' + JSON.stringify(cards) + ':' + JSON.stringify(subsB) + ':' + JSON.stringify(schedB);
     if (_sharedCache[name] === key) continue; // nothing changed for this person
     try {
       await dbxUpload(`${CREW_DIR}/${cleanName(name)}/shared.json`, body);
@@ -13730,6 +13737,7 @@ function renderSubsSetup() {
       ${tel || s.em ? `<div class="jc-taps sb-taps">${tel ? `<a href="tel:${esc(tel)}" class="jc-tap sb-call">📞 ${esc(s.ph)}</a><a href="sms:${esc(tel)}" class="jc-tap sb-text">💬 Text</a>` : ''}${s.em ? `<a href="mailto:${esc(s.em)}" class="jc-tap sb-mail">✉ ${esc(s.em)}</a>` : ''}</div>` : '<div class="hint sb-nonum" style="margin: 4px 0 0;">no number on this one yet</div>'}
       ${s.note ? `<div class="sb-note sb-dim">about them: ${esc(s.note)}</div>` : ''}
       <div class="sb-note sb-dim sb-onjobs">${on.length ? '🏠 on: ' + on.map(esc).join(' · ') : '○ on no job yet — pick them on a job under ⚡ Pick by trade'}</div>
+      ${schedSubLineHtml(s.id)}
       ${_subsForm ? '' : `<div class="sb-acts"><button type="button" class="btn-ghost sb-ed" onclick="subsMasterEdit('${escq(s.id)}')">✎ Edit</button><button type="button" class="btn-ghost sb-del${armed ? ' armed' : ''}" onclick="subsDelete('${escq(s.id)}')">${armed ? `⚠ SURE? Tap again — off EVERY job (${on.length})` : '🗑 Delete'}</button></div>`}
     </div>`; };
   const groups = []; rows.forEach(r => { const t = subsTradeWord(r.s.trade); let g = groups.find(x => x[0] === t); if (!g) groups.push(g = [t, []]); g[1].push(r); });
@@ -13781,6 +13789,7 @@ function subsRowHtml(r, tag) {
     ${l.note ? `<div class="sb-note">📝 on this job: ${esc(l.note)}</div>` : ''}
     ${s.note ? `<div class="sb-note sb-dim">about them: ${esc(s.note)}</div>` : ''}
     ${also.length ? `<div class="sb-note sb-dim sb-also">also on: ${also.map(esc).join(' · ')}</div>` : ''}
+    ${schedSubLineHtml(s.id)}
     ${edit ? `<div class="sb-acts"><button type="button" class="btn-ghost sb-ed" onclick="subsEditOpen('${escq(l.id)}')">✎ Edit</button><button type="button" class="btn-ghost sb-off${armed ? ' armed' : ''}" onclick="subsOff('${escq(l.id)}')">${armed ? '⚠ SURE? Tap again — off this job' : '✕ Off this job'}</button></div>` : ''}
   </div>`;
 }
@@ -13987,8 +13996,20 @@ function subsAskRows() {
 //   days (his own rule, written on his finish-schedule sheet). A step marked ✓ done never moves. Nothing is dragged.
 //   SEE IT ALL — one week grid, every job stacked (📋 Every job), or one job; the names stay pinned while the weeks scroll on
 //   a phone; a filter shows the crew's weeks or the subs' weeks; a week with the crew on two jobs says so in words.
-// The plan lives in prefs.sched (his own prefs — synced to his other devices like everything else); Eric's phone only for now
-// (a crew phone has no door) — handing the crew their weeks read-only is the next step, on his go.
+// The plan lives in prefs.sched (his own prefs — synced to his other devices like everything else).
+// 📅 v7.68 — Eric, the same night ("go ahead and get started"): THREE ROADS OUT OF THE PLAN. (1) THE CREW READ THE WEEKS: the
+//   whole plan, every job, rides to every crew folder in shared.json as `sched` (the subs' road, v7.51 — a crew phone keeps it in
+//   daylog-crew-sched so it reads with no signal); a crew phone opens the same window READ-ONLY (no add, no paste, no move, no
+//   editor — a row tap shows the step's words) from the job card and the portal; the step NOTES stay on Eric's phone (his scratch,
+//   not theirs). (2) A SUB ON A STEP: a 🔧 sub step can name WHICH sub, picked by exact name off the subs list (`sid`, never a
+//   guess from the step's words — "Plumbing rough-in" does not pick the plumber by itself); the row and the bar wear the company,
+//   and the sub's own plate under 👷 Subs (the job's window, every job, ⚙ Setup) lists his booked weeks across the jobs.
+//   (3) WHERE WE ARE ON THE HOMEOWNER'S PAGE: a card he switches on per job (🎛 What they see → 📅 Where we are, opt-in; or
+//   📤 in this window) that lists the steps IN ORDER with ✓ done · ▸ under way · ○ ahead — NO dates, no days, no who, no sub
+//   (`schedPageCut`: the names and the three words, as of the day it was written; the page file is served whole to their
+//   browser, so nothing else may ride) — "never dates that promise more than he means"; the page follows every change to the
+//   plan while it is on (`schedPageSoon`), and the window puts it right on open when the day moved it (`schedPageStale`).
+let crewSched = (() => { try { const j = JSON.parse(lsGet('daylog-crew-sched') || 'null'); return j && typeof j === 'object' ? j : null; } catch (e) { return null; } })();   // a crew phone's copy, delivered in shared.json
 const SCHED_WHO = ['crew', 'sub', 'inspection', 'homeowner'];
 const SCHED_TEMPLATE = [['Demo', 5, 'crew'], ['Dirt work', 5, 'sub'], ['Foundation', 10, 'sub'], ['Framing', 15, 'crew'], ['Trusses set', 3, 'crew'], ['Roof dried in', 5, 'crew'], ['Windows and doors', 3, 'crew'],
   ['Plumbing rough-in', 8, 'sub'], ['Electrical rough-in', 8, 'sub'], ['Heat and ducting', 3, 'sub'], ['Rough-in inspection', 1, 'inspection'], ['Insulation', 4, 'sub'], ['Drywall, mud, texture', 15, 'sub'],
@@ -14000,9 +14021,10 @@ function schedClose() {   // opened from the 📇 Job Card → back to the card 
   if (back === 'card' && _cardJob) { $('revModal').classList.remove('mat-full'); openJobCard(_cardJob); return; }
   closeReview();
 }
-function schedBook() {
-  if (!prefs.sched || typeof prefs.sched !== 'object') prefs.sched = { jobs: {} };
-  if (!prefs.sched.jobs || typeof prefs.sched.jobs !== 'object') prefs.sched.jobs = {};
+function schedHealBook(b) { const o = (b && typeof b === 'object' && !Array.isArray(b)) ? b : {}; if (!o.jobs || typeof o.jobs !== 'object' || Array.isArray(o.jobs)) o.jobs = {}; return o; }
+function schedBook() {   // the book THIS phone reads: Eric's own prefs — or, on a crew phone, the copy he sent (read-only there)
+  if (CREW_NAME) { crewSched = schedHealBook(crewSched); return crewSched; }
+  prefs.sched = schedHealBook(prefs.sched);
   return prefs.sched;
 }
 function schedPlan(job, make) {   // the plan of one job (by the card key, so the name's case never makes a second plan)
@@ -14042,19 +14064,45 @@ function schedWhoOf(txt) {
 }
 function schedNewId() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function schedClean(s) {   // one shape, whichever device wrote it
-  return { id: String(s.id || schedNewId()), n: String(s.n || '').trim().slice(0, 80), days: Math.max(1, Math.round(+s.days || 1)), who: SCHED_WHO.includes(s.who) ? s.who : '', start: schedDay(s.start) || localDay(new Date()), done: schedDay(s.done) || '', note: String(s.note || '').trim().slice(0, 200) };
+  const who = SCHED_WHO.includes(s.who) ? s.who : '';
+  return { id: String(s.id || schedNewId()), n: String(s.n || '').trim().slice(0, 80), days: Math.max(1, Math.round(+s.days || 1)), who, start: schedDay(s.start) || localDay(new Date()), done: schedDay(s.done) || '', note: String(s.note || '').trim().slice(0, 200), sid: who === 'sub' ? String(s.sid || '').trim().slice(0, 40) : '' };   // 📅 v7.68 — sid = the sub picked for this step (a 🔧 step only)
 }
 function schedSteps(job) { const p = schedPlan(job); if (!p) return []; p.steps = p.steps.map(schedClean); return p.steps; }
 function schedSorted(job) { return schedSteps(job).slice().sort((a, b) => a.start.localeCompare(b.start)); }
 function schedLastEnd(job) { const st = schedSteps(job); return st.length ? st.map(schedEnd).sort().pop() : ''; }
-function schedSave() { schedBook(); scheduleSave(); }
+let _schedPubT = null;
+function schedPublishSoon() { clearTimeout(_schedPubT); _schedPubT = setTimeout(() => { _schedPubT = null; publishSharedNotes(); }, 600); }   // 📅 v7.68 — the crew's folders, the subs' way
+function schedSave(job) { if (!schedCanEdit()) return; schedBook(); scheduleSave(); schedPublishSoon(); if (job) schedPageSoon(job); }
+// 📅 v7.68 — Eric's phone → every crew folder: every job that has steps, the steps less his notes (the note is his scratch — who said
+// what, what it waits on — not the crew's); `sid` rides, the sub's own card is already on their phone (v7.51)
+function schedPublish() {
+  if (CREW_NAME) return null;
+  const b = schedBook(), out = { jobs: {} };
+  Object.keys(b.jobs).forEach(j => { const st = schedSteps(j); if (st.length) out.jobs[j] = { steps: st.map(s => ({ id: s.id, n: s.n, days: s.days, who: s.who, start: s.start, done: s.done, sid: s.sid })) }; });
+  return out;
+}
+// 📅 v7.68 — the sub picked on a step, and a sub's booked weeks across every job (for his plate under 👷 Subs)
+function schedSubOf(s) { if (!s || s.who !== 'sub' || !s.sid) return null; const x = subsBookNow().subs[s.sid]; return x && !x.gone ? x : null; }
+function schedSubWord(s) { const x = schedSubOf(s); return x ? (x.co || x.who || '') : ''; }
+function schedStepsOfSub(sid) {   // [{ job, s }] not done, by start — every job on this phone's book
+  if (!sid) return [];
+  const out = [];
+  schedJobs().forEach(job => schedSteps(job).forEach(s => { if (s.who === 'sub' && s.sid === sid && !s.done) out.push({ job, s }); }));
+  return out.sort((a, b) => a.s.start.localeCompare(b.s.start));
+}
+function schedSubLineHtml(sid) {   // the line on a sub's plate: 📅 Oak House · Plumbing rough-in · Oct 7 – Oct 14 (· ⚠ late)
+  const rows = schedStepsOfSub(sid); if (!rows.length) return '';
+  const today = localDay(new Date());
+  return `<div class="sb-note sb-sched">${rows.slice(0, 6).map(({ job, s }) => `📅 ${esc(job)} · ${esc(s.n)} · ${esc(schedShortWord(s.start))}${s.days > 1 ? ' – ' + esc(schedShortWord(schedEnd(s))) : ''}${schedEnd(s) < today ? ' · ⚠ late' : ''}`).join('<br>')}${rows.length > 6 ? `<br>· + ${rows.length - 6} more on the schedule` : ''}</div>`;
+}
 // ---- the taps
 function schedAddStep(job, n, daysTxt, who, startDay) {
+  if (!schedCanEdit()) return null;
   const p = schedPlan(job, true), name = String(n || '').trim().slice(0, 80);
   if (!name) return null;
   const last = schedLastEnd(job);
   const s = schedClean({ id: schedNewId(), n: name, days: schedDaysOf(daysTxt), who: who || schedWhoOf(name), start: schedDay(startDay) || (last ? schedAddDays(last, 1) : localDay(new Date())) });
-  p.steps.push(s); schedSave();
+  p.steps.push(s); schedSave(job);
   return s;
 }
 function schedPasteText(job, text) {   // one step a line: "plumbing 1.5 weeks" · "heat/ducting 2-3 days" · "sheetrock 2.5 wk" — the days follow the words
@@ -14068,31 +14116,34 @@ function schedPasteText(job, text) {   // one step a line: "plumbing 1.5 weeks" 
   return n;
 }
 function schedFromTemplate(job) {
-  if (schedSteps(job).length) return 0;
+  if (!schedCanEdit() || schedSteps(job).length) return 0;
   SCHED_TEMPLATE.forEach(([n, d, w]) => schedAddStep(job, n, String(d), w));
   return SCHED_TEMPLATE.length;
 }
 // the rule: this step and every step that starts on or after it move together; a ✓ done step stays where it was
 function schedMove(job, id, n) {
+  if (!schedCanEdit()) return [];
   const st = schedSteps(job), me = st.find(s => s.id === id);
   if (!me || !n) return [];
   const from = me.start, moved = [];
   st.forEach(s => { if (!s.done && (s.id === id || s.start >= from)) { s.start = schedAddDays(s.start, n); moved.push(s); } });
-  schedSave();
+  schedSave(job);
   return moved;
 }
-function schedMoveJob(job, n) { const st = schedSteps(job); const moved = st.filter(s => !s.done); moved.forEach(s => { s.start = schedAddDays(s.start, n); }); schedSave(); return moved; }
+function schedMoveJob(job, n) { if (!schedCanEdit()) return []; const st = schedSteps(job); const moved = st.filter(s => !s.done); moved.forEach(s => { s.start = schedAddDays(s.start, n); }); schedSave(job); return moved; }
 function schedSet(job, id, k, v) {
+  if (!schedCanEdit()) return;
   const s = schedSteps(job).find(x => x.id === id); if (!s) return;
   if (k === 'days') s.days = Math.max(1, Math.round(+v || schedDaysOf(v)));
   else if (k === 'start') { const d = schedDay(v); if (d) s.start = d; }
-  else if (k === 'who') s.who = SCHED_WHO.includes(v) ? v : '';
+  else if (k === 'who') { s.who = SCHED_WHO.includes(v) ? v : ''; if (s.who !== 'sub') s.sid = ''; }   // 📅 v7.68 — a step that is no longer a sub's lets its sub go
+  else if (k === 'sid') s.sid = s.who === 'sub' ? String(v || '').trim().slice(0, 40) : '';   // 📅 v7.68 — the sub, picked by exact name off the list
   else if (k === 'n') s.n = String(v || '').trim().slice(0, 80) || s.n;
   else if (k === 'note') s.note = String(v || '').trim().slice(0, 200);
-  schedSave();
+  schedSave(job);
 }
-function schedDoneToggle(job, id) { const s = schedSteps(job).find(x => x.id === id); if (!s) return; s.done = s.done ? '' : localDay(new Date()); schedSave(); return s; }
-function schedDel(job, id) { const p = schedPlan(job); if (!p) return; p.steps = p.steps.filter(s => s.id !== id); schedSave(); }
+function schedDoneToggle(job, id) { if (!schedCanEdit()) return; const s = schedSteps(job).find(x => x.id === id); if (!s) return; s.done = s.done ? '' : localDay(new Date()); schedSave(job); return s; }
+function schedDel(job, id) { if (!schedCanEdit()) return; const p = schedPlan(job); if (!p) return; p.steps = p.steps.filter(s => s.id !== id); schedSave(job); }
 // the weeks the crew is on two jobs at once (a not-done crew step of two different jobs in the same Monday-to-Sunday week)
 function schedCrewClash() {
   const byWeek = {};
@@ -14105,16 +14156,17 @@ function schedCrewClash() {
 }
 // ---- the window
 function openSchedule(job) {
-  if (!schedCanEdit()) { toast('📅 The schedule is Eric\'s — on his phone', false); return; }
+  // 📅 v7.68 — a crew phone opens it too, read-only (Eric's plan, as it landed on this phone); the 👁 preview likewise
   const want = String(job == null ? '' : job).trim();
   _schedJob = !want || want === '*' ? '*' : want;
   _schedOpen = null; _schedArm = ''; _schedPaste = false; _schedAdd = false; _schedBack = '';
-  if (_jcEdit) { cardStash(); _jcEdit = false; }
+  if (schedCanEdit() && _jcEdit) { cardStash(); _jcEdit = false; }
   renderSchedule(true);
   $('revModal').classList.add('show', 'mat-full');
   document.body.classList.add('modal-open');
+  if (schedCanEdit() && _schedJob !== '*') schedPageLoad(_schedJob);   // 📅 v7.68 — is WHERE WE ARE on their page? (and put it right when the day moved it)
 }
-function schedPick(v) { _schedJob = v === '*' ? '*' : String(v || '*'); _schedOpen = null; _schedArm = ''; _schedPaste = false; _schedAdd = false; renderSchedule(); }
+function schedPick(v) { _schedJob = v === '*' ? '*' : String(v || '*'); _schedOpen = null; _schedArm = ''; _schedPaste = false; _schedAdd = false; renderSchedule(); if (schedCanEdit() && _schedJob !== '*') schedPageLoad(_schedJob); }
 function schedWho(v) { _schedWho = _schedWho === v ? '' : v; renderSchedule(); }
 function schedJobList() {   // every job on the list (a plan or not) — the wheel offers them all; the chart draws the planned ones
   const have = [], add = j => { j = String(j || '').trim(); if (j && j !== '—' && !isPersonalJob(j) && !have.some(x => cardKey(x) === cardKey(j))) have.push(j); };
@@ -14140,26 +14192,41 @@ function schedChartHtml(job, win) {
   const rows = shown.map(s => {
     const end = schedEnd(s), late = !s.done && end < today, left = x(s.start), width = Math.max(1.2, x(schedAddDays(end, 1)) - left);
     const open = _schedOpen === s.id, mark = s.who === 'inspection' || s.who === 'homeowner';   // a one-day thing is a round mark with a glyph, not a sliver of a bar
-    const whoW = schedWhoWord(s.who);
+    const subW = schedSubWord(s), whoW = schedWhoWord(s.who) + (subW ? ' · ' + subW : '');   // 📅 v7.68 — the sub picked for the step, by name
     return `<div class="sch-lab${open ? ' open' : ''}${s.done ? ' done' : ''}${late ? ' late' : ''}" role="button" tabindex="0" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')" onkeydown="if(event.key==='Enter'){schedRowTap('${escq(job)}','${escq(s.id)}')}">
-        <b>${s.done ? '✓ ' : late ? '⚠ ' : ''}${esc(s.n)}</b><small>${esc(schedShortWord(s.start))}${s.days > 1 ? ' – ' + esc(schedShortWord(end)) : ''} · ${s.days} day${s.days === 1 ? '' : 's'}${whoW ? ' · ' + whoW : ''}${s.done ? ' · done' : late ? ' · LATE' : ''}</small></div>
-      <div class="sch-lane${open ? ' open' : ''}" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')"><div class="sch-bar${s.done ? ' done' : ''}${late ? ' late' : ''}${mark ? ' mark' : ''}${s.who === 'sub' ? ' sub' : ''}" style="left:${left.toFixed(2)}%;${mark ? '' : `width:${width.toFixed(2)}%`}" title="${esc(s.n)} · ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(end))}">${mark ? (s.who === 'inspection' ? '📋' : '🏠') : esc(s.n)}</div></div>`;
+        <b>${s.done ? '✓ ' : late ? '⚠ ' : ''}${esc(s.n)}</b><small>${esc(schedShortWord(s.start))}${s.days > 1 ? ' – ' + esc(schedShortWord(end)) : ''} · ${s.days} day${s.days === 1 ? '' : 's'}${whoW ? ' · ' + esc(whoW) : ''}${s.done ? ' · done' : late ? ' · LATE' : ''}</small></div>
+      <div class="sch-lane${open ? ' open' : ''}" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')"><div class="sch-bar${s.done ? ' done' : ''}${late ? ' late' : ''}${mark ? ' mark' : ''}${s.who === 'sub' ? ' sub' : ''}" style="left:${left.toFixed(2)}%;${mark ? '' : `width:${width.toFixed(2)}%`}" title="${esc(s.n)}${subW ? ' · ' + esc(subW) : ''} · ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(end))}">${mark ? (s.who === 'inspection' ? '📋' : '🏠') : esc(s.n)}</div></div>`;
   }).join('');
   const todayX = x(today);
   return `<div class="sch-chart"><div class="sch-grid" style="--wk:${win.weeks}"><div class="sch-corner"></div><div class="sch-head">${heads.join('')}</div>
     ${rows || `<div class="sch-lab"><small>${_schedWho ? 'no ' + (_schedWho === 'crew' ? 'crew' : 'sub') + ' steps on this job' : 'no steps yet'}</small></div><div class="sch-lane"></div>`}
     ${todayX > 0 && todayX < 100 ? `<div class="sch-today" style="left:calc(var(--lab) + (100% - var(--lab)) * ${(todayX / 100).toFixed(4)})" title="today"></div>` : ''}</div></div>`;
 }
+// 📅 v7.68 — the wheel of subs for a 🔧 step: the ones ON this job first, then the rest of the list by trade; picked by name, never guessed
+function schedSubWheelHtml(job, s) {
+  const b = subsBookNow(), onJob = subsOn(job).map(r => r.s), onIds = new Set(onJob.map(x => x.id));
+  const rest = subsSort(subsLive(b.subs).filter(x => !onIds.has(x.id)).map(x => ({ s: x, l: {} }))).map(r => r.s);
+  const opt = x => `<option value="${esc(x.id)}"${s.sid === x.id ? ' selected' : ''}>${esc(x.co || x.who || '(no name)')}${x.co && x.who ? ' · ' + esc(x.who) : ''}${x.trade ? ' — ' + esc(x.trade) : ''}</option>`;
+  if (!onJob.length && !rest.length) return `<div class="field" style="flex: 2 1 200px; margin: 0;"><label>Which sub</label><div class="hint" style="margin: 0;">○ no subs on the list yet — add them under 👷 Subs on this job</div></div>`;
+  return `<div class="field" style="flex: 2 1 200px; margin: 0;"><label>Which sub — their plate under 👷 Subs shows these weeks</label><select id="schSid" onchange="schedSet('${escq(job)}','${escq(s.id)}','sid',this.value); renderSchedule();"><option value=""${s.sid ? '' : ' selected'}>— not picked —</option>${onJob.length ? `<optgroup label="On ${esc(job)}">${onJob.map(opt).join('')}</optgroup>` : ''}${rest.length ? `<optgroup label="The rest of the list">${rest.map(opt).join('')}</optgroup>` : ''}</select></div>`;
+}
 function schedEditHtml(job, s) {
   const armed = _schedArm === 'del:' + s.id;
+  if (!schedCanEdit()) {   // 📅 v7.68 — a crew phone (and the 👁 preview): the step's words, nothing to change
+    const subW = schedSubWord(s), today = localDay(new Date()), late = !s.done && schedEnd(s) < today;
+    return `<div class="sch-edit sch-edit-ro" id="schEdit"><div><b>${esc(s.n)}</b> — ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(schedEnd(s)))} · ${s.days} day${s.days === 1 ? '' : 's'}${s.who ? ' · ' + esc(schedWhoWord(s.who)) : ''}${subW ? ' · ' + esc(subW) : ''}${s.done ? ' · ✓ done' : late ? ' · ⚠ LATE' : ''}</div>
+      <div class="hint" style="margin: 6px 0 0;">Eric's plan — it lands on this phone with every sync. A move is his to make.</div>
+      <div class="sch-moves"><button type="button" class="btn-ghost" onclick="_schedOpen = null; renderSchedule();">▴ Fold</button></div></div>`;
+  }
   return `<div class="sch-edit" id="schEdit">
     <div class="frow" style="gap: 6px; flex-wrap: wrap;">
       <div class="field" style="flex: 2 1 160px; margin: 0;"><label>The step</label><input type="text" id="schN" value="${esc(s.n)}" onchange="schedSet('${escq(job)}','${escq(s.id)}','n',this.value); renderSchedule();"></div>
       <div class="field" style="flex: 1 1 90px; margin: 0;"><label>Days</label><input type="text" inputmode="decimal" id="schDays" value="${s.days}" onchange="schedSet('${escq(job)}','${escq(s.id)}','days',this.value); renderSchedule();"></div>
       <div class="field" style="flex: 1 1 130px; margin: 0;"><label>Starts</label><input type="date" id="schStart" value="${esc(s.start)}" onchange="schedStartSet('${escq(job)}','${escq(s.id)}',this.value)"></div>
       <div class="field" style="flex: 1 1 130px; margin: 0;"><label>Who</label><select id="schWho" onchange="schedSet('${escq(job)}','${escq(s.id)}','who',this.value); renderSchedule();"><option value=""${s.who ? '' : ' selected'}>—</option>${SCHED_WHO.map(w => `<option value="${w}"${s.who === w ? ' selected' : ''}>${schedWhoWord(w)}</option>`).join('')}</select></div>
+      ${s.who === 'sub' ? schedSubWheelHtml(job, s) : ''}
     </div>
-    <div class="field" style="margin: 6px 0 0;"><label>Note</label><input type="text" id="schNote" value="${esc(s.note)}" placeholder="who said what, what it waits on" onchange="schedSet('${escq(job)}','${escq(s.id)}','note',this.value)"></div>
+    <div class="field" style="margin: 6px 0 0;"><label>Note — yours alone; it never rides to the crew or the homeowner</label><input type="text" id="schNote" value="${esc(s.note)}" placeholder="who said what, what it waits on" onchange="schedSet('${escq(job)}','${escq(s.id)}','note',this.value)"></div>
     <div class="sch-moves">
       <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',-1)">◀ 1 day earlier</button>
       <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',1)">1 day later ▶</button>
@@ -14207,15 +14274,82 @@ function schedPasteTap(job) {
 }
 function schedTemplateTap(job) { const n = schedFromTemplate(job); renderSchedule(); toast(n ? `📐 The standard sequence is on ${job} — ${n} steps, delete what does not apply and type the real days` : `${job} already has steps`, !!n); }
 function schedMoveJobTap(job, n) { const moved = schedMoveJob(job, n); renderSchedule(); toast(`⇄ ${moved.length} step${moved.length === 1 ? '' : 's'} on ${job} moved ${Math.abs(n)} day${Math.abs(n) === 1 ? '' : 's'} ${n > 0 ? 'later' : 'earlier'} · the last step ends ${schedDayWord(schedLastEnd(job))}`); }
+// ---- 📅 v7.68 — WHERE WE ARE on the homeowner's page. The page file is served WHOLE to their browser, so the cut is the step
+// NAMES and three words (done · now · next) as of today — no date, no days, no who, no sub, no note. Opt-in per job (show.sched),
+// from the plate here or 🎛 What they see; while it is on, the page follows every change to the plan (schedPageSoon) and is put
+// right on open when a day passing moved a step from ahead to under way (schedPageLoad). READ, MODIFY, WRITE — only `sched` and,
+// when turning it on, `show.sched` are touched; every other key on the page rides through untouched.
+const _schedPage = {};   // code → { on, at, noread } — what their page holds, read when the window opens on that job
+function schedClientOf(job) { const i = blClientIdx(job); return i >= 0 ? { i, c: _portalIdx.clients[i] } : null; }
+function schedPageCut(job) {
+  const today = localDay(new Date());
+  return { at: today, steps: schedSorted(job).map(s => ({ n: s.n, st: s.done ? 'done' : (s.start <= today ? 'now' : 'next') })) };
+}
+function schedPageSame(a, b) { return JSON.stringify(((a || {}).steps) || []) === JSON.stringify(((b || {}).steps) || []); }
+async function schedPageLoad(job) {
+  if (!schedCanEdit() || !dbx.refreshToken) return;
+  const cl = schedClientOf(job); if (!cl) return;
+  const code = cl.c.code; let pg = null;
+  try { pg = JSON.parse(await dbxDownload(portalRoot() + '/' + code + '.json') || 'null'); } catch (e) { pg = null; }
+  if (!pg) { _schedPage[code] = { on: false, at: '', noread: true }; renderSchedule(); return; }
+  const on = !!(pg.show && pg.show.sched);
+  _schedPage[code] = { on, at: (pg.sched && pg.sched.at) || '' };
+  if (on && !schedPageSame(pg.sched, schedPageCut(job))) { await schedPageSend(job, false); return; }   // the day moved a step: put their card right
+  renderSchedule();
+}
+const _schedPageT = {};
+function schedPageSoon(job) {   // their page follows every change to the plan while the card is on
+  if (!schedCanEdit()) return;
+  const cl = schedClientOf(job); if (!cl) return;
+  const st = _schedPage[cl.c.code]; if (!st || !st.on) return;
+  clearTimeout(_schedPageT[cl.c.code]); _schedPageT[cl.c.code] = setTimeout(() => { delete _schedPageT[cl.c.code]; schedPageSend(job, false); }, 800);
+}
+async function schedPageSend(job, turnOn) {
+  if (!schedCanEdit()) return false;
+  const cl = schedClientOf(job); if (!cl) { toast('📅 This job has no client page — give it one first (🏠 Project portal)', false); return false; }
+  const code = cl.c.code, path = portalRoot() + '/' + code + '.json';
+  let pg = null; try { pg = JSON.parse(await dbxDownload(path) || 'null'); } catch (e) { pg = null; }
+  if (!pg) { toast('Couldn\'t read their page — nothing changed', false); return false; }
+  const cut = schedPageCut(job);
+  pg.sched = cut;
+  if (turnOn) { pg.show = pg.show || {}; pg.show.sched = true; }
+  try { await dbxUpload(path, JSON.stringify(pg, null, 1)); } catch (e) { toast('Couldn\'t save their page — try again', false); return false; }
+  _schedPage[code] = { on: !!(pg.show && pg.show.sched), at: cut.at };
+  if (_visCache[code]) _visCache[code] = pg.show || {};
+  renderSchedule(); if ($('pvBox')) renderPageVis();
+  return true;
+}
+async function schedPageTap(job) {   // the plate: off → turn it on and put today's on; on → put today's on
+  const cl = schedClientOf(job); if (!cl) return;
+  const was = !!(_schedPage[cl.c.code] || {}).on;
+  if (await schedPageSend(job, !was)) toast(was ? '📅 Their page says where we are as of today ✓' : '📅 WHERE WE ARE is on their page — the steps in order, no dates ✓');
+}
+async function schedPageOff(job) {
+  const cl = schedClientOf(job); if (!cl) return;
+  await pageShowSet(cl.i, 'sched', false);
+  _schedPage[cl.c.code] = { ...(_schedPage[cl.c.code] || {}), on: false }; renderSchedule();
+}
+function schedPagePlateHtml(job) {
+  const cl = schedClientOf(job);
+  if (!cl) return `<div class="hint sch-page" style="margin: 8px 0 0;">🏠 ${esc(job)} has no client page — give it one (🏠 Project portal) and WHERE WE ARE can go on it.</div>`;
+  const st = _schedPage[cl.c.code];
+  if (!st) return `<div class="hint sch-page" style="margin: 8px 0 0;">⏳ reading their page…</div>`;
+  if (st.noread) return `<div class="hint sch-page" style="margin: 8px 0 0;">⚠ Could not read their page — check the connection, then open this again.</div>`;
+  const n = schedSteps(job).length;
+  return `<div class="sch-page">${st.on
+    ? `<button type="button" class="btn-ghost sch-tool sel" onclick="schedPageTap('${escq(job)}')">✓ WHERE WE ARE IS ON THEIR PAGE — as of ${esc(schedShortWord(st.at) || 'today')} · tap to send today's</button><button type="button" class="btn-ghost sch-tool" onclick="schedPageOff('${escq(job)}')">🙈 Take it off their page</button>`
+    : `<button type="button" class="btn-ghost sch-tool"${n ? '' : ' disabled'} onclick="schedPageTap('${escq(job)}')">📤 Put WHERE WE ARE on their page — the steps in order (✓ done · ▸ under way · ○ ahead), no dates</button>`}</div>`;
+}
 function schedBandHtml(job, win) {
   const steps = schedSteps(job), today = localDay(new Date()), late = steps.filter(s => !s.done && schedEnd(s) < today).length, done = steps.filter(s => s.done).length, last = schedLastEnd(job);
   const clash = schedCrewClash(), mine = Object.keys(clash).filter(w => clash[w].some(j => cardKey(j) === cardKey(job))).sort();
-  const one = _schedJob !== '*';
+  const one = _schedJob !== '*' && schedCanEdit();   // 📅 v7.68 — a crew phone reads: no tools
   return `<div class="sch-band" data-job="${esc(job)}">
     <div class="sch-band-h"><b>🏠 ${esc(job)}</b><span>${steps.length ? `${steps.length} step${steps.length === 1 ? '' : 's'}${done ? ` · ${done} done` : ''} · last step ends ${esc(schedDayWord(last))}${late ? ` · <span class="sch-late-w">⚠ ${late} LATE</span>` : ''}` : 'no plan yet'}</span></div>
     ${mine.length ? `<div class="sch-clash">⚠ The crew is on two jobs at once the week${mine.length === 1 ? '' : 's'} of ${mine.map(w => esc(schedShortWord(w)) + ' (' + esc(clash[w].filter(j => cardKey(j) !== cardKey(job)).join(', ')) + ')').join(', ')}</div>` : ''}
     ${schedChartHtml(job, win)}
-    ${(() => { const o = _schedOpen && steps.find(s => s.id === _schedOpen); return o ? `<div class="sch-edit-h">✎ ${esc(o.n)} — ${esc(schedDayWord(o.start))} to ${esc(schedDayWord(schedEnd(o)))}</div>` + schedEditHtml(job, o) : ''; })()}
+    ${(() => { const o = _schedOpen && steps.find(s => s.id === _schedOpen); return o ? `<div class="sch-edit-h">${schedCanEdit() ? '✎' : '📅'} ${esc(o.n)} — ${esc(schedDayWord(o.start))} to ${esc(schedDayWord(schedEnd(o)))}</div>` + schedEditHtml(job, o) : ''; })()}
+    ${one ? schedPagePlateHtml(job) : ''}
     ${one ? `<div class="sch-tools">
       ${_schedAdd ? `<div class="sch-addrow"><input type="text" id="schAddN" placeholder="the step — plumbing rough-in" onkeydown="if(event.key==='Enter'){schedAddTap('${escq(job)}')}"><input type="text" id="schAddD" inputmode="decimal" placeholder="days · 1.5 weeks" onkeydown="if(event.key==='Enter'){schedAddTap('${escq(job)}')}"><select id="schAddW"><option value="">who?</option>${SCHED_WHO.map(w => `<option value="${w}">${schedWhoWord(w)}</option>`).join('')}</select><button type="button" class="btn-primary" onclick="schedAddTap('${escq(job)}')">➕ Add</button><button type="button" class="btn-ghost" onclick="_schedAdd=false; renderSchedule();">✕</button></div>`
         : `<button type="button" class="btn-primary sch-tool" onclick="_schedAdd=true; _schedPaste=false; renderSchedule(); setTimeout(()=>{const el=$('schAddN'); if(el) el.focus();},60);">➕ Add a step${steps.length ? ' after ' + esc(schedShortWord(last)) : ''}</button>`}
@@ -14240,7 +14374,7 @@ function renderSchedule(force) {
   const jobsIn = all ? planned : [list.find(j => cardKey(j) === cardKey(_schedJob)) || _schedJob];
   const win = schedWindow(jobsIn);
   box.innerHTML = `<div id="schedBox" class="sch-box"><h3>📅 Schedule${winX('schedClose()', 'close')}</h3>
-    <div class="hint" style="margin: 0 0 8px;">A plan is a list of steps with days. Tap a step to change it; a move takes everything after it along. Weeks across, today is the line${all ? '; every job that has a plan is here' : ''}.</div>
+    <div class="hint" style="margin: 0 0 8px;">${schedCanEdit() ? `A plan is a list of steps with days. Tap a step to change it; a move takes everything after it along. Weeks across, today is the line${all ? '; every job that has a plan is here' : ''}. The crew's phones get every job's weeks on their next sync.` : `Eric's plan, as it landed on this phone — the weeks across, today is the line${all ? '; every job that has a plan is here' : ''}. Tap a step to read it; a move is his to make.`}</div>
     <div class="jc-pick">
       <label for="schedJob" class="jc-pick-lbl">▸ PICK THE JOB</label>
       <select id="schedJob" class="jc-pick-sel" onchange="schedPick(this.value)">
@@ -14256,21 +14390,23 @@ function renderSchedule(force) {
   else { [...box.querySelectorAll('.sch-chart')].forEach(c => { const t = c.querySelector('.sch-today'); if (t && c.scrollWidth > c.clientWidth) { const lab = parseFloat(getComputedStyle(c.querySelector('.sch-grid')).getPropertyValue('--lab')) || 190; c.scrollLeft = Math.max(0, t.offsetLeft - lab - (c.clientWidth - lab) / 3); } }); }   // the first look lands on this week, a third of the way in
 }
 // the doors: the 📇 Job Card (under 📐 Plans) and the top of the 🏠 Project portal
+// 📅 v7.68 — on a crew phone the doors open the same window read-only (the plan Eric sent); a crew phone with no plan yet has no door
 function cardSchedHtml(job) {
-  if (!job || !schedCanEdit()) return '';
+  if (!job) return '';
   const n = schedSteps(job).length;
+  if (!schedCanEdit() && !n) return '';
   return `<button type="button" class="btn-ghost jc-sched" onclick="cardSched()">📅 Schedule — ${n ? `${n} step${n === 1 ? '' : 's'}, last ends ${esc(schedShortWord(schedLastEnd(job)))}` : 'no plan yet for ' + esc(job)}</button>`;
 }
 function cardSched() {
-  const job = _cardJob; if (!job || !schedCanEdit()) return;
-  if (_jcEdit) cardStash();   // mid-edit: keep the words first
+  const job = _cardJob; if (!job) return;
+  if (schedCanEdit() && _jcEdit) cardStash();   // mid-edit: keep the words first
   openSchedule(job);
   if ($('schedBox')) _schedBack = 'card';   // only once the schedule is really open; ‹ Back then reopens the card
   renderSchedule();
 }
 function portalSchedHtml() {
-  if (!schedCanEdit()) return '';
   const n = schedJobs().length;
+  if (!schedCanEdit() && !n) return '';
   return `<button type="button" class="btn-ghost pf-sched" onclick="openSchedule('*')">📅 Schedule — every job on one week grid${n ? ` · ${n} with a plan` : ''}</button>`;
 }
 // ================= /📅 v7.67 =================
@@ -14289,6 +14425,8 @@ async function checkSharedNotes() {
     if (j.cards && typeof j.cards === 'object' && !Array.isArray(j.cards)) { crewCards = j.cards; cardEditsOverlay(); }   // 📇 v7.09 — this phone's own edits stay on top until Eric has them
     // 👷 v7.51 — the subs, every job: kept on the phone (they read with no signal), this phone's own changes on top until Eric has them
     if (j.subs && typeof j.subs === 'object' && !Array.isArray(j.subs)) { crewSubs = subsHeal(j.subs); lsSet('daylog-crew-subs', JSON.stringify(crewSubs)); subsEditsOverlay(); subsFresh(); }
+    // 📅 v7.68 — Eric's schedule, every job: kept on the phone (it reads with no signal); the window follows if it is open
+    if (j.sched && typeof j.sched === 'object' && !Array.isArray(j.sched)) { crewSched = schedHealBook(j.sched); lsSet('daylog-crew-sched', JSON.stringify(crewSched)); if ($('schedBox')) renderSchedule(); }
     // 🚚 v5.51 — take Eric's truck book, keep the NEWER odometer per truck (his sweep vs
     // a trip just ended on this phone). Trucks Eric added appear; ones he removed go.
     if (Array.isArray(j.trucks) && j.trucks.length) {
@@ -15725,7 +15863,7 @@ function portalFold(i) { _portalOpen = _portalOpen === i ? -1 : i; _rotArm = 0; 
 // client page. Absent = ON for the newer switches; money/phases keep their explicit flags.
 const _visCache = {};
 const VIS_KEYS = [['money', '💵 Money'], ['phases', '📊 Phases'], ['mat', '📋 Build List'], ['ask', '💬 Ask/Remark'], ['photos', '📷 Photos'], ['journal', '📖 Journal']];
-function visOn(show, k) { return (k === 'money' || k === 'phases') ? !!(show || {})[k] : (show || {})[k] !== false; }
+function visOn(show, k) { return (k === 'money' || k === 'phases' || k === 'sched') ? !!(show || {})[k] : (show || {})[k] !== false; }   // 📅 v7.68 — sched is opt-in too
 async function portalVisLoad(i) {
   const c = (_portalIdx && _portalIdx.clients || [])[i];
   if (!c || _visCache[c.code]) return;
@@ -18319,8 +18457,8 @@ function clientPreviewOpen(i) {
 // 🎛 v7.40 — pageShowSet / pageBoardSet: the page's own switches, written through Eric's Dropbox. They were reached from
 // the v6.61 owner bars through a postMessage listener; the bars are gone (WHAT THEY SEE, below) and the listener with
 // them — the window calls these straight. money and phases are opt-IN (their switch must be true), the rest opt-OUT.
-const OWN_KEYS = ['journal', 'money', 'budget', 'upcoming', 'phases', 'photos', 'ask', 'boards', 'mat'];
-const OWN_WORDS = { journal: 'the journal', money: 'where it stands', budget: 'estimated remaining costs', upcoming: 'receipts received', phases: 'work by phase', photos: 'the photos', ask: 'ask / remark', boards: 'the options boards', mat: 'the build list' };
+const OWN_KEYS = ['journal', 'money', 'budget', 'upcoming', 'phases', 'photos', 'ask', 'boards', 'mat', 'sched'];   // 📅 v7.68 — sched
+const OWN_WORDS = { journal: 'the journal', money: 'where it stands', budget: 'estimated remaining costs', upcoming: 'receipts received', phases: 'work by phase', photos: 'the photos', ask: 'ask / remark', boards: 'the options boards', mat: 'the build list', sched: 'where we are' };
 async function pageShowSet(i, key, on) {
   const c = (((_portalIdx || {}).clients) || [])[i];
   if (!c || !OWN_KEYS.includes(key)) return;
@@ -18330,8 +18468,10 @@ async function pageShowSet(i, key, on) {
   if (!pg) { toast('Couldn\'t read their page — nothing changed', false); return; }
   pg.show = pg.show || {};
   pg.show[key] = !!on;                      // money and phases are opt-in, the rest opt-out — true/false serves both
+  if (key === 'sched' && on) pg.sched = schedPageCut(portalAppJob(c));   // 📅 v7.68 — switched on here: today's steps go with it, so the card is never empty
   try { await dbxUpload(path, JSON.stringify(pg, null, 1)); } catch (e) { toast('Couldn\'t save their page — try again', false); return; }
   _visCache[c.code] = pg.show; if ($('pvBox')) renderPageVis();   // 🎛 v7.40 — the window follows
+  if (key === 'sched') { _schedPage[c.code] = { on: !!on, at: on ? localDay(new Date()) : (( _schedPage[c.code] || {}).at || '') }; if ($('schedBox')) renderSchedule(); }   // 📅 v7.68
   toast(on ? `👁 ${OWN_WORDS[key] || key} — they see it again ✓` : `🙈 ${OWN_WORDS[key] || key} — hidden from them ✓`);
   cpReload();
 }
@@ -18359,7 +18499,7 @@ async function pageBoardSet(i, id, off) {
 // in words (✓ THEY SEE THIS — tap to hide / ○ HIDDEN FROM THEM — tap to show; off = dashed and dim, never colour alone),
 // writing the same page.show / boardsOff keys through pageShowSet / pageBoardSet as the bars did. Eric's phone only: the
 // office fold draws no door, and a crew phone that reaches the function is turned away in words.
-const PV_CARDS = [['journal', '📖 Journal — the weekly journal and its photos'], ['money', '💵 Where it stands — invoiced, paid, open'], ['upcoming', '🧾 Receipts received — not on an invoice yet'], ['budget', '📐 Estimated remaining costs — the approved estimates'], ['phases', '📊 Work by phase']];   // 🧾 v7.45 — the two cards by the names their page gives them now, in the order it draws them
+const PV_CARDS = [['sched', '📅 Where we are — the plan\'s steps in order, no dates (from the 📅 Schedule)'], ['journal', '📖 Journal — the weekly journal and its photos'], ['money', '💵 Where it stands — invoiced, paid, open'], ['upcoming', '🧾 Receipts received — not on an invoice yet'], ['budget', '📐 Estimated remaining costs — the approved estimates'], ['phases', '📊 Work by phase']];   // 🧾 v7.45 — the two cards by the names their page gives them now, in the order it draws them; 📅 v7.68 — where we are, first (opt-in)
 const PV_TILES = [['photos', '📷 Photos'], ['ask', '💬 Ask / Remark'], ['boards', '🖼 Options — the option boards'], ['mat', '📋 Build List']];
 const _pvBoardsOff = {};   // code → the boards hidden from that client (page.boardsOff)
 let _pvIdx = -1, _pvNoRead = '';
@@ -18397,7 +18537,7 @@ function renderPageVis(force) {
     ${!show ? `<div class="hint" style="margin: 0 0 10px;">${_pvNoRead === c.code ? '⚠ Could not read their page — check the connection, then open this again.' : '⏳ reading their page…'}</div>` : `
     <h4 class="pv-h">THE CARDS</h4>
     ${PV_CARDS.map(([k, lab]) => row(k, lab, `pageVisTap('${k}')`, visOn(show, k))).join('')}
-    <div class="hint" style="margin: 6px 0 12px;">💵 Where it stands and 📊 Work by phase draw only with figures from the books — a page with no QuickBooks numbers shows nothing there even when on. 📐 Estimated remaining costs appears for them only once a category's lamp is lit with a number on the estimates board.</div>
+    <div class="hint" style="margin: 6px 0 12px;">💵 Where it stands and 📊 Work by phase draw only with figures from the books — a page with no QuickBooks numbers shows nothing there even when on. 📐 Estimated remaining costs appears for them only once a category's lamp is lit with a number on the estimates board. 📅 Where we are shows the 📅 Schedule's steps in order with ✓ done · ▸ under way · ○ ahead — never a date — and follows the plan while it is on.</div>
     <h4 class="pv-h">THE TILES</h4>
     ${PV_TILES.map(([k, lab]) => row(k, lab, `pageVisTap('${k}')`, visOn(show, k))).join('')}
     <h4 class="pv-h">THE OPTION BOARDS</h4>
@@ -25706,7 +25846,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.67';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.68';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

@@ -164,6 +164,17 @@
   .lt-meta { font-size: 12px; color: var(--ink2); margin-top: 3px; width: 100%; }
   .lt-back { display: block; width: 100%; margin-top: 6px; min-height: 40px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink);
     font-weight: 700; font-size: 13px; padding: 7px 12px; cursor: pointer; font-family: inherit; }
+  /* 📅 v7.68 — WHERE WE ARE: the plan's steps in order, each with a glyph AND a word — ✓ done · ▸ UNDER WAY · ○ ahead — never the
+     colour alone, and no dates on purpose (timing moves with the weather and the subs). Clore Construction switches it on per job. */
+  .sw-sub { font-size: 11.5px; color: var(--ink2); letter-spacing: 1px; font-weight: 800; margin-bottom: 8px; }
+  .sw-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 10px; margin: 6px 0;
+    border: 1px solid var(--line); border-radius: 10px; font-size: 14px; }
+  .sw-row.sw-now { border: 2px solid var(--gold); font-weight: 800; }
+  .sw-row.sw-done { opacity: .62; }
+  .sw-g { font-weight: 900; text-align: center; }
+  .sw-w { font-size: 11px; letter-spacing: .8px; font-weight: 800; color: var(--ink2); white-space: nowrap; }
+  .sw-row.sw-now .sw-w { color: var(--gold); }
+  .sw-foot { font-size: 12px; color: var(--ink2); margin-top: 8px; line-height: 1.45; }
 </style>
 </head>
 <body>
@@ -1000,6 +1011,19 @@ async function boot() {
     ${allShots.length ? `<div class="card" id="photoCard" style="display: none;"><h3>📷 PROGRESS PHOTOS — newest first</h3>
       <div class="gal">${allShots.slice(0, 60).map(n => `<img loading="lazy" src="${photoUrl(n)}" alt="progress photo" onclick="shotOpen('${photoUrl(n)}')">`).join('')}</div>
     </div>` : ''}`;
+  // 📅 v7.68 — WHERE WE ARE: the steps of the plan in order with three words — ✓ done · ▸ UNDER WAY · ○ ahead — as of the day it
+  // was written; Clore Construction switches it on per job (opt-in: show.sched must be true). No dates, no days, nobody named — the
+  // order of the work is the promise, the timing is not.
+  if (d.show && d.show.sched && d.sched && Array.isArray(d.sched.steps) && d.sched.steps.length) {
+    const st = d.sched.steps.filter(s => s && s.n).map(s => ({ n: String(s.n), st: s.st === 'done' ? 'done' : s.st === 'now' ? 'now' : 'next' }));
+    const doneRows = st.filter(s => s.st === 'done'), rest = st.filter(s => s.st !== 'done'), nowN = st.filter(s => s.st === 'now').length;
+    const row = s => `<div class="sw-row sw-${s.st}"><span class="sw-g">${s.st === 'done' ? '✓' : s.st === 'now' ? '▸' : '○'}</span><span class="sw-n">${esc(s.n)}</span><span class="sw-w">${s.st === 'done' ? 'DONE' : s.st === 'now' ? 'UNDER WAY' : 'AHEAD'}</span></div>`;
+    h += `<div class="card" id="schedCard"><h3>📅 WHERE WE ARE</h3>
+      <div class="sw-sub">${doneRows.length} OF ${st.length} STEPS DONE${nowN ? ` · ${nowN} UNDER WAY` : ''} · AS OF ${esc(d.sched.at || d.updated || '')}</div>
+      ${doneRows.length ? `<div class="ph" id="swDone"><div class="ph-head" onclick="document.getElementById('swDone').classList.toggle('open'); ping('sched:done')"><span>✓ ${doneRows.length} step${doneRows.length === 1 ? '' : 's'} done — tap to see</span><span>▾</span></div><div class="ph-cats" style="padding-left: 0;">${doneRows.map(row).join('')}</div></div>` : ''}
+      ${rest.length ? rest.map(row).join('') : '<div class="sw-row sw-done"><span class="sw-g">✓</span><span class="sw-n">Every step on the plan is done</span><span class="sw-w">DONE</span></div>'}
+      <div class="sw-foot">The steps, in the order they come. Timing moves with the weather and the subs — ask us where things stand.</div></div>`;
+  }
   // 📖 the job journal: ONLY the latest week shows; older weeks live behind one fold
   if ((d.journal || []).length && sh('journal')) {
     const js = d.journal.slice(0, 26);
