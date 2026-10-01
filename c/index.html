@@ -759,6 +759,7 @@ const bParts = b => Array.isArray(b.lp) ? b.lp.filter(p => p && p.t) : [];
 const bHeldLine = b => !!(b && b.held && b.later && !b.done);
 const bHeldParts = b => bParts(b).filter(p => p.held);
 const dayWord = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(+m[1], +m[2] - 1, +m[3], 12).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''; };
+const localDayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };   // their own day, never the UTC one
 function budgetHtml(d) {
   if (!Array.isArray(d.budget) || !d.budget.length) return '';
   const usedBy = budgetUsedBy(d);
@@ -886,7 +887,7 @@ async function holdLine(bi, on) {
   const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null;
   if (!b || !b.later || b.done || !!b.held === !!on) return;
   const prev = { held: b.held, at: b.heldAt };
-  if (on) { b.held = 1; b.heldAt = new Date().toISOString().slice(0, 10); } else { delete b.held; delete b.heldAt; }
+  if (on) { b.held = 1; b.heldAt = localDayStr(); } else { delete b.held; delete b.heldAt; }
   budgetRedraw();
   if (PV) return;   // Eric previewing — show the motion, save nothing
   try {
@@ -901,7 +902,7 @@ async function holdPart(bi, pi, on) {
   const b = _d && Array.isArray(_d.budget) ? _d.budget[bi] : null, p = b && Array.isArray(b.lp) ? b.lp[pi] : null;
   if (!b || !p || b.done || !!p.held === !!on) return;
   const prev = { held: p.held, at: p.heldAt };
-  if (on) { p.held = 1; p.heldAt = new Date().toISOString().slice(0, 10); } else { delete p.held; delete p.heldAt; }
+  if (on) { p.held = 1; p.heldAt = localDayStr(); } else { delete p.held; delete p.heldAt; }
   budgetRedraw();
   if (PV) return;
   try {

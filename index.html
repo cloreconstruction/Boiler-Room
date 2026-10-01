@@ -2448,6 +2448,12 @@
   .mat-desc { font-weight: var(--fw7, 700); color: var(--ink-1); cursor: pointer; }   /* 👆 v7.21 — what was picked leads the row's line */
   .mat-pick2desc.armed { border: 2.5px solid var(--warn, #ffa657); }   /* 👆 v7.23 — ⚠ SURE? before it writes over other words */
   .mat-legend { font-size: var(--fs115, 11.5px); color: var(--ink-muted); margin: 0 0 8px; line-height: 1.5; }
+  /* 🔍 v7.63 — the search box at the top of the Build List, with the rest of the sorting plates */
+  .mat-search { position: relative; margin: 0 0 8px; }
+  .mat-search input { width: 100%; min-height: 44px; font-size: 16px; padding: 9px 44px 9px 12px; border: 2px solid var(--border); border-radius: 12px; }
+  .mat-search input:focus { border-color: var(--accent); }
+  .mat-search .mat-search-x { position: absolute; right: 4px; top: 4px; min-width: 40px; min-height: 36px; padding: 4px 8px; }
+  .mat-search-say b { color: var(--accent); }
   /* 📋 v6.91 — the Build List, round two. A light is an ICON over its LETTER: lit = the brass plate, the icon in full and a ✓
      in its corner (brightness + glyph + the word in its label — never colour alone); unlit = hollow, the icon dimmed. */
   .mat-box { min-width: 40px; min-height: 42px; padding: 2px 3px 1px; flex-direction: column; gap: 0; position: relative; }
@@ -4577,7 +4583,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.62 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.63 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -18861,6 +18867,37 @@ const MAT_STAGE_F = [
   ['old', '⏳ getting old', it => matOld(it)],   // ⏳ v7.25 — waited on him a week or more
   ['stuck', '🚧 stuck', it => matIsStuck(it)]];   // 🚧 v7.25 — cannot move until something happens
 function matStageOk(it) { const f = MAT_STAGE_F.find(x => x[0] === _matStageF); return !f || f[2](it); }
+// 🔍 v7.63 — A SEARCH BOX ON THE BUILD LIST. Eric: "in the build list i need a search bar to find items or categories at the top
+// with the rest of the sorting stuff." The words he types find a ROW (its name, what it is, its note, the homeowner's pick, its
+// SKU, its tags) or a whole CATEGORY (its name — then every row in it shows); the board narrows to what matches, every matching
+// category unfolds (a filter unfolds, v7.21), a line under the box counts what it found, and the box keeps his thumb through
+// every redraw (the crew card's search taught that). It rides WITH the 🏷 and working-list filters (all three narrow together)
+// and lets go when the board closes.
+let _matQ = '';
+function matQWords() { return String(_matQ || '').trim().toLowerCase(); }
+function matQOk(it, room) {
+  const q = matQWords(); if (!q) return true;
+  if (room && String(room.name || '').toLowerCase().includes(q)) return true;
+  return [it.n, it.desc, it.sel, it.pick, it.sku, ...matItemTags(it)].some(v => String(v || '').toLowerCase().includes(q));
+}
+function matSearchSet(v) {
+  const was = matQWords();
+  _matQ = String(v || '').slice(0, 80);
+  if (matQWords() && matQWords() !== was) _matRmShut = new Set();   // what matches should be SEEN, not folded away
+  renderMatMgr();
+  const b = $('matSearch'); if (b) { b.focus(); const n = b.value.length; try { b.setSelectionRange(n, n); } catch (e) {} }   // the box keeps his thumb through the redraw
+}
+function matSearchClear() { _matQ = ''; renderMatMgr(); const b = $('matSearch'); if (b) b.focus(); }
+function matSearchHtml() {
+  const q = matQWords();
+  let rows = 0, cats = 0;
+  if (q) (_matD.rooms || []).forEach(r => { const n = (r.items || []).filter(x => matQOk(x, r)).length; if (n) { rows += n; cats++; } });
+  return `<div class="mat-search" role="search">
+    <input type="search" id="matSearch" value="${esc(_matQ)}" placeholder="🔍 Find an item or a category…" aria-label="find an item or a category on this board" autocomplete="off" oninput="matSearchSet(this.value)">
+    ${q ? `<button type="button" class="btn-ghost req-x mat-search-x" onclick="matSearchClear()" aria-label="clear the search">✕</button>` : ''}
+    ${q ? `<div class="hint mat-search-say" style="margin: 4px 0 0;">${rows ? `🔍 <b>${rows} row${rows === 1 ? '' : 's'}</b> in ${cats} categor${cats === 1 ? 'y' : 'ies'} match “${esc(_matQ.trim())}”${_matTagF || _matStageF ? ' (with the filter below)' : ''}` : `🔍 nothing on this board matches “${esc(_matQ.trim())}”`} · ✕ clears it</div>` : ''}
+  </div>`;
+}
 function matTopBarHtml() {
   const all = _matD.rooms.flatMap(r => r.items || []), t = matTotals(all), anyBuy = all.some(matIsBuy);
   if (_matStageF && !all.some(matStageOk)) _matStageF = '';
@@ -19257,7 +19294,7 @@ async function openMaterials(i) {
   if (portalGuard()) return;
   // 🏢 v7.09 — Eric: "he should be able to click on Plans, Build List, and Journal." The board's files were always under
   // portalRoot() — the shared folder — so an office phone works the same board Eric does. (Field crew stop at portalGuard.)
-  _matIdx = i; _matEdit = ''; _matWhoFor = ''; _matRmTools = -1; _matHelp = false; _matDirty = false; _matArm = ''; matLightDisarm(); _matTagF = ''; _matStageF = ''; _matPaste = false; _matPasteRows = null; _matPasteText = '';
+  _matIdx = i; _matEdit = ''; _matWhoFor = ''; _matRmTools = -1; _matHelp = false; _matDirty = false; _matArm = ''; matLightDisarm(); _matTagF = ''; _matStageF = ''; _matQ = ''; _matPaste = false; _matPasteRows = null; _matPasteText = '';
   const c = _portalIdx.clients[i];
   toast('⏳ Loading the board…');
   matTplLoad();
@@ -19289,7 +19326,8 @@ function renderMatMgr() {
       <button type="button" class="btn-ghost req-x x-plate x-small" style="min-width: 44px;" onclick="matClose()" aria-label="close the board" title="close the board">✕</button>
     </span></h3>
     ${_matHistShow ? matHistHtml() : ''}
-    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client · <a href="javascript:void(0)" style="color: var(--accent); font-weight: var(--fw7, 700); text-decoration: none; white-space: nowrap;" onclick="_matHelp = !_matHelp; renderMatMgr()" aria-expanded="${_matHelp}">${_matHelp ? '▾' : '▸'} ? how this works</a>${_matHelp ? `<span id="matHelpBox" style="display: block; margin-top: 6px; line-height: 1.55;">Tap a <b>light</b>, then tap it <b>again</b> — the first tap only asks ⚠ sure? and a line under the row says what will change. Lighting one lights every one before it; turning one off turns off every one after it. Something to buy: 👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed. A checklist item: 👷 on somebody's list · 📅 scheduled · ✅ done — 👷 is a name you pick, so it never lights by itself. A row's <b>steps</b> are in its window — tap the name. <b>⚠ 1st</b> sends a row to the top of its category — the rest waits on it. <b>⇄</b> at the end of every row turns it into a checklist item, or back into something to buy — a row that already has progress asks ⚠ sure? first. Tap a <b>name</b> to open the row; <b>✎ edit</b> (or hold the name) opens its window. <b>🚧 stuck</b> marks a row that cannot move until something happens — say what in its band. <b>⏳</b> cubes count the days a row has waited on you (one at 3 days, two at 7, three at 14) — an ordered row waits quietly until its expected arrival has passed.</span>` : ''}` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
+    <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client · <a href="javascript:void(0)" style="color: var(--accent); font-weight: var(--fw7, 700); text-decoration: none; white-space: nowrap;" onclick="_matHelp = !_matHelp; renderMatMgr()" aria-expanded="${_matHelp}">${_matHelp ? '▾' : '▸'} ? how this works</a>${_matHelp ? `<span id="matHelpBox" style="display: block; margin-top: 6px; line-height: 1.55;">Tap a <b>light</b>, then tap it <b>again</b> — the first tap only asks ⚠ sure? and a line under the row says what will change. Lighting one lights every one before it; turning one off turns off every one after it. Something to buy: 👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed. A checklist item: 👷 on somebody's list · 📅 scheduled · ✅ done — 👷 is a name you pick, so it never lights by itself. A row's <b>steps</b> are in its window — tap the name. <b>⚠ 1st</b> sends a row to the top of its category — the rest waits on it. <b>⇄</b> at the end of every row turns it into a checklist item, or back into something to buy — a row that already has progress asks ⚠ sure? first. Tap a <b>name</b> to open the row; <b>✎ edit</b> (or hold the name) opens its window. <b>🚧 stuck</b> marks a row that cannot move until something happens — say what in its band. <b>⏳</b> cubes count the days a row has waited on you (one at 3 days, two at 7, three at 14) — an ordered row waits quietly until its expected arrival has passed. <b>🔍 Find</b> — type a word in the box at the top: it finds a row by its name, what it is, its note, the pick, its SKU or a tag, or a whole category by its name; the board narrows to what matches, ✕ clears it.</span>` : ''}` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
+    ${_matD.rooms.length ? matSearchHtml() : ''}
     ${(() => { // 🏷 v5.80 — the sort: tap a tag, see that trade's list (the electrician's list)
       const used = {};
       _matD.rooms.forEach(r => (r.items || []).forEach(x => matItemTags(x).forEach(tg => { used[tg] = (used[tg] || 0) + 1; })));
@@ -19302,9 +19340,9 @@ function renderMatMgr() {
       </div>`; })()}
     ${matTopBarHtml()}
     ${_matD.rooms.map(((r, ri) => {
-      const its = (r.items || []).filter(x => (!_matTagF || matItemTags(x).includes(_matTagF)) && matStageOk(x))   // 📋 v6.89 — the trade AND the stage he asked for
+      const its = (r.items || []).filter(x => (!_matTagF || matItemTags(x).includes(_matTagF)) && matStageOk(x) && matQOk(x, r))   // 📋 v6.89 — the trade AND the stage he asked for · 🔍 v7.63 — and the words he typed
         .sort((a, b) => (matItemDone(a) - matItemDone(b)) || (matIsFirst(b) - matIsFirst(a)));   // ⚠ v6.91 — a FIRST row rides at the top of its category (a stable sort: the rest keep their places) · ✓ v7.19 — a finished row sinks to the bottom
-      if ((_matTagF || _matStageF) && !its.length) return ''; // this category has nothing for that trade or that stage
+      if ((_matTagF || _matStageF || matQWords()) && !its.length) return ''; // this category has nothing for that trade, that stage or those words
       const doneN = its.filter(matItemDone).length;
       const pct = its.length ? Math.round(doneN / its.length * 100) : 0;
       const shut = _matRmShut.has(ri);
@@ -25147,7 +25185,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.62';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.63';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

@@ -15,6 +15,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath, pathToFileURL
   const shipped = fs.readFileSync(path.join(repo, 'netlify', 'functions', 'client-portal.mjs'), 'utf8');
   let pass = 0, fail = 0;
   const ok = (n, c, x) => { if (c) { pass++; console.log('  ok  ' + n); } else { fail++; console.log('  FAIL ' + n + (x ? ' -> ' + x : '')); } };
+  // the day on their card is ALASKA's (the function stamps it with Intl; after 4 PM in Kenai the UTC day is already tomorrow — the
+  // full run of 2026-09-30 found it at 00:14 UTC); the board's own stamps use the PC's local day
+  const todayAK = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Anchorage', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
 
   console.log('— ☁ the homeowner\'s door: {c, hold} —');
@@ -47,7 +50,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath, pathToFileURL
   ok('hold on an OFFERED line: the page line gets held + heldAt (today), one review-pile entry names it with its number, the office bell is asked', await (async () => {
     const r = await post({ c: 'test-1234', hold: { n: 'Demo', on: true } });
     const b = pageOf().budget.find(x => x.n === 'Demo'), a = asksOf();
-    return r.status === 200 && b.held === 1 && b.heldAt === today && b.later === 1 && a.length === 1 && a[0].pk === 'hold:Demo' && a[0].text === '⏳ SAVED FOR LATER — Demo ($6,000)' && a[0].tag === 'General' && st.rings === 1;
+    return r.status === 200 && b.held === 1 && b.heldAt === todayAK && b.later === 1 && a.length === 1 && a[0].pk === 'hold:Demo' && a[0].text === '⏳ SAVED FOR LATER — Demo ($6,000)' && a[0].tag === 'General' && st.rings === 1;
   })(), JSON.stringify([pageOf().budget[0], asksOf()]));
   ok('the same tap again changes nothing and writes nothing', await (async () => { const n = st.ups.length; const r = await post({ c: 'test-1234', hold: { n: 'Demo', on: true } }); return r.status === 200 && st.ups.length === n && st.rings === 1; })());
   ok('↩ back in the plan: held comes off, the SAME pile entry flips (never a second), counting the change of mind', await (async () => {
@@ -58,7 +61,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath, pathToFileURL
   ok('a part: {p} holds that part alone — its own pile entry, named line: part, with the part\'s number', await (async () => {
     const r = await post({ c: 'test-1234', hold: { n: 'Vanities and sinks', on: true, p: 0 } });
     const b = pageOf().budget.find(x => x.n === 'Vanities and sinks'), a = asksOf();
-    return r.status === 200 && b.lp[0].held === 1 && b.lp[0].heldAt === today && !('held' in b) && a[0].pk === 'hold:Vanities and sinks#0' && a[0].text === '⏳ SAVED FOR LATER — Vanities and sinks: Second bath vanity ($1,680)';
+    return r.status === 200 && b.lp[0].held === 1 && b.lp[0].heldAt === todayAK && !('held' in b) && a[0].pk === 'hold:Vanities and sinks#0' && a[0].text === '⏳ SAVED FOR LATER — Vanities and sinks: Second bath vanity ($1,680)';
   })(), JSON.stringify(asksOf()));
   ok('a line with choices holds whole, and the entry carries the planned (or picked) option\'s number', await (async () => {
     const r = await post({ c: 'test-1234', hold: { n: 'Flooring', on: true } });

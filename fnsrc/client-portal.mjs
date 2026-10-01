@@ -336,7 +336,9 @@ const portal = async (req, context) => {
       }
       if (!!target.held !== on) {
         const now = new Date().toISOString();
-        if (on) { target.held = 1; target.heldAt = now.slice(0, 10); } else { delete target.held; delete target.heldAt; }
+        // the DAY on their card is Alaska's, not the cloud's: after 4 PM in Kenai the UTC day is already tomorrow
+        const akDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Anchorage', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        if (on) { target.held = 1; target.heldAt = akDay; } else { delete target.held; delete target.heldAt; }
         await up(t, ppath, JSON.stringify(pg, null, 1));
         const apath = `${BASE}/asks-${c}.json`;
         let arr = [];
