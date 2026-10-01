@@ -39,12 +39,13 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   console.log('— made in a minute —');
   ok('the words: "1.5 weeks" → 11 days (rounded), "2.5 wk" → 18, "3-4 days" → the bigger one, "2" → 2, "1 day" → 1, nothing → 1', await page.evaluate(() => [schedDaysOf('1.5 weeks'), schedDaysOf('2.5 wk'), schedDaysOf('3-4 days'), schedDaysOf('2'), schedDaysOf('1 day'), schedDaysOf('')].join('|') === '11|18|4|2|1|1'));
-  ok('a pasted list — one step a line, the days last — lands as steps, one after the other, each starting the day after the one before ends; who is read off the words (plumbing → sub, inspection → inspection, move in → homeowner, the rest → crew)', await (async () => {
+  // 🗓 v7.76 — the days are WORK days: a week is as many days as that kind of step works (a sub's five, the crew's four), and a step
+  // starts on its first work day after the one before ends (the exact days are pinned on fixed dates in _test776)
+  const packed = job => page.evaluate(job => { const st = schedSteps(job); let prev = ''; return st.every(s => { const want = schedWorkOn(s.who, prev ? schedAddDays(prev, 1) : localDay(new Date()), 1); prev = schedEnd(s); return s.start === want; }); }, job);
+  ok('a pasted list — one step a line, the days last — lands as steps, one after the other, each starting on its first work day after the one before ends; who is read off the words (plumbing → sub, inspection → inspection, move in → homeowner, the rest → crew)', await (async () => {
     const n = await page.evaluate(() => schedPasteText('Oak House', 'plumbing 1.5 weeks\nheat/ducting 2-3 days\ninsulation 3-4 days\nsheetrock 2.5 weeks\nrough-in inspection 1 day\nfloors, doors, trim 2 weeks\nmove in'));
     const st = await steps('Oak House');
-    const d0 = st[0].start;
-    const starts = await page.evaluate(d0 => { const st = schedSteps('Oak House'); let d = d0, okk = true; st.forEach(s => { if (s.start !== d) okk = false; d = schedAddDays(d, s.days); }); return okk; }, d0);
-    return n === 7 && st.map(s => s.n).join('|') === 'plumbing|heat/ducting|insulation|sheetrock|rough-in inspection|floors, doors, trim|move in' && st.map(s => s.days).join('|') === '11|3|4|18|1|14|1' && st.map(s => s.who).join('|') === 'sub|sub|sub|sub|inspection|crew|homeowner' && d0 === (await plus(0)) && starts;
+    return n === 7 && st.map(s => s.n).join('|') === 'plumbing|heat/ducting|insulation|sheetrock|rough-in inspection|floors, doors, trim|move in' && st.map(s => s.days).join('|') === '8|3|4|13|1|8|1' && st.map(s => s.who).join('|') === 'sub|sub|sub|sub|inspection|crew|homeowner' && await packed('Oak House');
   })(), JSON.stringify(await steps('Oak House')));
   ok('the whole plan is one scheduleSave away (prefs.sched — his own prefs, synced like everything else)', await page.evaluate(() => _saves > 0 && prefs.sched.jobs['Oak House'].steps.length === 7));
   ok('➕ Add a step typed in the window lands AFTER the last step, with its days and who', await (async () => {
@@ -52,7 +53,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await page.evaluate(() => { _schedAdd = true; renderSchedule(); $('schAddN').value = 'clean'; $('schAddD').value = '2 days'; $('schAddW').value = 'crew'; schedAddTap('Oak House'); });
     const st = await steps('Oak House');
     const last = st[st.length - 1], before = st[st.length - 2];
-    return st.length === 8 && last.n === 'clean' && last.days === 2 && last.who === 'crew' && last.start === await page.evaluate(b => schedAddDays(b.start, b.days), before) && await page.evaluate(() => !!$('schAddN'));   // the add row stays open for the next one
+    return st.length === 8 && last.n === 'clean' && last.days === 2 && last.who === 'crew' && before.n === 'move in' && await packed('Oak House') && await page.evaluate(() => !!$('schAddN'));   // the add row stays open for the next one (v7.76: its first work day after the last step ends)
   })(), JSON.stringify(await steps('Oak House')));
   ok('📐 the standard sequence fills an EMPTY job only (22 steps in build order); a job that has steps refuses in words', await (async () => {
     const n1 = await page.evaluate(() => schedFromTemplate('Pine Cabin'));
@@ -62,25 +63,30 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   })());
 
   console.log('— moved in one tap —');
-  ok('a move on a step takes that step AND every step that starts on or after it by the same days; the steps before it stay', await (async () => {
+  // 🗓 v7.76 — a move is counted in WORK days, and what is taken along keeps its place behind the step before it (fixed dates: _test776)
+  const gaps = job => page.evaluate(job => { const st = schedSorted(job); return st.map((s, i) => i ? schedLag(s.who, schedEnd(st[i - 1]), s.start) : 0).join('|'); }, job);
+  ok('a move on a step takes that step AND every step that starts on or after it — three work days later, each still right behind the one before it; the steps before it stay', await (async () => {
     const before = await steps('Oak House');
+    const want = await page.evaluate(() => { const s = schedSteps('Oak House')[2]; return schedShift({ who: s.who, start: s.start }, 0, 3).start; });
     const moved = await page.evaluate(() => { const st = schedSteps('Oak House'); return schedMove('Oak House', st[2].id, 3).map(s => s.n); });
     const after = await steps('Oak House');
-    return moved.join('|') === 'insulation|sheetrock|rough-in inspection|floors, doors, trim|move in|clean' && after.slice(0, 2).every((s, i) => s.start === before[i].start) && await page.evaluate(b => { const st = schedSteps('Oak House'); return st.slice(2).every((s, i) => s.start === schedAddDays(b[i + 2].start, 3)); }, before);
+    return moved.join('|') === 'insulation|sheetrock|rough-in inspection|floors, doors, trim|move in|clean' && after.slice(0, 2).every((s, i) => s.start === before[i].start) && after[2].start === want && want > before[2].start
+      && await page.evaluate(() => { const st = schedSteps('Oak House'); return st.slice(3).every((s, i) => s.start === schedWorkOn(s.who, schedAddDays(schedEnd(st[i + 2]), 1), 1)); });   // from the moved step on, the chain is as tight as it was
   })());
   ok('a ✓ done step never moves — even when it sits inside the moved range', await (async () => {
     await page.evaluate(() => { const st = schedSteps('Oak House'); schedDoneToggle('Oak House', st[3].id); });   // sheetrock done
     const before = await steps('Oak House');
-    await page.evaluate(() => { const st = schedSteps('Oak House'); schedMove('Oak House', st[2].id, 7); });
+    await page.evaluate(() => { const st = schedSteps('Oak House'); schedMoveBy('Oak House', st[2].id, 1, 0); });   // one week later
     const after = await steps('Oak House');
-    return before[3].done === today && after[3].start === before[3].start && after[2].start === await page.evaluate(b => schedAddDays(b, 7), before[2].start) && after[4].start === await page.evaluate(b => schedAddDays(b, 7), before[4].start);
+    return before[3].done === today && after[3].start === before[3].start && after[2].start > before[2].start && after[2].start === await page.evaluate(b => schedShift({ who: b.who, start: b.start }, 1, 0).start, before[2]) && after[4].start > before[4].start;
   })());
-  ok('a typed start day is a move by the difference — what follows comes along', await (async () => {
-    const before = await steps('Oak House');
+  ok('a typed start day moves the step to that day (its next work day when the crew is off) — what follows comes along, in the same order with the same gaps', await (async () => {
+    const before = await steps('Oak House'), g0 = await gaps('Oak House');
     const want = await page.evaluate(b => schedAddDays(b, 5), before[5].start);
     await page.evaluate(w => { const st = schedSteps('Oak House'); schedStartSet('Oak House', st[5].id, w); }, want);
     const after = await steps('Oak House');
-    return after[5].start === want && after[6].start === await page.evaluate(b => schedAddDays(b, 5), before[6].start) && after[0].start === before[0].start;
+    return after[5].start === await page.evaluate(w => schedWorkOn('crew', w, 1), want) && after[6].start > before[6].start && after[7].start > before[7].start && after[0].start === before[0].start
+      && (await gaps('Oak House')).split('|').slice(6).join('|') === g0.split('|').slice(6).join('|');   // the two after it are as far behind it as they were
   })());
   ok('⇄ the whole job a week later moves every open step and leaves the done one', await (async () => {
     const before = await steps('Oak House');
@@ -88,7 +94,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const after = await steps('Oak House');
     return after.every((s, i) => s.done ? s.start === before[i].start : true) && await page.evaluate(b => schedSteps('Oak House').every((s, i) => s.done || s.start === schedAddDays(b[i].start, 7)), before);
   })());
-  ok('the toast says what moved and when the last step now ends', await page.evaluate(() => { _said.length = 0; const st = schedSteps('Oak House'); schedMoveTap('Oak House', st[5].id, 1); return _said.some(s => /^📅 floors, doors, trim and 2 steps after it moved 1 day later · the last step ends /.test(s)); }), await page.evaluate(() => _said.join(' | ')));
+  ok('the toast says what moved and when the last step now ends', await page.evaluate(() => { _said.length = 0; const st = schedSteps('Oak House'); schedMoveTap('Oak House', st[5].id, 1); return _said.some(s => /^📅 floors, doors, trim moved 1 work day later · it starts \w{3} \w{3} \d+ · 2 linked steps after it moved along · the last step ends /.test(s)); }), await page.evaluate(() => _said.join(' | ')));
   ok('✕ Delete is two taps (⚠ SURE?), and the first tap lets go by itself', await (async () => {
     await page.evaluate(() => { const st = schedSteps('Oak House'); _schedOpen = st[7].id; renderSchedule(); });
     const n0 = (await steps('Oak House')).length;
@@ -110,7 +116,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('a bar sits where its days are: the first step starts at the left of its week, a later step further right, a sub step is outlined and the move-in a round mark, the done step dimmed', await page.evaluate(() => { const bars = [...$('revBox').querySelectorAll('.sch-bar')]; const l = b => parseFloat(b.style.left); return l(bars[0]) < l(bars[1]) && l(bars[1]) < l(bars[5]) && bars[0].classList.contains('sub') && bars[6].classList.contains('mark') && bars[2].classList.contains('done') && bars[2].textContent === 'sheetrock' && parseFloat(bars[0].style.width) > 0; }));
   ok('a tap on a row opens its editor UNDER the chart — the step, its days, its start, who, a note, the three moves, ✓ Done, ✕ Delete', await (async () => {
     await page.evaluate(() => $('revBox').querySelectorAll('.sch-lab')[1].click());
-    return await page.evaluate(() => { const e = $('schEdit'); const chart = $('revBox').querySelector('.sch-chart'); return !!e && $('schN').value === 'heat/ducting' && $('schDays').value === '3' && $('schStart').type === 'date' && !!$('schWho') && !!$('schNote') && [...e.querySelectorAll('button')].map(b => b.textContent.trim()).join('|') === '🔗 LINKED — a move takes every later step along · tap to unlock this one|◀ 1 day earlier|1 day later ▶|1 week later ▶▶|✓ Done|✕ Delete this step|▴ Fold' /* v7.73 — the 🔗 / 🔓 switch leads the moves */ && chart.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING && !chart.contains(e) && $('revBox').querySelectorAll('.sch-lab')[1].classList.contains('open'); });
+    return await page.evaluate(() => { const e = $('schEdit'); const chart = $('revBox').querySelector('.sch-chart'); return !!e && $('schN').value === 'heat/ducting' && $('schDays').value === '3' && $('schStart').type === 'date' && !!$('schWho') && !!$('schNote') && [...e.querySelectorAll('button')].map(b => b.textContent.trim()).join('|') === '🔗 LINKED — a move takes the linked steps after it along · tap to unlink this one|🔗 Stay linked only to everything after this step|🔓 Unlink all|🔗 Relink all|◀ 1 work day earlier|1 work day later ▶|1 week later ▶▶|✓ Done|✕ Delete this step|▴ Fold' /* v7.75 — the links lead the moves; v7.76 — a sub's step moves by work days */ && /^Work days \(Mon–Fri\)$/.test($('schDaysL').textContent) && chart.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING && !chart.contains(e) && $('revBox').querySelectorAll('.sch-lab')[1].classList.contains('open'); });
   })());
   ok('a late step (its last day before today, not done) is said in words — ⚠ LATE on the row and ⚠ n LATE on the band', await (async () => {
     await page.evaluate(() => { const st = schedSteps('Oak House'); schedMoveJob('Oak House', -40); openSchedule('Oak House'); });
@@ -123,8 +129,8 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return await page.evaluate(() => { const bands = [...$('revBox').querySelectorAll('.sch-band')]; const wk = bands.map(b => b.querySelector('.sch-head').children.length); return bands.length === 2 && bands.map(b => b.dataset.job).join('|') === 'Oak House|Pine Cabin' && wk[0] === wk[1] && /every job with a plan/.test($('schedNow').textContent) && !$('revBox').querySelector('.sch-tools'); });
   })());
   ok('the crew on two jobs in one week is said in words on both bands and the week heading wears ⚠', await (async () => {
-    // Pine Cabin's Demo (crew, 5 days) starts today; Oak House's crew step moved onto the same week
-    await page.evaluate(() => { const st = schedSteps('Oak House'); const f = st.find(s => s.n === 'floors, doors, trim'); schedMove('Oak House', f.id, Math.round((schedDate(localDay(new Date())) - schedDate(f.start)) / 86400000)); openSchedule('*'); });
+    // Pine Cabin's Demo (crew, 4 work days) starts on the crew's first work day from today; Oak House's crew step is put on the same day
+    await page.evaluate(() => { const st = schedSteps('Oak House'); const f = st.find(s => s.n === 'floors, doors, trim'); schedSet('Oak House', f.id, 'start', localDay(new Date())); openSchedule('*'); });
     return await page.evaluate(() => { const bands = [...$('revBox').querySelectorAll('.sch-band')]; const c = bands.map(b => (b.querySelector('.sch-clash') || { textContent: '' }).textContent); return /⚠ The crew is on two jobs at once the weeks? of .*\(Pine Cabin\)/.test(c[0]) && /\(Oak House\)/.test(c[1]) && bands.every(b => b.querySelector('.sch-head .sch-wk-clash')); });
   })(), await page.evaluate(() => [...$('revBox').querySelectorAll('.sch-clash')].map(c => c.textContent).join(' | ')));
   ok('👷 CREW ONLY narrows every band to the crew\'s steps; 🔧 SUBS AND THE REST to the others; EVERYONE brings them all back', await page.evaluate(() => { schedWho('crew'); const a = [...$('revBox').querySelectorAll('.sch-band')].map(b => [...b.querySelectorAll('.sch-lab b')].map(x => x.textContent).join('|')); schedWho('sub'); const s = [...$('revBox').querySelectorAll('.sch-band')][0].querySelectorAll('.sch-lab').length; schedWho(''); const e = $('revBox').querySelectorAll('.sch-band')[0].querySelectorAll('.sch-lab').length; return a[0] === 'floors, doors, trim' && s === 6 && e === 7; }));

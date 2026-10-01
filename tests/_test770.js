@@ -105,7 +105,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   })());
   ok('a tap on a row still opens its editor, and a move still moves the plan — the width is only how it is drawn (nothing of it in the plan, the crew\'s copy or a page)', await (async () => {
     await page.evaluate(() => { $('schedJob').value = 'Oak House'; $('schedJob').dispatchEvent(new Event('change')); }); await page.waitForTimeout(120);
-    const r = await page.evaluate(() => { const st = schedSorted('Oak House'); const was = st[1].start; document.querySelectorAll('#schedBox .sch-lab')[1].click(); const ed = !!$('schEdit') || !!document.querySelector('#schedBox .sch-edit'); schedMove('Oak House', st[1].id, 7); const moved = schedSorted('Oak House').find(s => s.id === st[1].id).start === schedAddDays(was, 7); schedMove('Oak House', st[1].id, -7);
+    const r = await page.evaluate(() => { const st = schedSorted('Oak House'); const was = st[1].start; document.querySelectorAll('#schedBox .sch-lab')[1].click(); const ed = !!$('schEdit') || !!document.querySelector('#schedBox .sch-edit'); const want = schedShift({ who: st[1].who, start: was }, 1, 0).start; schedMoveBy('Oak House', st[1].id, 1, 0); const moved = want > was && schedSorted('Oak House').find(s => s.id === st[1].id).start === want; schedMoveBy('Oak House', st[1].id, -1, 0);   /* v7.76 — a week later, the same weekday */
       const pub = JSON.stringify(schedPublish()), cut = JSON.stringify(schedPageCut('Oak House')); clearTimeout(_schedPubT); return { ed, moved, clean: !/zoom|wkw/i.test(pub) && !/zoom|wkw/i.test(cut) && !/zoom|wkw/i.test(JSON.stringify(prefs.sched)) }; });
     return r.ed && r.moved && r.clean;
   })());

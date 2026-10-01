@@ -49,7 +49,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     clearTimeout(_subsPubT);
     // the plan: the first step already done, the second starts today
     schedPasteText('Oak House', 'demo 3 days\nplumbing rough-in 1.5 weeks\nelectrical rough-in 1 week\nrough-in inspection 1 day\nfloors, doors, trim 2 weeks');
-    schedMoveJob('Oak House', -3); const st = schedSteps('Oak House'); schedDoneToggle('Oak House', st[0].id);
+    // (v7.76 — the days are work days: the done step is put two weeks back, the second on the sub's latest work day up to today)
+    const ids = schedSteps('Oak House').map(s => s.id), t0 = localDay(new Date());
+    schedSet('Oak House', ids[0], 'start', schedAddDays(t0, -14)); schedDoneToggle('Oak House', ids[0]);
+    schedSet('Oak House', ids[1], 'start', schedWorkOn('sub', t0, -1));
     clearTimeout(_schedPubT);
   });
   await page.evaluate(async () => { _portalIdx = JSON.parse(_dbxFiles[portalRoot() + '/index.json']); });

@@ -37,13 +37,17 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     localStorage.removeItem('daylog-sched-shade'); localStorage.removeItem('daylog-sched-zoom'); _schedShade = { we: false, fr: false, ho: false }; _schedZoom = 1;
     const mon = schedAddDays(schedMonday(localDay(new Date())), 7), d = n => schedAddDays(mon, n), put = (job, n, start, days, who, done) => schedPlan(job, true).steps.push(schedClean({ n, start, days, who, done: done || '' }));
     window._mon = mon;
-    put('Oak House', 'mon to fri', d(0), 5, 'crew');            // Mon → Fri
-    put('Oak House', 'sat to sun', d(5), 2, 'crew');            // Sat → Sun
+    // 🗓 v7.76 — the days are WORK days: a crew, sub or inspection step never starts or ends on a day it does not work, so the row's
+    // ⚠ is for the steps that count EVERY day (no "who", or the homeowner's) — those can still sit on a weekend, a Friday, a holiday
+    put('Oak House', 'mon to fri', d(0), 5, '');                // Mon → Fri
+    put('Oak House', 'sat to sun', d(5), 2, '');                // Sat → Sun
     put('Oak House', 'tue to thu', d(8), 3, 'sub');             // Tue → Thu the week after: touches no shaded day
-    put('Oak House', 'inspection on a sat', d(12), 1, 'inspection');   // a one-day mark on a Saturday
-    put('Oak House', 'wed to mon', d(16), 6, 'crew');           // Wed → Mon: runs THROUGH a weekend, starts and ends on working days
-    put('Oak House', 'done on a sunday', d(6), 1, 'crew', d(6));   // done: never flagged
-    put('Pine Cabin', 'thu to fri', d(3), 2, 'crew');
+    put('Oak House', 'move in on a sat', d(12), 1, 'homeowner');   // a one-day mark on a Saturday
+    put('Oak House', 'wed to mon', d(16), 6, '');               // Wed → Mon: runs THROUGH a weekend, starts and ends on working days
+    put('Oak House', 'done on a sunday', d(6), 1, '', d(6));    // done: never flagged
+    put('Oak House', 'crew thu to tue', d(24), 3, 'crew');      // the crew's Thu, Mon, Tue: it runs over its Friday and the weekend — never flagged, those days are not its own
+    put('Oak House', 'sub mon to fri', d(28), 5, 'sub');        // a sub works its Friday: not flagged when Fridays are shaded
+    put('Pine Cabin', 'thu to fri', d(3), 2, '');
     renderJobSelects(); closePanels(); renderAll(); clearTimeout(_schedPubT); window._saves = 0; window._ups.length = 0; _said.length = 0;
     openSchedule('Oak House');
   });
@@ -72,7 +76,8 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return cs.pointerEvents === 'none' && cs.position === 'absolute' && alpha > 0.05 && alpha < 0.6 && !!top && (top === bar || bar.contains(top) || top.classList.contains('sch-lane')) && !!(bar.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING); }));
   ok('in words, under the plates: what is shaded — and a step says so on its own row: starts Sat · ends Sun, a one-day mark "on a Sat"; a step that only runs THROUGH a weekend, one that touches none, and a DONE one say nothing', await (async () => {
     const r = await rows(), say = await page.evaluate(() => $('schShadeSay') ? $('schShadeSay').textContent.trim() : '');
-    return /^▒ Shaded on the chart: weekends\. A step that starts or ends on a shaded day says so on its row\.$/.test(say) && r['sat to sun'] === '⚠ starts Sat · ends Sun' && r['inspection on a sat'] === '⚠ on a Sat' && r['mon to fri'] === '' && r['tue to thu'] === '' && r['wed to mon'] === '' && r['done on a sunday'] === '';
+    return /^▒ Shaded on the chart: weekends\. A step that counts every day \(🏠 homeowner, or no “who”\) and starts or ends on a shaded day says so on its row\.$/.test(say) && r['sat to sun'] === '⚠ starts Sat · ends Sun' && r['move in on a sat'] === '⚠ on a Sat' && r['mon to fri'] === '' && r['tue to thu'] === '' && r['wed to mon'] === '' && r['done on a sunday'] === ''
+      && r['crew thu to tue'] === '' && r['sub mon to fri'] === '';   // v7.76 — a step with a work week is never flagged
   })(), JSON.stringify(await rows()));
   ok('the job\'s heading counts them: ⚠ 2 on a shaded day', await page.evaluate(() => { const n = document.querySelector('#schedBox .sch-band-h .sch-off-n'); return !!n && n.textContent.trim() === '⚠ 2 on a shaded day'; }));
 
@@ -81,7 +86,8 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await page.evaluate(() => $('schShade').querySelector('[data-k="fr"]').click()); await page.waitForTimeout(120);
     const f = await bands('fr'), w = await bands('we'), r = await rows();
     const look = await page.evaluate(() => { const a = getComputedStyle(document.querySelector('#schedBox .sch-off.fr')), b = getComputedStyle(document.querySelector('#schedBox .sch-off.we')); return a.backgroundColor !== b.backgroundColor && a.borderLeftStyle === 'dashed' && b.borderLeftStyle === 'solid' && /weekends · Fridays\./.test($('schShadeSay').textContent); });
-    return f.length === weeks && f.every((x, i) => Math.abs(x.day - (i * 7 + 4)) < 0.15 && Math.abs(x.days - 1) < 0.15 && x.t === 'Friday') && w.length === weeks && look && r['mon to fri'] === '⚠ ends Fri' && r['sat to sun'] === '⚠ starts Sat · ends Sun' && r['tue to thu'] === '';
+    return f.length === weeks && f.every((x, i) => Math.abs(x.day - (i * 7 + 4)) < 0.15 && Math.abs(x.days - 1) < 0.15 && x.t === 'Friday') && w.length === weeks && look && r['mon to fri'] === '⚠ ends Fri' && r['sat to sun'] === '⚠ starts Sat · ends Sun' && r['tue to thu'] === ''
+      && r['sub mon to fri'] === '' && r['crew thu to tue'] === '';   // v7.76 — the sub is at work on its Friday; the crew's step only runs across one
   })(), JSON.stringify(await rows()));
   ok('Weekends off again, Fridays stay: each plate is its own switch', await (async () => {
     await page.evaluate(() => $('schShade').querySelector('[data-k="we"]').click()); await page.waitForTimeout(120);
@@ -94,7 +100,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return Object.keys(a).sort().join(',') === '2026-01-01,2026-05-25,2026-07-04,2026-09-07,2026-11-26,2026-12-25' && a['2026-11-26'] === 'Thanksgiving' && a['2026-05-25'] === 'Memorial Day' && a['2026-09-07'] === 'Labor Day'
       && Object.keys(b).sort().join(',') === '2027-01-01,2027-05-31,2027-07-04,2027-09-06,2027-11-25,2027-12-25' && Object.keys(c).sort().join(',') === '2028-01-01,2028-05-29,2028-07-04,2028-09-04,2028-11-23,2028-12-25' && schedHolidayOf('2026-11-27') === '' && schedHolidayOf('nope') === ''; }));
   // the next holiday from the anchor Monday: a step is put right on it, so it is in view whenever this runs
-  const hol = await page.evaluate(() => { let day = schedAddDays(window._mon, 21), name = ''; for (let i = 0; i < 400 && !name; i++) { name = schedHolidayOf(day); if (!name) day = schedAddDays(day, 1); } const p = schedPlan('Oak House', true); p.steps.push(schedClean({ n: 'starts on the holiday', start: day, days: 3, who: 'crew' })); p.steps.push(schedClean({ n: 'ends on the holiday', start: schedAddDays(day, -2), days: 3, who: 'sub' })); renderSchedule(true); return { day, name, word: schedDayWord(day) }; });
+  const hol = await page.evaluate(() => { let day = schedAddDays(window._mon, 21), name = ''; for (let i = 0; i < 400 && !name; i++) { name = schedHolidayOf(day); if (!name) day = schedAddDays(day, 1); } const p = schedPlan('Oak House', true); p.steps.push(schedClean({ n: 'starts on the holiday', start: day, days: 3, who: '' })); p.steps.push(schedClean({ n: 'ends on the holiday', start: schedAddDays(day, -2), days: 3, who: '' }));   /* (steps that count every day — v7.76) */ renderSchedule(true); return { day, name, word: schedDayWord(day) }; });
   await page.waitForTimeout(150);
   ok('☑ Holidays: the holiday in view gets its own column — hatched, one day wide, on its day — and the words under the plates NAME it with its date; a step that starts or ends on it says so', await (async () => {
     await page.evaluate(() => { $('schShade').querySelector('[data-k="fr"]').click(); $('schShade').querySelector('[data-k="ho"]').click(); }); await page.waitForTimeout(150);
@@ -126,7 +132,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await page.evaluate(() => { $('schedJob').value = 'Oak House'; $('schedJob').dispatchEvent(new Event('change')); }); await page.waitForTimeout(120);
     return r.length === 2 && r.every(x => x.we === x.wk && x.fr === x.wk) && /⚠ \d+ on a shaded day/.test(r[0].n) && r[1].n === '⚠ 1 on a shaded day';
   })());
-  ok('the plan is not touched: no step moved, the days are still calendar days, a row tap still opens its editor through the column, and one day later takes the flag off the Saturday step\'s start', await (async () => {
+  ok('the plan is not touched: no step moved, no day count changed, a row tap still opens its editor through the column, and two days later takes the flag off the Saturday step\'s start', await (async () => {
     const before = await page.evaluate(() => JSON.stringify(schedSorted('Oak House').map(s => [s.n, s.start, s.days])));
     await page.evaluate(() => { const b = [...document.querySelectorAll('#schedBox .sch-bar')].find(x => x.textContent.trim() === 'sat to sun'); b.parentElement.click(); }); await page.waitForTimeout(120);
     const ed = await page.evaluate(() => !!document.querySelector('#schedBox .sch-edit'));
@@ -151,7 +157,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     localStorage.setItem('daylog-crew-sched', JSON.stringify({ jobs: { 'Oak House': { steps: [{ id: 's1', n: 'framing', days: 6, who: 'crew', start: iso(0), done: '' }] } } }));
     localStorage.setItem('daylog-dbx', JSON.stringify({ appKey: 'k', refreshToken: 'test-token', accessToken: 'a', expiresAt: Date.now() + 3600000 })); });
   await page.reload(); await page.waitForTimeout(900); await stub();
-  ok('a crew phone has the plates too: its own switches on its own screen, the Mon → Sat step says ends Sat, nothing written', await (async () => {
+  ok('a crew phone has the plates too: its own switches on its own screen, the Mon → Sat step of a copy sent BEFORE v7.76 (calendar days, read as it was written) says ends Sat, nothing written', await (async () => {
     await page.evaluate(() => { jobs = ['Oak House']; window._ups.length = 0; window._saves = 0; openSchedule('Oak House'); }); await page.waitForTimeout(250);
     const off = await page.evaluate(() => [...$('schShade').querySelectorAll('.pick-chip')].map(c => c.textContent.trim()).join('|'));
     await page.evaluate(() => $('schShade').querySelector('[data-k="we"]').click()); await page.waitForTimeout(120);

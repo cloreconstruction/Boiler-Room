@@ -1786,11 +1786,24 @@
   .sch-lab.done { opacity: .6; }
   .sch-lab.late b { color: var(--err, #ff8a70); }
   .sch-lane { position: relative; border-bottom: 1px solid var(--border); min-height: 44px; background-image: repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px calc(100% / var(--wk))); cursor: pointer; }
-  .sch-bar { position: absolute; top: 10px; height: 24px; border-radius: 5px; background: var(--accent); color: var(--accent-ink, #111); font-size: 12px; line-height: 24px; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: var(--fw7, 700); }
-  .sch-bar.sub { background: var(--raised, var(--surface-1)); color: var(--ink-1); border: 1px solid var(--accent); line-height: 22px; }
+  .sch-bar { --bb: var(--accent); position: absolute; z-index: 0; top: 10px; height: 24px; border-radius: 5px; background: var(--accent); color: var(--accent-ink, #111); font-size: 12px; line-height: 24px; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: var(--fw7, 700); }
+  .sch-bar.sub { --bb: var(--raised, var(--surface-1)); background: var(--raised, var(--surface-1)); color: var(--ink-1); border: 1px solid var(--accent); line-height: 22px; }
   .sch-bar.mark { background: var(--warn, #ffa657); color: #111; border-radius: 999px; width: 26px; height: 26px; top: 9px; padding: 0; text-align: center; line-height: 26px; font-size: 14px; margin-left: -4px; }
   .sch-bar.done { opacity: .45; }
-  .sch-bar.late { background: var(--err, #ff8a70); color: #111; }
+  .sch-bar.late { --bb: var(--err, #ff8a70); background: var(--err, #ff8a70); color: #111; }
+  /* 🗓 v7.76 — the days inside a bar that are not worked (a weekend, the crew's Friday, a holiday): black-and-yellow stripes across the
+     bar, the step's name over them on a halo of the bar's own colour so it still reads; the same stripes key the line over the chart */
+  .sch-x, .sch-xkey { background: repeating-linear-gradient(135deg, #111 0 4px, #f5c400 4px 8px); }
+  .sch-x { position: absolute; top: 0; bottom: 0; pointer-events: none; }
+  .sch-xkey { display: inline-block; width: 26px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 6px; }
+  .sch-bar-t { position: relative; z-index: 1; text-shadow: 0 0 2px var(--bb), 0 0 2px var(--bb), 0 0 4px var(--bb), 0 0 5px var(--bb); }
+  .sch-wd-say { margin: -2px 0 8px; }
+  /* 🔗 v7.75 — the links: the step's own switch, then three plates; a row that is unlinked says so in words */
+  .sch-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 8px 0 0; }
+  #schedBox .sch-links .sch-solo, #schedBox .sch-links .sch-link-from { grid-column: 1 / -1; margin: 0; }
+  #schedBox .sch-links .btn-ghost { min-height: 46px; white-space: normal; line-height: 1.3; font-size: 13.5px; padding: 6px 8px; }
+  .sch-freew { color: var(--accent); font-weight: var(--fw7, 700); white-space: nowrap; }
+  #schedBox .sch-tool-link { white-space: normal; line-height: 1.3; font-size: 13.5px; }
   .sch-today { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--err, #ff8a70); pointer-events: none; z-index: 1; }
   .sch-edit-h { font-weight: var(--fw8, 800); font-size: 14px; margin: 8px 0 4px; }
   .sch-edit { border: 2px solid var(--accent); border-radius: 10px; padding: 8px; }
@@ -4703,7 +4716,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.74 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.76 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -14028,8 +14041,8 @@ function subsAskRows() {
 // Eric: "can we build in a gantt calendar that can be easily made and moved? i used a site called clickup and it worked fairly
 // well but was difficult to see enough info at once and was a huge chore to try and just juggle and change the chart with
 // multiple jobs and constant delays." Three answers to those three complaints:
-//   MADE IN A MINUTE — a job's plan is a list of STEPS, each a name and a number of days (calendar days, as he types them:
-//   "plumbing 1.5 weeks"). Type them one at a time, paste a list, or start from the standard sequence and delete what does
+//   MADE IN A MINUTE — a job's plan is a list of STEPS, each a name and a number of days (as he types them: "plumbing 1.5 weeks";
+//   calendar days until v7.76, WORK days since — see that block below). Type them one at a time, paste a list, or start from the standard sequence and delete what does
 //   not apply. Each step gets a start day when it is made (after the one before it) and keeps it from then on.
 //   MOVED IN ONE TAP — a delay on any step moves that step AND EVERY STEP THAT STARTS ON OR AFTER IT by the same number of
 //   days (his own rule, written on his finish-schedule sheet). A step marked ✓ done never moves. Nothing is dragged.
@@ -14050,9 +14063,10 @@ function subsAskRows() {
 //   plan while it is on (`schedPageSoon`), and the window puts it right on open when the day moved it (`schedPageStale`).
 let crewSched = (() => { try { const j = JSON.parse(lsGet('daylog-crew-sched') || 'null'); return j && typeof j === 'object' ? j : null; } catch (e) { return null; } })();   // a crew phone's copy, delivered in shared.json
 const SCHED_WHO = ['crew', 'sub', 'inspection', 'homeowner'];
-const SCHED_TEMPLATE = [['Demo', 5, 'crew'], ['Dirt work', 5, 'sub'], ['Foundation', 10, 'sub'], ['Framing', 15, 'crew'], ['Trusses set', 3, 'crew'], ['Roof dried in', 5, 'crew'], ['Windows and doors', 3, 'crew'],
+// 🗓 v7.76 — the days are WORK days: a week of the crew's is four (Mon–Thu), a sub's five (Mon–Fri)
+const SCHED_TEMPLATE = [['Demo', 4, 'crew'], ['Dirt work', 5, 'sub'], ['Foundation', 10, 'sub'], ['Framing', 12, 'crew'], ['Trusses set', 3, 'crew'], ['Roof dried in', 4, 'crew'], ['Windows and doors', 3, 'crew'],
   ['Plumbing rough-in', 8, 'sub'], ['Electrical rough-in', 8, 'sub'], ['Heat and ducting', 3, 'sub'], ['Rough-in inspection', 1, 'inspection'], ['Insulation', 4, 'sub'], ['Drywall, mud, texture', 15, 'sub'],
-  ['Paint walls and ceilings', 5, 'sub'], ['Tile', 8, 'sub'], ['Floors, doors, trim', 10, 'crew'], ['Cabinets and vanities', 5, 'crew'], ['Plumbing trim', 3, 'sub'], ['Electrical trim', 2, 'sub'], ['Final inspection', 1, 'inspection'], ['Clean', 2, 'crew'], ['Move in', 1, 'homeowner']];
+  ['Paint walls and ceilings', 5, 'sub'], ['Tile', 8, 'sub'], ['Floors, doors, trim', 8, 'crew'], ['Cabinets and vanities', 4, 'crew'], ['Plumbing trim', 3, 'sub'], ['Electrical trim', 2, 'sub'], ['Final inspection', 1, 'inspection'], ['Clean', 2, 'crew'], ['Move in', 1, 'homeowner']];
 let _schedJob = '*', _schedOpen = null, _schedArm = '', _schedWho = '', _schedPaste = false, _schedAdd = false, _schedBack = '';
 function schedCanEdit() { return !CREW_NAME && !crewPreview; }
 function schedClose() {   // opened from the 📇 Job Card → back to the card (the v7.60 rule); from the portal → the portal is still under it
@@ -14064,6 +14078,7 @@ function schedHealBook(b) { const o = (b && typeof b === 'object' && !Array.isAr
 function schedBook() {   // the book THIS phone reads: Eric's own prefs — or, on a crew phone, the copy he sent (read-only there)
   if (CREW_NAME) { crewSched = schedHealBook(crewSched); return crewSched; }
   prefs.sched = schedHealBook(prefs.sched);
+  if (!prefs.sched.wd) schedWorkMigrate(prefs.sched);   // 🗓 v7.76 — once: a book of calendar days becomes a book of work days
   return prefs.sched;
 }
 function schedPlan(job, make) {   // the plan of one job (by the card key, so the name's case never makes a second plan)
@@ -14081,17 +14096,89 @@ function schedJobs() {   // every job that has a plan, in the app's job order, p
 const schedDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? String(s) : '';
 const schedDate = s => { const d = schedDay(s); return d ? new Date(d + 'T12:00:00') : null; };
 function schedAddDays(day, n) { const d = schedDate(day) || new Date(); d.setDate(d.getDate() + (+n || 0)); return localDay(d); }
-function schedEnd(s) { return schedAddDays(s.start, Math.max(1, +s.days || 1) - 1); }   // the last day of the step
+// ================= 🗓 v7.76 — THE DAYS ARE WORK DAYS =================
+// Eric: "when i put in number of days for the category i'm only counting work days, m-t for crew, m-f for subs, if a category
+// crossed over a weekend i want it to have the bar go over the weekend but its crossed out with diagnal black and yellow bar for
+// sat and sun. that way the category continues but the weekend isn't counted". A step's `days` are WORK days now: the crew works
+// Monday to Thursday, a sub (and an inspection) Monday to Friday, the homeowner's days and a step with no "who" count every day;
+// the six holidays (v7.71) are nobody's work day. A step ENDS on the day its last work day falls (schedEnd), so a step that
+// crosses a weekend is as long on the chart as it really is — and the days inside it that are not worked are struck through with
+// black-and-yellow stripes (schedOffRuns → .sch-x). A step never STARTS on a day off: a start that lands on one moves to the next
+// work day (to the one before when it is being moved earlier — schedWorkOn). A book written before this build held CALENDAR days:
+// it is converted once, in memory (schedWorkMigrate; the book then carries `wd: 1` and is saved with his next change — a
+// conversion never pushes a file by itself, a push before the first pull could write over a newer copy) so that every step still
+// ends on the last work day it had; a crew phone still holding an old copy reads it the old way until Eric's phone sends the new one.
+// A MOVE is counted the same way (schedShift): 1 day later puts a step on ITS next work day (a crew step on a Thursday goes to
+// Monday), and every linked step after it goes one of its OWN work days later; 1 week later is the same weekday next week.
+const _schedHolY = {};   // ▒ v7.71's holidays by year (declared here: the work-day helpers read them)
+const SCHED_WEEK = { crew: [1, 2, 3, 4], sub: [1, 2, 3, 4, 5], inspection: [1, 2, 3, 4, 5] };   // Date.getDay(): 1 = Monday. Any other "who": every day counts
+function schedWeekWord(who) { return who === 'crew' ? 'Mon–Thu' : SCHED_WEEK[who] ? 'Mon–Fri' : ''; }
+function schedWorks(who, day) {   // is this day a work day for that kind of step?
+  const wk = SCHED_WEEK[who]; if (!wk) return true;
+  const d = schedDate(day); if (!d) return true;
+  return wk.includes(d.getDay()) && !schedHolidayOf(day);
+}
+function schedWorkOn(who, day, dir) {   // the first work day on or after `day` (dir < 0: on or before)
+  let d = schedDay(day) || localDay(new Date());
+  for (let i = 0; i < 21 && !schedWorks(who, d); i++) d = schedAddDays(d, dir < 0 ? -1 : 1);
+  return d;
+}
+function schedWd() { return !!schedBook().wd; }
+const _schedEndMemo = new Map();   // who|start|days → the last day (the answer never changes: the week and the holidays are rules)
+function schedEnd(s) {   // the last day of the step
+  const n = Math.max(1, Math.round(+s.days || 1));
+  if (!schedWd()) return schedAddDays(s.start, n - 1);   // an old copy on a crew phone: calendar days, as it was written
+  if (!SCHED_WEEK[s.who]) return schedAddDays(s.start, n - 1);   // every day counts
+  const key = s.who + '|' + s.start + '|' + n, hit = _schedEndMemo.get(key); if (hit) return hit;
+  let d = schedWorkOn(s.who, s.start, 1), left = n - 1;
+  for (let i = 0; left > 0 && i < 4000; i++) { d = schedAddDays(d, 1); if (schedWorks(s.who, d)) left--; }
+  if (_schedEndMemo.size > 4000) _schedEndMemo.clear();
+  _schedEndMemo.set(key, d);
+  return d;
+}
+function schedSpanDays(s) { return Math.max(1, Math.round((schedDate(schedEnd(s)) - schedDate(s.start)) / 86400000) + 1); }   // how many days the bar covers on the chart
+function schedOffRuns(s) {   // the days inside the step that are NOT worked, as runs: [{ from: <day index inside the step>, n: <days> }]
+  if (!schedWd() || !SCHED_WEEK[s.who]) return [];
+  const span = schedSpanDays(s), runs = [];
+  for (let i = 0; i < span; i++) { if (schedWorks(s.who, schedAddDays(s.start, i))) continue; const last = runs[runs.length - 1]; if (last && last.from + last.n === i) last.n++; else runs.push({ from: i, n: 1 }); }
+  return runs;
+}
+function schedDaysWord(s) { const n = s.days; return `${n} ${SCHED_WEEK[s.who] && schedWd() ? 'work ' : ''}day${n === 1 ? '' : 's'}`; }
+function schedShift(s, weeks, wdays) {   // a move: whole weeks on the calendar (the same weekday), then work days of the step's OWN week
+  let d = s.start;
+  if (weeks) d = schedWorkOn(s.who, schedAddDays(d, 7 * weeks), weeks < 0 ? -1 : 1);
+  const dir = wdays < 0 ? -1 : 1;
+  for (let k = Math.abs(Math.round(+wdays || 0)); k > 0; k--) d = schedWorkOn(s.who, schedAddDays(d, dir), dir);
+  s.start = d;
+  return s;
+}
+function schedShiftWord(weeks, wdays, who) {   // "1 week and 2 work days later" (a step that counts every day: "2 days")
+  const a = Math.abs(weeks || 0), b = Math.abs(wdays || 0), later = (weeks || wdays) > 0, w = SCHED_WEEK[who] ? 'work ' : '';
+  return [a ? `${a} week${a === 1 ? '' : 's'}` : '', b ? `${b} ${w}day${b === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ') + (later ? ' later' : ' earlier');
+}
+function schedWorkMigrate(b) {   // once per book: calendar days → the work days inside the same span, so every step still ends where it did
+  b.wd = 1;   // first: nothing below may come back in here
+  Object.keys(b.jobs).forEach(j => (b.jobs[j].steps || []).forEach(s => { if (s && schedDay(s.start)) schedCalToWork(s); }));
+}
+function schedCalToWork(s) {   // one step written in calendar days: its work days are the ones inside that span; it starts on its first work day
+  const who = SCHED_WHO.includes(s.who) ? s.who : '', cal = Math.max(1, Math.round(+s.days || 1));
+  let work = 0; for (let i = 0; i < cal; i++) if (schedWorks(who, schedAddDays(s.start, i))) work++;
+  s.start = schedWorkOn(who, s.start, 1); s.days = Math.max(1, work);
+  return s;
+}
+// ================= /🗓 v7.76 (the helpers — the taps and the drawing below read them) =================
 function schedMonday(day) { const d = schedDate(day) || new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return localDay(d); }
 function schedDayWord(day) { const d = schedDate(day); return d ? `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()]} ${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}` : ''; }
 function schedShortWord(day) { const d = schedDate(day); return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''; }
-// "1.5 weeks" · "2.5 wk" · "3-4 days" (the bigger one) · "2" · "1 day" → calendar days, at least one
-function schedDaysOf(txt) {
+// "1.5 weeks" · "2.5 wk" · "3-4 days" (the bigger one) · "2" · "1 day" → days, at least one
+// 🗓 v7.76 — WORK days: a week is as many days as that kind of step works (👷 crew 4 · 🔧 sub and 📋 inspection 5 · the rest 7)
+function schedDaysOf(txt, who) {
   const t = String(txt || '').toLowerCase();
   const m = t.match(/(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(w(?:ee)?ks?|d(?:ays?)?)?\b/);
   if (!m) return 1;
   const n = Math.max(parseFloat(m[1]), m[2] ? parseFloat(m[2]) : 0);
-  const days = /^w/.test(m[3] || '') ? n * 7 : n;
+  const wk = schedWd() && SCHED_WEEK[who] ? SCHED_WEEK[who].length : 7;
+  const days = /^w/.test(m[3] || '') ? n * wk : n;
   return Math.max(1, Math.round(days));
 }
 function schedWhoOf(txt) {
@@ -14104,7 +14191,11 @@ function schedWhoOf(txt) {
 function schedNewId() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function schedClean(s) {   // one shape, whichever device wrote it
   const who = SCHED_WHO.includes(s.who) ? s.who : '';
-  return { id: String(s.id || schedNewId()), n: String(s.n || '').trim().slice(0, 80), days: Math.max(1, Math.round(+s.days || 1)), who, start: schedDay(s.start) || localDay(new Date()), done: schedDay(s.done) || '', note: String(s.note || '').trim().slice(0, 200), sid: who === 'sub' ? String(s.sid || '').trim().slice(0, 40) : '' };   // 📅 v7.68 — sid = the sub picked for this step (a 🔧 step only)
+  let start = schedDay(s.start) || localDay(new Date());
+  if (SCHED_WEEK[who] && schedWd()) start = schedWorkOn(who, start, 1);   // 🗓 v7.76 — a step never starts on a day it does not work
+  const o = { id: String(s.id || schedNewId()), n: String(s.n || '').trim().slice(0, 80), days: Math.max(1, Math.round(+s.days || 1)), who, start, done: schedDay(s.done) || '', note: String(s.note || '').trim().slice(0, 200), sid: who === 'sub' ? String(s.sid || '').trim().slice(0, 40) : '' };   // 📅 v7.68 — sid = the sub picked for this step (a 🔧 step only)
+  if (s.free) o.free = 1;   // 🔗 v7.75 — unlinked: it moves alone and nothing takes it along (his own; never sent to the crew)
+  return o;
 }
 function schedSteps(job) { const p = schedPlan(job); if (!p) return []; p.steps = p.steps.map(schedClean); return p.steps; }
 function schedSorted(job) { return schedSteps(job).slice().sort((a, b) => a.start.localeCompare(b.start)); }
@@ -14114,11 +14205,19 @@ function schedPublishSoon() { clearTimeout(_schedPubT); _schedPubT = setTimeout(
 function schedSave(job) { if (!schedCanEdit()) return; schedBook(); scheduleSave(); schedPublishSoon(); if (job) schedPageSoon(job); }
 // 📅 v7.68 — Eric's phone → every crew folder: every job that has steps, the steps less his notes (the note is his scratch — who said
 // what, what it waits on — not the crew's); `sid` rides, the sub's own card is already on their phone (v7.51)
+// 🗓 v7.76 — the copy says its days are work days (`wd`), and each step carries BOTH counts: `days` = the days its bar covers on
+// the calendar (what a crew phone that has not loaded this build yet draws, so its bars still end on the right day) and `wk` = the
+// work days (what this build reads — schedCrewTake). 🔗 v7.75 — a step's link (`free`) is his own tool and does not ride.
 function schedPublish() {
   if (CREW_NAME) return null;
-  const b = schedBook(), out = { jobs: {} };
-  Object.keys(b.jobs).forEach(j => { const st = schedSteps(j); if (st.length) out.jobs[j] = { steps: st.map(s => ({ id: s.id, n: s.n, days: s.days, who: s.who, start: s.start, done: s.done, sid: s.sid })) }; });
+  const b = schedBook(), out = { wd: 1, jobs: {} };
+  Object.keys(b.jobs).forEach(j => { const st = schedSteps(j); if (st.length) out.jobs[j] = { steps: st.map(s => ({ id: s.id, n: s.n, days: schedSpanDays(s), wk: s.days, who: s.who, start: s.start, done: s.done, sid: s.sid })) }; });
   return out;
+}
+function schedCrewTake(j) {   // a crew phone: the copy as Eric's phone sent it → the book this build reads (work days in `days`)
+  const b = schedHealBook(j);
+  if (b.wd) Object.keys(b.jobs).forEach(k => ((b.jobs[k] || {}).steps || []).forEach(s => { if (s && s.wk) { s.days = s.wk; delete s.wk; } }));
+  return b;
 }
 // 📅 v7.68 — the sub picked on a step, and a sub's booked weeks across every job (for his plate under 👷 Subs)
 function schedSubOf(s) { if (!s || s.who !== 'sub' || !s.sid) return null; const x = subsBookNow().subs[s.sid]; return x && !x.gone ? x : null; }
@@ -14139,8 +14238,8 @@ function schedAddStep(job, n, daysTxt, who, startDay) {
   if (!schedCanEdit()) return null;
   const p = schedPlan(job, true), name = String(n || '').trim().slice(0, 80);
   if (!name) return null;
-  const last = schedLastEnd(job);
-  const s = schedClean({ id: schedNewId(), n: name, days: schedDaysOf(daysTxt), who: who || schedWhoOf(name), start: schedDay(startDay) || (last ? schedAddDays(last, 1) : localDay(new Date())) });
+  const last = schedLastEnd(job), w = who || schedWhoOf(name);
+  const s = schedClean({ id: schedNewId(), n: name, days: schedDaysOf(daysTxt, w), who: w, start: schedDay(startDay) || (last ? schedAddDays(last, 1) : localDay(new Date())) });   // 🗓 v7.76 — schedClean puts the start on the step's next work day
   p.steps.push(s); schedSave(job);
   return s;
 }
@@ -14159,23 +14258,67 @@ function schedFromTemplate(job) {
   SCHED_TEMPLATE.forEach(([n, d, w]) => schedAddStep(job, n, String(d), w));
   return SCHED_TEMPLATE.length;
 }
-// the rule: this step and every step that starts on or after it move together; a ✓ done step stays where it was
-function schedMove(job, id, n, only) {   // 🔓 v7.73 — `only`: this one step alone (he unlocked it); every other step stays where it is
+// the rule: this step and every LINKED step that starts on or after it move together; a ✓ done step stays where it was
+// 🔗 v7.75 — a 🔓 unlinked step (`free`) moves alone, and no other step's move takes it along.
+// 🗓 v7.76 — a move is `weeks` whole weeks (the same weekday) and/or `wdays` work days of the step's own week (schedShift). The steps
+// taken along KEEP THEIR PLACE behind the step they came after: each one's gap — counted in its own work days from the last day of
+// the latest moved step that ended before it began — is the same after the move as before it (so a sub who came in the day after
+// the crew finished still comes in the day after, though the crew's last day jumped a weekend). A step that ran alongside the moved
+// one (nothing moved ends before it begins) goes the same weeks and work days as the moved step, by its own week.
+function schedLag(who, a, b) { let n = 0, d = a; for (let i = 0; d < b && i < 4000; i++) { d = schedAddDays(d, 1); if (schedWorks(who, d)) n++; } return n; }   // that step's work days after day a, up to and counting day b
+function schedAfter(who, a, lag) { let d = a; for (let k = lag, i = 0; k > 0 && i < 4000; i++) { d = schedAddDays(d, 1); if (schedWorks(who, d)) k--; } return d; }   // its lag-th work day after day a
+function schedMoveBy(job, id, weeks, wdays, only) {
   if (!schedCanEdit()) return [];
   const st = schedSteps(job), me = st.find(s => s.id === id);
-  if (!me || !n) return [];
-  const from = me.start, moved = [];
-  st.forEach(s => { if (!s.done && (s.id === id || (!only && s.start >= from))) { s.start = schedAddDays(s.start, n); moved.push(s); } });
+  weeks = Math.round(+weeks || 0); wdays = Math.round(+wdays || 0);
+  if (!me || (!weeks && !wdays)) return [];
+  const from = me.start, alone = !!only || !!me.free;
+  const set = st.filter(s => !s.done && (s.id === id || (!alone && !s.free && s.start >= from))).sort((a, b) => a.id === id ? -1 : b.id === id ? 1 : a.start.localeCompare(b.start));   // the moved step first, then what it takes along, in start order
+  const was = new Map(set.map(s => [s.id, { start: s.start, end: schedEnd(s) }])), moved = [];
+  set.forEach(s => {
+    const o = was.get(s.id); let p = null;
+    if (s.id !== id) moved.forEach(x => { const xo = was.get(x.id); if (xo.end < o.start && (!p || xo.end > was.get(p.id).end || (xo.end === was.get(p.id).end && schedEnd(x) > schedEnd(p)))) p = x; });
+    if (p) s.start = schedAfter(s.who, schedEnd(p), Math.max(1, schedLag(s.who, was.get(p.id).end, o.start)));
+    else schedShift(s, weeks, wdays);
+    moved.push(s);
+  });
   schedSave(job);
   return moved;
 }
-function schedMoveJob(job, n) { if (!schedCanEdit()) return []; const st = schedSteps(job); const moved = st.filter(s => !s.done); moved.forEach(s => { s.start = schedAddDays(s.start, n); }); schedSave(job); return moved; }
+function schedMove(job, id, n, only) { return schedMoveBy(job, id, 0, n, only); }   // n work days (🔓 v7.73 — `only`: this one step alone, whatever its link)
+function schedMoveJob(job, n) {   // the whole job, linked or not: n days — a multiple of seven is whole weeks (the same weekday), anything else is work days
+  if (!schedCanEdit()) return [];
+  const st = schedSteps(job), moved = st.filter(s => !s.done), wk = n % 7 === 0;
+  moved.forEach(s => schedShift(s, wk ? n / 7 : 0, wk ? 0 : n));
+  schedSave(job);
+  return moved;
+}
+// 🔗 v7.75 — THE LINKS. Eric: "the gantt chart needs to have more link buttons: unlink all, relink all, and stay linked only to
+// everything after this category". A step is 🔗 linked (as ever) or 🔓 unlinked, and it STAYS that way until he changes it
+// (v7.73's unlock let go when the step was folded; with "unlink all" that would have undone itself at the first tap):
+//   🔓 Unlink all — every step of the job moves on its own · 🔗 Relink all — a move takes the later steps along again ·
+//   🔗 Stay linked only to everything after this step — this step and every step that starts on or after it are linked, every
+//   step that starts before it is unlinked (so nothing earlier pushes it, and it still pushes what follows) ·
+//   and the switch on the open step, for that one step. The row says 🔓 unlinked in words; the job's heading counts them.
+// The link is his own tool: kept in his plan (his other devices see it), never sent to the crew or a homeowner's page.
+function schedSaveMine() { if (!schedCanEdit()) return; schedBook(); scheduleSave(); }   // a change the crew's copy and their page do not carry
+function schedLinkAll(job, linked) { if (!schedCanEdit()) return 0; const st = schedSteps(job); st.forEach(s => { if (linked) delete s.free; else s.free = 1; }); schedSaveMine(); return st.length; }
+function schedLinkFrom(job, id) {
+  if (!schedCanEdit()) return null;
+  const st = schedSteps(job), me = st.find(s => s.id === id); if (!me) return null;
+  let before = 0, after = 0;
+  st.forEach(s => { if (s.id === id || s.start >= me.start) { delete s.free; if (s.id !== id) after++; } else { s.free = 1; before++; } });
+  schedSaveMine();
+  return { before, after };
+}
+function schedLinkToggle(job, id) { if (!schedCanEdit()) return null; const s = schedSteps(job).find(x => x.id === id); if (!s) return null; if (s.free) delete s.free; else s.free = 1; schedSaveMine(); return s; }
+function schedFreeN(job) { return schedSteps(job).filter(s => !s.done && s.free).length; }
 function schedSet(job, id, k, v) {
   if (!schedCanEdit()) return;
   const s = schedSteps(job).find(x => x.id === id); if (!s) return;
-  if (k === 'days') s.days = Math.max(1, Math.round(+v || schedDaysOf(v)));
-  else if (k === 'start') { const d = schedDay(v); if (d) s.start = d; }
-  else if (k === 'who') { s.who = SCHED_WHO.includes(v) ? v : ''; if (s.who !== 'sub') s.sid = ''; }   // 📅 v7.68 — a step that is no longer a sub's lets its sub go
+  if (k === 'days') s.days = Math.max(1, Math.round(+v || schedDaysOf(v, s.who)));
+  else if (k === 'start') { const d = schedDay(v); if (d) s.start = schedWd() ? schedWorkOn(s.who, d, 1) : d; }
+  else if (k === 'who') { s.who = SCHED_WHO.includes(v) ? v : ''; if (s.who !== 'sub') s.sid = ''; if (schedWd()) s.start = schedWorkOn(s.who, s.start, 1); }   // 📅 v7.68 — a step that is no longer a sub's lets its sub go · 🗓 v7.76 — and it starts on a day the new "who" works
   else if (k === 'sid') s.sid = s.who === 'sub' ? String(v || '').trim().slice(0, 40) : '';   // 📅 v7.68 — the sub, picked by exact name off the list
   else if (k === 'n') s.n = String(v || '').trim().slice(0, 80) || s.n;
   else if (k === 'note') s.note = String(v || '').trim().slice(0, 200);
@@ -14198,7 +14341,7 @@ function openSchedule(job) {
   // 📅 v7.68 — a crew phone opens it too, read-only (Eric's plan, as it landed on this phone); the 👁 preview likewise
   const want = String(job == null ? '' : job).trim();
   _schedJob = !want || want === '*' ? '*' : want;
-  _schedOpen = null; _schedArm = ''; _schedPaste = false; _schedAdd = false; _schedBack = ''; _schedSolo = '';
+  _schedOpen = null; _schedArm = ''; _schedPaste = false; _schedAdd = false; _schedBack = '';
   if (schedCanEdit() && _jcEdit) { cardStash(); _jcEdit = false; }
   renderSchedule(true);
   $('revModal').classList.add('show', 'mat-full');
@@ -14206,7 +14349,7 @@ function openSchedule(job) {
   if (schedCanEdit() && _schedJob !== '*') schedPageLoad(_schedJob);   // 📅 v7.68 — is WHERE WE ARE on their page? (and put it right when the day moved it)
   schedInboxLoad(true);   // 📥 v7.69 — a plan dropped in from outside waits here for his tap
 }
-function schedPick(v) { _schedJob = v === '*' ? '*' : String(v || '*'); _schedOpen = null; _schedArm = ''; _schedPaste = false; _schedAdd = false; _schedSolo = ''; renderSchedule(); if (schedCanEdit() && _schedJob !== '*') schedPageLoad(_schedJob); }
+function schedPick(v) { _schedJob = v === '*' ? '*' : String(v || '*'); _schedOpen = null; _schedArm = ''; _schedPaste = false; _schedAdd = false; renderSchedule(); if (schedCanEdit() && _schedJob !== '*') schedPageLoad(_schedJob); }
 function schedWho(v) { _schedWho = _schedWho === v ? '' : v; renderSchedule(); }
 function schedJobList() {   // every job on the list (a plan or not) — the wheel offers them all; the chart draws the planned ones
   const have = [], add = j => { j = String(j || '').trim(); if (j && j !== '—' && !isPersonalJob(j) && !have.some(x => cardKey(x) === cardKey(j))) have.push(j); };
@@ -14229,14 +14372,18 @@ function schedChartHtml(job, win) {
   const clash = schedCrewClash();
   const heads = []; for (let i = 0; i < win.weeks; i++) { const w = schedAddDays(win.lo, i * 7); heads.push(`<span class="sch-wk${clash[w] && clash[w].some(j => cardKey(j) === cardKey(job)) ? ' sch-wk-clash' : ''}${schedMonday(today) === w ? ' sch-wk-now' : ''}" title="${esc(clash[w] ? 'crew on ' + clash[w].join(' and ') + ' this week' : '')}">${esc(schedShortWord(w))}${clash[w] && clash[w].some(j => cardKey(j) === cardKey(job)) ? ' ⚠' : ''}<i class="sch-wk-grip" onpointerdown="schedGrip(event)"></i></span>`); }   // ↔ v7.70 — the edge of a week's date drags with a mouse
   const shown = steps.filter(s => !_schedWho || (_schedWho === 'crew' ? s.who === 'crew' : s.who !== 'crew'));
+  const winEnd = schedAddDays(win.lo, span - 1), canEdit = schedCanEdit();
   const rows = shown.map(s => {
     const end = schedEnd(s), late = !s.done && end < today, left = x(s.start), width = Math.max(1.2, x(schedAddDays(end, 1)) - left);
     const open = _schedOpen === s.id, mark = s.who === 'inspection' || s.who === 'homeowner';   // a one-day thing is a round mark with a glyph, not a sliver of a bar
     const subW = schedSubWord(s), whoW = schedWhoWord(s.who) + (subW ? ' · ' + subW : '');   // 📅 v7.68 — the sub picked for the step, by name
     const off = schedOffFlag(s);   // ▒ v7.71 — it starts or ends on a day he has shaded: said in words on the row
-    return `<div class="sch-lab${open ? ' open' : ''}${s.done ? ' done' : ''}${late ? ' late' : ''}" role="button" tabindex="0" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')" onkeydown="if(event.key==='Enter'){schedRowTap('${escq(job)}','${escq(s.id)}')}">
-        <b>${s.done ? '✓ ' : late ? '⚠ ' : ''}${esc(s.n)}</b><small>${esc(schedShortWord(s.start))}${s.days > 1 ? ' – ' + esc(schedShortWord(end)) : ''} · ${s.days} day${s.days === 1 ? '' : 's'}${whoW ? ' · ' + esc(whoW) : ''}${s.done ? ' · done' : late ? ' · LATE' : ''}${off ? ` · <span class="sch-offw">⚠ ${esc(off)}</span>` : ''}</small></div>
-      <div class="sch-lane${open ? ' open' : ''}" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')"><div class="sch-bar${s.done ? ' done' : ''}${late ? ' late' : ''}${mark ? ' mark' : ''}${s.who === 'sub' ? ' sub' : ''}" style="left:${left.toFixed(2)}%;${mark ? '' : `width:${width.toFixed(2)}%`}" title="${esc(s.n)}${subW ? ' · ' + esc(subW) : ''} · ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(end))}${off ? ' · ' + esc(off) : ''}">${mark ? (s.who === 'inspection' ? '📋' : '🏠') : esc(s.n)}</div></div>`;
+    // 🗓 v7.76 — the days inside the bar that are not worked (a weekend, the crew's Friday, a holiday): struck through with stripes, a share of the bar each
+    const runs = !mark && s.start >= win.lo && end <= winEnd ? schedOffRuns(s) : [], spanD = schedSpanDays(s);
+    const free = canEdit && !!s.free;   // 🔗 v7.75 — unlinked: said on the row in words
+    return `<div class="sch-lab${open ? ' open' : ''}${s.done ? ' done' : ''}${late ? ' late' : ''}${free ? ' free' : ''}" role="button" tabindex="0" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')" onkeydown="if(event.key==='Enter'){schedRowTap('${escq(job)}','${escq(s.id)}')}">
+        <b>${s.done ? '✓ ' : late ? '⚠ ' : ''}${esc(s.n)}</b><small>${esc(schedShortWord(s.start))}${end !== s.start ? ' – ' + esc(schedShortWord(end)) : ''} · ${schedDaysWord(s)}${whoW ? ' · ' + esc(whoW) : ''}${s.done ? ' · done' : late ? ' · LATE' : ''}${free ? ' · <span class="sch-freew">🔓 unlinked</span>' : ''}${off ? ` · <span class="sch-offw">⚠ ${esc(off)}</span>` : ''}</small></div>
+      <div class="sch-lane${open ? ' open' : ''}" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')"><div class="sch-bar${s.done ? ' done' : ''}${late ? ' late' : ''}${mark ? ' mark' : ''}${s.who === 'sub' ? ' sub' : ''}" style="left:${left.toFixed(2)}%;${mark ? '' : `width:${width.toFixed(2)}%`}" title="${esc(s.n)}${subW ? ' · ' + esc(subW) : ''} · ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(end))} · ${schedDaysWord(s)}${runs.length ? ' (the striped days are not worked)' : ''}${off ? ' · ' + esc(off) : ''}">${mark ? (s.who === 'inspection' ? '📋' : '🏠') : runs.map(r => `<i class="sch-x" data-from="${r.from}" data-n="${r.n}" style="left:${(r.from / spanD * 100).toFixed(2)}%;width:${(r.n / spanD * 100).toFixed(2)}%"></i>`).join('') + `<span class="sch-bar-t">${esc(s.n)}</span>`}</div></div>`;
   }).join('');
   const todayX = x(today);
   return `<div class="sch-chart"><div class="sch-grid" style="--wk:${win.weeks}${schedWkwStyle()}"><div class="sch-corner"></div><div class="sch-head">${heads.join('')}</div>
@@ -14302,12 +14449,13 @@ function schedGrip(ev) {   // a MOUSE on the right edge of a week's date: the we
 // days wide, a Friday a fainter one with a dashed edge, a holiday hatched (never the colour alone — and a line under the plates
 // says in words what is shaded and names the holidays in view). A step that is not done and STARTS or ENDS on a shaded day says
 // so on its row (⚠ starts Sat · ends Sun) and the job's heading counts them, so he can walk down the list and nudge each one off
-// with ◀ 1 day earlier / 1 day later ▶. The plan itself is untouched: days are still calendar days and nothing moves by itself.
+// with ◀ 1 day earlier / 1 day later ▶. The plan itself is untouched: nothing moves by itself. (🗓 v7.76 — the days became WORK
+// days: a step with a work week never starts or ends on a day it does not work, so the ⚠ on a row is now only for the steps that
+// count every day — the homeowner's, and one with no "who".)
 // The holidays are the six the trades take, by rule, any year (schedHolidays). A way of LOOKING, like the week width: kept on
 // this device (`daylog-sched-shade`), never in his prefs or a file; a crew phone has the plates too.
 const SCHED_SHADES = [['we', 'Weekends'], ['fr', 'Fridays'], ['ho', 'Holidays']];
 let _schedShade = (() => { let j = {}; try { j = JSON.parse(lsGet('daylog-sched-shade') || '{}') || {}; } catch (e) { j = {}; } return { we: !!j.we, fr: !!j.fr, ho: !!j.ho }; })();
-const _schedHolY = {};
 function schedHolidays(y) {   // { 'YYYY-MM-DD': name } for one year
   if (_schedHolY[y]) return _schedHolY[y];
   const d = (m, day) => `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -14326,6 +14474,7 @@ function schedOffWord(day) {   // why a day is shaded, in a word ('' = it is not
 }
 function schedOffFlag(s) {   // a step that is not done and starts or ends on a shaded day, in words
   if (!s || s.done || !schedShadeAny()) return '';
+  if (schedWd() && SCHED_WEEK[s.who]) return '';   // 🗓 v7.76 — a step with a work week never starts or ends on a day it does not work (and a sub on a Friday is at work): nothing to nudge
   const a = schedOffWord(s.start);
   if (s.days <= 1) return a ? 'on ' + (/^(Sat|Sun|Fri)$/.test(a) ? 'a ' + a : a) : '';
   const e = schedOffWord(schedEnd(s));
@@ -14344,7 +14493,8 @@ function schedShadeHtml(win) {
   if (_schedShade.ho && win) for (let d = 0; d < win.weeks * 7; d++) { const day = schedAddDays(win.lo, d), h = schedHolidayOf(day); if (h) hol.push(schedDayWord(day) + ' ' + h); }
   const on = [_schedShade.we ? 'weekends' : '', _schedShade.fr ? 'Fridays' : '', _schedShade.ho ? 'holidays (' + (hol.length ? hol.join(' · ') : 'none in these weeks') + ')' : ''].filter(Boolean);
   return `<div class="sch-shade" id="schShade" role="group" aria-label="shade the days off on the chart"><span class="sch-shade-l">▒ SHADE</span>${SCHED_SHADES.map(([k, w]) => `<button type="button" class="pick-chip${_schedShade[k] ? ' sel' : ''}" data-k="${k}" aria-pressed="${!!_schedShade[k]}" onclick="schedShade('${k}')">${_schedShade[k] ? '☑' : '☐'} ${w}</button>`).join('')}</div>
-    ${on.length ? `<div class="hint sch-shade-say" id="schShadeSay">▒ Shaded on the chart: ${esc(on.join(' · '))}. A step that starts or ends on a shaded day says so on its row.</div>` : ''}`;
+    ${on.length ? `<div class="hint sch-shade-say" id="schShadeSay">▒ Shaded on the chart: ${esc(on.join(' · '))}. ${schedWd() ? 'A step that counts every day (🏠 homeowner, or no “who”) and starts or ends on a shaded day says so on its row.' : 'A step that starts or ends on a shaded day says so on its row.'}</div>` : ''}
+    ${schedWd() ? `<div class="hint sch-wd-say" id="schWdSay"><i class="sch-xkey" aria-hidden="true"></i>Days are WORK days: 👷 crew Mon–Thu · 🔧 subs and 📋 inspections Mon–Fri · the holidays off. A bar runs across the days in between, striped black and yellow — those are not counted.</div>` : ''}`;
 }
 function schedShade(k) { if (!SCHED_SHADES.some(x => x[0] === k)) return; _schedShade[k] = !_schedShade[k]; lsSet('daylog-sched-shade', JSON.stringify(_schedShade)); renderSchedule(); }
 // ================= /▒ v7.71 =================
@@ -14376,7 +14526,9 @@ function schedPicModel(jobsIn) {   // where everything goes, in the picture's ow
       const end = schedEnd(s), late = !s.done && end < today, a = Math.max(0, Math.min(span, idx(s.start))), e = Math.max(a, Math.min(span, idx(end) + 1));
       const mark = s.who === 'inspection' || s.who === 'homeowner', x = a * P.DAY, w = mark ? P.DAY : Math.max(P.DAY * 0.6, (e - a) * P.DAY), tw = Math.ceil(meas.measureText(s.n).width) + 14;
       const side = !mark && tw <= w ? 'in' : (x + w + 6 + tw <= chartW ? 'right' : (x - 6 - tw >= 0 ? 'left' : mark ? 'right' : 'in'));   // the name: in the bar, else beside it where there is room
-      band.rows.push({ y, n: s.n, meta: `${schedShortWord(s.start)}${s.days > 1 ? ' to ' + schedShortWord(end) : ''} · ${s.days} day${s.days === 1 ? '' : 's'}${SCHED_WHO.includes(s.who) ? ' · ' + s.who : ''}${s.done ? ' · done' : late ? ' · LATE' : ''}`, x, w, mark, who: s.who, done: !!s.done, late, side });
+      // 🗓 v7.76 — the days inside the bar that are not worked, in the picture's pixels from the bar's left edge (a bar cut by the sheet's edge wears none)
+      const xs = !mark && idx(s.start) >= 0 && idx(end) < span ? schedOffRuns(s).map(r => ({ x: r.from * P.DAY, w: r.n * P.DAY })) : [];
+      band.rows.push({ y, n: s.n, meta: `${schedShortWord(s.start)}${end !== s.start ? ' to ' + schedShortWord(end) : ''} · ${schedDaysWord(s)}${SCHED_WHO.includes(s.who) ? ' · ' + s.who : ''}${s.done ? ' · done' : late ? ' · LATE' : ''}`, x, w, mark, who: s.who, done: !!s.done, late, side, xs });
       y += P.ROW; rowsN++;
     });
     bands.push(band);
@@ -14388,7 +14540,7 @@ function schedPicModel(jobsIn) {   // where everything goes, in the picture's ow
   }
   const heads = []; for (let i = 0; i < win.weeks; i++) { const w = schedAddDays(win.lo, i * 7); heads.push({ x: i * 7 * P.DAY, t: schedShortWord(w), now: schedMonday(today) === w }); }
   const t = idx(today), one = jobsIn.length === 1, has = k => bands.some(b => b.rows.some(r => r.who === k));
-  const legend = [['crew', 'crew'], ['sub', 'sub'], ['inspection', 'inspection'], ['homeowner', 'homeowner']].filter(x => has(x[0])).concat(_schedShade.we ? [['we', 'weekend']] : [], _schedShade.fr ? [['fr', 'Friday']] : [], off.some(o => o.k === 'ho') ? [['ho', 'holiday']] : []);
+  const legend = [['crew', 'crew'], ['sub', 'sub'], ['inspection', 'inspection'], ['homeowner', 'homeowner']].filter(x => has(x[0])).concat(bands.some(b => b.rows.some(r => r.xs.length)) ? [['x', 'not worked, not counted']] : [], _schedShade.we ? [['we', 'weekend']] : [], _schedShade.fr ? [['fr', 'Friday']] : [], off.some(o => o.k === 'ho') ? [['ho', 'holiday']] : []);
   return { legend, title: one ? `${jobsIn[0]} schedule` : 'Schedule, every job', sub: `As of ${schedDayWord(today)}, ${today.slice(0, 4)}${_schedWho ? (_schedWho === 'crew' ? ' · crew steps only' : ' · subs, inspections and the rest only') : ''}`,
     foot: 'A working plan. Dates move with weather, inspections and subs.', weeks: win.weeks, lo: win.lo, heads, bands, off, rowsN, chartW, todayX: t >= 0 && t < span ? t * P.DAY : -1, W: P.M * 2 + P.LAB + chartW, H: y + P.FOOT, bottom: y };
 }
@@ -14396,8 +14548,9 @@ function schedPicDraw(m) {
   const P = SCHED_PIC, sc = Math.max(1, Math.min(2, Math.sqrt(12e6 / (m.W * m.H))));   // crisp, and inside what a phone's canvas will hold
   const c = document.createElement('canvas'); c.width = Math.round(m.W * sc); c.height = Math.round(m.H * sc);
   const g = c.getContext('2d'); g.scale(sc, sc); g.textBaseline = 'alphabetic';
-  const X0 = P.M + P.LAB, top = P.HEAD, R = m.W - P.M, BRASS = '#8a6418', INK = '#111', RED = '#b3261e';
+  const X0 = P.M + P.LAB, top = P.HEAD, R = m.W - P.M, BRASS = '#8a6418', INK = '#111', RED = '#b3261e', YELLOW = '#f5c400';
   const fit = (t, max) => { if (g.measureText(t).width <= max) return t; let s = t; while (s.length > 1 && g.measureText(s + '…').width > max) s = s.slice(0, -1); return s + '…'; };
+  const hatch = (hx, hy, hw, hh, dark, light) => { g.save(); g.beginPath(); g.rect(hx, hy, hw, hh); g.clip(); g.fillStyle = light; g.fillRect(hx, hy, hw, hh); g.strokeStyle = dark; g.lineWidth = 3; for (let k = -hh; k < hw + hh; k += 7) { g.beginPath(); g.moveTo(hx + k, hy + hh); g.lineTo(hx + k + hh, hy); g.stroke(); } g.restore(); };   // 🗓 v7.76 — black-and-yellow stripes
   const line = (x1, y1, x2, y2, col, wd, dash) => { g.save(); g.strokeStyle = col; g.lineWidth = wd || 1; if (dash) g.setLineDash(dash); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.restore(); };
   g.fillStyle = '#fff'; g.fillRect(0, 0, m.W, m.H);
   // the head: what it is, as of when, whose
@@ -14424,11 +14577,15 @@ function schedPicDraw(m) {
       if (r.mark) { g.fillStyle = r.done ? '#9a9a9a' : r.who === 'inspection' ? INK : BRASS; g.beginPath();
         if (r.who === 'inspection') { g.moveTo(x + P.DAY / 2, cy - 9); g.lineTo(x + P.DAY / 2 + 9, cy); g.lineTo(x + P.DAY / 2, cy + 9); g.lineTo(x + P.DAY / 2 - 9, cy); g.closePath(); } else g.arc(x + P.DAY / 2, cy, 8, 0, Math.PI * 2);
         g.fill(); }
-      else { g.fillStyle = r.done ? '#d9d9d9' : r.who === 'sub' ? '#fff' : BRASS; g.fillRect(x, by, r.w, bh);
+      else { const base = r.done ? '#d9d9d9' : r.who === 'sub' ? '#fff' : BRASS;
+        g.fillStyle = base; g.fillRect(x, by, r.w, bh);
+        r.xs.forEach(o => hatch(x + o.x, by, o.w, bh, r.done ? '#9a9a9a' : INK, r.done ? '#ececec' : YELLOW));   // 🗓 v7.76 — the days not worked, struck through
         if (r.who === 'sub' && !r.done) { g.strokeStyle = BRASS; g.lineWidth = 1.5; g.strokeRect(x + 0.75, by + 0.75, r.w - 1.5, bh - 1.5); }
         if (r.late) { g.strokeStyle = RED; g.lineWidth = 2; g.strokeRect(x + 1, by + 1, r.w - 2, bh - 2); } }
       g.font = `600 12px ${SCHED_PIC_SANS}`;
-      if (r.side === 'in') { g.fillStyle = r.done ? '#444' : r.who === 'sub' ? INK : '#fff'; g.fillText(fit(r.n, r.w - 10), x + 7, by + 15.5); }
+      if (r.side === 'in') { const t = fit(r.n, r.w - 10);
+        if (r.xs.length) { g.save(); g.lineJoin = 'round'; g.lineWidth = 3.5; g.strokeStyle = r.done ? '#d9d9d9' : r.who === 'sub' ? '#fff' : BRASS; g.strokeText(t, x + 7, by + 15.5); g.restore(); }   // the name on a halo of the bar's own colour, so it reads across the stripes
+        g.fillStyle = r.done ? '#444' : r.who === 'sub' ? INK : '#fff'; g.fillText(t, x + 7, by + 15.5); }
       else if (r.side === 'right') { g.fillStyle = INK; g.fillText(r.n, x + r.w + 6, by + 15.5); }
       else { g.fillStyle = INK; g.textAlign = 'right'; g.fillText(r.n, x - 6, by + 15.5); g.textAlign = 'left'; }
     });
@@ -14442,6 +14599,7 @@ function schedPicDraw(m) {
     else if (k === 'sub') { g.fillStyle = '#fff'; g.fillRect(lx, sy, 16, 12); g.strokeStyle = BRASS; g.lineWidth = 1.5; g.strokeRect(lx + 0.75, sy + 0.75, 14.5, 10.5); }
     else if (k === 'inspection') { g.fillStyle = INK; g.beginPath(); g.moveTo(lx + 8, sy - 1); g.lineTo(lx + 15, sy + 6); g.lineTo(lx + 8, sy + 13); g.lineTo(lx + 1, sy + 6); g.closePath(); g.fill(); }
     else if (k === 'homeowner') { g.fillStyle = BRASS; g.beginPath(); g.arc(lx + 8, sy + 6, 6.5, 0, Math.PI * 2); g.fill(); }
+    else if (k === 'x') hatch(lx, sy, 16, 12, INK, YELLOW);
     else if (k === 'ho') { g.save(); g.beginPath(); g.rect(lx, sy, 16, 12); g.clip(); g.fillStyle = '#fbe9d7'; g.fillRect(lx, sy, 16, 12); g.strokeStyle = '#d98a3d'; g.lineWidth = 1; for (let q = -12; q < 28; q += 6) { g.beginPath(); g.moveTo(lx + q, sy + 12); g.lineTo(lx + q + 12, sy); g.stroke(); } g.restore(); }
     else { g.fillStyle = k === 'we' ? '#e9e9e9' : '#f4f4f4'; g.fillRect(lx, sy, 16, 12); g.strokeStyle = '#bbb'; g.lineWidth = 1; g.strokeRect(lx + 0.5, sy + 0.5, 15, 11); if (k === 'fr') line(lx + 0.5, sy, lx + 0.5, sy + 12, '#888', 1, [3, 2]); }
     g.fillStyle = '#333'; g.fillText(t, lx + 22, ly); lx += 22 + g.measureText(t).width + 18; });
@@ -14484,57 +14642,86 @@ function schedSubWheelHtml(job, s) {
 // 🔓 v7.73 — ONE STEP ON ITS OWN. Eric, nudging steps off the weekends: "how can i unlock a single item so i can move it without it
 // moving everythig else". The rule stands — a move takes every step that starts on or after it (v7.67) — but the open step's editor
 // now wears a switch over its move buttons: 🔗 LINKED (as ever) ↔ 🔓 UNLOCKED — only this step moves. Unlocked, the three move
-// buttons AND a typed start day move that one step and leave every other where it is; the toast says so. The unlock is the open
-// editor's alone and is never stored: fold it, open another step, pick another job or open the window again and it is linked.
-let _schedSolo = '';
-function schedSoloOn(id) { return !!id && _schedSolo === id && _schedOpen === id && schedCanEdit(); }
-function schedSoloTap(id) { _schedSolo = schedSoloOn(id) ? '' : id; renderSchedule(); }
+// buttons AND a typed start day move that one step and leave every other where it is; the toast says so.
+// 🔗 v7.75 — the unlock STAYS now (it let go when the step was folded): the switch is the step's own link, kept in the plan, and
+// three more plates sit under it — 🔗 Stay linked only to everything after this step · 🔓 Unlink all · 🔗 Relink all (schedLinkFrom,
+// schedLinkAll, above). The line under the move buttons says what a move of THIS step takes along right now.
+function schedSoloTap(job, id) {
+  const s = schedLinkToggle(job, id); renderSchedule(); if (!s) return;
+  toast(s.free ? `🔓 ${s.n} is unlinked — it moves on its own, and nothing else moves it` : `🔗 ${s.n} is linked — a move takes the linked steps after it along`);
+}
+function schedLinkFromTap(job, id) {
+  const r = schedLinkFrom(job, id), s = schedSteps(job).find(x => x.id === id); renderSchedule(); if (!r || !s) return;
+  toast(`🔗 ${s.n} and the ${r.after} step${r.after === 1 ? '' : 's'} after it are linked${r.before ? ` · 🔓 the ${r.before} before it ${r.before === 1 ? 'is' : 'are'} unlinked` : ''}`);
+}
+function schedLinkAllTap(job, linked) {
+  const n = schedLinkAll(job, linked); renderSchedule();
+  toast(linked ? `🔗 All ${n} step${n === 1 ? '' : 's'} on ${job} are linked — a move takes the later steps along` : `🔓 All ${n} step${n === 1 ? '' : 's'} on ${job} are unlinked — a move takes only the step you move`);
+}
+function schedMoveSay(job, s) {   // what a move of THIS step takes along right now, in words
+  if (s.free) return '🔓 Unlinked — only this step moves, by the buttons or a typed start day. Every other step stays where it is.';
+  const st = schedSteps(job).filter(x => x.id !== s.id && !x.done && x.start >= s.start), along = st.filter(x => !x.free).length, stay = st.length - along;
+  return `🔗 Linked — a move takes this step${along ? ` and the ${along} linked step${along === 1 ? '' : 's'} that start${along === 1 ? 's' : ''} on or after it` : ' (no linked step starts after it)'}.${stay ? ` 🔓 ${stay} unlinked after it stay${stay === 1 ? 's' : ''} put.` : ''} A ✓ done step never moves.`;
+}
 function schedEditHtml(job, s) {
-  const armed = _schedArm === 'del:' + s.id, solo = schedSoloOn(s.id);
+  const armed = _schedArm === 'del:' + s.id, solo = !!s.free, wk = schedWd() ? schedWeekWord(s.who) : '';
   if (!schedCanEdit()) {   // 📅 v7.68 — a crew phone (and the 👁 preview): the step's words, nothing to change
     const subW = schedSubWord(s), today = localDay(new Date()), late = !s.done && schedEnd(s) < today;
-    return `<div class="sch-edit sch-edit-ro" id="schEdit"><div><b>${esc(s.n)}</b> — ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(schedEnd(s)))} · ${s.days} day${s.days === 1 ? '' : 's'}${s.who ? ' · ' + esc(schedWhoWord(s.who)) : ''}${subW ? ' · ' + esc(subW) : ''}${s.done ? ' · ✓ done' : late ? ' · ⚠ LATE' : ''}</div>
+    return `<div class="sch-edit sch-edit-ro" id="schEdit"><div><b>${esc(s.n)}</b> — ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(schedEnd(s)))} · ${schedDaysWord(s)}${s.who ? ' · ' + esc(schedWhoWord(s.who)) : ''}${subW ? ' · ' + esc(subW) : ''}${s.done ? ' · ✓ done' : late ? ' · ⚠ LATE' : ''}</div>
       <div class="hint" style="margin: 6px 0 0;">Eric's plan — it lands on this phone with every sync. A move is his to make.</div>
       <div class="sch-moves"><button type="button" class="btn-ghost" onclick="_schedOpen = null; renderSchedule();">▴ Fold</button></div></div>`;
   }
   return `<div class="sch-edit" id="schEdit">
     <div class="frow" style="gap: 6px; flex-wrap: wrap;">
       <div class="field" style="flex: 2 1 160px; margin: 0;"><label>The step</label><input type="text" id="schN" value="${esc(s.n)}" onchange="schedSet('${escq(job)}','${escq(s.id)}','n',this.value); renderSchedule();"></div>
-      <div class="field" style="flex: 1 1 90px; margin: 0;"><label>Days</label><input type="text" inputmode="decimal" id="schDays" value="${s.days}" onchange="schedSet('${escq(job)}','${escq(s.id)}','days',this.value); renderSchedule();"></div>
+      <div class="field" style="flex: 1 1 90px; margin: 0;"><label id="schDaysL">${wk ? `Work days (${wk})` : 'Days (every day counts)'}</label><input type="text" inputmode="decimal" id="schDays" value="${s.days}" onchange="schedSet('${escq(job)}','${escq(s.id)}','days',this.value); renderSchedule();"></div>
       <div class="field" style="flex: 1 1 130px; margin: 0;"><label>Starts</label><input type="date" id="schStart" value="${esc(s.start)}" onchange="schedStartSet('${escq(job)}','${escq(s.id)}',this.value)"></div>
       <div class="field" style="flex: 1 1 130px; margin: 0;"><label>Who</label><select id="schWho" onchange="schedSet('${escq(job)}','${escq(s.id)}','who',this.value); renderSchedule();"><option value=""${s.who ? '' : ' selected'}>—</option>${SCHED_WHO.map(w => `<option value="${w}"${s.who === w ? ' selected' : ''}>${schedWhoWord(w)}</option>`).join('')}</select></div>
       ${s.who === 'sub' ? schedSubWheelHtml(job, s) : ''}
     </div>
     <div class="field" style="margin: 6px 0 0;"><label>Note — yours alone; it never rides to the crew or the homeowner</label><input type="text" id="schNote" value="${esc(s.note)}" placeholder="who said what, what it waits on" onchange="schedSet('${escq(job)}','${escq(s.id)}','note',this.value)"></div>
-    <button type="button" class="pick-chip sch-solo${solo ? ' sel' : ''}" id="schSolo" aria-pressed="${solo}" onclick="schedSoloTap('${escq(s.id)}')">${solo ? '🔓 UNLOCKED — only this step moves · tap to link it to the rest again' : '🔗 LINKED — a move takes every later step along · tap to unlock this one'}</button>
-    <div class="sch-moves">
-      <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',-1)">◀ 1 day earlier</button>
-      <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',1)">1 day later ▶</button>
-      <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',7)">1 week later ▶▶</button>
+    <div class="sch-links" id="schLinks" role="group" aria-label="links — what a move takes along">
+      <button type="button" class="pick-chip sch-solo${solo ? ' sel' : ''}" id="schSolo" aria-pressed="${solo}" onclick="schedSoloTap('${escq(job)}','${escq(s.id)}')">${solo ? '🔓 UNLINKED — only this step moves · tap to link it again' : '🔗 LINKED — a move takes the linked steps after it along · tap to unlink this one'}</button>
+      <button type="button" class="btn-ghost sch-link-from" id="schLinkFrom" onclick="schedLinkFromTap('${escq(job)}','${escq(s.id)}')">🔗 Stay linked only to everything after this step</button>
+      <button type="button" class="btn-ghost" id="schUnlinkAll" onclick="schedLinkAllTap('${escq(job)}',false)">🔓 Unlink all</button>
+      <button type="button" class="btn-ghost" id="schRelinkAll" onclick="schedLinkAllTap('${escq(job)}',true)">🔗 Relink all</button>
     </div>
-    <div class="hint" id="schMoveSay" style="margin: 4px 0 6px;">${solo ? '🔓 Only this step moves — by the buttons or a typed start day. Every other step stays where it is. It links again when you fold it or open another step.' : 'A move takes this step and every step that starts on or after it. A ✓ done step never moves.'}</div>
+    <div class="sch-moves">
+      <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',-1)">◀ 1 ${wk ? 'work ' : ''}day earlier</button>
+      <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',1)">1 ${wk ? 'work ' : ''}day later ▶</button>
+      <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',1,'w')">1 week later ▶▶</button>
+    </div>
+    <div class="hint" id="schMoveSay" style="margin: 4px 0 6px;">${esc(schedMoveSay(job, s))}</div>
     <div class="sch-moves">
       <button type="button" class="btn-ghost${s.done ? ' sel' : ''}" onclick="schedDoneTap('${escq(job)}','${escq(s.id)}')">${s.done ? '↩ Not done after all' : '✓ Done'}</button>
       <button type="button" class="btn-ghost sch-del${armed ? ' armed' : ''}" onclick="schedDelTap('${escq(job)}','${escq(s.id)}')">${armed ? '⚠ SURE? Tap again' : '✕ Delete this step'}</button>
       <button type="button" class="btn-ghost" onclick="_schedOpen = null; renderSchedule();">▴ Fold</button>
     </div></div>`;
 }
-function schedRowTap(job, id) { _schedOpen = _schedOpen === id ? null : id; _schedArm = ''; _schedSolo = ''; renderSchedule(); }   // 🔓 v7.73 — a step opened (or folded) is LINKED again
-function schedStartSet(job, id, v) {   // a typed start day = a move of this step by the difference, so what follows moves with it (🔓 unlocked: this step alone)
+function schedRowTap(job, id) { _schedOpen = _schedOpen === id ? null : id; _schedArm = ''; renderSchedule(); }   // 🔗 v7.75 — a step's link stays as he set it, folded or not
+// a typed start day: the step goes to that day — its next work day when it is a day the step does not work (🗓 v7.76) — and the
+// linked steps after it move the same way: the whole weeks on the calendar, the rest in work days (🔓 unlinked: this step alone)
+function schedStartSet(job, id, v) {
   const s = schedSteps(job).find(x => x.id === id), d = schedDay(v); if (!s || !d) return;
-  const n = Math.round((schedDate(d) - schedDate(s.start)) / 86400000);
-  schedMoveTap(job, id, n);
+  const to = schedWorkOn(s.who, d, 1), off = to !== d ? `${schedDayWord(d)} is not a work day for this step` : '';
+  if (to === s.start) { renderSchedule(); if (off) toast(`${off} — it stays on ${schedDayWord(to)}`, false); return; }
+  const weeks = Math.trunc(Math.round((schedDate(to) - schedDate(s.start)) / 86400000) / 7);
+  let mid = schedWorkOn(s.who, schedAddDays(s.start, weeks * 7), weeks < 0 ? -1 : 1), wd = 0;
+  const dir = to > mid ? 1 : -1;
+  for (let i = 0; mid !== to && i < 40; i++) { mid = schedWorkOn(s.who, schedAddDays(mid, dir), dir); wd += dir; }
+  schedMoveDo(job, id, weeks, wd, off || 'typed');
 }
-function schedMoveTap(job, id, n) {
-  const only = schedSoloOn(id);   // 🔓 v7.73 — unlocked: this one step alone
-  const moved = schedMove(job, id, n, only); const me = schedSteps(job).find(x => x.id === id);
+function schedMoveTap(job, id, n, unit) { schedMoveDo(job, id, unit === 'w' ? n : 0, unit === 'w' ? 0 : n); }   // the buttons: n work days, or ('w') n weeks
+function schedMoveDo(job, id, weeks, wdays, typed) {
+  const was = schedSteps(job).find(x => x.id === id); if (!was) return;
+  if (was.done) { renderSchedule(); toast(`✓ ${was.n} is done — a done step never moves (↩ Not done after all first)`, false); return; }
+  const alone = !!was.free, moved = schedMoveBy(job, id, weeks, wdays), me = schedSteps(job).find(x => x.id === id);
   renderSchedule();
-  if (!me) return;
-  const days = `${Math.abs(n)} day${Math.abs(n) === 1 ? '' : 's'} ${n > 0 ? 'later' : 'earlier'}`;
-  if (only) { toast(moved.length ? `🔓 Only ${me.n} moved ${days} · it starts ${schedDayWord(me.start)} — nothing else moved` : `✓ ${me.n} is done — a done step never moves (↩ Not done after all first)`, !!moved.length); return; }
-  if (!moved.length) return;
-  const last = schedLastEnd(job);
-  toast(`📅 ${me.n} and ${moved.length - 1} step${moved.length - 1 === 1 ? '' : 's'} after it moved ${days} · the last step ends ${schedDayWord(last)}`);
+  if (!me || !moved.length) return;
+  const how = typed ? `now starts ${schedDayWord(me.start)}${typed !== 'typed' ? ` (${typed})` : ''}` : `moved ${schedShiftWord(weeks, wdays, me.who)} · it starts ${schedDayWord(me.start)}`;
+  if (alone) { toast(`🔓 Only ${me.n} ${how} — nothing else moved`); return; }
+  const k = moved.length - 1;
+  toast(`📅 ${me.n} ${how} · ${k ? `${k} linked step${k === 1 ? '' : 's'} after it moved along` : 'no linked step starts after it'} · the last step ends ${schedDayWord(schedLastEnd(job))}`);
 }
 function schedDoneTap(job, id) { const s = schedDoneToggle(job, id); renderSchedule(); if (s) toast(s.done ? `✓ ${s.n} is done` : `↩ ${s.n} is open again`); }
 function schedDelTap(job, id) {
@@ -14548,7 +14735,7 @@ function schedAddTap(job) {
   const s = schedAddStep(job, n, d, w);
   if (!s) { toast('Type the step first', false); return; }
   _schedAdd = true; renderSchedule();
-  toast(`➕ ${s.n} · ${s.days} day${s.days === 1 ? '' : 's'} · starts ${schedDayWord(s.start)}`);
+  toast(`➕ ${s.n} · ${schedDaysWord(s)} · starts ${schedDayWord(s.start)}`);
   setTimeout(() => { const el = $('schAddN'); if (el) el.focus(); }, 60);
 }
 function schedPasteTap(job) {
@@ -14557,7 +14744,7 @@ function schedPasteTap(job) {
   toast(n ? `📋 ${n} step${n === 1 ? '' : 's'} on the plan, one after the other` : 'Nothing read — one step a line, the days last: "plumbing 1.5 weeks"', !!n);
 }
 function schedTemplateTap(job) { const n = schedFromTemplate(job); renderSchedule(); toast(n ? `📐 The standard sequence is on ${job} — ${n} steps, delete what does not apply and type the real days` : `${job} already has steps`, !!n); }
-function schedMoveJobTap(job, n) { const moved = schedMoveJob(job, n); renderSchedule(); toast(`⇄ ${moved.length} step${moved.length === 1 ? '' : 's'} on ${job} moved ${Math.abs(n)} day${Math.abs(n) === 1 ? '' : 's'} ${n > 0 ? 'later' : 'earlier'} · the last step ends ${schedDayWord(schedLastEnd(job))}`); }
+function schedMoveJobTap(job, n) { const moved = schedMoveJob(job, n), wk = n % 7 === 0; renderSchedule(); toast(`⇄ ${moved.length} step${moved.length === 1 ? '' : 's'} on ${job} moved ${schedShiftWord(wk ? n / 7 : 0, wk ? 0 : n, 'crew')} · the last step ends ${schedDayWord(schedLastEnd(job))}`); }
 // ---- 📅 v7.68 — WHERE WE ARE on the homeowner's page. The page file is served WHOLE to their browser, so the cut is the step
 // NAMES and three words (done · now · next) as of today — no date, no days, no who, no sub, no note. Opt-in per job (show.sched),
 // from the plate here or 🎛 What they see; while it is on, the page follows every change to the plan (schedPageSoon) and is put
@@ -14629,14 +14816,15 @@ function schedBandHtml(job, win) {
   const clash = schedCrewClash(), mine = Object.keys(clash).filter(w => clash[w].some(j => cardKey(j) === cardKey(job))).sort();
   const one = _schedJob !== '*' && schedCanEdit();   // 📅 v7.68 — a crew phone reads: no tools
   const offN = steps.filter(s => schedOffFlag(s)).length;   // ▒ v7.71 — how many start or end on a day he has shaded
+  const open = steps.filter(s => !s.done).length, freeN = schedCanEdit() ? schedFreeN(job) : 0, allFree = !!freeN && freeN === open;   // 🔗 v7.75 — how many are unlinked, in words
   return `<div class="sch-band" data-job="${esc(job)}">
-    <div class="sch-band-h"><b>🏠 ${esc(job)}</b><span>${steps.length ? `${steps.length} step${steps.length === 1 ? '' : 's'}${done ? ` · ${done} done` : ''} · last step ends ${esc(schedDayWord(last))}${late ? ` · <span class="sch-late-w">⚠ ${late} LATE</span>` : ''}${offN ? ` · <span class="sch-offw sch-off-n">⚠ ${offN} on a shaded day</span>` : ''}` : 'no plan yet'}</span></div>
+    <div class="sch-band-h"><b>🏠 ${esc(job)}</b><span>${steps.length ? `${steps.length} step${steps.length === 1 ? '' : 's'}${done ? ` · ${done} done` : ''} · last step ends ${esc(schedDayWord(last))}${late ? ` · <span class="sch-late-w">⚠ ${late} LATE</span>` : ''}${freeN ? ` · <span class="sch-freew sch-free-n">🔓 ${allFree ? 'ALL UNLINKED' : freeN + ' unlinked'}</span>` : ''}${offN ? ` · <span class="sch-offw sch-off-n">⚠ ${offN} on a shaded day</span>` : ''}` : 'no plan yet'}</span></div>
     ${mine.length ? `<div class="sch-clash">⚠ The crew is on two jobs at once the week${mine.length === 1 ? '' : 's'} of ${mine.map(w => esc(schedShortWord(w)) + ' (' + esc(clash[w].filter(j => cardKey(j) !== cardKey(job)).join(', ')) + ')').join(', ')}</div>` : ''}
     ${schedChartHtml(job, win)}
     ${(() => { const o = _schedOpen && steps.find(s => s.id === _schedOpen); return o ? `<div class="sch-edit-h">${schedCanEdit() ? '✎' : '📅'} ${esc(o.n)} — ${esc(schedDayWord(o.start))} to ${esc(schedDayWord(schedEnd(o)))}</div>` + schedEditHtml(job, o) : ''; })()}
     ${one ? schedPagePlateHtml(job) : ''}
     ${one ? `<div class="sch-tools">
-      ${_schedAdd ? `<div class="sch-addrow"><input type="text" id="schAddN" placeholder="the step — plumbing rough-in" onkeydown="if(event.key==='Enter'){schedAddTap('${escq(job)}')}"><input type="text" id="schAddD" inputmode="decimal" placeholder="days · 1.5 weeks" onkeydown="if(event.key==='Enter'){schedAddTap('${escq(job)}')}"><select id="schAddW"><option value="">who?</option>${SCHED_WHO.map(w => `<option value="${w}">${schedWhoWord(w)}</option>`).join('')}</select><button type="button" class="btn-primary" onclick="schedAddTap('${escq(job)}')">➕ Add</button><button type="button" class="btn-ghost" onclick="_schedAdd=false; renderSchedule();">✕</button></div>`
+      ${_schedAdd ? `<div class="sch-addrow"><input type="text" id="schAddN" placeholder="the step — plumbing rough-in" onkeydown="if(event.key==='Enter'){schedAddTap('${escq(job)}')}"><input type="text" id="schAddD" inputmode="decimal" placeholder="work days · 1.5 weeks" onkeydown="if(event.key==='Enter'){schedAddTap('${escq(job)}')}"><select id="schAddW"><option value="">who?</option>${SCHED_WHO.map(w => `<option value="${w}">${schedWhoWord(w)}</option>`).join('')}</select><button type="button" class="btn-primary" onclick="schedAddTap('${escq(job)}')">➕ Add</button><button type="button" class="btn-ghost" onclick="_schedAdd=false; renderSchedule();">✕</button></div>`
         : `<button type="button" class="btn-primary sch-tool" onclick="_schedAdd=true; _schedPaste=false; renderSchedule(); setTimeout(()=>{const el=$('schAddN'); if(el) el.focus();},60);">➕ Add a step${steps.length ? ' after ' + esc(schedShortWord(last)) : ''}</button>`}
       ${_schedPaste ? `<div class="sch-pasterow"><textarea id="schPaste" rows="6" placeholder="one step a line, the days last:
 plumbing 1.5 weeks
@@ -14644,7 +14832,8 @@ heat/ducting 2-3 days
 insulation 3-4 days
 sheetrock 2.5 weeks"></textarea><div class="sch-moves"><button type="button" class="btn-primary" onclick="schedPasteTap('${escq(job)}')">📋 Put them on the plan</button><button type="button" class="btn-ghost" onclick="_schedPaste=false; renderSchedule();">✕ Never mind</button></div></div>`
         : `<button type="button" class="btn-ghost sch-tool" onclick="_schedPaste=true; _schedAdd=false; renderSchedule(); setTimeout(()=>{const el=$('schPaste'); if(el) el.focus();},60);">📋 Paste a list of steps</button>`}
-      ${steps.length ? `<button type="button" class="btn-ghost sch-tool" onclick="schedMoveJobTap('${escq(job)}', 7)">⇄ Whole job 1 week later</button><button type="button" class="btn-ghost sch-tool" onclick="schedMoveJobTap('${escq(job)}', -7)">⇄ Whole job 1 week earlier</button>`
+      ${steps.length ? `<button type="button" class="btn-ghost sch-tool" onclick="schedMoveJobTap('${escq(job)}', 7)">⇄ Whole job 1 week later</button><button type="button" class="btn-ghost sch-tool" onclick="schedMoveJobTap('${escq(job)}', -7)">⇄ Whole job 1 week earlier</button>
+        <button type="button" class="btn-ghost sch-tool sch-tool-link${allFree ? ' sel' : ''}" id="schToolUnlink" aria-pressed="${allFree}" onclick="schedLinkAllTap('${escq(job)}',false)">${allFree ? '✓ 🔓 ALL UNLINKED — every step moves on its own' : '🔓 Unlink all — every step moves on its own'}</button><button type="button" class="btn-ghost sch-tool sch-tool-link${open && !freeN ? ' sel' : ''}" id="schToolRelink" aria-pressed="${!!open && !freeN}" onclick="schedLinkAllTap('${escq(job)}',true)">${open && !freeN ? '✓ 🔗 ALL LINKED — a move takes the later steps along' : '🔗 Relink all — a move takes the later steps along'}</button>`
         : `<button type="button" class="btn-ghost sch-tool" onclick="schedTemplateTap('${escq(job)}')">📐 Start from the standard sequence (${SCHED_TEMPLATE.length} steps)</button>`}
     </div>` : ''}</div>`;
 }
@@ -14659,7 +14848,7 @@ function renderSchedule(force) {
   const jobsIn = all ? planned : [list.find(j => cardKey(j) === cardKey(_schedJob)) || _schedJob];
   const win = schedWindow(jobsIn);
   box.innerHTML = `<div id="schedBox" class="sch-box"><h3>📅 Schedule${winX('schedClose()', 'close')}</h3>
-    <div class="hint" style="margin: 0 0 8px;">${schedCanEdit() ? `A plan is a list of steps with days. Tap a step to change it; a move takes everything after it along. Weeks across, today is the line${all ? '; every job that has a plan is here' : ''}. The crew's phones get every job's weeks on their next sync.` : `Eric's plan, as it landed on this phone — the weeks across, today is the line${all ? '; every job that has a plan is here' : ''}. Tap a step to read it; a move is his to make.`}</div>
+    <div class="hint" style="margin: 0 0 8px;">${schedCanEdit() ? `A plan is a list of steps with ${schedWd() ? 'work ' : ''}days. Tap a step to change it; a move takes the linked steps after it along. Weeks across, today is the line${all ? '; every job that has a plan is here' : ''}. The crew's phones get every job's weeks on their next sync.` : `Eric's plan, as it landed on this phone — the weeks across, today is the line${all ? '; every job that has a plan is here' : ''}. Tap a step to read it; a move is his to make.`}</div>
     <div class="jc-pick">
       <label for="schedJob" class="jc-pick-lbl">▸ PICK THE JOB</label>
       <select id="schedJob" class="jc-pick-sel" onchange="schedPick(this.value)">
@@ -14694,7 +14883,8 @@ let _schedInbox = null, _schedInboxBusy = false;   // null = not read this sessi
 function schedInboxClean(p) {   // one shape and its sizes, whoever wrote the file; a plan with no id, no job or no usable step is not a plan
   if (!p || typeof p !== 'object') return null;
   const id = String(p.id || '').trim().replace(/[^\w.:-]/g, '').slice(0, 60), job = String(p.job || '').trim().slice(0, 120);
-  const steps = (Array.isArray(p.steps) ? p.steps : []).slice(0, 80).map(s => s && typeof s === 'object' && String(s.n || '').trim() && schedDay(s.start) ? schedClean({ ...s, id: '', sid: '' }) : null).filter(Boolean);
+  // 🗓 v7.76 — a plan's days are CALENDAR days (the contract) unless the plan says `"wd": 1`: each step is turned into the work days inside its span before it is offered
+  const steps = (Array.isArray(p.steps) ? p.steps : []).slice(0, 80).map(s => { if (!s || typeof s !== 'object' || !String(s.n || '').trim() || !schedDay(s.start)) return null; const o = { ...s, id: '', sid: '', free: 0 }; if (!p.wd && schedWd()) schedCalToWork(o); return schedClean(o); }).filter(Boolean);
   if (!id || !job || job === '—' || isPersonalJob(job) || !steps.length) return null;
   return { id, job, from: String(p.from || '').trim().slice(0, 40), note: String(p.note || '').trim().slice(0, 160), at: schedDay(p.at), steps };
 }
@@ -14802,7 +14992,7 @@ async function checkSharedNotes() {
     // 👷 v7.51 — the subs, every job: kept on the phone (they read with no signal), this phone's own changes on top until Eric has them
     if (j.subs && typeof j.subs === 'object' && !Array.isArray(j.subs)) { crewSubs = subsHeal(j.subs); lsSet('daylog-crew-subs', JSON.stringify(crewSubs)); subsEditsOverlay(); subsFresh(); }
     // 📅 v7.68 — Eric's schedule, every job: kept on the phone (it reads with no signal); the window follows if it is open
-    if (j.sched && typeof j.sched === 'object' && !Array.isArray(j.sched)) { crewSched = schedHealBook(j.sched); lsSet('daylog-crew-sched', JSON.stringify(crewSched)); if ($('schedBox')) renderSchedule(); }
+    if (j.sched && typeof j.sched === 'object' && !Array.isArray(j.sched)) { crewSched = schedCrewTake(j.sched); lsSet('daylog-crew-sched', JSON.stringify(crewSched)); if ($('schedBox')) renderSchedule(); }   // 🗓 v7.76 — the days as work days
     // 🚚 v5.51 — take Eric's truck book, keep the NEWER odometer per truck (his sweep vs
     // a trip just ended on this phone). Trucks Eric added appear; ones he removed go.
     if (Array.isArray(j.trucks) && j.trucks.length) {
@@ -26287,7 +26477,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.74';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.76';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

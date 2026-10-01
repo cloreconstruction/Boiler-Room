@@ -41,7 +41,12 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   });
   const INBOX = await page.evaluate(() => schedInboxPath());
   const day = n => page.evaluate(n => schedAddDays(localDay(new Date()), n), n);
-  const d3 = await day(3), d5 = await day(5), d12 = await day(12), d13 = await day(13), d20 = await day(20), dm2 = await day(-2);
+  // 🗓 v7.76 — the days are work days and a step starts on a day it works: the plan's days hang off NEXT WEEK'S MONDAY, so they are
+  // weekdays whenever this runs (d3 a Monday, d5 the Wednesday, d12 and d13 the Tuesday and Wednesday after, d20 the Monday after that)
+  const mon = await page.evaluate(() => schedMonday(schedAddDays(localDay(new Date()), 7)));
+  const from = n => page.evaluate(([m, n]) => schedAddDays(m, n), [mon, n]);
+  const d3 = await from(0), d5 = await from(2), d12 = await from(8), d13 = await from(9), d20 = await from(14), dm2 = await day(-2);
+  const snap = (who, d) => page.evaluate(([who, d]) => schedWorkOn(who, d, 1), [who, d]);   // (a holiday on one of those days moves the step to its next work day)
   const today = await page.evaluate(() => localDay(new Date()));
   const oakPlan = { id: 'oak-finish-1', job: 'oak house', from: 'Claude', at: today, note: 'the finish sheet', steps: [
     { n: 'Shingles', days: 5, who: 'sub', start: d3, sid: 'sNOT-HIS' },
@@ -127,8 +132,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await page.waitForTimeout(200);
     const r = await page.evaluate(() => ({ keys: Object.keys(prefs.sched.jobs).join('|'), st: schedSteps('Oak House').map(s => ({ n: s.n, d: s.days, w: s.who, s: s.start, done: s.done, sid: s.sid, note: s.note, id: s.id })), job: _schedJob, sel: $('schedJob').value, bars: $('revBox').querySelectorAll('.sch-bar').length, taken: prefs.schedTaken, saves: window._saves, said: _said.slice() }));
     const ids = new Set(r.st.map(s => s.id));
-    const span = await page.evaluate(([a, b]) => schedShortWord(a) + ' to ' + schedShortWord(b), [dm2, d12]);
-    return r.keys === 'Oak House' && r.st.length === 4 && r.st[0].n === 'Shingles' && r.st[0].s === d3 && r.st[1].s === d3 && r.st[2].s === d12 && r.st[3].s === dm2 && r.st[3].done === dm2 && r.st[3].w === '' && r.st[0].w === 'sub' && r.st[0].sid === '' && r.st[1].note === 'runs beside the roofer'
+    const span = await page.evaluate(([a, b]) => schedShortWord(a) + ' to ' + schedShortWord(b), [dm2, await snap('inspection', d12)]);
+    return r.keys === 'Oak House' && r.st.length === 4 && r.st[0].n === 'Shingles' && r.st[0].s === await snap('sub', d3) && r.st[1].s === await snap('crew', d3) && r.st[2].s === await snap('inspection', d12) && r.st[3].s === dm2 && r.st[3].done === dm2 && r.st[3].w === '' && r.st[0].w === 'sub' && r.st[0].sid === '' && r.st[1].note === 'runs beside the roofer'
+      && r.st[0].d <= 5 && r.st[1].d <= 4 && r.st[3].d === 2   // v7.76 — a plan's days are calendar days: Mon–Fri is five work days of a sub's and four of the crew's (fewer in a holiday week); a step with no "who" counts every day
       && ids.size === 4 && r.st.every(s => /^s[a-z0-9]{6,}$/.test(s.id)) && r.job === 'Oak House' && r.sel === 'Oak House' && r.bars === 4 && r.taken['oak-finish-1'] === today && r.saves >= 1 && r.said.some(m => m === '📥 4 steps on Oak House — ' + span);
   })(), await page.evaluate(() => JSON.stringify({ k: Object.keys(prefs.sched.jobs), st: schedSteps('Oak House'), said: _said })));
   ok('the plate is gone, the other two still wait; the crew\'s phones get the new plan on their own (the v7.68 road)', await (async () => {
@@ -148,9 +154,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await page.evaluate(async () => { const d = window.dbxDownload; window.dbxDownload = async () => null; await schedInboxLoad(true); window.dbxDownload = async () => { throw new TypeError('Failed to fetch'); }; await schedInboxLoad(true); window.dbxDownload = d; });
     return before === 'pine-2|barn1' && (await waiting()) === before && await page.evaluate(() => document.querySelectorAll('#schedInbox .sch-inbox').length === 2);
   })());
-  ok('a move after the take is his own: one step a week later takes the steps that start on or after it along, the done one stays (the v7.67 rule on the new plan)', await page.evaluate(() => { const st = schedSorted('Oak House'); const first = st.find(s => s.n === 'Shingles'), was = st.map(s => s.start).join('|'); schedMove('Oak House', first.id, 7); const now = schedSorted('Oak House');
-    const by = n => now.find(s => s.n === n); const r = by('Demo').start === st.find(s => s.n === 'Demo').start && by('Shingles').start === schedAddDays(first.start, 7) && by('Framing wrap-up').start === by('Shingles').start && by('Rough-in inspection').start === schedAddDays(st.find(s => s.n === 'Rough-in inspection').start, 7);
-    schedMove('Oak House', by('Shingles').id, -7); return r && schedSorted('Oak House').map(s => s.start).join('|') === was; }));
+  ok('a move after the take is his own: one step a week later takes the steps that start on or after it along, the done one stays (the v7.67 rule on the new plan) — and a week earlier puts every one back', await page.evaluate(() => { const st = schedSorted('Oak House'); const first = st.find(s => s.n === 'Shingles'), was = st.map(s => s.start).join('|'); const want = schedShift({ who: 'sub', start: first.start }, 1, 0).start; schedMoveBy('Oak House', first.id, 1, 0); const now = schedSorted('Oak House');
+    const by = n => now.find(s => s.n === n); const r = by('Demo').start === st.find(s => s.n === 'Demo').start && by('Shingles').start === want && want > first.start && by('Framing wrap-up').start === schedShift({ who: 'crew', start: st.find(s => s.n === 'Framing wrap-up').start }, 1, 0).start && by('Rough-in inspection').start > st.find(s => s.n === 'Rough-in inspection').start;
+    schedMoveBy('Oak House', by('Shingles').id, -1, 0); return r && schedSorted('Oak House').map(s => s.start).join('|') === was; }));
 
   console.log('— ✕ not this one, and a job that already has steps —');
   ok('✕ Not this one: the plate leaves, the plan is remembered as turned down, nothing lands on the schedule — and Undo brings the offer back', await (async () => {
