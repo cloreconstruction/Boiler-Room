@@ -1749,6 +1749,19 @@
   #schedBox .sch-zoom button { min-width: 50px; min-height: 44px; padding: 0 8px; font-size: 22px; font-weight: var(--fw8, 800); line-height: 1; }   /* the id outranks the skins' .btn-ghost sizes */
   #schedBox .sch-zoom button.sch-zoom-n { min-width: 68px; font-size: 14px; }
   #schedBox .sch-zoom button[disabled] { opacity: .4; }
+  /* ▒ v7.71 — the days off, shaded: ☐ Weekends ☐ Fridays ☐ Holidays; a see-through column down the chart for each such day (weekends a
+     bright wash, a Friday a fainter one with a dashed edge, a holiday hatched), and the row says it in words */
+  .sch-shade { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0 0 8px; }   /* the three plates stretch to one height, as the who-filter's do */
+  .sch-shade-l { align-self: center; font-size: 12.5px; font-weight: var(--fw8, 800); letter-spacing: .4px; padding-right: 4px; white-space: nowrap; }
+  #schedBox .sch-shade .pick-chip { min-height: 44px; white-space: normal; font-size: 12.5px; padding: 4px 6px; }   /* the id outranks the skins' chip sizes */
+  .sch-shade-say { margin: -2px 0 8px; }
+  .sch-off { position: absolute; top: 0; bottom: 0; pointer-events: none; z-index: 0; box-sizing: border-box; }
+  .sch-off.we { background: rgba(255, 255, 255, .17); border-left: 1px solid rgba(0, 0, 0, .5); border-right: 1px solid rgba(0, 0, 0, .5); }
+  .sch-off.fr { background: rgba(255, 255, 255, .08); border-left: 1px dashed rgba(255, 255, 255, .5); }
+  .sch-off.ho { background: repeating-linear-gradient(135deg, rgba(255, 166, 87, .5) 0 3px, rgba(255, 166, 87, .14) 3px 7px); border-left: 1px solid var(--warn, #ffa657); border-right: 1px solid var(--warn, #ffa657); }
+  .sch-offw { color: var(--warn, #ffa657); font-weight: var(--fw7, 700); }
+  /* 📤 v7.72 — the whole chart as one picture: the plate under the chart */
+  #schedBox .sch-pic { width: 100%; min-height: 48px; margin-top: 12px; white-space: normal; line-height: 1.3; font-weight: var(--fw8, 800); }
   .sch-wk-grip { display: none; }
   @media (hover: hover) and (pointer: fine) {
     .sch-zoom-tip { display: inline; }
@@ -4682,7 +4695,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.70 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.72 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -14212,13 +14225,15 @@ function schedChartHtml(job, win) {
     const end = schedEnd(s), late = !s.done && end < today, left = x(s.start), width = Math.max(1.2, x(schedAddDays(end, 1)) - left);
     const open = _schedOpen === s.id, mark = s.who === 'inspection' || s.who === 'homeowner';   // a one-day thing is a round mark with a glyph, not a sliver of a bar
     const subW = schedSubWord(s), whoW = schedWhoWord(s.who) + (subW ? ' · ' + subW : '');   // 📅 v7.68 — the sub picked for the step, by name
+    const off = schedOffFlag(s);   // ▒ v7.71 — it starts or ends on a day he has shaded: said in words on the row
     return `<div class="sch-lab${open ? ' open' : ''}${s.done ? ' done' : ''}${late ? ' late' : ''}" role="button" tabindex="0" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')" onkeydown="if(event.key==='Enter'){schedRowTap('${escq(job)}','${escq(s.id)}')}">
-        <b>${s.done ? '✓ ' : late ? '⚠ ' : ''}${esc(s.n)}</b><small>${esc(schedShortWord(s.start))}${s.days > 1 ? ' – ' + esc(schedShortWord(end)) : ''} · ${s.days} day${s.days === 1 ? '' : 's'}${whoW ? ' · ' + esc(whoW) : ''}${s.done ? ' · done' : late ? ' · LATE' : ''}</small></div>
-      <div class="sch-lane${open ? ' open' : ''}" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')"><div class="sch-bar${s.done ? ' done' : ''}${late ? ' late' : ''}${mark ? ' mark' : ''}${s.who === 'sub' ? ' sub' : ''}" style="left:${left.toFixed(2)}%;${mark ? '' : `width:${width.toFixed(2)}%`}" title="${esc(s.n)}${subW ? ' · ' + esc(subW) : ''} · ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(end))}">${mark ? (s.who === 'inspection' ? '📋' : '🏠') : esc(s.n)}</div></div>`;
+        <b>${s.done ? '✓ ' : late ? '⚠ ' : ''}${esc(s.n)}</b><small>${esc(schedShortWord(s.start))}${s.days > 1 ? ' – ' + esc(schedShortWord(end)) : ''} · ${s.days} day${s.days === 1 ? '' : 's'}${whoW ? ' · ' + esc(whoW) : ''}${s.done ? ' · done' : late ? ' · LATE' : ''}${off ? ` · <span class="sch-offw">⚠ ${esc(off)}</span>` : ''}</small></div>
+      <div class="sch-lane${open ? ' open' : ''}" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')"><div class="sch-bar${s.done ? ' done' : ''}${late ? ' late' : ''}${mark ? ' mark' : ''}${s.who === 'sub' ? ' sub' : ''}" style="left:${left.toFixed(2)}%;${mark ? '' : `width:${width.toFixed(2)}%`}" title="${esc(s.n)}${subW ? ' · ' + esc(subW) : ''} · ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(end))}${off ? ' · ' + esc(off) : ''}">${mark ? (s.who === 'inspection' ? '📋' : '🏠') : esc(s.n)}</div></div>`;
   }).join('');
   const todayX = x(today);
   return `<div class="sch-chart"><div class="sch-grid" style="--wk:${win.weeks}${schedWkwStyle()}"><div class="sch-corner"></div><div class="sch-head">${heads.join('')}</div>
     ${rows || `<div class="sch-lab"><small>${_schedWho ? 'no ' + (_schedWho === 'crew' ? 'crew' : 'sub') + ' steps on this job' : 'no steps yet'}</small></div><div class="sch-lane"></div>`}
+    ${schedOffHtml(win)}
     ${todayX > 0 && todayX < 100 ? `<div class="sch-today" style="left:calc(var(--lab) + (100% - var(--lab)) * ${(todayX / 100).toFixed(4)})" title="today"></div>` : ''}</div></div>`;
 }
 // ================= ↔ v7.70 — THE WEEK COLUMNS RESIZE =================
@@ -14271,6 +14286,185 @@ function schedGrip(ev) {   // a MOUSE on the right edge of a week's date: the we
   window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
 }
 // ================= /↔ v7.70 =================
+// ================= ▒ v7.71 — THE DAYS OFF, SHADED =================
+// Eric: "on the gantt chart i want to be able to select "weekends" "fridays" as crew doesnt always work friday and holidays. and
+// it will put like a highlighted vertical opaque column overlay so that i can easily adjust things off of the weekends".
+// Three plates over the chart — ▒ SHADE  ☐ Weekends  ☐ Fridays  ☐ Holidays — each its own switch (☑ = on; any mix). A switched-on
+// kind lays a see-through column down the whole chart, over the bars, for every such day in view: the weekends a bright wash two
+// days wide, a Friday a fainter one with a dashed edge, a holiday hatched (never the colour alone — and a line under the plates
+// says in words what is shaded and names the holidays in view). A step that is not done and STARTS or ENDS on a shaded day says
+// so on its row (⚠ starts Sat · ends Sun) and the job's heading counts them, so he can walk down the list and nudge each one off
+// with ◀ 1 day earlier / 1 day later ▶. The plan itself is untouched: days are still calendar days and nothing moves by itself.
+// The holidays are the six the trades take, by rule, any year (schedHolidays). A way of LOOKING, like the week width: kept on
+// this device (`daylog-sched-shade`), never in his prefs or a file; a crew phone has the plates too.
+const SCHED_SHADES = [['we', 'Weekends'], ['fr', 'Fridays'], ['ho', 'Holidays']];
+let _schedShade = (() => { let j = {}; try { j = JSON.parse(lsGet('daylog-sched-shade') || '{}') || {}; } catch (e) { j = {}; } return { we: !!j.we, fr: !!j.fr, ho: !!j.ho }; })();
+const _schedHolY = {};
+function schedHolidays(y) {   // { 'YYYY-MM-DD': name } for one year
+  if (_schedHolY[y]) return _schedHolY[y];
+  const d = (m, day) => `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const nth = (m, dow, n) => 1 + ((dow - new Date(y, m - 1, 1).getDay() + 7) % 7) + (n - 1) * 7;   // the nth <weekday> of a month
+  const last = (m, dow) => { const days = new Date(y, m, 0).getDate(); return days - ((new Date(y, m - 1, days).getDay() - dow + 7) % 7); };   // the last <weekday> of a month
+  return (_schedHolY[y] = { [d(1, 1)]: 'New Year\'s Day', [d(5, last(5, 1))]: 'Memorial Day', [d(7, 4)]: 'July 4th', [d(9, nth(9, 1, 1))]: 'Labor Day', [d(11, nth(11, 4, 4))]: 'Thanksgiving', [d(12, 25)]: 'Christmas' });
+}
+function schedHolidayOf(day) { const s = schedDay(day); return s ? (schedHolidays(+s.slice(0, 4))[s] || '') : ''; }
+function schedShadeAny() { return _schedShade.we || _schedShade.fr || _schedShade.ho; }
+function schedOffWord(day) {   // why a day is shaded, in a word ('' = it is not) — only by what is switched on
+  const d = schedDate(day); if (!d) return '';
+  const h = _schedShade.ho ? schedHolidayOf(day) : ''; if (h) return h;
+  const w = d.getDay();
+  if (_schedShade.we && (w === 6 || w === 0)) return w === 6 ? 'Sat' : 'Sun';
+  return _schedShade.fr && w === 5 ? 'Fri' : '';
+}
+function schedOffFlag(s) {   // a step that is not done and starts or ends on a shaded day, in words
+  if (!s || s.done || !schedShadeAny()) return '';
+  const a = schedOffWord(s.start);
+  if (s.days <= 1) return a ? 'on ' + (/^(Sat|Sun|Fri)$/.test(a) ? 'a ' + a : a) : '';
+  const e = schedOffWord(schedEnd(s));
+  return [a ? 'starts ' + a : '', e ? 'ends ' + e : ''].filter(Boolean).join(' · ');
+}
+function schedOffHtml(win) {   // the columns: one a Friday, one a weekend, one a holiday — a share of the lane, so they follow the week width
+  if (!schedShadeAny()) return '';
+  const span = win.weeks * 7, out = [];
+  const band = (d, n, k, t) => out.push(`<div class="sch-off ${k}" data-d="${d}" title="${esc(t)}" style="left:calc(var(--lab) + (100% - var(--lab)) * ${(d / span).toFixed(5)});width:calc((100% - var(--lab)) * ${(n / span).toFixed(5)})"></div>`);
+  for (let w = 0; w < win.weeks; w++) { if (_schedShade.fr) band(w * 7 + 4, 1, 'fr', 'Friday'); if (_schedShade.we) band(w * 7 + 5, 2, 'we', 'weekend'); }   // win.lo is a Monday
+  if (_schedShade.ho) for (let d = 0; d < span; d++) { const day = schedAddDays(win.lo, d), h = schedHolidayOf(day); if (h) band(d, 1, 'ho', h + ' · ' + schedDayWord(day)); }
+  return out.join('');
+}
+function schedShadeHtml(win) {
+  const hol = [];
+  if (_schedShade.ho && win) for (let d = 0; d < win.weeks * 7; d++) { const day = schedAddDays(win.lo, d), h = schedHolidayOf(day); if (h) hol.push(schedDayWord(day) + ' ' + h); }
+  const on = [_schedShade.we ? 'weekends' : '', _schedShade.fr ? 'Fridays' : '', _schedShade.ho ? 'holidays (' + (hol.length ? hol.join(' · ') : 'none in these weeks') + ')' : ''].filter(Boolean);
+  return `<div class="sch-shade" id="schShade" role="group" aria-label="shade the days off on the chart"><span class="sch-shade-l">▒ SHADE</span>${SCHED_SHADES.map(([k, w]) => `<button type="button" class="pick-chip${_schedShade[k] ? ' sel' : ''}" data-k="${k}" aria-pressed="${!!_schedShade[k]}" onclick="schedShade('${k}')">${_schedShade[k] ? '☑' : '☐'} ${w}</button>`).join('')}</div>
+    ${on.length ? `<div class="hint sch-shade-say" id="schShadeSay">▒ Shaded on the chart: ${esc(on.join(' · '))}. A step that starts or ends on a shaded day says so on its row.</div>` : ''}`;
+}
+function schedShade(k) { if (!SCHED_SHADES.some(x => x[0] === k)) return; _schedShade[k] = !_schedShade[k]; lsSet('daylog-sched-shade', JSON.stringify(_schedShade)); renderSchedule(); }
+// ================= /▒ v7.71 =================
+// ================= 📤 v7.72 — THE WHOLE CHART AS ONE PICTURE =================
+// Eric: "how can i get a screenshot or download this chart in a way i can see or share the whole thing if i need it on more than
+// the app?" A screenshot holds only what is on the screen. 📤 Share or save the whole chart draws EVERY week of what the window is
+// showing (one job, or every job; the 👷 / 🔧 filter rides) into ONE picture on a white sheet that prints: the step names and
+// their days down the left, the weeks across, a bar a step with its name in it — or beside it when the bar is too short to hold
+// it — an inspection a diamond, the move-in a dot, today a dashed line, the days off shaded when he has them switched on.
+// On a phone it goes to the share sheet (text it, mail it, save it to Photos); on a PC it lands in Downloads.
+// The picture may be handed to ANYONE, a homeowner too — so it never carries a sub's NAME or his own step notes (who is only the
+// kind: crew · sub · inspection · homeowner), and its foot says the dates move. Nothing is written anywhere but the picture.
+// The share sheet has to ride his tap (the rule 📗 Send to Bookkeeper learned), so the picture is made in the same breath:
+// drawn, read out as a data URL and turned into a file with no await in between.
+const SCHED_PIC = { M: 28, LAB: 300, DAY: 18, ROW: 38, HEAD: 78, WK: 30, JOBH: 34, FOOT: 68 };
+const SCHED_PIC_SANS = 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif', SCHED_PIC_SERIF = 'Georgia, "Times New Roman", serif';
+function schedPicJobs() { return _schedJob === '*' ? schedJobs() : [schedJobList().find(j => cardKey(j) === cardKey(_schedJob)) || _schedJob]; }
+function schedPicModel(jobsIn) {   // where everything goes, in the picture's own pixels — the drawing reads only this (and a suite can)
+  const P = SCHED_PIC, win = schedWindow(jobsIn), today = localDay(new Date()), span = win.weeks * 7, chartW = span * P.DAY;
+  const idx = day => Math.round((schedDate(day) - schedDate(win.lo)) / 86400000);
+  const meas = document.createElement('canvas').getContext('2d'); meas.font = `600 12px ${SCHED_PIC_SANS}`;
+  let y = P.HEAD + P.WK, rowsN = 0; const bands = [];
+  jobsIn.forEach(job => {
+    const steps = schedSorted(job).filter(s => !_schedWho || (_schedWho === 'crew' ? s.who === 'crew' : s.who !== 'crew'));
+    if (!steps.length) return;
+    const band = { job, y, say: `${steps.length} step${steps.length === 1 ? '' : 's'} · last step ends ${schedDayWord(steps.map(schedEnd).sort().pop())}`, rows: [] };
+    y += P.JOBH;
+    steps.forEach(s => {
+      const end = schedEnd(s), late = !s.done && end < today, a = Math.max(0, Math.min(span, idx(s.start))), e = Math.max(a, Math.min(span, idx(end) + 1));
+      const mark = s.who === 'inspection' || s.who === 'homeowner', x = a * P.DAY, w = mark ? P.DAY : Math.max(P.DAY * 0.6, (e - a) * P.DAY), tw = Math.ceil(meas.measureText(s.n).width) + 14;
+      const side = !mark && tw <= w ? 'in' : (x + w + 6 + tw <= chartW ? 'right' : (x - 6 - tw >= 0 ? 'left' : mark ? 'right' : 'in'));   // the name: in the bar, else beside it where there is room
+      band.rows.push({ y, n: s.n, meta: `${schedShortWord(s.start)}${s.days > 1 ? ' to ' + schedShortWord(end) : ''} · ${s.days} day${s.days === 1 ? '' : 's'}${SCHED_WHO.includes(s.who) ? ' · ' + s.who : ''}${s.done ? ' · done' : late ? ' · LATE' : ''}`, x, w, mark, who: s.who, done: !!s.done, late, side });
+      y += P.ROW; rowsN++;
+    });
+    bands.push(band);
+  });
+  const off = [];
+  if (schedShadeAny()) {
+    for (let w = 0; w < win.weeks; w++) { if (_schedShade.fr) off.push({ k: 'fr', x: (w * 7 + 4) * P.DAY, w: P.DAY }); if (_schedShade.we) off.push({ k: 'we', x: (w * 7 + 5) * P.DAY, w: 2 * P.DAY }); }
+    if (_schedShade.ho) for (let d = 0; d < span; d++) { const h = schedHolidayOf(schedAddDays(win.lo, d)); if (h) off.push({ k: 'ho', x: d * P.DAY, w: P.DAY, t: h }); }
+  }
+  const heads = []; for (let i = 0; i < win.weeks; i++) { const w = schedAddDays(win.lo, i * 7); heads.push({ x: i * 7 * P.DAY, t: schedShortWord(w), now: schedMonday(today) === w }); }
+  const t = idx(today), one = jobsIn.length === 1, has = k => bands.some(b => b.rows.some(r => r.who === k));
+  const legend = [['crew', 'crew'], ['sub', 'sub'], ['inspection', 'inspection'], ['homeowner', 'homeowner']].filter(x => has(x[0])).concat(_schedShade.we ? [['we', 'weekend']] : [], _schedShade.fr ? [['fr', 'Friday']] : [], off.some(o => o.k === 'ho') ? [['ho', 'holiday']] : []);
+  return { legend, title: one ? `${jobsIn[0]} schedule` : 'Schedule, every job', sub: `As of ${schedDayWord(today)}, ${today.slice(0, 4)}${_schedWho ? (_schedWho === 'crew' ? ' · crew steps only' : ' · subs, inspections and the rest only') : ''}`,
+    foot: 'A working plan. Dates move with weather, inspections and subs.', weeks: win.weeks, lo: win.lo, heads, bands, off, rowsN, chartW, todayX: t >= 0 && t < span ? t * P.DAY : -1, W: P.M * 2 + P.LAB + chartW, H: y + P.FOOT, bottom: y };
+}
+function schedPicDraw(m) {
+  const P = SCHED_PIC, sc = Math.max(1, Math.min(2, Math.sqrt(12e6 / (m.W * m.H))));   // crisp, and inside what a phone's canvas will hold
+  const c = document.createElement('canvas'); c.width = Math.round(m.W * sc); c.height = Math.round(m.H * sc);
+  const g = c.getContext('2d'); g.scale(sc, sc); g.textBaseline = 'alphabetic';
+  const X0 = P.M + P.LAB, top = P.HEAD, R = m.W - P.M, BRASS = '#8a6418', INK = '#111', RED = '#b3261e';
+  const fit = (t, max) => { if (g.measureText(t).width <= max) return t; let s = t; while (s.length > 1 && g.measureText(s + '…').width > max) s = s.slice(0, -1); return s + '…'; };
+  const line = (x1, y1, x2, y2, col, wd, dash) => { g.save(); g.strokeStyle = col; g.lineWidth = wd || 1; if (dash) g.setLineDash(dash); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.restore(); };
+  g.fillStyle = '#fff'; g.fillRect(0, 0, m.W, m.H);
+  // the head: what it is, as of when, whose
+  g.fillStyle = INK; g.font = `bold 24px ${SCHED_PIC_SERIF}`; g.fillText(fit(m.title, m.W - P.M * 2 - 230), P.M, 38);
+  g.fillStyle = '#444'; g.font = `13px ${SCHED_PIC_SERIF}`; g.fillText(m.sub, P.M, 60);
+  g.textAlign = 'right'; g.fillText('Clore Construction, Inc.', R, 38); g.textAlign = 'left';
+  // the days off, under everything: a weekend a grey column, a Friday a paler one with a dashed edge, a holiday hatched
+  m.off.forEach(o => { const x = X0 + o.x, h = m.bottom - top;
+    if (o.k === 'ho') { g.save(); g.beginPath(); g.rect(x, top, o.w, h); g.clip(); g.fillStyle = '#fbe9d7'; g.fillRect(x, top, o.w, h); g.strokeStyle = '#d98a3d'; g.lineWidth = 1; for (let k = -h; k < o.w + h; k += 6) { g.beginPath(); g.moveTo(x + k, top + h); g.lineTo(x + k + h, top); g.stroke(); } g.restore(); return; }
+    g.fillStyle = o.k === 'we' ? '#e9e9e9' : '#f4f4f4'; g.fillRect(x, top, o.w, h); if (o.k === 'fr') line(x + 0.5, top, x + 0.5, m.bottom, '#aaa', 1, [3, 3]); });
+  // the weeks across
+  m.heads.forEach(h => { line(X0 + h.x + 0.5, top, X0 + h.x + 0.5, m.bottom, '#cfcfcf'); g.fillStyle = '#333'; g.font = `${h.now ? 'bold ' : ''}12px ${SCHED_PIC_SANS}`; g.fillText(h.t, X0 + h.x + 5, top + 20); });
+  line(P.M, top + 0.5, R, top + 0.5, INK); line(P.M, top + P.WK + 0.5, R, top + P.WK + 0.5, '#999'); line(X0 + 0.5, top, X0 + 0.5, m.bottom, INK); line(R - 0.5, top, R - 0.5, m.bottom, '#cfcfcf');
+  // a band a job: its name on a plate, then a row a step
+  m.bands.forEach(b => {
+    g.fillStyle = '#f1ece0'; g.fillRect(P.M, b.y + 1, m.W - P.M * 2, P.JOBH - 1);
+    g.fillStyle = INK; g.font = `bold 15px ${SCHED_PIC_SERIF}`; g.fillText(fit(b.job, P.LAB + 260), P.M + 8, b.y + 22);
+    g.fillStyle = '#444'; g.font = `12px ${SCHED_PIC_SANS}`; g.textAlign = 'right'; g.fillText(b.say, R - 8, b.y + 22); g.textAlign = 'left';
+    b.rows.forEach(r => {
+      line(P.M, r.y + P.ROW + 0.5, R, r.y + P.ROW + 0.5, '#e4e4e4');
+      g.fillStyle = INK; g.font = `bold 13.5px ${SCHED_PIC_SANS}`; g.fillText(fit((r.done ? '✓ ' : '') + r.n, P.LAB - 16), P.M + 8, r.y + 16);
+      g.fillStyle = r.late ? RED : '#555'; g.font = `11.5px ${SCHED_PIC_SANS}`; g.fillText(fit(r.meta, P.LAB - 16), P.M + 8, r.y + 31);
+      const x = X0 + r.x, by = r.y + 8, bh = 22, cy = r.y + P.ROW / 2;
+      if (r.mark) { g.fillStyle = r.done ? '#9a9a9a' : r.who === 'inspection' ? INK : BRASS; g.beginPath();
+        if (r.who === 'inspection') { g.moveTo(x + P.DAY / 2, cy - 9); g.lineTo(x + P.DAY / 2 + 9, cy); g.lineTo(x + P.DAY / 2, cy + 9); g.lineTo(x + P.DAY / 2 - 9, cy); g.closePath(); } else g.arc(x + P.DAY / 2, cy, 8, 0, Math.PI * 2);
+        g.fill(); }
+      else { g.fillStyle = r.done ? '#d9d9d9' : r.who === 'sub' ? '#fff' : BRASS; g.fillRect(x, by, r.w, bh);
+        if (r.who === 'sub' && !r.done) { g.strokeStyle = BRASS; g.lineWidth = 1.5; g.strokeRect(x + 0.75, by + 0.75, r.w - 1.5, bh - 1.5); }
+        if (r.late) { g.strokeStyle = RED; g.lineWidth = 2; g.strokeRect(x + 1, by + 1, r.w - 2, bh - 2); } }
+      g.font = `600 12px ${SCHED_PIC_SANS}`;
+      if (r.side === 'in') { g.fillStyle = r.done ? '#444' : r.who === 'sub' ? INK : '#fff'; g.fillText(fit(r.n, r.w - 10), x + 7, by + 15.5); }
+      else if (r.side === 'right') { g.fillStyle = INK; g.fillText(r.n, x + r.w + 6, by + 15.5); }
+      else { g.fillStyle = INK; g.textAlign = 'right'; g.fillText(r.n, x - 6, by + 15.5); g.textAlign = 'left'; }
+    });
+  });
+  if (m.todayX >= 0) { line(X0 + m.todayX + 0.5, top, X0 + m.todayX + 0.5, m.bottom, RED, 1.5, [5, 4]); g.fillStyle = RED; g.font = `bold 11px ${SCHED_PIC_SANS}`; g.textAlign = 'center'; g.fillText('today', X0 + m.todayX, top - 5); g.textAlign = 'left'; }
+  line(P.M, m.bottom + 0.5, R, m.bottom + 0.5, INK);
+  // the key, in words beside each shape (never the colour alone), then the foot
+  g.font = `12px ${SCHED_PIC_SANS}`; let lx = P.M; const ly = m.bottom + 24;
+  m.legend.forEach(([k, t]) => { const sy = ly - 11;
+    if (k === 'crew') { g.fillStyle = BRASS; g.fillRect(lx, sy, 16, 12); }
+    else if (k === 'sub') { g.fillStyle = '#fff'; g.fillRect(lx, sy, 16, 12); g.strokeStyle = BRASS; g.lineWidth = 1.5; g.strokeRect(lx + 0.75, sy + 0.75, 14.5, 10.5); }
+    else if (k === 'inspection') { g.fillStyle = INK; g.beginPath(); g.moveTo(lx + 8, sy - 1); g.lineTo(lx + 15, sy + 6); g.lineTo(lx + 8, sy + 13); g.lineTo(lx + 1, sy + 6); g.closePath(); g.fill(); }
+    else if (k === 'homeowner') { g.fillStyle = BRASS; g.beginPath(); g.arc(lx + 8, sy + 6, 6.5, 0, Math.PI * 2); g.fill(); }
+    else if (k === 'ho') { g.save(); g.beginPath(); g.rect(lx, sy, 16, 12); g.clip(); g.fillStyle = '#fbe9d7'; g.fillRect(lx, sy, 16, 12); g.strokeStyle = '#d98a3d'; g.lineWidth = 1; for (let q = -12; q < 28; q += 6) { g.beginPath(); g.moveTo(lx + q, sy + 12); g.lineTo(lx + q + 12, sy); g.stroke(); } g.restore(); }
+    else { g.fillStyle = k === 'we' ? '#e9e9e9' : '#f4f4f4'; g.fillRect(lx, sy, 16, 12); g.strokeStyle = '#bbb'; g.lineWidth = 1; g.strokeRect(lx + 0.5, sy + 0.5, 15, 11); if (k === 'fr') line(lx + 0.5, sy, lx + 0.5, sy + 12, '#888', 1, [3, 2]); }
+    g.fillStyle = '#333'; g.fillText(t, lx + 22, ly); lx += 22 + g.measureText(t).width + 18; });
+  g.fillStyle = '#555'; g.font = `italic 12px ${SCHED_PIC_SERIF}`; g.fillText(m.foot, P.M, m.bottom + 48);
+  return c;
+}
+function schedPicName(jobsIn) { return `${(jobsIn.length === 1 ? jobsIn[0] : 'Every job').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim()} schedule ${localDay(new Date())}.png`; }
+function schedPicFile(jobsIn) {   // drawn and turned into a file in one breath — no await, so a share sheet can still ride the tap
+  const m = schedPicModel(jobsIn); if (!m.rowsN) return null;
+  const u = schedPicDraw(m).toDataURL('image/png'), bin = atob(u.slice(u.indexOf(',') + 1)), a = new Uint8Array(bin.length);
+  for (let k = 0; k < bin.length; k++) a[k] = bin.charCodeAt(k);
+  return new File([a], schedPicName(jobsIn), { type: 'image/png' });
+}
+function schedPicSave(file) {   // a PC (or a phone with no share sheet for files): the picture lands in Downloads
+  const a = document.createElement('a'), url = URL.createObjectURL(file);
+  a.href = url; a.download = file.name; a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  toast(`⬇ ${file.name} — saved to your Downloads`);
+}
+function schedPicShare() {
+  let file = null;
+  try { file = schedPicFile(schedPicJobs()); } catch (e) { toast('⚠ The picture could not be made — ' + ((e && e.message) || e), false); return; }
+  if (!file) { toast('No steps to draw yet', false); return; }
+  const pc = !!(window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches);
+  if (!pc && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: file.name.replace(/\.png$/, '') }).catch(e => { if (!e || e.name !== 'AbortError') schedPicSave(file); });   // he backed out of the sheet = nothing; a sheet that failed = the file instead
+    return;
+  }
+  schedPicSave(file);
+}
+// ================= /📤 v7.72 =================
 // 📅 v7.68 — the wheel of subs for a 🔧 step: the ones ON this job first, then the rest of the list by trade; picked by name, never guessed
 function schedSubWheelHtml(job, s) {
   const b = subsBookNow(), onJob = subsOn(job).map(r => r.s), onIds = new Set(onJob.map(x => x.id));
@@ -14413,8 +14607,9 @@ function schedBandHtml(job, win) {
   const steps = schedSteps(job), today = localDay(new Date()), late = steps.filter(s => !s.done && schedEnd(s) < today).length, done = steps.filter(s => s.done).length, last = schedLastEnd(job);
   const clash = schedCrewClash(), mine = Object.keys(clash).filter(w => clash[w].some(j => cardKey(j) === cardKey(job))).sort();
   const one = _schedJob !== '*' && schedCanEdit();   // 📅 v7.68 — a crew phone reads: no tools
+  const offN = steps.filter(s => schedOffFlag(s)).length;   // ▒ v7.71 — how many start or end on a day he has shaded
   return `<div class="sch-band" data-job="${esc(job)}">
-    <div class="sch-band-h"><b>🏠 ${esc(job)}</b><span>${steps.length ? `${steps.length} step${steps.length === 1 ? '' : 's'}${done ? ` · ${done} done` : ''} · last step ends ${esc(schedDayWord(last))}${late ? ` · <span class="sch-late-w">⚠ ${late} LATE</span>` : ''}` : 'no plan yet'}</span></div>
+    <div class="sch-band-h"><b>🏠 ${esc(job)}</b><span>${steps.length ? `${steps.length} step${steps.length === 1 ? '' : 's'}${done ? ` · ${done} done` : ''} · last step ends ${esc(schedDayWord(last))}${late ? ` · <span class="sch-late-w">⚠ ${late} LATE</span>` : ''}${offN ? ` · <span class="sch-offw sch-off-n">⚠ ${offN} on a shaded day</span>` : ''}` : 'no plan yet'}</span></div>
     ${mine.length ? `<div class="sch-clash">⚠ The crew is on two jobs at once the week${mine.length === 1 ? '' : 's'} of ${mine.map(w => esc(schedShortWord(w)) + ' (' + esc(clash[w].filter(j => cardKey(j) !== cardKey(job)).join(', ')) + ')').join(', ')}</div>` : ''}
     ${schedChartHtml(job, win)}
     ${(() => { const o = _schedOpen && steps.find(s => s.id === _schedOpen); return o ? `<div class="sch-edit-h">${schedCanEdit() ? '✎' : '📅'} ${esc(o.n)} — ${esc(schedDayWord(o.start))} to ${esc(schedDayWord(schedEnd(o)))}</div>` + schedEditHtml(job, o) : ''; })()}
@@ -14454,8 +14649,10 @@ function renderSchedule(force) {
     </div>
     <div class="sch-who"><button type="button" class="pick-chip${!_schedWho ? ' sel' : ''}" aria-pressed="${!_schedWho}" onclick="schedWho('')">${!_schedWho ? '✓ ' : ''}EVERYONE</button><button type="button" class="pick-chip${_schedWho === 'crew' ? ' sel' : ''}" aria-pressed="${_schedWho === 'crew'}" onclick="schedWho('crew')">${_schedWho === 'crew' ? '✓ ' : ''}👷 CREW ONLY</button><button type="button" class="pick-chip${_schedWho === 'sub' ? ' sel' : ''}" aria-pressed="${_schedWho === 'sub'}" onclick="schedWho('sub')">${_schedWho === 'sub' ? '✓ ' : ''}🔧 SUBS AND THE REST</button></div>
     ${schedZoomHtml()}
+    ${schedShadeHtml(win)}
     <div id="schedInbox">${schedInboxHtml(all ? '' : _schedJob)}</div>
     <div id="schedList">${all ? (planned.length ? planned.map(j => schedBandHtml(j, win)).join('') : `<div class="hint sb-none" style="margin: 10px 0;">○ No job has a plan yet — pick a job above and add its steps, or paste a list.</div>`) : schedBandHtml(jobsIn[0], win)}</div>
+    ${jobsIn.some(j => schedSteps(j).length) ? `<button type="button" class="btn-ghost sch-pic" id="schPic" onclick="schedPicShare()">📤 Share or save the whole chart — one picture, every week</button>` : ''}
     <div class="rev-row" style="margin-top: 14px;"><button type="button" class="btn-ghost x-plate" style="flex: 1;" onclick="schedClose()">‹ Back${_schedBack === 'card' ? ' to the job card' : ''}</button></div></div>`;
   if (!force) { box.scrollTop = keepBox; if ($('revModal')) $('revModal').scrollTop = keep; [...box.querySelectorAll('.sch-chart')].forEach((c, i) => { if (scrolls[i] != null) c.scrollLeft = scrolls[i]; }); }
   else { [...box.querySelectorAll('.sch-chart')].forEach(c => { const t = c.querySelector('.sch-today'); if (t && c.scrollWidth > c.clientWidth) { const lab = parseFloat(getComputedStyle(c.querySelector('.sch-grid')).getPropertyValue('--lab')) || 190; c.scrollLeft = Math.max(0, t.offsetLeft - lab - (c.clientWidth - lab) / 3); } }); }   // the first look lands on this week, a third of the way in
@@ -26004,7 +26201,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.70';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.72';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
