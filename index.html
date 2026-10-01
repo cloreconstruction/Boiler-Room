@@ -1741,7 +1741,20 @@
   .sch-who .pick-chip { min-height: 44px; white-space: normal; font-size: 12.5px; padding: 4px 6px; }
   .sch-corner { border-bottom: 1px solid var(--border); position: sticky; left: 0; background: var(--surface-1); z-index: 2; }
   .sch-head { display: grid; grid-template-columns: repeat(var(--wk), 1fr); border-bottom: 1px solid var(--border); font-size: 11.5px; color: var(--ink-2); }
-  .sch-head span { padding: 5px 3px; border-left: 1px solid var(--border); white-space: nowrap; overflow: hidden; }
+  .sch-head span { padding: 5px 3px; border-left: 1px solid var(--border); white-space: nowrap; overflow: hidden; position: relative; }
+  /* ↔ v7.70 — the week columns resize: − 150% + over the chart; with a mouse, the right edge of a week's date drags (a finger there still scrolls) */
+  .sch-zoom { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
+  .sch-zoom-l { margin-right: auto; font-size: 12.5px; font-weight: var(--fw8, 800); letter-spacing: .4px; }
+  .sch-zoom-tip { display: none; font-weight: 400; letter-spacing: 0; color: var(--ink-2); font-size: 12px; }
+  #schedBox .sch-zoom button { min-width: 50px; min-height: 44px; padding: 0 8px; font-size: 22px; font-weight: var(--fw8, 800); line-height: 1; }   /* the id outranks the skins' .btn-ghost sizes */
+  #schedBox .sch-zoom button.sch-zoom-n { min-width: 68px; font-size: 14px; }
+  #schedBox .sch-zoom button[disabled] { opacity: .4; }
+  .sch-wk-grip { display: none; }
+  @media (hover: hover) and (pointer: fine) {
+    .sch-zoom-tip { display: inline; }
+    .sch-wk-grip { display: block; position: absolute; top: 0; right: 0; width: 8px; height: 100%; cursor: col-resize; }
+    .sch-wk-grip:hover, .sch-wk-grip.on { background: var(--accent); opacity: .6; }
+  }
   .sch-wk-now { font-weight: var(--fw8, 800); color: var(--ink-1); }
   .sch-wk-clash { color: var(--warn, #ffa657); font-weight: var(--fw8, 800); }
   .sch-lab { padding: 6px 8px; border-bottom: 1px solid var(--border); position: sticky; left: 0; background: var(--surface-1); z-index: 1; cursor: pointer; min-height: 44px; }
@@ -4669,7 +4682,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.69 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.70 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -14193,7 +14206,7 @@ function schedChartHtml(job, win) {
   const steps = schedSorted(job), today = localDay(new Date());
   const span = win.weeks * 7, x = day => Math.max(0, Math.min(100, (schedDate(day) - schedDate(win.lo)) / 86400000 / span * 100));
   const clash = schedCrewClash();
-  const heads = []; for (let i = 0; i < win.weeks; i++) { const w = schedAddDays(win.lo, i * 7); heads.push(`<span class="sch-wk${clash[w] && clash[w].some(j => cardKey(j) === cardKey(job)) ? ' sch-wk-clash' : ''}${schedMonday(today) === w ? ' sch-wk-now' : ''}" title="${esc(clash[w] ? 'crew on ' + clash[w].join(' and ') + ' this week' : '')}">${esc(schedShortWord(w))}${clash[w] && clash[w].some(j => cardKey(j) === cardKey(job)) ? ' ⚠' : ''}</span>`); }
+  const heads = []; for (let i = 0; i < win.weeks; i++) { const w = schedAddDays(win.lo, i * 7); heads.push(`<span class="sch-wk${clash[w] && clash[w].some(j => cardKey(j) === cardKey(job)) ? ' sch-wk-clash' : ''}${schedMonday(today) === w ? ' sch-wk-now' : ''}" title="${esc(clash[w] ? 'crew on ' + clash[w].join(' and ') + ' this week' : '')}">${esc(schedShortWord(w))}${clash[w] && clash[w].some(j => cardKey(j) === cardKey(job)) ? ' ⚠' : ''}<i class="sch-wk-grip" onpointerdown="schedGrip(event)"></i></span>`); }   // ↔ v7.70 — the edge of a week's date drags with a mouse
   const shown = steps.filter(s => !_schedWho || (_schedWho === 'crew' ? s.who === 'crew' : s.who !== 'crew'));
   const rows = shown.map(s => {
     const end = schedEnd(s), late = !s.done && end < today, left = x(s.start), width = Math.max(1.2, x(schedAddDays(end, 1)) - left);
@@ -14204,10 +14217,60 @@ function schedChartHtml(job, win) {
       <div class="sch-lane${open ? ' open' : ''}" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')"><div class="sch-bar${s.done ? ' done' : ''}${late ? ' late' : ''}${mark ? ' mark' : ''}${s.who === 'sub' ? ' sub' : ''}" style="left:${left.toFixed(2)}%;${mark ? '' : `width:${width.toFixed(2)}%`}" title="${esc(s.n)}${subW ? ' · ' + esc(subW) : ''} · ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(end))}">${mark ? (s.who === 'inspection' ? '📋' : '🏠') : esc(s.n)}</div></div>`;
   }).join('');
   const todayX = x(today);
-  return `<div class="sch-chart"><div class="sch-grid" style="--wk:${win.weeks}"><div class="sch-corner"></div><div class="sch-head">${heads.join('')}</div>
+  return `<div class="sch-chart"><div class="sch-grid" style="--wk:${win.weeks}${schedWkwStyle()}"><div class="sch-corner"></div><div class="sch-head">${heads.join('')}</div>
     ${rows || `<div class="sch-lab"><small>${_schedWho ? 'no ' + (_schedWho === 'crew' ? 'crew' : 'sub') + ' steps on this job' : 'no steps yet'}</small></div><div class="sch-lane"></div>`}
     ${todayX > 0 && todayX < 100 ? `<div class="sch-today" style="left:calc(var(--lab) + (100% - var(--lab)) * ${(todayX / 100).toFixed(4)})" title="today"></div>` : ''}</div></div>`;
 }
+// ================= ↔ v7.70 — THE WEEK COLUMNS RESIZE =================
+// Eric: "on the gantt chart i need to be able to resize the date column so i can see the words in the bars better". A bar is as
+// wide as its days, so at the sheet's own width (56px a week, 52 on a phone) a five-day step is a sliver and its name is cut.
+// A row over the chart — ↔ WEEK WIDTH  −  150%  + — makes every week wider or narrower in steps (SCHED_ZOOMS); a tap on the
+// percent puts it back to 100%; with a MOUSE the right edge of any week's date drags to any width (a finger on that edge still
+// scrolls the chart — nothing about the PLAN is ever dragged, the v7.67 rule stands: this is only how wide the weeks are drawn).
+// It is a way of LOOKING: kept on this device alone (`daylog-sched-zoom`, a phone and a PC want different widths), never in his
+// prefs, never in a file — and a crew phone has it too. Every band in 📋 Every job takes the same width, so the weeks still
+// line up; the date that sat at the left edge of the chart stays there through the change.
+const SCHED_ZOOMS = [0.7, 1, 1.5, 2, 3, 4, 5];
+let _schedZoom = (() => { const n = parseFloat(lsGet('daylog-sched-zoom') || ''); return n >= 0.5 && n <= 12 ? n : 1; })();
+function schedWkwBase() { return window.matchMedia && matchMedia('(max-width: 700px)').matches ? 52 : 56; }   // the sheet's own --wkw
+function schedWkwPx() { return Math.round(schedWkwBase() * _schedZoom); }
+function schedWkwStyle() { return Math.abs(_schedZoom - 1) < 0.005 ? '' : `;--wkw:${schedWkwPx()}px`; }
+function schedZoomWord() { return Math.round(_schedZoom * 20) * 5 + '%'; }   // to the nearest five
+function schedZoomHtml() {
+  const lo = _schedZoom <= SCHED_ZOOMS[0] + 0.005, hi = _schedZoom >= SCHED_ZOOMS[SCHED_ZOOMS.length - 1] - 0.005;
+  return `<div class="sch-zoom" id="schZoom"><span class="sch-zoom-l">↔ WEEK WIDTH<small class="sch-zoom-tip"> · or drag the edge of a week's date</small></span>
+    <button type="button" class="btn-ghost" id="schZoomOut" aria-label="narrower weeks — more weeks on the screen" title="narrower weeks" onclick="schedZoom(-1)"${lo ? ' disabled' : ''}>−</button>
+    <button type="button" class="btn-ghost sch-zoom-n" id="schZoomN" aria-label="week width ${schedZoomWord()} — tap to put it back to 100%" title="tap for 100%" onclick="schedZoomTo(1)">${schedZoomWord()}</button>
+    <button type="button" class="btn-ghost" id="schZoomIn" aria-label="wider weeks — more of the words in the bars" title="wider weeks" onclick="schedZoom(1)"${hi ? ' disabled' : ''}>+</button></div>`;
+}
+function schedLabPx(c) { const g = c.querySelector('.sch-grid'); return g ? (parseFloat(getComputedStyle(g).getPropertyValue('--lab')) || 190) : 190; }
+function schedZoomTo(z) {   // the one door: keeps the same date at the left edge of every chart through the change
+  z = Math.max(0.5, Math.min(12, Math.round(z * 100) / 100));
+  const box = $('revBox'), charts = () => box ? [...box.querySelectorAll('.sch-chart')] : [];
+  const before = charts().map(c => ({ s: c.scrollLeft, w: Math.max(1, c.scrollWidth - schedLabPx(c)) }));
+  _schedZoom = z; lsSet('daylog-sched-zoom', String(z));
+  renderSchedule();
+  charts().forEach((c, k) => { const b = before[k]; if (b) c.scrollLeft = Math.round(b.s * Math.max(1, c.scrollWidth - schedLabPx(c)) / b.w); });
+}
+function schedZoom(dir) {
+  const next = dir > 0 ? SCHED_ZOOMS.find(z => z > _schedZoom + 0.005) : SCHED_ZOOMS.slice().reverse().find(z => z < _schedZoom - 0.005);
+  if (next == null) return;
+  if (dir < 0) { const box = $('revBox'), cs = box ? [...box.querySelectorAll('.sch-chart')] : [];   // narrower only helps while something runs off the screen
+    if (cs.length && cs.every(c => c.scrollWidth <= c.clientWidth + 1)) { toast('Every week is already on the screen'); return; } }
+  schedZoomTo(next);
+}
+function schedGrip(ev) {   // a MOUSE on the right edge of a week's date: the weeks follow the pointer; let go = kept
+  if (ev.pointerType !== 'mouse' || ev.button !== 0) return;
+  ev.preventDefault();
+  const grip = ev.currentTarget, cell = grip.parentElement, x0 = ev.clientX, w0 = cell.getBoundingClientRect().width, base = schedWkwBase();
+  const grids = [...document.querySelectorAll('#schedBox .sch-grid')];
+  let z = _schedZoom, moved = false;
+  grip.classList.add('on'); document.body.style.userSelect = 'none';
+  const move = e => { moved = true; z = Math.max(0.5, Math.min(12, Math.round((w0 + e.clientX - x0) / base * 100) / 100)); grids.forEach(g => g.style.setProperty('--wkw', Math.round(base * z) + 'px')); };
+  const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); document.body.style.userSelect = ''; grip.classList.remove('on'); if (moved) schedZoomTo(z); };
+  window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+}
+// ================= /↔ v7.70 =================
 // 📅 v7.68 — the wheel of subs for a 🔧 step: the ones ON this job first, then the rest of the list by trade; picked by name, never guessed
 function schedSubWheelHtml(job, s) {
   const b = subsBookNow(), onJob = subsOn(job).map(r => r.s), onIds = new Set(onJob.map(x => x.id));
@@ -14390,6 +14453,7 @@ function renderSchedule(force) {
       <div class="jc-pick-now" id="schedNow">${all ? `✓ SHOWING — every job with a plan · ${win.weeks} weeks from ${esc(schedShortWord(win.lo))}` : `✓ SHOWING — ${esc(_schedJob)} · ${win.weeks} weeks from ${esc(schedShortWord(win.lo))}`}</div>
     </div>
     <div class="sch-who"><button type="button" class="pick-chip${!_schedWho ? ' sel' : ''}" aria-pressed="${!_schedWho}" onclick="schedWho('')">${!_schedWho ? '✓ ' : ''}EVERYONE</button><button type="button" class="pick-chip${_schedWho === 'crew' ? ' sel' : ''}" aria-pressed="${_schedWho === 'crew'}" onclick="schedWho('crew')">${_schedWho === 'crew' ? '✓ ' : ''}👷 CREW ONLY</button><button type="button" class="pick-chip${_schedWho === 'sub' ? ' sel' : ''}" aria-pressed="${_schedWho === 'sub'}" onclick="schedWho('sub')">${_schedWho === 'sub' ? '✓ ' : ''}🔧 SUBS AND THE REST</button></div>
+    ${schedZoomHtml()}
     <div id="schedInbox">${schedInboxHtml(all ? '' : _schedJob)}</div>
     <div id="schedList">${all ? (planned.length ? planned.map(j => schedBandHtml(j, win)).join('') : `<div class="hint sb-none" style="margin: 10px 0;">○ No job has a plan yet — pick a job above and add its steps, or paste a list.</div>`) : schedBandHtml(jobsIn[0], win)}</div>
     <div class="rev-row" style="margin-top: 14px;"><button type="button" class="btn-ghost x-plate" style="flex: 1;" onclick="schedClose()">‹ Back${_schedBack === 'card' ? ' to the job card' : ''}</button></div></div>`;
@@ -25940,7 +26004,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.69';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.70';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
