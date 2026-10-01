@@ -1801,7 +1801,9 @@
   /* 💚 v7.65 — a COMPLETE category that came in UNDER: the part of the bar that was never needed is a loud green stripe and the word
      beside it says the money (Eric: "make the progress bar do something that makes it stand out that we were under"); over = red */
   .est-barrow .est-bar { display: flex; }
-  .est-bar-under { height: 100%; flex: none; background: repeating-linear-gradient(135deg, var(--good, #8fd694) 0 4px, color-mix(in srgb, var(--good, #8fd694) 40%, transparent) 4px 8px); }
+  /* 🟩 v7.66 — Eric: "make the remainder part of the bar the stripes but make it a deep green so its clear that its a good thing" —
+     two deep greens, solid, no transparency, so the stripe reads as a full block of good, never a pale hatch */
+  .est-bar-under { height: 100%; flex: none; background: repeating-linear-gradient(135deg, #1f9a52 0 5px, #0e6134 5px 10px); }
   .est-bar-word.under { color: var(--good, #8fd694); font-weight: var(--fw8, 800); font-size: var(--fs12, 12px); }
   .est-bar-word.over { color: var(--err, #ff8a70); font-weight: var(--fw8, 800); font-size: var(--fs12, 12px); }
   :root[data-skin="calm"] .est-board .est-name { font-size: 16px; font-weight: 600; }
@@ -4608,7 +4610,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.65 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.66 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -25357,7 +25359,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.65';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.66';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
