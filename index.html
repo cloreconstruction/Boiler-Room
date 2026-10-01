@@ -1727,6 +1727,54 @@
   .sb-pickrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
   #subsList .sb-pickrow .pick-chip { min-height: 44px; font-size: 14px; }   /* (the id outranks the skins' 40px chip rule) */
   .sb-pickrow .pick-chip .sb-dim { font-weight: 400; opacity: .85; }
+  /* 📅 v7.67 — THE SCHEDULE. Weeks across, the step names pinned on the left while the weeks scroll; a bar a step (a crew step solid,
+     a sub's outlined, an inspection or the move-in a round mark); today a dashed line; a tap on a row opens the step's editor under the chart. */
+  .sch-band { border: 1px solid var(--border); border-radius: 12px; padding: 8px 8px 10px; margin: 0 0 10px; background: var(--surface-1); }
+  .sch-band-h { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; font-size: 14px; margin: 0 0 6px; }
+  .sch-band-h b { font-size: 16px; }
+  .sch-late-w { color: var(--err, #ff8a70); font-weight: var(--fw8, 800); }
+  .sch-clash { font-size: 13.5px; color: var(--warn, #ffa657); font-weight: var(--fw7, 700); margin: 0 0 6px; }
+  .sch-chart { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .sch-grid { --lab: 190px; --wkw: 56px; position: relative; display: grid; grid-template-columns: var(--lab) minmax(calc(var(--wk) * var(--wkw)), 1fr); min-width: calc(var(--lab) + var(--wk) * var(--wkw)); }
+  @media (max-width: 700px) { .sch-grid { --lab: 148px; --wkw: 52px; } }
+  .sch-who { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0 0 8px; }
+  .sch-who .pick-chip { min-height: 44px; white-space: normal; font-size: 12.5px; padding: 4px 6px; }
+  .sch-corner { border-bottom: 1px solid var(--border); position: sticky; left: 0; background: var(--surface-1); z-index: 2; }
+  .sch-head { display: grid; grid-template-columns: repeat(var(--wk), 1fr); border-bottom: 1px solid var(--border); font-size: 11.5px; color: var(--ink-2); }
+  .sch-head span { padding: 5px 3px; border-left: 1px solid var(--border); white-space: nowrap; overflow: hidden; }
+  .sch-wk-now { font-weight: var(--fw8, 800); color: var(--ink-1); }
+  .sch-wk-clash { color: var(--warn, #ffa657); font-weight: var(--fw8, 800); }
+  .sch-lab { padding: 6px 8px; border-bottom: 1px solid var(--border); position: sticky; left: 0; background: var(--surface-1); z-index: 1; cursor: pointer; min-height: 44px; }
+  .sch-lab b { font-size: 14px; display: block; overflow-wrap: anywhere; }
+  .sch-lab small { display: block; font-size: 12px; color: var(--ink-2); }
+  @media (max-width: 700px) { .sch-lab { padding: 5px 6px; } .sch-lab b { font-size: 13px; } .sch-lab small { font-size: 11px; } }
+  .sch-lab.open { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .sch-lab.done { opacity: .6; }
+  .sch-lab.late b { color: var(--err, #ff8a70); }
+  .sch-lane { position: relative; border-bottom: 1px solid var(--border); min-height: 44px; background-image: repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px calc(100% / var(--wk))); cursor: pointer; }
+  .sch-bar { position: absolute; top: 10px; height: 24px; border-radius: 5px; background: var(--accent); color: var(--accent-ink, #111); font-size: 12px; line-height: 24px; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: var(--fw7, 700); }
+  .sch-bar.sub { background: var(--raised, var(--surface-1)); color: var(--ink-1); border: 1px solid var(--accent); line-height: 22px; }
+  .sch-bar.mark { background: var(--warn, #ffa657); color: #111; border-radius: 999px; width: 26px; height: 26px; top: 9px; padding: 0; text-align: center; line-height: 26px; font-size: 14px; margin-left: -4px; }
+  .sch-bar.done { opacity: .45; }
+  .sch-bar.late { background: var(--err, #ff8a70); color: #111; }
+  .sch-today { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--err, #ff8a70); pointer-events: none; z-index: 1; }
+  .sch-edit-h { font-weight: var(--fw8, 800); font-size: 14px; margin: 8px 0 4px; }
+  .sch-edit { border: 2px solid var(--accent); border-radius: 10px; padding: 8px; }
+  .sch-edit input, .sch-edit select { min-height: 44px; font-size: 16px; }
+  .sch-moves { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .sch-moves .btn-ghost, .sch-moves .btn-primary { flex: 1 1 130px; min-height: 44px; font-size: 13.5px; }
+  .sch-del.armed { border-color: var(--err, #ff8a70) !important; font-weight: var(--fw8, 800); }
+  .sch-tools { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .sch-tool { flex: 1 1 200px; min-height: 46px; }
+  .sch-addrow { flex: 1 1 100%; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto auto; gap: 6px; }
+  .sch-addrow input, .sch-addrow select { min-height: 46px; font-size: 16px; min-width: 0; }
+  .sch-addrow .btn-primary, .sch-addrow .btn-ghost { min-height: 46px; }
+  @media (max-width: 700px) { .sch-addrow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .sch-addrow input:first-child { grid-column: 1 / -1; } }
+  .sch-pasterow { flex: 1 1 100%; }
+  .sch-pasterow textarea { width: 100%; font-size: 16px; min-height: 140px; }
+  .jc-sched { width: 100%; min-height: 48px; margin: -6px 0 14px; font-weight: var(--fw8, 800); font-size: 15px; }
+  .pf-sched { width: 100%; min-height: 48px; margin: 0 0 10px; font-weight: var(--fw8, 800); }
+  @media (min-width: 701px) { .sch-box { max-width: 1100px; margin: 0 auto; } }
   .sb-pickrow .pick-chip.sel .sb-dim { color: inherit; opacity: .8; }   /* on the lit plate the small words take the plate's own ink */
   .sb-pickrow .sb-pickadd { border-style: dashed; }
   #subsSetupBox .sb-master { margin-bottom: 8px; }
@@ -4610,7 +4658,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.66 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.67 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -11910,6 +11958,7 @@ function openPortalWin() {
   if (!w || !box) return;
   box.innerHTML = `${winX('closePortalWin()')}<h3>🏠 Project portal</h3>
     <div class="hint" style="margin: 0 0 8px;">One live page per job, at an unguessable address. Tap a job to unfold its buttons; text the link once and it updates as the books do. 🔄 rotate kills the old link instantly.</div>
+    ${portalSchedHtml()}
     <div id="qbFreshStrip"></div>
     <div id="portalList"><button class="btn-ghost" onclick="renderPortalList()">🔄 Load the projects</button> <span class="hint">Tap if the list doesn't fill itself in.</span></div>
     <!-- ← v6.81 — Eric: "At the bottom of the project portal, I need a back button. I keep pushing 'Build the page.'" Under the list, in every state. -->
@@ -13439,7 +13488,7 @@ function openJobCard(job, edit) {
       : canEdit ? 'Eric\'s job cards — the address, the people, the codes. You can edit them; Eric\'s phone picks your changes up on its next sync.'
       : 'Addresses, numbers, emails and door codes for one job — read-only; ask your Wizard for it out loud too.'}</div>
     ${mine && _crewDbx && _crewDbx.name ? crewDbxHtml(_crewDbx) : ''}
-    ${pick}${job ? cardPlansHtml(job) + headsBar + body : subsDoorHtml()}`;
+    ${pick}${job ? cardPlansHtml(job) + cardSchedHtml(job) + headsBar + body : subsDoorHtml()}`;   // 📅 v7.67 — the schedule's door rides under 📐 Plans
   $('revModal').classList.add('show');
   document.body.classList.add('modal-open');
 }
@@ -13927,6 +13976,304 @@ function subsAskRows() {
     if (r.l.note) o.onThisJob = r.l.note; if (r.s.note) o.about = r.s.note; return o; });
 }
 // ================= /SUBS =================
+// ================= 📅 v7.67 — THE SCHEDULE =================
+// Eric: "can we build in a gantt calendar that can be easily made and moved? i used a site called clickup and it worked fairly
+// well but was difficult to see enough info at once and was a huge chore to try and just juggle and change the chart with
+// multiple jobs and constant delays." Three answers to those three complaints:
+//   MADE IN A MINUTE — a job's plan is a list of STEPS, each a name and a number of days (calendar days, as he types them:
+//   "plumbing 1.5 weeks"). Type them one at a time, paste a list, or start from the standard sequence and delete what does
+//   not apply. Each step gets a start day when it is made (after the one before it) and keeps it from then on.
+//   MOVED IN ONE TAP — a delay on any step moves that step AND EVERY STEP THAT STARTS ON OR AFTER IT by the same number of
+//   days (his own rule, written on his finish-schedule sheet). A step marked ✓ done never moves. Nothing is dragged.
+//   SEE IT ALL — one week grid, every job stacked (📋 Every job), or one job; the names stay pinned while the weeks scroll on
+//   a phone; a filter shows the crew's weeks or the subs' weeks; a week with the crew on two jobs says so in words.
+// The plan lives in prefs.sched (his own prefs — synced to his other devices like everything else); Eric's phone only for now
+// (a crew phone has no door) — handing the crew their weeks read-only is the next step, on his go.
+const SCHED_WHO = ['crew', 'sub', 'inspection', 'homeowner'];
+const SCHED_TEMPLATE = [['Demo', 5, 'crew'], ['Dirt work', 5, 'sub'], ['Foundation', 10, 'sub'], ['Framing', 15, 'crew'], ['Trusses set', 3, 'crew'], ['Roof dried in', 5, 'crew'], ['Windows and doors', 3, 'crew'],
+  ['Plumbing rough-in', 8, 'sub'], ['Electrical rough-in', 8, 'sub'], ['Heat and ducting', 3, 'sub'], ['Rough-in inspection', 1, 'inspection'], ['Insulation', 4, 'sub'], ['Drywall, mud, texture', 15, 'sub'],
+  ['Paint walls and ceilings', 5, 'sub'], ['Tile', 8, 'sub'], ['Floors, doors, trim', 10, 'crew'], ['Cabinets and vanities', 5, 'crew'], ['Plumbing trim', 3, 'sub'], ['Electrical trim', 2, 'sub'], ['Final inspection', 1, 'inspection'], ['Clean', 2, 'crew'], ['Move in', 1, 'homeowner']];
+let _schedJob = '*', _schedOpen = null, _schedArm = '', _schedWho = '', _schedPaste = false, _schedAdd = false, _schedBack = '';
+function schedCanEdit() { return !CREW_NAME && !crewPreview; }
+function schedClose() {   // opened from the 📇 Job Card → back to the card (the v7.60 rule); from the portal → the portal is still under it
+  const back = _schedBack; _schedBack = '';
+  if (back === 'card' && _cardJob) { $('revModal').classList.remove('mat-full'); openJobCard(_cardJob); return; }
+  closeReview();
+}
+function schedBook() {
+  if (!prefs.sched || typeof prefs.sched !== 'object') prefs.sched = { jobs: {} };
+  if (!prefs.sched.jobs || typeof prefs.sched.jobs !== 'object') prefs.sched.jobs = {};
+  return prefs.sched;
+}
+function schedPlan(job, make) {   // the plan of one job (by the card key, so the name's case never makes a second plan)
+  const b = schedBook(), k = Object.keys(b.jobs).find(j => cardKey(j) === cardKey(job));
+  if (k) { const p = b.jobs[k]; if (!Array.isArray(p.steps)) p.steps = []; return p; }
+  if (!make) return null;
+  return (b.jobs[String(job).trim()] = { steps: [] });
+}
+function schedJobs() {   // every job that has a plan, in the app's job order, plus any planned job no longer on the list
+  const b = schedBook(), have = [], add = j => { if (j && j !== '—' && !isPersonalJob(j) && !have.some(x => cardKey(x) === cardKey(j))) have.push(j); };
+  personalFirst(jobs).forEach(j => { if (schedPlan(j) && schedPlan(j).steps.length) add(j); });
+  Object.keys(b.jobs).forEach(j => { if (b.jobs[j].steps && b.jobs[j].steps.length) add(j); });
+  return have;
+}
+const schedDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? String(s) : '';
+const schedDate = s => { const d = schedDay(s); return d ? new Date(d + 'T12:00:00') : null; };
+function schedAddDays(day, n) { const d = schedDate(day) || new Date(); d.setDate(d.getDate() + (+n || 0)); return localDay(d); }
+function schedEnd(s) { return schedAddDays(s.start, Math.max(1, +s.days || 1) - 1); }   // the last day of the step
+function schedMonday(day) { const d = schedDate(day) || new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return localDay(d); }
+function schedDayWord(day) { const d = schedDate(day); return d ? `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()]} ${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}` : ''; }
+function schedShortWord(day) { const d = schedDate(day); return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''; }
+// "1.5 weeks" · "2.5 wk" · "3-4 days" (the bigger one) · "2" · "1 day" → calendar days, at least one
+function schedDaysOf(txt) {
+  const t = String(txt || '').toLowerCase();
+  const m = t.match(/(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(w(?:ee)?ks?|d(?:ays?)?)?\b/);
+  if (!m) return 1;
+  const n = Math.max(parseFloat(m[1]), m[2] ? parseFloat(m[2]) : 0);
+  const days = /^w/.test(m[3] || '') ? n * 7 : n;
+  return Math.max(1, Math.round(days));
+}
+function schedWhoOf(txt) {
+  const t = String(txt || '').toLowerCase();
+  if (/inspect/.test(t)) return 'inspection';
+  if (/move in|homeowner|owner/.test(t)) return 'homeowner';
+  if (/plumb|elec|heat|duct|insulat|drywall|sheetrock|mud|texture|paint|tile|roofer|shingle|concrete|foundation|dirt|excavat|gutter|siding sub/.test(t)) return 'sub';
+  return 'crew';
+}
+function schedNewId() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function schedClean(s) {   // one shape, whichever device wrote it
+  return { id: String(s.id || schedNewId()), n: String(s.n || '').trim().slice(0, 80), days: Math.max(1, Math.round(+s.days || 1)), who: SCHED_WHO.includes(s.who) ? s.who : '', start: schedDay(s.start) || localDay(new Date()), done: schedDay(s.done) || '', note: String(s.note || '').trim().slice(0, 200) };
+}
+function schedSteps(job) { const p = schedPlan(job); if (!p) return []; p.steps = p.steps.map(schedClean); return p.steps; }
+function schedSorted(job) { return schedSteps(job).slice().sort((a, b) => a.start.localeCompare(b.start)); }
+function schedLastEnd(job) { const st = schedSteps(job); return st.length ? st.map(schedEnd).sort().pop() : ''; }
+function schedSave() { schedBook(); scheduleSave(); }
+// ---- the taps
+function schedAddStep(job, n, daysTxt, who, startDay) {
+  const p = schedPlan(job, true), name = String(n || '').trim().slice(0, 80);
+  if (!name) return null;
+  const last = schedLastEnd(job);
+  const s = schedClean({ id: schedNewId(), n: name, days: schedDaysOf(daysTxt), who: who || schedWhoOf(name), start: schedDay(startDay) || (last ? schedAddDays(last, 1) : localDay(new Date())) });
+  p.steps.push(s); schedSave();
+  return s;
+}
+function schedPasteText(job, text) {   // one step a line: "plumbing 1.5 weeks" · "heat/ducting 2-3 days" · "sheetrock 2.5 wk" — the days follow the words
+  const lines = String(text || '').split(/\n/).map(l => l.trim()).filter(Boolean);
+  let n = 0;
+  lines.forEach(l => {
+    const m = l.match(/^(.*?)[\s:,·-]*(\d+(?:\.\d+)?(?:\s*(?:-|–|to)\s*\d+(?:\.\d+)?)?\s*(?:w(?:ee)?ks?|d(?:ays?)?)?)\s*$/i);
+    const name = (m ? m[1] : l).replace(/[\s:,·-]+$/, '').trim(), days = m ? m[2] : '1';
+    if (name && schedAddStep(job, name, days)) n++;
+  });
+  return n;
+}
+function schedFromTemplate(job) {
+  if (schedSteps(job).length) return 0;
+  SCHED_TEMPLATE.forEach(([n, d, w]) => schedAddStep(job, n, String(d), w));
+  return SCHED_TEMPLATE.length;
+}
+// the rule: this step and every step that starts on or after it move together; a ✓ done step stays where it was
+function schedMove(job, id, n) {
+  const st = schedSteps(job), me = st.find(s => s.id === id);
+  if (!me || !n) return [];
+  const from = me.start, moved = [];
+  st.forEach(s => { if (!s.done && (s.id === id || s.start >= from)) { s.start = schedAddDays(s.start, n); moved.push(s); } });
+  schedSave();
+  return moved;
+}
+function schedMoveJob(job, n) { const st = schedSteps(job); const moved = st.filter(s => !s.done); moved.forEach(s => { s.start = schedAddDays(s.start, n); }); schedSave(); return moved; }
+function schedSet(job, id, k, v) {
+  const s = schedSteps(job).find(x => x.id === id); if (!s) return;
+  if (k === 'days') s.days = Math.max(1, Math.round(+v || schedDaysOf(v)));
+  else if (k === 'start') { const d = schedDay(v); if (d) s.start = d; }
+  else if (k === 'who') s.who = SCHED_WHO.includes(v) ? v : '';
+  else if (k === 'n') s.n = String(v || '').trim().slice(0, 80) || s.n;
+  else if (k === 'note') s.note = String(v || '').trim().slice(0, 200);
+  schedSave();
+}
+function schedDoneToggle(job, id) { const s = schedSteps(job).find(x => x.id === id); if (!s) return; s.done = s.done ? '' : localDay(new Date()); schedSave(); return s; }
+function schedDel(job, id) { const p = schedPlan(job); if (!p) return; p.steps = p.steps.filter(s => s.id !== id); schedSave(); }
+// the weeks the crew is on two jobs at once (a not-done crew step of two different jobs in the same Monday-to-Sunday week)
+function schedCrewClash() {
+  const byWeek = {};
+  schedJobs().forEach(job => schedSteps(job).forEach(s => {
+    if (s.done || s.who !== 'crew') return;
+    for (let d = schedMonday(s.start); d <= schedEnd(s); d = schedAddDays(d, 7)) { byWeek[d] = byWeek[d] || new Set(); byWeek[d].add(job); }
+  }));
+  const out = {}; Object.keys(byWeek).forEach(w => { if (byWeek[w].size >= 2) out[w] = [...byWeek[w]]; });
+  return out;
+}
+// ---- the window
+function openSchedule(job) {
+  if (!schedCanEdit()) { toast('📅 The schedule is Eric\'s — on his phone', false); return; }
+  const want = String(job == null ? '' : job).trim();
+  _schedJob = !want || want === '*' ? '*' : want;
+  _schedOpen = null; _schedArm = ''; _schedPaste = false; _schedAdd = false; _schedBack = '';
+  if (_jcEdit) { cardStash(); _jcEdit = false; }
+  renderSchedule(true);
+  $('revModal').classList.add('show', 'mat-full');
+  document.body.classList.add('modal-open');
+}
+function schedPick(v) { _schedJob = v === '*' ? '*' : String(v || '*'); _schedOpen = null; _schedArm = ''; _schedPaste = false; _schedAdd = false; renderSchedule(); }
+function schedWho(v) { _schedWho = _schedWho === v ? '' : v; renderSchedule(); }
+function schedJobList() {   // every job on the list (a plan or not) — the wheel offers them all; the chart draws the planned ones
+  const have = [], add = j => { j = String(j || '').trim(); if (j && j !== '—' && !isPersonalJob(j) && !have.some(x => cardKey(x) === cardKey(j))) have.push(j); };
+  personalFirst(jobs).forEach(add); schedJobs().forEach(add);
+  return have;
+}
+function schedWhoWord(w) { return w === 'crew' ? '👷 crew' : w === 'sub' ? '🔧 sub' : w === 'inspection' ? '📋 inspection' : w === 'homeowner' ? '🏠 homeowner' : ''; }
+function schedWindow(jobsIn) {   // the Monday the chart starts on and how many weeks: every planned step in view, this week always in it
+  const today = localDay(new Date());
+  let lo = schedMonday(today), hi = schedAddDays(lo, 6);
+  jobsIn.forEach(job => schedSteps(job).forEach(s => { if (s.start < lo) lo = schedMonday(s.start); const e = schedEnd(s); if (e > hi) hi = e; }));
+  lo = schedMonday(lo);
+  let weeks = Math.ceil(((schedDate(hi) - schedDate(lo)) / 86400000 + 1) / 7);
+  if (weeks > 30) { lo = schedMonday(schedAddDays(today, -14)); weeks = 30; }   // a very long plan: from two weeks back, thirty weeks
+  return { lo, weeks: Math.max(weeks, 4) };
+}
+function schedChartHtml(job, win) {
+  const steps = schedSorted(job), today = localDay(new Date());
+  const span = win.weeks * 7, x = day => Math.max(0, Math.min(100, (schedDate(day) - schedDate(win.lo)) / 86400000 / span * 100));
+  const clash = schedCrewClash();
+  const heads = []; for (let i = 0; i < win.weeks; i++) { const w = schedAddDays(win.lo, i * 7); heads.push(`<span class="sch-wk${clash[w] && clash[w].some(j => cardKey(j) === cardKey(job)) ? ' sch-wk-clash' : ''}${schedMonday(today) === w ? ' sch-wk-now' : ''}" title="${esc(clash[w] ? 'crew on ' + clash[w].join(' and ') + ' this week' : '')}">${esc(schedShortWord(w))}${clash[w] && clash[w].some(j => cardKey(j) === cardKey(job)) ? ' ⚠' : ''}</span>`); }
+  const shown = steps.filter(s => !_schedWho || (_schedWho === 'crew' ? s.who === 'crew' : s.who !== 'crew'));
+  const rows = shown.map(s => {
+    const end = schedEnd(s), late = !s.done && end < today, left = x(s.start), width = Math.max(1.2, x(schedAddDays(end, 1)) - left);
+    const open = _schedOpen === s.id, mark = s.who === 'inspection' || s.who === 'homeowner';   // a one-day thing is a round mark with a glyph, not a sliver of a bar
+    const whoW = schedWhoWord(s.who);
+    return `<div class="sch-lab${open ? ' open' : ''}${s.done ? ' done' : ''}${late ? ' late' : ''}" role="button" tabindex="0" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')" onkeydown="if(event.key==='Enter'){schedRowTap('${escq(job)}','${escq(s.id)}')}">
+        <b>${s.done ? '✓ ' : late ? '⚠ ' : ''}${esc(s.n)}</b><small>${esc(schedShortWord(s.start))}${s.days > 1 ? ' – ' + esc(schedShortWord(end)) : ''} · ${s.days} day${s.days === 1 ? '' : 's'}${whoW ? ' · ' + whoW : ''}${s.done ? ' · done' : late ? ' · LATE' : ''}</small></div>
+      <div class="sch-lane${open ? ' open' : ''}" onclick="schedRowTap('${escq(job)}','${escq(s.id)}')"><div class="sch-bar${s.done ? ' done' : ''}${late ? ' late' : ''}${mark ? ' mark' : ''}${s.who === 'sub' ? ' sub' : ''}" style="left:${left.toFixed(2)}%;${mark ? '' : `width:${width.toFixed(2)}%`}" title="${esc(s.n)} · ${esc(schedDayWord(s.start))} to ${esc(schedDayWord(end))}">${mark ? (s.who === 'inspection' ? '📋' : '🏠') : esc(s.n)}</div></div>`;
+  }).join('');
+  const todayX = x(today);
+  return `<div class="sch-chart"><div class="sch-grid" style="--wk:${win.weeks}"><div class="sch-corner"></div><div class="sch-head">${heads.join('')}</div>
+    ${rows || `<div class="sch-lab"><small>${_schedWho ? 'no ' + (_schedWho === 'crew' ? 'crew' : 'sub') + ' steps on this job' : 'no steps yet'}</small></div><div class="sch-lane"></div>`}
+    ${todayX > 0 && todayX < 100 ? `<div class="sch-today" style="left:calc(var(--lab) + (100% - var(--lab)) * ${(todayX / 100).toFixed(4)})" title="today"></div>` : ''}</div></div>`;
+}
+function schedEditHtml(job, s) {
+  const armed = _schedArm === 'del:' + s.id;
+  return `<div class="sch-edit" id="schEdit">
+    <div class="frow" style="gap: 6px; flex-wrap: wrap;">
+      <div class="field" style="flex: 2 1 160px; margin: 0;"><label>The step</label><input type="text" id="schN" value="${esc(s.n)}" onchange="schedSet('${escq(job)}','${escq(s.id)}','n',this.value); renderSchedule();"></div>
+      <div class="field" style="flex: 1 1 90px; margin: 0;"><label>Days</label><input type="text" inputmode="decimal" id="schDays" value="${s.days}" onchange="schedSet('${escq(job)}','${escq(s.id)}','days',this.value); renderSchedule();"></div>
+      <div class="field" style="flex: 1 1 130px; margin: 0;"><label>Starts</label><input type="date" id="schStart" value="${esc(s.start)}" onchange="schedStartSet('${escq(job)}','${escq(s.id)}',this.value)"></div>
+      <div class="field" style="flex: 1 1 130px; margin: 0;"><label>Who</label><select id="schWho" onchange="schedSet('${escq(job)}','${escq(s.id)}','who',this.value); renderSchedule();"><option value=""${s.who ? '' : ' selected'}>—</option>${SCHED_WHO.map(w => `<option value="${w}"${s.who === w ? ' selected' : ''}>${schedWhoWord(w)}</option>`).join('')}</select></div>
+    </div>
+    <div class="field" style="margin: 6px 0 0;"><label>Note</label><input type="text" id="schNote" value="${esc(s.note)}" placeholder="who said what, what it waits on" onchange="schedSet('${escq(job)}','${escq(s.id)}','note',this.value)"></div>
+    <div class="sch-moves">
+      <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',-1)">◀ 1 day earlier</button>
+      <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',1)">1 day later ▶</button>
+      <button type="button" class="btn-ghost" onclick="schedMoveTap('${escq(job)}','${escq(s.id)}',7)">1 week later ▶▶</button>
+    </div>
+    <div class="hint" style="margin: 4px 0 6px;">A move takes this step and every step that starts on or after it. A ✓ done step never moves.</div>
+    <div class="sch-moves">
+      <button type="button" class="btn-ghost${s.done ? ' sel' : ''}" onclick="schedDoneTap('${escq(job)}','${escq(s.id)}')">${s.done ? '↩ Not done after all' : '✓ Done'}</button>
+      <button type="button" class="btn-ghost sch-del${armed ? ' armed' : ''}" onclick="schedDelTap('${escq(job)}','${escq(s.id)}')">${armed ? '⚠ SURE? Tap again' : '✕ Delete this step'}</button>
+      <button type="button" class="btn-ghost" onclick="_schedOpen = null; renderSchedule();">▴ Fold</button>
+    </div></div>`;
+}
+function schedRowTap(job, id) { _schedOpen = _schedOpen === id ? null : id; _schedArm = ''; renderSchedule(); }
+function schedStartSet(job, id, v) {   // a typed start day = a move of this step by the difference, so what follows moves with it
+  const s = schedSteps(job).find(x => x.id === id), d = schedDay(v); if (!s || !d) return;
+  const n = Math.round((schedDate(d) - schedDate(s.start)) / 86400000);
+  schedMoveTap(job, id, n);
+}
+function schedMoveTap(job, id, n) {
+  const moved = schedMove(job, id, n); const me = schedSteps(job).find(x => x.id === id);
+  renderSchedule();
+  if (!moved.length || !me) return;
+  const last = schedLastEnd(job);
+  toast(`📅 ${me.n} and ${moved.length - 1} step${moved.length - 1 === 1 ? '' : 's'} after it moved ${Math.abs(n)} day${Math.abs(n) === 1 ? '' : 's'} ${n > 0 ? 'later' : 'earlier'} · the last step ends ${schedDayWord(last)}`);
+}
+function schedDoneTap(job, id) { const s = schedDoneToggle(job, id); renderSchedule(); if (s) toast(s.done ? `✓ ${s.n} is done` : `↩ ${s.n} is open again`); }
+function schedDelTap(job, id) {
+  if (_schedArm !== 'del:' + id) { _schedArm = 'del:' + id; renderSchedule(); setTimeout(() => { if (_schedArm === 'del:' + id) { _schedArm = ''; renderSchedule(); } }, 4000); return; }
+  const s = schedSteps(job).find(x => x.id === id);
+  _schedArm = ''; _schedOpen = null; schedDel(job, id); renderSchedule();
+  if (s) toast(`✕ ${s.n} is off the plan`);
+}
+function schedAddTap(job) {
+  const n = ($('schAddN') || {}).value || '', d = ($('schAddD') || {}).value || '', w = ($('schAddW') || {}).value || '';
+  const s = schedAddStep(job, n, d, w);
+  if (!s) { toast('Type the step first', false); return; }
+  _schedAdd = true; renderSchedule();
+  toast(`➕ ${s.n} · ${s.days} day${s.days === 1 ? '' : 's'} · starts ${schedDayWord(s.start)}`);
+  setTimeout(() => { const el = $('schAddN'); if (el) el.focus(); }, 60);
+}
+function schedPasteTap(job) {
+  const n = schedPasteText(job, ($('schPaste') || {}).value || '');
+  _schedPaste = false; renderSchedule();
+  toast(n ? `📋 ${n} step${n === 1 ? '' : 's'} on the plan, one after the other` : 'Nothing read — one step a line, the days last: "plumbing 1.5 weeks"', !!n);
+}
+function schedTemplateTap(job) { const n = schedFromTemplate(job); renderSchedule(); toast(n ? `📐 The standard sequence is on ${job} — ${n} steps, delete what does not apply and type the real days` : `${job} already has steps`, !!n); }
+function schedMoveJobTap(job, n) { const moved = schedMoveJob(job, n); renderSchedule(); toast(`⇄ ${moved.length} step${moved.length === 1 ? '' : 's'} on ${job} moved ${Math.abs(n)} day${Math.abs(n) === 1 ? '' : 's'} ${n > 0 ? 'later' : 'earlier'} · the last step ends ${schedDayWord(schedLastEnd(job))}`); }
+function schedBandHtml(job, win) {
+  const steps = schedSteps(job), today = localDay(new Date()), late = steps.filter(s => !s.done && schedEnd(s) < today).length, done = steps.filter(s => s.done).length, last = schedLastEnd(job);
+  const clash = schedCrewClash(), mine = Object.keys(clash).filter(w => clash[w].some(j => cardKey(j) === cardKey(job))).sort();
+  const one = _schedJob !== '*';
+  return `<div class="sch-band" data-job="${esc(job)}">
+    <div class="sch-band-h"><b>🏠 ${esc(job)}</b><span>${steps.length ? `${steps.length} step${steps.length === 1 ? '' : 's'}${done ? ` · ${done} done` : ''} · last step ends ${esc(schedDayWord(last))}${late ? ` · <span class="sch-late-w">⚠ ${late} LATE</span>` : ''}` : 'no plan yet'}</span></div>
+    ${mine.length ? `<div class="sch-clash">⚠ The crew is on two jobs at once the week${mine.length === 1 ? '' : 's'} of ${mine.map(w => esc(schedShortWord(w)) + ' (' + esc(clash[w].filter(j => cardKey(j) !== cardKey(job)).join(', ')) + ')').join(', ')}</div>` : ''}
+    ${schedChartHtml(job, win)}
+    ${(() => { const o = _schedOpen && steps.find(s => s.id === _schedOpen); return o ? `<div class="sch-edit-h">✎ ${esc(o.n)} — ${esc(schedDayWord(o.start))} to ${esc(schedDayWord(schedEnd(o)))}</div>` + schedEditHtml(job, o) : ''; })()}
+    ${one ? `<div class="sch-tools">
+      ${_schedAdd ? `<div class="sch-addrow"><input type="text" id="schAddN" placeholder="the step — plumbing rough-in" onkeydown="if(event.key==='Enter'){schedAddTap('${escq(job)}')}"><input type="text" id="schAddD" inputmode="decimal" placeholder="days · 1.5 weeks" onkeydown="if(event.key==='Enter'){schedAddTap('${escq(job)}')}"><select id="schAddW"><option value="">who?</option>${SCHED_WHO.map(w => `<option value="${w}">${schedWhoWord(w)}</option>`).join('')}</select><button type="button" class="btn-primary" onclick="schedAddTap('${escq(job)}')">➕ Add</button><button type="button" class="btn-ghost" onclick="_schedAdd=false; renderSchedule();">✕</button></div>`
+        : `<button type="button" class="btn-primary sch-tool" onclick="_schedAdd=true; _schedPaste=false; renderSchedule(); setTimeout(()=>{const el=$('schAddN'); if(el) el.focus();},60);">➕ Add a step${steps.length ? ' after ' + esc(schedShortWord(last)) : ''}</button>`}
+      ${_schedPaste ? `<div class="sch-pasterow"><textarea id="schPaste" rows="6" placeholder="one step a line, the days last:
+plumbing 1.5 weeks
+heat/ducting 2-3 days
+insulation 3-4 days
+sheetrock 2.5 weeks"></textarea><div class="sch-moves"><button type="button" class="btn-primary" onclick="schedPasteTap('${escq(job)}')">📋 Put them on the plan</button><button type="button" class="btn-ghost" onclick="_schedPaste=false; renderSchedule();">✕ Never mind</button></div></div>`
+        : `<button type="button" class="btn-ghost sch-tool" onclick="_schedPaste=true; _schedAdd=false; renderSchedule(); setTimeout(()=>{const el=$('schPaste'); if(el) el.focus();},60);">📋 Paste a list of steps</button>`}
+      ${steps.length ? `<button type="button" class="btn-ghost sch-tool" onclick="schedMoveJobTap('${escq(job)}', 7)">⇄ Whole job 1 week later</button><button type="button" class="btn-ghost sch-tool" onclick="schedMoveJobTap('${escq(job)}', -7)">⇄ Whole job 1 week earlier</button>`
+        : `<button type="button" class="btn-ghost sch-tool" onclick="schedTemplateTap('${escq(job)}')">📐 Start from the standard sequence (${SCHED_TEMPLATE.length} steps)</button>`}
+    </div>` : ''}</div>`;
+}
+function renderSchedule(force) {
+  const box = $('revBox'); if (!box) return;
+  if (!force && !$('schedBox')) return;
+  const keep = $('revModal') ? $('revModal').scrollTop : 0, keepBox = box.scrollTop;
+  const scrolls = [...box.querySelectorAll('.sch-chart')].map(c => c.scrollLeft);   // the weeks stay where he scrolled them
+  const list = schedJobList(), all = _schedJob === '*';
+  if (!all && !list.some(j => cardKey(j) === cardKey(_schedJob))) list.unshift(_schedJob);
+  const planned = schedJobs();
+  const jobsIn = all ? planned : [list.find(j => cardKey(j) === cardKey(_schedJob)) || _schedJob];
+  const win = schedWindow(jobsIn);
+  box.innerHTML = `<div id="schedBox" class="sch-box"><h3>📅 Schedule${winX('schedClose()', 'close')}</h3>
+    <div class="hint" style="margin: 0 0 8px;">A plan is a list of steps with days. Tap a step to change it; a move takes everything after it along. Weeks across, today is the line${all ? '; every job that has a plan is here' : ''}.</div>
+    <div class="jc-pick">
+      <label for="schedJob" class="jc-pick-lbl">▸ PICK THE JOB</label>
+      <select id="schedJob" class="jc-pick-sel" onchange="schedPick(this.value)">
+        <option value="*"${all ? ' selected' : ''}>📋 Every job · ${planned.length} with a plan</option>
+        ${list.map(j => `<option value="${esc(j)}"${!all && cardKey(j) === cardKey(_schedJob) ? ' selected' : ''}>${esc(j)}${schedSteps(j).length ? ' · ' + schedSteps(j).length + ' steps' : ''}</option>`).join('')}
+      </select>
+      <div class="jc-pick-now" id="schedNow">${all ? `✓ SHOWING — every job with a plan · ${win.weeks} weeks from ${esc(schedShortWord(win.lo))}` : `✓ SHOWING — ${esc(_schedJob)} · ${win.weeks} weeks from ${esc(schedShortWord(win.lo))}`}</div>
+    </div>
+    <div class="sch-who"><button type="button" class="pick-chip${!_schedWho ? ' sel' : ''}" aria-pressed="${!_schedWho}" onclick="schedWho('')">${!_schedWho ? '✓ ' : ''}EVERYONE</button><button type="button" class="pick-chip${_schedWho === 'crew' ? ' sel' : ''}" aria-pressed="${_schedWho === 'crew'}" onclick="schedWho('crew')">${_schedWho === 'crew' ? '✓ ' : ''}👷 CREW ONLY</button><button type="button" class="pick-chip${_schedWho === 'sub' ? ' sel' : ''}" aria-pressed="${_schedWho === 'sub'}" onclick="schedWho('sub')">${_schedWho === 'sub' ? '✓ ' : ''}🔧 SUBS AND THE REST</button></div>
+    <div id="schedList">${all ? (planned.length ? planned.map(j => schedBandHtml(j, win)).join('') : `<div class="hint sb-none" style="margin: 10px 0;">○ No job has a plan yet — pick a job above and add its steps, or paste a list.</div>`) : schedBandHtml(jobsIn[0], win)}</div>
+    <div class="rev-row" style="margin-top: 14px;"><button type="button" class="btn-ghost x-plate" style="flex: 1;" onclick="schedClose()">‹ Back${_schedBack === 'card' ? ' to the job card' : ''}</button></div></div>`;
+  if (!force) { box.scrollTop = keepBox; if ($('revModal')) $('revModal').scrollTop = keep; [...box.querySelectorAll('.sch-chart')].forEach((c, i) => { if (scrolls[i] != null) c.scrollLeft = scrolls[i]; }); }
+  else { [...box.querySelectorAll('.sch-chart')].forEach(c => { const t = c.querySelector('.sch-today'); if (t && c.scrollWidth > c.clientWidth) { const lab = parseFloat(getComputedStyle(c.querySelector('.sch-grid')).getPropertyValue('--lab')) || 190; c.scrollLeft = Math.max(0, t.offsetLeft - lab - (c.clientWidth - lab) / 3); } }); }   // the first look lands on this week, a third of the way in
+}
+// the doors: the 📇 Job Card (under 📐 Plans) and the top of the 🏠 Project portal
+function cardSchedHtml(job) {
+  if (!job || !schedCanEdit()) return '';
+  const n = schedSteps(job).length;
+  return `<button type="button" class="btn-ghost jc-sched" onclick="cardSched()">📅 Schedule — ${n ? `${n} step${n === 1 ? '' : 's'}, last ends ${esc(schedShortWord(schedLastEnd(job)))}` : 'no plan yet for ' + esc(job)}</button>`;
+}
+function cardSched() {
+  const job = _cardJob; if (!job || !schedCanEdit()) return;
+  if (_jcEdit) cardStash();   // mid-edit: keep the words first
+  openSchedule(job);
+  if ($('schedBox')) _schedBack = 'card';   // only once the schedule is really open; ‹ Back then reopens the card
+  renderSchedule();
+}
+function portalSchedHtml() {
+  if (!schedCanEdit()) return '';
+  const n = schedJobs().length;
+  return `<button type="button" class="btn-ghost pf-sched" onclick="openSchedule('*')">📅 Schedule — every job on one week grid${n ? ` · ${n} with a plan` : ''}</button>`;
+}
+// ================= /📅 v7.67 =================
 let crewShared = [];
 async function checkSharedNotes() {
   if (!CREW_NAME || !dbx.refreshToken) return;
@@ -25359,7 +25706,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.66';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.67';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

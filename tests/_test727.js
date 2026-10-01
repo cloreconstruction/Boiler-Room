@@ -70,7 +70,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('a sort is remembered money IN as well: payroll as Income once, and the next payroll line is Income on arrival', await page.evaluate(async () => {
     await pbStmtFiles([_file('checking (4).csv', ['Date,Description,Amount', `${_D.us(_D.back(6))},PAYROLL ACME CONST,1500.00`].join('\n'))]);
     pbTxCat(_tx().find(x => /PAYROLL/.test(x.desc)).id, 'Income');
-    await pbStmtFiles([_file('checking (5).csv', ['Date,Description,Amount', `${_D.us(_D.back(7))},PAYROLL ACME CONST,1500.00`].join('\n'))]);
+    await pbStmtFiles([_file('checking (5).csv', ['Date,Description,Amount', `${_D.us(_D.back(7))},PAYROLL ACME CONST,1550.00`].join('\n'))]);   // a different amount on purpose: on the 1st of a month back(6) and back(7) are the same day, and the same day · amount · words is one line (the dedupe) — found 2026-10-01
     const pr = _tx().filter(x => /PAYROLL/.test(x.desc));
     return pr.length === 2 && pr.every(x => x.cat === 'Income') && pb().storeCat['payroll acme const'] === 'Income';
   }), await page.evaluate(() => JSON.stringify(_tx().filter(x => /PAYROLL/.test(x.desc)))));
