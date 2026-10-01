@@ -1798,6 +1798,12 @@
   .est-barrow .est-bar { flex: 1 1 auto; min-width: 0; outline: 1px solid color-mix(in srgb, var(--ink-muted) 40%, transparent); outline-offset: 1px; }
   .est-bar-word { flex: none; font-size: var(--fs115, 11.5px); font-weight: var(--fw7, 700); color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
   .est-done .est-bar-word { color: var(--good, #8fd694); }
+  /* 💚 v7.65 — a COMPLETE category that came in UNDER: the part of the bar that was never needed is a loud green stripe and the word
+     beside it says the money (Eric: "make the progress bar do something that makes it stand out that we were under"); over = red */
+  .est-barrow .est-bar { display: flex; }
+  .est-bar-under { height: 100%; flex: none; background: repeating-linear-gradient(135deg, var(--good, #8fd694) 0 4px, color-mix(in srgb, var(--good, #8fd694) 40%, transparent) 4px 8px); }
+  .est-bar-word.under { color: var(--good, #8fd694); font-weight: var(--fw8, 800); font-size: var(--fs12, 12px); }
+  .est-bar-word.over { color: var(--err, #ff8a70); font-weight: var(--fw8, 800); font-size: var(--fs12, 12px); }
   :root[data-skin="calm"] .est-board .est-name { font-size: 16px; font-weight: 600; }
   :root[data-skin="calm"] .est-board .est-num { font-size: 17px; font-weight: 600; }
   :root[data-skin="calm"] .est-board .hint { font-size: 13px; }
@@ -4602,7 +4608,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.64 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.65 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -16669,7 +16675,7 @@ function renderEstimates() {
       </div>
       ${sub ? `<div class="hint est-sub">${sub}</div>` : ''}
       ${tot > 0 || u > 0 ? `<div class="est-barrow"><div class="est-bar${done ? ' done' : ''}" role="img" aria-label="${done ? `complete — ${money0(spent)} of ${money0(tot)}` : `${money0(u)} in of ${money0(tot)}`}" style="height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--ink-muted) 22%, transparent); overflow: hidden;">
-        <div class="est-bar-fill" style="height: 100%; width: ${barPct}%; background: ${barOver ? 'var(--err, #c0392b)' : 'var(--accent)'};"></div></div><span class="est-bar-word">${done ? '✓ complete' : tot > 0 ? barPct + '% in' : 'no estimate'}</span></div>` : ''}
+        <div class="est-bar-fill" style="height: 100%; width: ${barPct}%; background: ${barOver ? 'var(--err, #c0392b)' : 'var(--accent)'};"></div>${done && tot > 0 && under > 0 ? `<div class="est-bar-under" style="width: ${100 - barPct}%;" title="${money0(under)} under the estimate — never needed"></div>` : ''}</div><span class="est-bar-word${done && tot > 0 ? (under > 0 ? ' under' : under < 0 ? ' over' : '') : ''}">${done ? (tot > 0 && under > 0 ? `✓ ${money0(under)} UNDER` : tot > 0 && under < 0 ? `⚠ ${money0(-under)} OVER` : '✓ complete') : tot > 0 ? barPct + '% in' : 'no estimate'}</span></div>` : ''}
       ${open ? `
         ${done ? `<div class="est-done-say" id="estDoneSay-${ci}">🔒 <b>COMPLETE</b>${x.done.at ? ' since ' + esc(estDayWord(x.done.at) || x.done.at) : ''} — the estimate is locked${tot > 0 ? ` at <b>${money0(tot)}</b>; it came to <b>${money0(spent)}</b> (${money0(u)} in${pendUp ? ' + ' + money0(pendUp) + ' on the way' : ''})` : ''}. ↩ Reopen it to change a bid.${x.appr ? ' Their page says COMPLETE on this line and counts nothing more as remaining.' : ''}</div>` : ''}
         ${updLive ? `<div class="est-upd-say" id="estUpd-${ci}">🔄 <b>Their page says UPDATED</b> ${esc(estDayWord(x.upd.at) || x.upd.at)} — was <b>${money0(x.upd.from)}</b>, now <b>${money0(x.upd.to)}</b>. ${estUpdWhyOk(x) ? `They read: <b>“${esc(x.upd.why)}”</b>` : x.upd.why ? `Your why was said for ${money0(x.upd.whyFor)} — the number is ${money0(x.upd.to)} now. Still right? Tap ✓ Say it, or change it:` : 'Why did it change? They read what you type here (no vendor names):'}
@@ -25351,7 +25357,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.64';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.65';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
