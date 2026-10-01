@@ -13,9 +13,12 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const want = (e.notification.data && e.notification.data.url) || '';
+  // 🔔 v7.74 — a tap LANDS on what the alert is about: the app is told WHICH alert it was by its tag (a fixed word such as
+  // crew-reply — never a name, a job or a figure). An open app gets a message; a cold start gets it as ?tap= on its address.
+  const tag = String(e.notification.tag || '').replace(/[^\w-]/g, '').slice(0, 40);
   e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
     const hit = want ? list.find(c => String(c.url).includes(want)) : list.find(c => 'focus' in c);
-    if (hit && 'focus' in hit) return hit.focus();
-    return clients.openWindow(want || './');
+    if (hit && 'focus' in hit) return Promise.resolve(hit.focus()).then(c => { try { (c || hit).postMessage({ brTap: tag }); } catch (err) {} });
+    return clients.openWindow(want || (/^crew-/.test(tag) ? './?tap=' + encodeURIComponent(tag) : './'));
   }));
 });

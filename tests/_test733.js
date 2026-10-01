@@ -58,7 +58,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }), await eric.page.evaluate(() => JSON.stringify({ cards: pendingQueue.map(p => p.id), e5: entries.find(e => e.id === 5), e6: entries.find(e => e.id === 6) })));
   ok('the card reads WITH PHIL; ⚠ first, then newest: Phil\'s ⚠ note, Trim delivered, Eric\'s own two-sided note (you → Phil), Phil\'s flushed one', await eric.page.evaluate(() => {
     const rows = [...document.querySelectorAll('#crewFeedList .sum-row')].map(r => r.textContent.replace(/\s+/g, ' ').trim());
-    return /👷 WITH PHIL — /.test($('cfFoldBtn').textContent) && rows.length === 4 && /⚠ NEEDS YOUR ATTENTION/.test(rows[0]) && /gate code/.test(rows[0]) && /Trim delivered/.test(rows[1]) && /you → Phil/.test(rows[2]) && /Soffit color/.test(rows[2]) && /Done with the trim/.test(rows[3]);
+    return /👷 WITH PHIL — /.test($('cfFoldBtn').textContent) && rows.length === 4 && /⚠ NEEDS YOUR ATTENTION/.test(rows[0]) && /gate code/.test(rows[0]) && /you → Phil/.test(rows[1]) && /Soffit color/.test(rows[1]) && /Trim delivered/.test(rows[2]) && /Done with the trim/.test(rows[3]);   // v7.74 — the two with words he has not answered lead (↩ NEW REPLY), then newest
   }), await eric.page.evaluate(() => JSON.stringify([...document.querySelectorAll('#crewFeedList .sum-row')].map(r => r.textContent.replace(/\s+/g, ' ').trim().slice(0, 90)))));
   ok('Phil\'s ⚠ note carries the back-and-forth (↩ you: Use the tan · ↩ Phil: Thanks); cube ① lit and PULSING (his Thanks is newer than my last word), cube ② unlit, the words say so; the plates read 📷-less · ⤵ Flush to the grinder · 💬 Respond', await eric.page.evaluate(() => {
     const row = [...document.querySelectorAll('#crewFeedList .sum-row')][0], t = row.textContent.replace(/\s+/g, ' ');
@@ -71,7 +71,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     return cubes.length === 2 && !cubes[0].classList.contains('lit') && cubes[1].classList.contains('lit') && /⤵ Phil flushed it/.test(row.textContent);
   }));
   ok('Eric\'s own note on the card: Phil\'s response under it, cube ① lit and pulsing, plates ⤵ Flush — done with it · 💬 Respond', await eric.page.evaluate(() => {
-    const row = [...document.querySelectorAll('#crewFeedList .sum-row')][2], t = row.textContent.replace(/\s+/g, ' '), cubes = row.querySelectorAll('.th-cube'), btns = [...row.querySelectorAll('button')].map(b => b.textContent.trim());
+    const row = [...document.querySelectorAll('#crewFeedList .sum-row')][1], t = row.textContent.replace(/\s+/g, ' '), cubes = row.querySelectorAll('.th-cube'), btns = [...row.querySelectorAll('button')].map(b => b.textContent.trim());   // v7.74 — second: it has a new reply
     return /↩ Phil .*Yes, tan is fine/.test(t) && cubes[0].classList.contains('lit') && cubes[0].classList.contains('pulse') && !cubes[1].classList.contains('lit') && btns.includes('⤵ Flush — done with it') && btns.includes('💬 Respond');
   }));
   ok('💬 Respond on Phil\'s note: a box under it; ↩ Send makes a note in Eric\'s log with re → Phil:30, unlocked for Phil, ↩ in front of the words; the pulse rests; the thread shows ↩ you', await eric.page.evaluate(async () => {
@@ -127,7 +127,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('the 📢 ERIC NEEDS AN ANSWER card draws nothing; the card reads WITH ERIC; ⚠ items first (my own ⚠ note, then Eric\'s open ⚠ one), Eric\'s response is NOT a row of its own; then the rest newest first', await phil.page.evaluate(() => {
     const rows = [...document.querySelectorAll('#crewSharedList .sum-row')].map(r => r.textContent.replace(/\s+/g, ' ').trim());
     return CREW_NAME === 'Phil' && $('crewAskCard').style.display === 'none' && /📨 WITH ERIC — showing/.test($('crFoldBtn').textContent) && rows.length === 4 && /YOU → ERIC/.test(rows[0]) && /⚠ NEEDS ERIC’S ATTENTION|⚠ NEEDS ERIC'S ATTENTION/.test(rows[0]) && /gate code/.test(rows[0]) &&
-      /⚠ NEEDS YOUR ATTENTION · Soffit color/.test(rows[1]) && /Pick the soffit color/.test(rows[2]) && /plain old note/.test(rows[3]) && !rows.some(t => /^↩|📨 ↩ Use the tan/.test(t));
+      /⚠ NEEDS YOUR ATTENTION · Soffit color/.test(rows[1]) && /Pick the soffit color/.test(rows[2]) && /plain old note/.test(rows[3]) && !rows.some(t => /^↩ Use the tan|📨 ↩ Use the tan/.test(t));   // v7.74 — a row may lead with ↩ NEW REPLY; Eric's response is still never a row of its own
   }), await phil.page.evaluate(() => JSON.stringify([...document.querySelectorAll('#crewSharedList .sum-row')].map(r => r.textContent.replace(/\s+/g, ' ').trim().slice(0, 80)))));
   ok('my own ⚠ note: Eric\'s response under it (↩ Eric: Use the tan), cube ① lit + pulsing, cube ② lit (⤵ Eric flushed it — from `seen`), plates ⤵ Flush — done with it · 💬 Respond', await phil.page.evaluate(() => {
     const row = [...document.querySelectorAll('#crewSharedList .sum-row')][0], t = row.textContent.replace(/\s+/g, ' '), cubes = row.querySelectorAll('.th-cube'), btns = [...row.querySelectorAll('button')].map(b => b.textContent.trim());

@@ -1760,6 +1760,12 @@
   .sch-off.fr { background: rgba(255, 255, 255, .08); border-left: 1px dashed rgba(255, 255, 255, .5); }
   .sch-off.ho { background: repeating-linear-gradient(135deg, rgba(255, 166, 87, .5) 0 3px, rgba(255, 166, 87, .14) 3px 7px); border-left: 1px solid var(--warn, #ffa657); border-right: 1px solid var(--warn, #ffa657); }
   .sch-offw { color: var(--warn, #ffa657); font-weight: var(--fw7, 700); }
+  /* 💬 v7.74 — a note with words from the other side he has not answered: ↩ NEW REPLY in words, an edge all round, and a flash when an alert's tap lands on it */
+  .th-newtag { color: var(--accent); letter-spacing: .5px; }
+  .sum-row.th-new { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 8px; }
+  .sum-row.th-flash { animation: thFlash 1.2s ease-in-out 2; }
+  @keyframes thFlash { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 0 6px var(--accent); } }
+  @media (prefers-reduced-motion: reduce) { .sum-row.th-flash { animation: none; box-shadow: 0 0 0 4px var(--accent); } }
   /* 🔓 v7.73 — one step on its own: the switch over the move buttons in a step's editor */
   #schedBox .sch-solo { width: 100%; min-height: 46px; margin: 8px 0 0; white-space: normal; line-height: 1.3; font-size: 13px; padding: 6px 8px; text-align: left; }
   /* 📤 v7.72 — the whole chart as one picture: the plate under the chart */
@@ -4697,7 +4703,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.73 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.74 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -14816,6 +14822,7 @@ async function checkSharedNotes() {
       scheduleSave();
     }
     renderCrewShared();
+    pushTapLand();   // 🔔 v7.74 — he tapped an alert a moment ago: the note with the new words comes to the middle of the screen
     crewAsks = (j.asks || []).slice(0, 10);
     renderCrewAsks();
     lsSet('daylog-req-acks', JSON.stringify(j.acks || {}));
@@ -15006,9 +15013,10 @@ function renderCrewShared0() {
   const btn = $('crFoldBtn');
   if (btn) {
     // brightness + glyph + the spelled word: never a bare caret
+    const nw = all.filter(n => n.fresh).length, nwW = nw ? ` · ↩ ${nw} new repl${nw === 1 ? 'y' : 'ies'}` : '';   // 💬 v7.74 — said on the fold too
     btn.textContent = folded
-      ? `▸ 📨 WITH ERIC — ${all.length} note${all.length === 1 ? '' : 's'}, tap to open`
-      : `▾ 📨 WITH ERIC — showing ${Math.min(cap, list.length)} of ${all.length}${sorted ? ' (sorted)' : ''}, tap to fold`;   // 💬 v7.33 — both directions
+      ? `▸ 📨 WITH ERIC — ${all.length} note${all.length === 1 ? '' : 's'}${nwW}, tap to open`
+      : `▾ 📨 WITH ERIC — showing ${Math.min(cap, list.length)} of ${all.length}${sorted ? ' (sorted)' : ''}${nwW}, tap to fold`;   // 💬 v7.33 — both directions
     btn.setAttribute('aria-expanded', folded ? 'false' : 'true');
   }
   const bodyEl = $('crewSharedList');
@@ -15030,8 +15038,8 @@ function renderCrewShared0() {
     const id = escq(String(n.id == null ? '' : n.id));
     if (n.own) {   // 💬 v7.33 — my own note to Eric, two-sided (he responded, or it went ⚠)
       const st = thState(CREW_NAME, n.id, n.seen, n.done);
-      return `<div class="sum-row th-own" style="cursor: default; font-size: 14.5px; display: block;">
-      <span>📨 <b style="letter-spacing:.5px;">YOU → ERIC · </b>${n.attn ? '<b style="letter-spacing:.5px;">⚠ NEEDS ERIC\'S ATTENTION · </b>' : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
+      return `<div class="sum-row th-own${st.pulse ? ' th-new' : ''}" data-th="${esc(CREW_NAME)}:${id}" style="cursor: default; font-size: 14.5px; display: block;">
+      <span>${st.pulse ? '<b class="th-newtag">↩ NEW REPLY · </b>' : ''}📨 <b style="letter-spacing:.5px;">YOU → ERIC · </b>${n.attn ? '<b style="letter-spacing:.5px;">⚠ NEEDS ERIC\'S ATTENTION · </b>' : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
       ${thLinesHtml(CREW_NAME, n.id)}
       <div>${thCubesHtml(st, 'Eric')}</div>
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
@@ -15043,8 +15051,8 @@ function renderCrewShared0() {
     </div>`;
     }
     const st = thState('Eric', n.id, n.done, thFlushedSet().has(String(n.id)));
-    return `<div class="sum-row" style="cursor: default; font-size: 14.5px; display: block;">
-      <span>${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${n.ask ? `<b style="letter-spacing:.5px;">${n.ask === 'open' ? '⚠ NEEDS YOUR ATTENTION' : n.ask === 'seen' ? '📢 NO ANSWER NEEDED' : '📢 ANSWERED'} · </b>` : ''}${n.board && n.board.p ?`<span class="bd-pri bd-pri--ro" aria-label="priority ${BRD_WORDS[n.board.p]}" title="priority ${BRD_WORDS[n.board.p]}">${brdCubes(n.board.p)}</span> ` : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${(n.tags || []).length ? ' · 🏷 ' + esc(n.tags.join(', ')) : ''}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
+    return `<div class="sum-row${st.pulse ? ' th-new' : ''}" data-th="Eric:${id}" style="cursor: default; font-size: 14.5px; display: block;">
+      <span>${st.pulse ? '<b class="th-newtag">↩ NEW REPLY · </b>' : ''}${n.direct ? '📨' : n.toAll ? '🔓' : '📨'} ${n.direct && n.toAll ? '<b style="letter-spacing:.5px;">FOR YOU · </b>' : ''}${n.ask ? `<b style="letter-spacing:.5px;">${n.ask === 'open' ? '⚠ NEEDS YOUR ATTENTION' : n.ask === 'seen' ? '📢 NO ANSWER NEEDED' : '📢 ANSWERED'} · </b>` : ''}${n.board && n.board.p ?`<span class="bd-pri bd-pri--ro" aria-label="priority ${BRD_WORDS[n.board.p]}" title="priority ${BRD_WORDS[n.board.p]}">${brdCubes(n.board.p)}</span> ` : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${(n.tags || []).length ? ' · 🏷 ' + esc(n.tags.join(', ')) : ''}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
       ${n.board && n.board.sub && n.board.sub.length ? n.board.sub.map(s => `<div class="bd-sub${s.done ? ' done' : ''}"><span class="bd-t">${s.done ? '✓' : '○'} ${esc(s.t || '')}</span></div>`).join('') : ''}
       ${thLinesHtml('Eric', n.id)}
       ${st.responded || st.theirFlushed || st.myFlushed ? `<div>${thCubesHtml(st, 'Eric')}</div>` : ''}
@@ -15196,22 +15204,78 @@ function thSharedFlush(id) {
   if (crewPreview) { toast('👁 Preview — on a crew phone this puts your note into their log and tells you they flushed it'); return; }
   const n = (crewShared || []).find(x => String(x.id) === String(id)); if (!n) return;
   const lines = thLines('Eric', id), nid = isNaN(+id) ? id : +id;
-  addEntry('Note', `Eric: ${String(n.text || '').trim()}${lines ? '\n' + lines : ''}`.slice(0, 2000), jobs.includes(n.job) ? n.job : '—', { sharedRef: nid, noSniff: true, who: 'Eric', ...(n.ph ? { photoPath: n.ph } : {}) });
+  const seenWas = thSeenAt('Eric', id);
+  const made = addEntry('Note', `Eric: ${String(n.text || '').trim()}${lines ? '\n' + lines : ''}`.slice(0, 2000), jobs.includes(n.job) ? n.job : '—', { sharedRef: nid, noSniff: true, who: 'Eric', ...(n.ph ? { photoPath: n.ph } : {}) });
   const s = thFlushedSet(); s.add(String(id)); lsSet('daylog-shared-flushed', JSON.stringify([...s].slice(-300)));
   thMark('Eric', id);
   renderCrewShared();
-  toast('⤵ Into your log ✓ — Eric sees you flushed it');
+  // 💬 v7.74 — Phil: "And I accidentally flushed." The plate sits a thumb from 💬 Respond — so a flush can be taken back
+  toastUndo('⤵ Into your log ✓ — Eric sees you flushed it', () => {
+    entries = entries.filter(x => !(x.id === made.id && x.sharedRef != null));   // by its number — a sync may have swapped the objects since
+    const f = thFlushedSet(); f.delete(String(id)); lsSet('daylog-shared-flushed', JSON.stringify([...f]));
+    thSeenPut('Eric', id, seenWas);
+    renderAll(); scheduleSave(); renderCrewShared();
+    toast('↩ Not flushed after all — it is back as it was');
+  });
 }
+function thSeenPut(owner, id, at) { prefs.thSeen = prefs.thSeen || {}; if (at) prefs.thSeen[thKey(owner, id)] = at; else delete prefs.thSeen[thKey(owner, id)]; }
+// ================= 🔔 v7.74 — AN ALERT'S TAP LANDS ON WHAT IT IS ABOUT =================
+// Eric, with Phil's words on his card: "Does Phil's disappear if he flushes and I don't. Why wouldn't he see my response?" — Phil had
+// written "I can't see your response by tapping. And I accidentally flushed." His note never left his card (a two-sided note stays
+// until BOTH have flushed) and Eric's reply was on his phone — but a tap on the alert only opened the app at the top of the page,
+// and the card that holds the reply is a thousand pixels down, showing three notes. Now: (1) the service worker tells the app which
+// alert was tapped (its tag — a fixed word, never a name) and the app pulls the newest, opens the card, puts the note with the new
+// words in the middle of the screen and flashes it (`pushTapSet` → `thGoNew`); a cold start carries it as `?tap=`; (2) on both
+// cards a note with words from the other side he has not answered comes FIRST and wears ↩ NEW REPLY, and the fold counts them
+// (crewSharedRows / crewFeedRows) — a reply on last week's note is never below the fold; (3) ⤵ Flush can be taken back (↩ Undo).
+let _pushTap = '', _pushTapAt = 0;
+const PUSH_TAP_THREAD = /^crew-(reply|eric|ask|board)$/;
+function pushTapSet(tag) {
+  tag = String(tag || '').replace(/[^\w-]/g, '').slice(0, 40);
+  if (!PUSH_TAP_THREAD.test(tag) || crewPreview) return;
+  _pushTap = tag; _pushTapAt = Date.now();
+  thGoNew();   // with what this phone holds already…
+  if (dbx.refreshToken) { if (CREW_NAME) checkSharedNotes(); else checkCrewLogs(); }   // …and again once the newest is in (both end in pushTapLand)
+}
+function pushTapLand() {
+  if (!_pushTap) return;
+  const live = Date.now() - _pushTapAt < 60000; _pushTap = '';   // a minute on it is no longer "the tap"
+  if (live) thGoNew();
+}
+function thGoNew() {   // open the card and bring the note with the newest unanswered words to the middle of the screen
+  const crewSide = !!CREW_NAME, card = $(crewSide ? 'crewSharedCard' : 'crewFeedCard'), list = $(crewSide ? 'crewSharedList' : 'crewFeedList');
+  if (!card || !list) return false;
+  try { if ($('revModal') && $('revModal').classList.contains('show')) closeReview(); closePanels(); if (typeof closePortalWin === 'function' && $('portalWin') && $('portalWin').classList.contains('show')) closePortalWin(); } catch (e) {}
+  if (crewSide && prefs.crewFold) { prefs.crewFold = false; scheduleSave(); } else if (!crewSide && prefs.crewFeedFold) { prefs.crewFeedFold = false; scheduleSave(); }
+  if (crewSide) renderCrewShared(); else renderCrewFeed();
+  if (card.style.display === 'none') return false;
+  const row = list.querySelector('.th-new') || list.querySelector('.sum-row');
+  if (!row) return false;
+  try { row.scrollIntoView({ block: 'center' }); } catch (e) { row.scrollIntoView(); }
+  row.classList.add('th-flash'); setTimeout(() => row.classList.remove('th-flash'), 2600);
+  return row.classList.contains('th-new');
+}
+if ('serviceWorker' in navigator) { try { navigator.serviceWorker.addEventListener('message', ev => { const t = ev.data && ev.data.brTap; if (t) pushTapSet(t); }); } catch (e) {} }
+(() => { try { const t = new URLSearchParams(location.search).get('tap'); if (t) { history.replaceState(null, '', location.pathname + location.hash); setTimeout(() => pushTapSet(t), 1500); } } catch (e) {} })();
+// ================= /🔔 v7.74 =================
 // your OWN item: flushing it = done with it; the thread's words are kept on the entry, and the other side learns of it
 function thOwnFlush(id) {
   const e = entries.find(x => String(x.id) === String(id)); if (!e) return;
+  const was = { threadDone: e.threadDone, thread: e.thread, askDone: e.askDone, askFlush: e.askFlush }, seenWas = thSeenAt(thMe(), id);
   e.threadDone = new Date().toISOString();
   const rs = thResponses(thMe(), id); if (rs.length) e.thread = rs.map(r => ({ by: r.by, at: r.at, t: r.t }));
   if (e.ask && !e.askDone) { e.askDone = e.threadDone; e.askFlush = 'Eric'; }
   thMark(thMe(), id);
   scheduleSave();
-  if (CREW_NAME) renderCrewShared(); else { publishSharedNotes(); renderCrewFeed(); }
-  toast('⤵ Done with it ✓ — it leaves the card once they flush it too');
+  const draw = () => { if (CREW_NAME) renderCrewShared(); else { publishSharedNotes(); renderCrewFeed(); } };
+  draw();
+  // 💬 v7.74 — a flush can be taken back (the plate sits a thumb from 💬 Respond)
+  toastUndo('⤵ Done with it ✓ — it leaves the card once they flush it too', () => {
+    Object.keys(was).forEach(k => { if (was[k] === undefined) delete e[k]; else e[k] = was[k]; });
+    thSeenPut(thMe(), id, seenWas);
+    scheduleSave(); draw();
+    toast('↩ Not flushed after all — it is back as it was');
+  });
 }
 // a crew phone's own two-sided notes (Eric responded, or it went ⚠) sit on WITH ERIC beside his
 function crewOwnThreadRows() {
@@ -15231,7 +15295,10 @@ function crewSharedRows() {
   });
   const own = crewOwnThreadRows();
   const attn = n => n.own ? (n.attn && !n.done ? 1 : 0) : (n.ask === 'open' ? 1 : 0);
-  return [...rows, ...own].sort((a, b) => (attn(b) - attn(a)) || String(b.ts || '').localeCompare(String(a.ts || '')));
+  // 💬 v7.74 — a note with words from Eric I have not answered comes FIRST, whatever its age: a reply on a note from last week
+  // sat below the "show 3" fold where nobody would ever look (n.fresh rides on the row: its tag, its class, the count on the fold)
+  return [...rows, ...own].map(n => { n.fresh = thState(n.own ? CREW_NAME : 'Eric', n.id).pulse; return n; })
+    .sort((a, b) => ((b.fresh ? 1 : 0) - (a.fresh ? 1 : 0)) || (attn(b) - attn(a)) || String(b.ts || '').localeCompare(String(a.ts || '')));
 }
 // Eric's own two-sided notes to one man (he responded, or it asks ⚠) sit on WITH PHIL beside Phil's
 // 💬 v7.34 — Eric, with a picture of the same note five times over (you → Shevaun, you → Milo, you → Aaron…): "why is it sending to all
@@ -15295,7 +15362,9 @@ function crewFeedRows() {
   const own = ericOwnThreadRows();   // 💬 v7.33 — my own two-sided notes sit here too · 💬 v7.34 — ONE row per note
   const attn = r => r.own ? (r.e.ask && !r.e.askDone ? 1 : 0) : (r.e.route === 'Eric' && r.e.urg === 'now' ? 1 : 0);
   const tsOf = r => r.e.ts instanceof Date ? r.e.ts.toISOString() : String(r.e.ts || '');   // my own rows carry a Date, his an ISO string
-  return [...rows, ...own].sort((a, b) => (attn(b) - attn(a)) || tsOf(b).localeCompare(tsOf(a)));   // ⚠ first, then newest
+  // 💬 v7.74 — words from the other side that I have not answered come first (r.fresh), then ⚠, then newest
+  return [...rows, ...own].map(r => { r.fresh = thState(r.own ? 'Eric' : r.who, r.e.id).pulse; return r; })
+    .sort((a, b) => ((b.fresh ? 1 : 0) - (a.fresh ? 1 : 0)) || (attn(b) - attn(a)) || tsOf(b).localeCompare(tsOf(a)));
 }
 function crewFeedFold() { prefs.crewFeedFold = !prefs.crewFeedFold; scheduleSave(); renderCrewFeed(); }
 let _cfShownKeys = [];   // what the card lists right now (the search and the wheels respected) — what ⤵ Flush takes
@@ -15401,9 +15470,10 @@ function renderCrewFeed0() {
   const folded = prefs.crewFeedFold === true;
   const btn = $('cfFoldBtn');
   if (btn) {   // brightness + glyph + the spelled word: never a bare caret
+    const nw = all.filter(r => r.fresh).length, nwW = nw ? ` · ↩ ${nw} new repl${nw === 1 ? 'y' : 'ies'}` : '';   // 💬 v7.74 — said on the fold too
     btn.textContent = folded
-      ? `▸ 👷 ${title} — ${all.length} note${all.length === 1 ? '' : 's'}, tap to open`
-      : `▾ 👷 ${title} — showing ${Math.min(cap, list.length)} of ${narrowed ? list.length + ' found' : all.length}, tap to fold`;
+      ? `▸ 👷 ${title} — ${all.length} note${all.length === 1 ? '' : 's'}${nwW}, tap to open`
+      : `▾ 👷 ${title} — showing ${Math.min(cap, list.length)} of ${narrowed ? list.length + ' found' : all.length}${nwW}, tap to fold`;
     btn.setAttribute('aria-expanded', folded ? 'false' : 'true');
   }
   const body = $('crewFeedList');
@@ -15426,8 +15496,8 @@ function renderCrewFeed0() {
     const ph = cfPhotoPath(e.photoPath || (e.photoPaths || [])[0], r.folder);
     if (r.own) {   // 💬 v7.33 — my own note to him, two-sided (he responded, or it asks ⚠)
       const seenNames = Object.keys(e.seenBy || {}), st = thState('Eric', e.id, seenNames.length > 0, !!e.threadDone); st.flushedBy = seenNames.join(', ');   // 💬 v7.34
-      return `<div class="sum-row cf-row th-own" style="cursor: default; font-size: 14.5px; display: block;">
-      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">📨 <b>you → ${esc(r.who === 'crew' ? 'the crew' : r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''}${e.ask && !e.askDone ? ' · <b>⚠ NEEDS THEIR ATTENTION</b>' : ''}</div>
+      return `<div class="sum-row cf-row th-own${st.pulse ? ' th-new' : ''}" data-th="Eric:${escq(String(e.id))}" style="cursor: default; font-size: 14.5px; display: block;">
+      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">${st.pulse ? '<b class="th-newtag">↩ NEW REPLY · </b>' : ''}📨 <b>you → ${esc(r.who === 'crew' ? 'the crew' : r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''}${e.ask && !e.askDone ? ' · <b>⚠ NEEDS THEIR ATTENTION</b>' : ''}</div>
       <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${esc(String(e.details || '').slice(0, 600))}</div>
       ${thLinesHtml('Eric', e.id)}
       <div>${thCubesHtml(st, r.who === 'crew' ? 'the crew' : r.who)}</div>
@@ -15441,8 +15511,8 @@ function renderCrewFeed0() {
     }
     const waiting = cfWillLog(r);   // ⤵ v7.15 — what the flush will do with it, said on its plate
     const st = thState(r.who, e.id, !!e.threadDone, gone.has(r.key));
-    return `<div class="sum-row cf-row" style="cursor: default; font-size: 14.5px; display: block;">
-      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">👷 <b>${esc(r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''} · ${cfForWord(e)}${e.type === 'Done' ? ' · ✅ finished' : ''}${e.route === 'Eric' && e.urg === 'now' ? ' · <b>⚠ NEEDS YOUR ATTENTION</b>' : ''}</div>
+    return `<div class="sum-row cf-row${st.pulse ? ' th-new' : ''}" data-th="${escq(r.who)}:${escq(String(e.id))}" style="cursor: default; font-size: 14.5px; display: block;">
+      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">${st.pulse ? '<b class="th-newtag">↩ NEW REPLY · </b>' : ''}👷 <b>${esc(r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''} · ${cfForWord(e)}${e.type === 'Done' ? ' · ✅ finished' : ''}${e.route === 'Eric' && e.urg === 'now' ? ' · <b>⚠ NEEDS YOUR ATTENTION</b>' : ''}</div>
       <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${esc(String(e.details || '').slice(0, 600))}</div>
       ${thLinesHtml(r.who, e.id)}
       ${st.responded || st.theirFlushed || st.myFlushed ? `<div>${thCubesHtml(st, r.who)}</div>` : ''}
@@ -15781,6 +15851,7 @@ async function checkCrewLogs() {
     }
     renderPendBanner();
     renderCrewFeed();   // 👷 v7.13
+    pushTapLand();   // 🔔 v7.74
   } catch (e) { /* no crew dir yet — quiet */ }
 }
 
@@ -26216,7 +26287,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.73';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.74';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
