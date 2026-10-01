@@ -2484,6 +2484,25 @@
   .jrn-rel-row .sum-title { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
   .jrn-rel-row .btn-ghost { width: 100%; margin: 0; min-height: 40px; padding: 6px 4px; white-space: normal; line-height: 1.15; text-align: center; }
   .jrn-rel-back.armed { color: var(--err, #c0392b); font-weight: var(--fw8, 800); border-color: var(--err, #c0392b); }
+  /* 🧾 v7.64 — the pictures on a released week (✕ takes one off their page), the RECEIPT? band on a grid tile, and the
+     look-before-it-goes sheet */
+  .jrn-rel-phs { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .jrn-rel-ph { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: rgba(0,0,0,0.35); display: inline-flex; align-items: center; justify-content: center; }
+  .jrn-rel-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .jrn-rel-ph .jrn-rel-x { position: absolute; right: 0; bottom: 0; min-width: 26px; min-height: 26px; padding: 2px 5px; border: 0; border-radius: 8px 0 0 0; background: rgba(0,0,0,0.78); color: #fff; font: inherit; font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); cursor: pointer; }
+  .jrn-rel-ph.armed { border: 2px solid var(--err, #c0392b); }
+  .jrn-rel-ph.armed .jrn-rel-x { left: 0; right: 0; bottom: 0; border-radius: 0; background: var(--err, #c0392b); font-size: var(--fs10, 10px); }
+  .jrn-paper-band { position: absolute; left: 0; right: 0; top: 0; background: var(--warn, #ffa657); color: #1a1408; font-size: var(--fs10, 10px); font-weight: var(--fw8, 800); letter-spacing: .3px; padding: 2px 4px; text-align: center; white-space: nowrap; overflow: hidden; }
+  .jrn-paper-band.armed { background: var(--err, #c0392b); color: #fff; }
+  .jrn-go-box { max-height: 90vh; overflow-y: auto; }
+  .jrn-go-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .jrn-go-ph { position: relative; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.35); padding-bottom: 4px; }
+  .jrn-go-ph.paper { border: 2px dashed var(--warn, #ffa657); }
+  .jrn-go-ph img { width: 100%; height: 150px; object-fit: cover; display: block; }
+  .jrn-go-ph .ph-wait { display: flex; height: 150px; align-items: center; justify-content: center; font-size: 28px; }
+  .jrn-go-words { font-size: var(--fs115, 11.5px); padding: 4px 6px 0; line-height: 1.3; overflow-wrap: anywhere; }
+  .jrn-go-x { width: calc(100% - 12px); margin: 4px 6px 0; min-height: 36px; }
+  @media (min-width: 701px) { .jrn-go-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   /* 🏗 v7.10 — the WHERE window's construction categories, a heading a phase */
   .bl-ph-h { font-size: var(--fs115, 11.5px); font-weight: var(--fw8, 800); letter-spacing: .5px; text-transform: uppercase; color: var(--accent); margin: 8px 0 5px; padding-left: 8px; border-left: 3px solid var(--accent); }
   /* 📎 v7.53 — the grinder's second question: a row already on the list, and the light it moves to. Two lines a plate — the
@@ -4583,7 +4602,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.63 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.64 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -18145,6 +18164,13 @@ function jrnStamp(id) {
   if (!e) return;
   if (e.personal) { toast('🔒 Personal never goes near a client', false); return; }
   if (e.mail) { toast('📧 An email never goes on their page — write that line yourself', false); return; }   // v6.41
+  // 🧾 v7.64 — a note that reads as PAPER (a receipt, a check, an invoice) with a picture on it: the stamp would send that
+  // picture to the homeowner's page — so the first tap only asks, in words, and the second stamps it
+  if (!e.jrn && e.photoPath && jrnPaperLike(e)) {
+    if (_jrnStampArm !== id) { _jrnStampArm = id; setTimeout(() => { if (_jrnStampArm === id) _jrnStampArm = null; }, 5000);
+      toast('⚠ This note looks like a receipt or a check, and its PICTURE would go to the homeowner\'s page — tap 📖 again if that is what you want', false); return; }
+    _jrnStampArm = null;
+  }
   e.jrn = !e.jrn; delete e.jrnDone;
   scheduleSave();
   if (e.jrn && (!e.job || e.job === '—')) toast('📖 Stamped — ⚠ it has NO JOB yet. Give it one (✎) or it can\'t find its journal.', false);
@@ -18182,7 +18208,7 @@ function journalDraft(aj, code) {
 }
 async function openJournal(i) {
   if (portalGuard()) return;
-  const c = _portalIdx.clients[i]; _jrnIdx = i; _jrnPhAll = false;   // 📷 v7.10 — six photos first, every open
+  const c = _portalIdx.clients[i]; _jrnIdx = i; _jrnPhAll = false; _jrnSweptFor = ''; _jrnPaperArm = ''; _jrnDropArm = ''; jrnGoClose();   // 📷 v7.10 — six photos first, every open · 🧾 v7.64 — a fresh sweep and no armed plates
   const aj = portalAppJob(c);
   const st = jrnStamped(aj);
   const stNotes = st.filter(e => !e.photoPath);
@@ -18316,12 +18342,13 @@ function renderJrnPhotos() {
     const sentDay = typeof e.jrnSent === 'string'
       ? new Date(e.jrnSent + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
     const times = +e.jrnSentN || 0;
-    const aria = `${sel ? 'Riding with this week' : 'Not going this week'}${sent ? `. Already sent${sentDay ? ' ' + sentDay : ''}${times > 1 ? `, ${times} times` : ''}` : ''}`;
-    return `<button type="button" data-jph="${e.id}_${it.pi}"${hide ? ' hidden class="jrn-more"' : ''} onclick="jrnPhotoTog(${e.id}, ${it.pi})" aria-pressed="${sel}" aria-label="${esc(aria)}" title="${esc(aria)}"
+    const paper = jrnPaperLike(e), armed = _jrnPaperArm === e.id + '_' + it.pi;   // 🧾 v7.64 — a receipt, a check, an invoice: it says so, and asks first
+    const aria = `${sel ? 'Riding with this week' : armed ? 'sure? tap again — this looks like a receipt or a check' : 'Not going this week'}${paper ? '. Looks like paper — a receipt, a check, an invoice' : ''}${sent ? `. Already sent${sentDay ? ' ' + sentDay : ''}${times > 1 ? `, ${times} times` : ''}` : ''}`;
+    return `<button type="button" data-jph="${e.id}_${it.pi}"${hide ? ' hidden' : ''} class="${hide ? 'jrn-more' : ''}${paper ? ' jrn-paper' : ''}${armed ? ' armed' : ''}" onclick="jrnPhotoTog(${e.id}, ${it.pi})" aria-pressed="${sel}" aria-label="${esc(aria)}" title="${esc(aria)}"
       style="position: relative; height: 76px; padding: 0; overflow: hidden; cursor: pointer; background: rgba(0,0,0,0.35);
-        border: ${sel ? '3px solid var(--accent)' : '1px solid var(--border)'}; border-radius: 8px;">
+        border: ${sel ? '3px solid var(--accent)' : armed ? '3px solid var(--warn, #ffa657)' : paper ? '2px dashed var(--warn, #ffa657)' : '1px solid var(--border)'}; border-radius: 8px;">
       ${link ? `<img src="${esc(link)}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;${sel ? '' : ' opacity: 0.75;'}">` : '<span style="font-size: 22px;">📷</span>'}
-      ${sel ? '<span style="position: absolute; top: 3px; right: 3px; background: var(--accent); color: var(--accent-ink); font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); border-radius: 999px; padding: 1px 6px;">✓ GOES</span>' : ''}
+      ${sel ? '<span style="position: absolute; top: 3px; right: 3px; background: var(--accent); color: var(--accent-ink); font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); border-radius: 999px; padding: 1px 6px;">✓ GOES</span>' : armed ? '<span class="jrn-paper-band armed">⚠ SURE? tap again</span>' : paper ? '<span class="jrn-paper-band">🧾 RECEIPT?</span>' : ''}
       ${sent ? `<span style="position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.72); color: #f3e0ac;
         font-size: 9.5px; font-weight: var(--fw8, 800); letter-spacing: .3px; padding: 1px 3px; white-space: nowrap; overflow: hidden;">⭐ SENT${times > 1 ? ' ' + times + '×' : ''}${sentDay ? ' · ' + esc(sentDay) : ''}</span>` : ''}
     </button>`;
@@ -18372,6 +18399,14 @@ function jrnPhotoTog(id, pi) {
   const p = all[pi == null ? 0 : pi];
   if (!p) return;
   let sel = jrnSelPaths(e);
+  // 🧾 v7.64 — picking a picture that looks like PAPER (a receipt, a check, an invoice) asks first: the tile reads ⚠ SURE? for five
+  // seconds and the second tap picks it; un-picking is always one tap
+  if (!sel.includes(p) && jrnPaperLike(e)) {
+    const key = e.id + '_' + (pi == null ? 0 : pi);
+    if (_jrnPaperArm !== key) { _jrnPaperArm = key; renderJrnPhotos(); setTimeout(() => { if (_jrnPaperArm === key) { _jrnPaperArm = ''; renderJrnPhotos(); } }, 5000);
+      toast('⚠ That looks like a receipt or a check — tap it again if the homeowner should really see it', false); return; }
+    _jrnPaperArm = '';
+  }
   sel = sel.includes(p) ? sel.filter(x => x !== p) : [...sel, p];
   if (!sel.length) { e.jrn = false; delete e.jrnPh; }
   else {
@@ -18411,12 +18446,16 @@ async function renderJrnReleased() {
   // 📐 v7.14 — Eric: "it tells the week, says 'Edited,' and has an edit button and a take back button, but they don't really fit
   // on there very well. Make sure all the take back buttons are in a line and all the edit buttons are in a line." Each row is
   // a grid: the week's words in a column that wraps, then two fixed columns — every ✎ Edit and every ↩ Take back stack straight.
-  box.innerHTML = `<div class="field" style="margin: 0 0 2px;"><label>📤 On their page now — ✎ edit it or ↩ take it back</label></div>` +
+  box.innerHTML = `<div class="field" style="margin: 0 0 2px;"><label>📤 On their page now — ✎ edit it or ↩ take it back · ✕ on a photo takes just that one off</label></div>` +
     js.slice(0, 8).map((j, i) => `<div class="sum-row jrn-rel-row" style="cursor: default;">
       <span class="sum-title">📖 Week of ${esc(j.week || '?')}${(j.photos || []).length ? ` · 📷 ${j.photos.length}` : ''}${j.edited ? ' · ✎ edited' : ''}</span>
       <button class="btn-ghost req-x jrn-rel-ed" onclick="jrnEditRel(${i})">✎ Edit</button>
       <button class="btn-ghost req-x jrn-rel-back${_jrnRetractArm === i ? ' armed' : ''}" onclick="jrnRetract(${i})">${_jrnRetractArm === i ? '⚠ SURE? Tap again' : '↩ Take back'}</button>
+      ${jrnRelPhotosHtml(c, j, i)}
     </div>`).join('');
+  // 🧾 v7.64 — the pictures on each week, small, each with its ✕; and the served folder swept of files no week uses any more
+  jrnRelThumbs(c, [...new Set(js.slice(0, 8).flatMap(j => j.photos || []))]);
+  jrnPhotoSweep(c, d);
 }
 // 📖 v6.31 — WHAT WENT OUT LAST TIME, sitting where he can read it while he writes the next
 // one. Open by default (he asked for it open), foldable, and read-only: last week's words
@@ -18510,10 +18549,134 @@ async function jrnRetract(i) {
     const gone = (d.journal || []).splice(i, 1)[0];
     d.updated = new Date().toISOString().slice(0, 10);
     await dbxUpload(path, JSON.stringify(d, null, 1));
+    // 🧹 v7.64 — the week's picture files leave the served folder too (the ones no other week still uses) — off the page is not off the shelf
+    const moved = gone && (gone.photos || []).length ? await jrnPhotoMoveOut(c, gone.photos, d) : 0;
     renderJrnReleased();
-    toast(`↩ "Week of ${gone ? gone.week : '?'}" is OFF ${c.job}'s page ✓`);
+    toast(`↩ "Week of ${gone ? gone.week : '?'}" is OFF ${c.job}'s page ✓${moved ? ` · ${moved} picture file${moved > 1 ? 's' : ''} moved out of their folder` : ''}`);
   } catch (e) { toast('Couldn\'t take it back — check the connection and try again', false); }
 }
+// ================= 🧾 v7.64 — A CHECK ON THE HOMEOWNER'S PAGE: NEVER AGAIN =================
+// Eric, with a picture of a client's PROGRESS PHOTOS whose last tile was a check he wrote (the bank numbers in full): "last
+// photo is a check written. not sure how it got on the page but trace the path and be sure it doesn't happen again." Traced
+// (read-only): the photo was the picture on a RECEIPT note (the check he wrote to a sub, photographed as the receipt — the
+// Wizard had read the date, the store and the amount off it); that note was stamped 📖 for the journal and its week was
+// released three weeks earlier; the grid holds the job's last 30 days, so by the time he looked the note was out of the grid
+// and the check was still on their page. Nothing had shown him the pictures before they went, nothing told paper from a
+// progress shot, and a take-back left the copied file in the served folder. Four guards:
+//   1. jrnPaperLike(e) — a note that reads as paper (a receipt, a check, an invoice, a statement: the read's 💵 / 🏪 lines, the
+//      🧾 tag, a category, an amount, a Filed entry, a bill on the way, or the words themselves) — its tile in the grid wears
+//      🧾 RECEIPT? and the first tap only asks ⚠ SURE?; the row's 📖 stamp asks the same way (jrnStamp).
+//   2. Release SHOWS the pictures first (jrnGoConfirm): every photo about to ride, big enough to see, ✕ leave it off on each,
+//      then 📖 Release. Words alone release as before.
+//   3. A released week lists its photos with ✕ (jrnPhotoDrop): one picture off their page, the week stays.
+//   4. Off the page = off the shelf: a take-back or a ✕ MOVES the file out of photos-<code>/ into App Data/Backups/photos-<code>/
+//      (never deleted — Dropbox rule) when no other week still uses it, and the journal window sweeps the folder on open for
+//      files no week uses any more (jrnPhotoSweep) — so the one he took back by hand tonight leaves too.
+const JRN_PAPER_RE = /\b(check|cheque|invoice|receipt|statement|deposit|routing|account number|bill)\b/i;
+function jrnPaperLike(e) {
+  if (!e) return false;
+  if (e.type === 'Filed' || e.rcpt || e.budg || e.amount != null || e.category) return true;
+  if ((e.tags || []).some(t => /^receipt$/i.test(String(t)))) return true;
+  const words = String(e.details || '') + '\n' + String(e.ai || '');
+  return /💵|🏪|🧾/.test(words) || JRN_PAPER_RE.test(words);
+}
+let _jrnStampArm = null, _jrnPaperArm = '', _jrnDropArm = '', _jrnGoSeen = '', _jrnSweptFor = '';
+const _jrnRelLinks = {};
+function jrnServedPath(c, name) { return portalRoot() + '/photos-' + c.code + '/' + name; }
+function jrnBackupPath(c, name) { return DBX_ROOT + '/App Data/Backups/photos-' + c.code + '/' + name; }
+// move the given picture files out of the served folder — only the ones no week on the page still names; returns how many moved
+async function jrnPhotoMoveOut(c, names, d) {
+  const still = new Set(((d && d.journal) || []).flatMap(j => (j && j.photos) || []));
+  let n = 0;
+  for (const name of [...new Set(names || [])]) {
+    if (!name || still.has(name)) continue;
+    try {
+      const r = await dbxRpc('files/move_v2', { from_path: jrnServedPath(c, name), to_path: jrnBackupPath(c, name), autorename: true });
+      if (r && !r.error_summary) n++;
+      else if (r && /not_found/.test(String(r.error_summary))) n++;   // already gone — the shelf is clean either way
+    } catch (e) { /* the next sweep tries again */ }
+  }
+  return n;
+}
+// the served folder, swept on the journal window's open: a file no released week names any more goes to Backups
+async function jrnPhotoSweep(c, d) {
+  if (!c || !d || !Array.isArray(d.journal) || _jrnSweptFor === c.code) return 0;
+  _jrnSweptFor = c.code;
+  let list;
+  try { list = await dbxList({ path: portalRoot() + '/photos-' + c.code }); } catch (e) { return 0; }
+  if (!list || list.error_summary || list.partial || !Array.isArray(list.entries)) return 0;   // a refused or cut-short listing is no reason to move anything
+  const used = new Set(d.journal.flatMap(j => (j && j.photos) || []));
+  const orphans = list.entries.filter(f => f && f['.tag'] === 'file' && !used.has(f.name)).map(f => f.name);
+  if (!orphans.length) return 0;
+  const n = await jrnPhotoMoveOut(c, orphans, d);
+  if (n) toast(`🧹 ${n} picture file${n > 1 ? 's' : ''} no week on their page uses any more — moved out of their folder`);
+  return n;
+}
+// ✕ on one photo of a released week: off the week (the week stays), and the file leaves the served folder when nothing else uses it
+async function jrnPhotoDrop(i, name) {
+  const key = i + '|' + name;
+  if (_jrnDropArm !== key) { _jrnDropArm = key; renderJrnReleased(); setTimeout(() => { if (_jrnDropArm === key) { _jrnDropArm = ''; renderJrnReleased(); } }, 5000); return; }
+  _jrnDropArm = '';
+  const c = _portalIdx.clients[_jrnIdx];
+  if (!c) return;
+  try {
+    const path = portalRoot() + '/' + c.code + '.json';
+    const d = JSON.parse(await dbxDownload(path) || '{}');
+    const j = (d.journal || [])[i];
+    if (!j || !(j.photos || []).includes(name)) { toast('That photo is not on their page any more', false); renderJrnReleased(); return; }
+    j.photos = j.photos.filter(x => x !== name);
+    if (!j.photos.length) delete j.photos;
+    d.updated = new Date().toISOString().slice(0, 10);
+    await dbxUpload(path, JSON.stringify(d, null, 1));
+    const moved = await jrnPhotoMoveOut(c, [name], d);
+    renderJrnReleased();
+    toast(`✕ That photo is off ${c.job}'s page${moved ? ' — the file moved out of their folder' : ' (another week still uses the file)'} ✓`);
+  } catch (e) { toast('Couldn\'t take the photo off — check the connection and try again', false); }
+}
+async function jrnRelThumbs(c, names) {
+  for (const name of names) {
+    const p = jrnServedPath(c, name);
+    if (_jrnRelLinks[p]) continue;
+    try {
+      const t = await getToken();
+      const r = await fetch('https://content.dropboxapi.com/2/files/get_thumbnail_v2', { method: 'POST', headers: { Authorization: 'Bearer ' + t,
+        'Dropbox-API-Arg': hsafe({ resource: { '.tag': 'path', path: p }, format: { '.tag': 'jpeg' }, size: { '.tag': 'w128h128' } }) } });
+      if (r.ok) { _jrnRelLinks[p] = URL.createObjectURL(await r.blob()); const img = document.querySelector(`.jrn-rel-ph[data-rel="${CSS.escape(p)}"] img`); if (img) img.src = _jrnRelLinks[p]; }
+    } catch (e) { /* the placeholder stays */ }
+    if (!$('jrnRelList')) break;
+  }
+}
+function jrnRelPhotosHtml(c, j, i) {
+  const names = (j && j.photos) || [];
+  if (!names.length) return '';
+  return `<div class="jrn-rel-phs">${names.map(name => { const p = jrnServedPath(c, name), armed = _jrnDropArm === i + '|' + name;
+    return `<span class="jrn-rel-ph${armed ? ' armed' : ''}" data-rel="${esc(p)}" title="${esc(name)}">${_jrnRelLinks[p] ? `<img src="${esc(_jrnRelLinks[p])}" alt="">` : '<span class="ph-wait">📷</span>'}<button type="button" class="jrn-rel-x" onclick="jrnPhotoDrop(${i}, '${escq(name)}')" aria-label="${armed ? 'sure? tap again — this photo comes off their page' : 'take this photo off their page'}">${armed ? '⚠ SURE?' : '✕'}</button></span>`; }).join('')}</div>`;
+}
+// 📷 before a release with pictures: show them, big, and ask — ✕ leaves one off (it is un-picked), 📖 Release sends the rest
+function jrnGoConfirm(riding, c) {
+  let host = $('jrnGoHost'); if (!host) { host = document.createElement('div'); host.id = 'jrnGoHost'; document.body.appendChild(host); }
+  const paper = riding.filter(r => jrnPaperLike(r.e)).length;
+  host.innerHTML = `<div class="we-sheet" onclick="if (event.target === this) jrnGoClose()"><div class="we-box jrn-go-box" role="dialog" aria-label="the photos about to go to the homeowner's page">
+    <div class="we-head"><b>📷 ${riding.length} PHOTO${riding.length === 1 ? '' : 'S'} GO WITH THIS WEEK</b><span>${esc(c.job)}</span><button type="button" class="btn-ghost x-plate x-small" style="min-width: 44px;" onclick="jrnGoClose()" aria-label="not yet">✕</button></div>
+    <div class="hint" style="margin: 0 0 8px;">Look at each one — the homeowner sees them all. ✕ leaves one off this week.${paper ? ` <b>⚠ ${paper} look${paper === 1 ? 's' : ''} like paper (a receipt, a check, an invoice) — are you sure?</b>` : ''}</div>
+    <div class="jrn-go-grid">${riding.map(r => { const link = _jrnPhLinks[r.p]; return `<div class="jrn-go-ph${jrnPaperLike(r.e) ? ' paper' : ''}" data-go="${esc(r.p)}">${link ? `<img src="${esc(link)}" alt="">` : '<span class="ph-wait">📷</span>'}
+      ${jrnPaperLike(r.e) ? '<span class="jrn-paper-band">🧾 RECEIPT? a check? — look</span>' : ''}
+      <div class="jrn-go-words">${esc(String(r.e.details || '').replace(/\s+/g, ' ').slice(0, 60))}</div>
+      <button type="button" class="btn-ghost req-x jrn-go-x" onclick="jrnGoDrop(${r.e.id}, ${r.pi})">✕ Leave this one off</button></div>`; }).join('')}</div>
+    <div class="rev-row" style="margin-top: 10px; flex-wrap: wrap; gap: 6px;"><button type="button" class="btn-primary" style="flex: 2; min-height: 46px; font-weight: var(--fw8, 800);" onclick="journalRelease(true)">📖 Release — ${riding.length} photo${riding.length === 1 ? '' : 's'} ride${riding.length === 1 ? 's' : ''}</button><button type="button" class="btn-ghost" style="flex: 1; min-height: 46px;" onclick="jrnGoClose()">✕ Not yet</button></div></div></div>`;
+  jrnPhLoadLinks(riding.map(r => ({ path: r.p, e: r.e, pi: r.pi }))).then(() => { riding.forEach(r => { const img = document.querySelector(`.jrn-go-ph[data-go="${CSS.escape(r.p)}"] img, .jrn-go-ph[data-go="${CSS.escape(r.p)}"] .ph-wait`); if (img && _jrnPhLinks[r.p] && img.tagName !== 'IMG') img.outerHTML = `<img src="${esc(_jrnPhLinks[r.p])}" alt="">`; }); });
+}
+function jrnGoClose() { const h = $('jrnGoHost'); if (h) h.innerHTML = ''; }
+function jrnGoDrop(id, pi) {   // un-pick that photo for this week, then show what is left
+  const e = entries.find(x => x.id === id); if (!e) return;
+  const all = entryAllPhotos(e), p = all[pi];
+  if (jrnSelPaths(e).includes(p)) jrnPhotoTog(id, pi);
+  const c = _portalIdx.clients[_jrnIdx]; if (!c) return;
+  const riding = jrnRiding(portalAppJob(c));
+  if (!riding.length) { jrnGoClose(); toast('No photos ride now — 📖 Release sends the words alone'); return; }
+  jrnGoConfirm(riding, c);
+}
+function jrnRiding(aj) { const out = []; jrnStamped(aj).forEach(e => { const all = entryAllPhotos(e); jrnSelPaths(e).forEach(p => out.push({ e, p, pi: all.indexOf(p) })); }); return out; }
 // 🧙 v5.20 — the Wizard drafts the journal: raw entries are MATERIAL, not the message.
 // It drops tests, internal logistics and scheduling chatter; keeps what an owner cares about.
 // No key / offline / already-edited → the raw draft stands, exactly like before.
@@ -18566,12 +18729,15 @@ function jrnUndoBack() {
   if (typeof event !== 'undefined' && event && event.target && event.target.style) event.target.style.display = 'none';
   toast('↩ Your words are back — nothing lost');
 }
-async function journalRelease() {
+async function journalRelease(sure) {
   if (portalGuard() || _jrnIdx == null) return;
   const c = _portalIdx.clients[_jrnIdx];
   const text = ($('jrnText').value || '').trim();
   if (!text) { toast('Nothing to release', false); return; }
   const path = portalRoot() + '/' + c.code + '.json';
+  // 📷 v7.64 — pictures riding? He sees them first (jrnGoConfirm) — the sheet's own 📖 Release comes back here with `sure`
+  if (_jrnEditIdx == null && !sure) { const riding = jrnRiding(portalAppJob(c)); if (riding.length) { jrnGoConfirm(riding, c); return; } }
+  jrnGoClose();
   // ✎ v5.20 — edit mode: rewrite the already-released week in place, live on their page
   if (_jrnEditIdx != null) {
     try {
@@ -25185,7 +25351,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.63';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.64';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
