@@ -1664,8 +1664,25 @@
   .est-phase { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 16px 0 2px; padding: 0 2px 6px; border-bottom: 2px solid var(--baseline); font-weight: var(--fw8, 800); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
   .est-phase span { font-weight: 600; font-size: var(--fs12, 12px); letter-spacing: 0; text-transform: none; opacity: .85; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .est-phase.need { border-bottom-color: var(--warn, #ffa657); color: var(--warn, #ffa657); }
-  .est-line { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
-  .est-name { min-width: 0; cursor: pointer; font-weight: var(--fw8, 800); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .est-line { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }   /* 👁 v7.79 — eye · name · number · lamp */
+  /* 👁 v7.79 — the eye takes a little of the name's room, so a long name wraps onto a second line instead of being cut to a few letters */
+  .est-name { min-width: 0; cursor: pointer; font-weight: var(--fw8, 800); line-height: 1.3; overflow: hidden; white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  /* 👁 v7.79 — Eric: "on each item a small icon to click to see client view, i want to keep checking back and forth quickly when i
+     make changes and see what they see". One small eye at the FRONT of every row — the same place on every row, one straight
+     column down the board, and the far side from the lamp (a stray thumb on a lit lamp takes the line off their page; a stray
+     thumb on the eye only looks). Dimmed on a line they do not see — it still opens their page. */
+  .est-board .est-eye { width: 34px; min-width: 34px; height: 34px; min-height: 34px !important; padding: 0 !important; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: inherit; font-size: 16px !important; line-height: 1; cursor: pointer; }
+  .est-board .est-eye.off { opacity: .5; }
+  /* 🔍 v7.79 — the search box at the top of the estimates board (the Build List's box); while he searches, what matches sits right
+     under the box and the rest of the top of the board waits below it */
+  .est-board #estSearch { font-size: 16px !important; min-height: 44px !important; padding: 9px 44px 9px 12px !important; width: 100%; }
+  .est-board #estSearch::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }   /* one ✕, the plate — not the browser's own beside it */
+  .est-board .est-search { margin-top: 14px; }   /* clear of the board's own ✕ close in the corner above */
+  .est-search-say b { color: var(--accent); }
+  .est-search-back { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .est-mid.searching { display: flex; flex-direction: column; }
+  .est-mid.searching > .est-rows { order: -1; margin-bottom: 12px; }
+  .est-mid.searching > .est-rows > .est-phase:first-child { margin-top: 6px; }
   .est-num { font-variant-numeric: tabular-nums; font-weight: var(--fw8, 800); white-space: nowrap; text-align: right; font-size: 14px; }
   .est-num.mute { opacity: .5; font-weight: 500; }
   .est-sub { margin: 2px 0 0 !important; white-space: normal !important; }
@@ -4746,7 +4763,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.78 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.79 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -17285,6 +17302,7 @@ async function openEstimates(i) {
   if (CREW_NAME) { toast('💰 The estimates board is Eric\'s — the money stays on his phone', false); return; }
   _estIdx = i; _estArm = ''; _estOpenCats = new Set(); _estShowEmpty = new Set(); _estHelp = false; _estGuessOnly = false;   // 🕯 v6.66 — the folds start shut
   _estGoneOpen = false; estWhatClose();   // 👁 v7.49 — every category on the list, each folded to its one line; nothing left open from the last time
+  _estQ = ''; _estQFirst = -1;   // 🔍 v7.79 — a fresh open starts with no search
   const c = _portalIdx.clients[i];
   toast('⏳ Opening the estimates…');
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
@@ -17826,6 +17844,97 @@ function estCatOptions(selIdx, skipIdx) {   // 🏷 v7.50 — skipIdx: the one c
   return catGroups(_estD.cats.map(x => x.n)).map(([, name, names]) => { const list = names.filter(n => idx[n] !== skipIdx);
     return list.length ? `<optgroup label="${esc(name)}">${list.map(n => `<option value="${idx[n]}"${idx[n] === selIdx ? ' selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>` : ''; }).join('');
 }
+// ================= 🔍 v7.79 — FIND A CATEGORY; 👁 THEIR PAGE FROM ANY LINE =================
+// 🔍 Eric: "on the top of the estimates page i need to be able to search for categories, scrolling is taking a while to find things".
+// A search box is the first thing under the board's title. The words he types find a category by its NAME (every word must be in
+// it, case aside; the books' other names for a line count too — "landfill" finds Trash / Construction Debris). While he searches,
+// what matches sits RIGHT UNDER the box (the rest of the top of the board waits below it), still in its sections and still folded
+// to one line each — a tap opens one, and Enter (the phone's Search key) opens the first. A line under the box counts what it
+// found; nothing found says so, and a category he once TOOK OFF this board is offered back by name. ✕ clears it; a fresh open of
+// the board starts with no search. It narrows together with the ≈ only-the-best-guesses filter. The box keeps his thumb through
+// every redraw (the Build List's search taught that).
+let _estQ = '', _estQFirst = -1;
+function estQWords() { return String(_estQ || '').toLowerCase().split(/\s+/).filter(Boolean); }
+function estQHay(n) { const k = String(n || '').trim().toLowerCase(); return [k, ...((EST_ALIASES[k] || []).map(a => String(a).toLowerCase()))].join(' · '); }
+function estQOk(x) { const w = estQWords(); if (!w.length) return true; const hay = estQHay(x && x.n); return w.every(q => hay.includes(q)); }
+function estSearchSet(v) {
+  _estQ = String(v || '').slice(0, 60);
+  renderEstimates();
+  const b = $('estSearch'); if (b) { b.focus(); const n = b.value.length; try { b.setSelectionRange(n, n); } catch (e) {} }   // the box keeps his thumb through the redraw
+}
+function estSearchClear() { _estQ = ''; renderEstimates(); const b = $('estSearch'); if (b) b.focus(); }
+function estSearchGo() {   // Enter / the phone's Search key: open the first one found
+  if (!estQWords().length) return;
+  const ci = _estQFirst;
+  if (!(ci >= 0) || !_estD.cats[ci]) { toast(`🔍 No category on this board matches “${_estQ.trim()}”`, false); return; }
+  _estOpenCats.add(ci); _estArm = '';
+  renderEstimates();
+  const b = $('estSearch'); if (b) b.blur();
+  setTimeout(() => { const r = document.querySelector(`.est-board .est-row[data-ci="${ci}"]`); if (r && r.scrollIntoView) r.scrollIntoView({ block: 'start' }); }, 40);
+}
+function estSearchHtml(hitN) {
+  const q = estQWords().length > 0, said = esc(_estQ.trim());
+  // a category he took off this board that the words find: offered back, by name (🗑 v7.49's list)
+  const gone = q ? estGoneList() : [], goneHits = gone.filter(n => estQOk({ n }));
+  const say = !q ? '' : hitN
+    ? `🔍 <b>${hitN} categor${hitN === 1 ? 'y' : 'ies'}</b> match${hitN === 1 ? 'es' : ''} “${said}”${_estGuessOnly ? ' (among the best guesses)' : ''} — tap ${hitN === 1 ? 'it' : 'one'} to open it · ✕ clears the search`
+    : `🔍 No category on this board matches “${said}”${_estGuessOnly ? ' among the best guesses' : ''}${goneHits.length ? '' : ' — ➕ category at the foot of the board adds one'} · ✕ clears the search`;
+  return `<div class="mat-search est-search" role="search">
+    <input type="search" id="estSearch" value="${esc(_estQ)}" placeholder="🔍 Find a category…" aria-label="find a category on this board" autocomplete="off" enterkeyhint="search" oninput="estSearchSet(this.value)" onkeydown="if (event.key === 'Enter') { event.preventDefault(); estSearchGo(); }">
+    ${q ? `<button type="button" class="btn-ghost req-x mat-search-x" onclick="estSearchClear()" aria-label="clear the search">✕</button>` : ''}
+    ${q ? `<div class="hint est-search-say" id="estSearchSay" style="margin: 4px 0 0;">${say}</div>` : ''}
+    ${goneHits.length ? `<div class="est-search-back" id="estSearchBack"><span class="hint" style="margin: 0; align-self: center;">🗑 You took ${goneHits.length === 1 ? 'this one' : 'these'} off this board:</span>${catSort(goneHits).map(n => `<button type="button" class="pick-chip est-back" onclick="estPutBack(${gone.indexOf(n)})" aria-label="put ${esc(n)} back on this board">↩ ${esc(n)}</button>`).join('')}</div>` : ''}
+  </div>`;
+}
+// 👁 Eric: "and on each item a small icon to click to see client view, i want to keep checking back and forth quickly when i make
+// changes and see what they see". Every row wears a small 👁 (between its name and its number — away from the lamp). A tap:
+// (1) a change still waiting to be saved goes out FIRST, so their page holds what the board holds; (2) their page opens over the
+// board in the viewer (the board stays exactly as it was underneath — the same line open, the same place); (3) the banner names
+// the line, and says so in words when they do not see it (office-only) or see only its receipts; (4) the line is brought to the
+// middle of the viewer and its edge shows for a moment, so he is looking at the right line. The app looks into its OWN frame to
+// find the line — their page's code is not changed, and the homeowner never gets the edge.
+async function estPeek(ci) {
+  const x = _estD && _estD.cats[ci], c = ((_portalIdx || {}).clients || [])[_estIdx];
+  if (!x || !c) return;
+  const name = x.n, onPage = !!(x.appr && estTotal(x) > 0), way = estPendUp(x) > 0;
+  if (_estTimer) { clearTimeout(_estTimer); _estTimer = null; busyShow('💾 SAVING YOUR CHANGE, THEN THEIR PAGE…'); try { await estSave(); } catch (e) {} busyDone('👁 THEIR PAGE'); }
+  if (!_estD || _portalIdx.clients[_estIdx] !== c) return;   // the board was closed while the save was in the air
+  clientPreviewOpen(_estIdx);
+  const b = document.querySelector('.cp-banner');
+  if (b) b.textContent = onPage ? `👁 THEIR PAGE — ${name} · TAP HERE TO COME BACK`
+    : way ? `👁 THEIR PAGE — ${name}: they see its receipts, not its estimate · TAP HERE TO COME BACK`
+    : `👁 THEIR PAGE — ${name} is office-only, they do not see it · TAP HERE TO COME BACK`;
+  if (onPage || way) cpSeek(name);
+}
+// bring one line of their page to the middle of the viewer, and show its edge for a moment
+let _cpSeekT = null;
+function cpSeek(name) {
+  clearInterval(_cpSeekT);
+  const want = String(name || '').trim().toLowerCase();
+  if (!want) return;
+  let tries = 0;
+  _cpSeekT = setInterval(() => {
+    tries++;
+    if (!$('cliPrev').classList.contains('show') || tries > 80) { clearInterval(_cpSeekT); return; }   // closed, or their page never drew (16 s)
+    let doc = null; try { doc = $('cpFrame').contentDocument; } catch (e) { doc = null; }
+    if (!doc || !doc.querySelector('.card')) return;   // not drawn yet
+    clearInterval(_cpSeekT);
+    const first = el => String((el.querySelector('span') || {}).textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const is = el => { const t = first(el); return t === want || t.startsWith(want + ' — '); };
+    const row = [...doc.querySelectorAll('#budgetCard .bud-row')].find(is) || [...doc.querySelectorAll('#laterCard .lt-row')].find(el => first(el).startsWith(want)) || [...doc.querySelectorAll('#upcomingCard .rc-row')].find(is);
+    if (!row) return;
+    try { row.scrollIntoView({ block: 'center' }); } catch (e) {}
+    // an iPhone sizes the frame to its whole page and the WRAPPER scrolls (v5.35): put the line in the middle of the wrapper too
+    const wrap = document.querySelector('#cliPrev .cp-scroll'), fr = $('cpFrame');
+    if (wrap && fr && wrap.scrollHeight > wrap.clientHeight + 4) {
+      const r = row.getBoundingClientRect(), f = fr.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+      wrap.scrollTop += (f.top + r.top + r.height / 2) - (w.top + wrap.clientHeight / 2);
+    }
+    const o0 = row.style.outline, of0 = row.style.outlineOffset;
+    row.style.outline = '3px solid #f2c66d'; row.style.outlineOffset = '3px';
+    setTimeout(() => { try { row.style.outline = o0; row.style.outlineOffset = of0; } catch (e) {} }, 1800);
+  }, 200);
+}
 function renderEstimates() {
   const c = _portalIdx.clients[_estIdx];
   if (!c || !_estD) return;
@@ -17845,14 +17954,18 @@ function renderEstimates() {
   // ⏳ v7.61 — what THEY saved for later (read off their page): how many lines or parts, and what it adds up to
   const heldAll = _estD.cats.map(estHeldOf).filter(h => h.line || h.parts.length), heldN = heldAll.reduce((s, h) => s + (h.line ? 1 : h.parts.length), 0), heldTot = estR2(heldAll.reduce((s, h) => s + h.amt, 0));
   const updN = _estD.cats.filter(x => x.appr && estUpdLive(x)).length, updNoWhy = _estD.cats.filter(x => x.appr && estUpdLive(x) && !estUpdWhyOk(x)).length;
+  // 🔍 v7.79 — the search: is it on, and how many categories match (with the ≈ only-the-best-guesses filter, when that is lit)
+  const qOn = estQWords().length > 0, qHitN = qOn ? _estD.cats.filter(x => estQOk(x) && (!_estGuessOnly || estIsGuess(x))).length : 0;
   $('revBox').innerHTML = `<div class="est-board"><h3>💰 ${esc(c.job)} — estimates
     ${winX('closeEstimates()', 'close estimates')}</h3>
+    ${estSearchHtml(qHitN)}
+    <div class="est-mid${qOn ? ' searching' : ''}"><div class="est-top">
     <div style="margin: 0 0 8px; font-size: 14px; line-height: 1.4;">${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}${needN ? ` · <b style="color: var(--warn, #ffa657);">⚠ ${needN} need${needN > 1 ? '' : 's'} you</b>` : ''}${doneN ? ` · <b class="est-done-word" id="estDoneN">✓ ${doneN} complete</b>` : ''}${heldN ? ` · <b class="est-held-word" id="estHeldN">⏳ ${heldN} saved for later by them — ${money0(heldTot)}</b>` : ''}${updN ? ` · <b class="est-upd-word" id="estUpdN">🔄 ${updN} updated on their page${updNoWhy ? ` — ${updNoWhy} with no why yet` : ''}</b>` : ''} <span class="hint" style="margin: 0;">· 💹 markup ${estMk()}%</span></div>
     ${dpHost(c.code, 'est')}
     ${wayAll || inAll ? `<div class="est-what-row" id="estWhatAll">${wayAll ? `<button type="button" class="est-what" data-what="way" onclick="estWhatOpen(-1, 'way')" aria-label="${money0(wayAll)} on the way on this job — see what it is">📥 ${money0(wayAll)} on the way ›</button>` : ''}${inAll ? `<button type="button" class="est-what" data-what="in" onclick="estWhatOpen(-1, 'in')" aria-label="${money0(inAll)} in on this job — see what it is">📗 ${money0(inAll)} in ›</button>` : ''}<span class="hint" style="margin: 0;">the whole job — tap to see what it is</span></div>` : ''}
     ${guessN ? `<button type="button" class="pick-chip est-guess-filter${_estGuessOnly ? ' sel' : ''}" id="estGuessBtn" aria-pressed="${_estGuessOnly}" onclick="estGuessOnly()">${_estGuessOnly ? `✓ ≈ ONLY THE BEST GUESSES (${guessN}) — tap to show everything` : `≈ ${guessN} best guess${guessN > 1 ? 'es' : ''} — ${money0(guessTot)} with no bid behind it yet · tap to see only those`}</button>` : ''}
     <button type="button" class="btn-ghost est-help-btn" onclick="estHelp()" aria-expanded="${_estHelp}">${_estHelp ? '▾' : '▸'} ? How this works</button>
-    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing. <b>≈ Placeholder — best guess:</b> no bid yet? Open the category, tap ≈ ➕ placeholder, type your own number. The row wears ≈ and a dashed edge until a real bid backs it — type the real number and tap the ≈ plate again, or add the bid and tap ○ use this. Once the category is ✓ ON PAGE their page says it too: ≈ on the number and the word PLACEHOLDER — a rough figure that holds the spot until the real bid comes in, which may be higher or lower. <b>☑ Two separate things in one category</b> (two vanities, say): open the category and tap <b>☐ use this too</b> on the second bid — both are used, the category's number is the two added together, and that total is what their page shows. ○ use this instead goes back to one bid; ☑ USING BOTH — tap to take this off drops one. In a category that offers the homeowner choices, a bid you use that is not one of the choices is counted in every choice. <b>📄 A receipt on the way:</b> tap 📄 The receipt to open it (its words, the day, the amount, 📷 its picture — or 🔍 Find the paper for an old filing), 🏷 Wrong category? Move it to put it on the right line. <b>📥 on the way · $ in:</b> tap either one — on a row, or the two at the top for the whole job — to see what it is made of: each receipt's amount, date, store and category, and 📷 its picture. <b>Every category is always on the list.</b> ✕ remove category takes one off this board and it stays off; ↩ at the foot of the board puts it back. <b>🏷 A receipt on the wrong category:</b> tap 📥 on the way, then 🏷 Wrong category? Move it on that receipt (or the same plate on the bill inside the open category) and pick the right one — their page follows at once. <b>✓ A category that is finished:</b> open it and tap ✓ Mark this category COMPLETE — the estimate is locked, the row says what it came to (under or over), and their page says COMPLETE and counts nothing more as remaining on that line. ↩ Reopen takes it back. <b>⏳ Save for later:</b> open a category and tap ⏳ Let them save this for later — their page puts a Save for later button on that line; when they tap it the line comes off ESTIMATED REMAINING COSTS and onto their ⏳ SAVED FOR LATER card (they can put it back), this row says ⏳ THEY SAVED IT FOR LATER, and it lands in your review pile like a pick. When a line adds bids together, ○ can wait on ONE bid offers just that part (give it a homeowner name in the 🏠 box — that name and its number are the only things about the bid their page sees). Taking the offer off puts the line back on their estimate. <b>🔄 Updated:</b> when a number that is on their page changes, their line says 🔄 UPDATED with the day, what it was and what it is now, and this category asks you why — type it and tap ✓ Say it on their page (they read those words — no vendor names); the sign stays a month, or ✕ takes it off. <b>🗒 A note on each number:</b> Estimate 1 and Estimate 2 each have their own note box beside them — what that number is (labor, materials, whose price). Those notes stay in the office; the homeowner never sees them.</div>
+    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing. <b>≈ Placeholder — best guess:</b> no bid yet? Open the category, tap ≈ ➕ placeholder, type your own number. The row wears ≈ and a dashed edge until a real bid backs it — type the real number and tap the ≈ plate again, or add the bid and tap ○ use this. Once the category is ✓ ON PAGE their page says it too: ≈ on the number and the word PLACEHOLDER — a rough figure that holds the spot until the real bid comes in, which may be higher or lower. <b>☑ Two separate things in one category</b> (two vanities, say): open the category and tap <b>☐ use this too</b> on the second bid — both are used, the category's number is the two added together, and that total is what their page shows. ○ use this instead goes back to one bid; ☑ USING BOTH — tap to take this off drops one. In a category that offers the homeowner choices, a bid you use that is not one of the choices is counted in every choice. <b>📄 A receipt on the way:</b> tap 📄 The receipt to open it (its words, the day, the amount, 📷 its picture — or 🔍 Find the paper for an old filing), 🏷 Wrong category? Move it to put it on the right line. <b>📥 on the way · $ in:</b> tap either one — on a row, or the two at the top for the whole job — to see what it is made of: each receipt's amount, date, store and category, and 📷 its picture. <b>Every category is always on the list.</b> ✕ remove category takes one off this board and it stays off; ↩ at the foot of the board puts it back. <b>🏷 A receipt on the wrong category:</b> tap 📥 on the way, then 🏷 Wrong category? Move it on that receipt (or the same plate on the bill inside the open category) and pick the right one — their page follows at once. <b>✓ A category that is finished:</b> open it and tap ✓ Mark this category COMPLETE — the estimate is locked, the row says what it came to (under or over), and their page says COMPLETE and counts nothing more as remaining on that line. ↩ Reopen takes it back. <b>⏳ Save for later:</b> open a category and tap ⏳ Let them save this for later — their page puts a Save for later button on that line; when they tap it the line comes off ESTIMATED REMAINING COSTS and onto their ⏳ SAVED FOR LATER card (they can put it back), this row says ⏳ THEY SAVED IT FOR LATER, and it lands in your review pile like a pick. When a line adds bids together, ○ can wait on ONE bid offers just that part (give it a homeowner name in the 🏠 box — that name and its number are the only things about the bid their page sees). Taking the offer off puts the line back on their estimate. <b>🔄 Updated:</b> when a number that is on their page changes, their line says 🔄 UPDATED with the day, what it was and what it is now, and this category asks you why — type it and tap ✓ Say it on their page (they read those words — no vendor names); the sign stays a month, or ✕ takes it off. <b>🗒 A note on each number:</b> Estimate 1 and Estimate 2 each have their own note box beside them — what that number is (labor, materials, whose price). Those notes stay in the office; the homeowner never sees them. <b>🔍 Find a category:</b> type a few letters in the box at the top — what matches sits right under it; tap one to open it (Enter opens the first), ✕ clears the search. <b>👁 on every row:</b> tap it to see their page at that line — a change you just made is saved first; tap the banner at the top to come straight back to where you were. A dimmed 👁 means they do not see that line.</div>
     ${(() => { const bills = estBillCands();
       // 📥 v6.02 — Eric: "keep it small until it has something to deal with." Nothing waiting
       // = one thin line you can tap open to file a bill by hand. A bill arrives = it opens
@@ -17890,6 +18003,7 @@ function renderEstimates() {
       </div>
       <div class="hint" style="margin: 6px 0 0;">These are the grinder's receipt reads for this job. 📤 Send to their page = it shows on their page under RECEIPTS RECEIVED — NOT ON AN INVOICE YET, markup riding invisibly, and it comes off that line's estimated remaining cost. When a QuickBooks run catches it, retire the line inside its category. 🏢 not budget just leaves it in the log.</div>
     </div>`; })()}
+    </div><div class="est-rows">
     ${(() => {
       // 🕯 v6.66 — one row per category, drawn by rowOf; the sections underneath decide WHERE it sits.
       const rowOf = (x, ci, ph) => {
@@ -17968,6 +18082,7 @@ function renderEstimates() {
       const barOver = done ? under < 0 : !!over;
       return `<div class="set-section fc-sec est-row${open ? ' est-open' : ''}${x.appr ? ' est-lit' : ''}${guess ? ' est-guess' : ''}${done ? ' est-done' : ''}" data-ci="${ci}" style="margin-top: 6px; padding: 8px 12px;">
       <div class="est-line">
+        <button type="button" class="est-eye${(x.appr && tot > 0) || pendUp > 0 ? '' : ' off'}" data-eye="${ci}" onclick="event.stopPropagation(); estPeek(${ci})" aria-label="see ${esc(x.n)} on their page${(x.appr && tot > 0) || pendUp > 0 ? '' : ' — it is not on their page'}" title="${(x.appr && tot > 0) || pendUp > 0 ? 'see what the homeowner sees on this line' : 'this line is not on their page — tap to look at their page anyway'}">👁</button>
         <span role="button" class="est-name" aria-expanded="${open}" onclick="estFold(${ci})">${open ? '▾' : '▸'} ${esc(x.n)}</span>
         <span class="est-num${tot ? '' : ' mute'}${guess ? ' guess' : ''}"${guess ? ' title="your best guess — no bid behind it yet" aria-label="about ' + money0(tot) + ', your best guess, no bid behind it yet"' : ''}>${numTxt}</span>
         <button type="button" class="pick-chip est-lamp${x.appr ? ' sel' : ''}" style="flex: none; font-size: var(--fs105, 10.5px); padding: 5px 9px; min-height: 28px; font-weight: var(--fw8, 800);${x.appr ? '' : ' border-style: dashed;'}" onclick="estApprove(${ci})">${_estArm === 'ap' + ci ? '⚠ SURE?' : x.appr ? '✓ ON PAGE' : '🏢 office'}</button>
@@ -18070,22 +18185,29 @@ function renderEstimates() {
       needs.sort(byRank); byPh.forEach(list => list.sort(byRank));
       let out = '';
       const gOnly = _estGuessOnly, isG = ci => estIsGuess(_estD.cats[ci]);   // ≈ v7.45 — "only the best guesses": the same rows, the same sections, the rest left out
-      const needsShown = gOnly ? needs.filter(isG) : needs;
+      const isQ = ci => !qOn || estQOk(_estD.cats[ci]);   // 🔍 v7.79 — the search narrows the same rows in the same sections (with the ≈ filter, both narrow)
+      const needsShown = (gOnly ? needs.filter(isG) : needs).filter(isQ);
+      _estQFirst = -1;
       if (needsShown.length) {
         const nBills = needsShown.reduce((s, ci) => s + (_estD.cats[ci].pend || []).length, 0);
+        if (qOn) _estQFirst = needsShown[0];
         out += `<div class="est-phase need">⚠ Needs you <span>${nBills ? `${nBills} bill${nBills > 1 ? 's' : ''} waiting` : 'over the estimate'}</span></div>` + needsShown.map(ci => rowOf(_estD.cats[ci], ci, '')).join('');
       }
       EST_PHASES.forEach(([ph, name]) => {
-        const list = gOnly ? (byPh.get(ph) || []).filter(isG) : (byPh.get(ph) || []);
+        const full = byPh.get(ph) || [];
+        const list = (gOnly ? full.filter(isG) : full).filter(isQ);
         if (!list.length) return;
+        if (qOn && _estQFirst < 0) _estQFirst = list[0];
         const appr = list.filter(ci => _estD.cats[ci].appr && estTotal(_estD.cats[ci]) > 0).reduce((s, ci) => s + estTotal(_estD.cats[ci]), 0);
         const gTot = list.filter(isG).reduce((s, ci) => s + estGuessAmt(_estD.cats[ci]), 0);
         // 👁 v7.49 — no "+11 empty — tap to show" line any more: every category of the phase is on the list, always
-        out += `<div class="est-phase">${esc(name)} <span>${appr ? `${money0(appr)} approved` : 'nothing approved'}${gTot ? ` · ≈ ${money0(gTot)} best guess` : ''}</span></div>` +
+        // 🔍 v7.79 — while he searches, the heading says how many of the phase's categories are showing (a money total of only the shown rows would mislead)
+        out += `<div class="est-phase">${esc(name)} <span>${qOn ? `${list.length} of ${full.length} shown` : `${appr ? `${money0(appr)} approved` : 'nothing approved'}${gTot ? ` · ≈ ${money0(gTot)} best guess` : ''}`}</span></div>` +
           list.map(ci => rowOf(_estD.cats[ci], ci, ph)).join('');
       });
       return out;
     })()}
+    </div></div>
     <div class="frow" style="margin-top: 12px;">
       <div class="field" style="flex: 1;"><input type="text" id="estNewCat" placeholder="new category…" onkeydown="if(event.key==='Enter'){event.preventDefault();estAddCat();}"></div>
       <button class="btn-ghost" onclick="estAddCat()">➕ category</button>
@@ -19426,6 +19548,7 @@ async function pageBoardTap(id) {
 function cpReload() { const fr = $('cpFrame'); if (fr && fr.src && fr.src !== 'about:blank') { const s = fr.src; fr.src = 'about:blank'; setTimeout(() => { fr.src = s; }, 30); } }
 function clientPreviewClose() {
   $('cliPrev').classList.remove('show');
+  clearInterval(_cpSeekT);   // 👁 v7.79 — a line still being looked for is let go
   $('cpFrame').src = 'about:blank';
   if ($('cpMeter')) $('cpMeter').innerHTML = '';   // 💰 v7.51
   // 📐 v5.83 — the rack borrows this banner for CURRENT/SUPERSEDED words; hand it back
@@ -26719,7 +26842,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.78';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.79';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
