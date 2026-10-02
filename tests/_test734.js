@@ -42,7 +42,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('under the crew-wide note: every man\'s response with his name (↩ Phil, ↩ Nathan); cube ① lit and pulsing, the words name them both; cube ② lit and the words say who flushed it (Nathan); the ask is closed by the first response', await page.evaluate(() => {
     const row = [...document.querySelectorAll('#crewFeedList .th-own')].find(r => /Move the container/.test(r.textContent)), t = row.textContent.replace(/\s+/g, ' '), cubes = row.querySelectorAll('.th-cube');
     return /↩ Phil .*Chase is on it/.test(t) && /↩ Nathan .*cut the bush/.test(t) && cubes[0].classList.contains('lit') && cubes[0].classList.contains('pulse') && cubes[1].classList.contains('lit') &&
-      /↩ Phil, Nathan responded — new/.test(t) && /⤵ Nathan flushed it/.test(t) && !!entries.find(e => e.id === 5).askDone && !/NEEDS THEIR ATTENTION/.test(t);
+      /↩ Phil, Nathan responded — new/.test(t) && /⚙ Nathan took it to the grinder/.test(t) && !!entries.find(e => e.id === 5).askDone && !/NEEDS THEIR ATTENTION/.test(t);
   }), await page.evaluate(() => [...document.querySelectorAll('#crewFeedList .th-own')].map(r => r.textContent.replace(/\s+/g, ' ')).join(' || ')));
   ok('💬 Respond on the crew-wide note: the reply is unlocked for the WHOLE crew (vis crew), attached to the note; the toast says the crew', await page.evaluate(async () => {
     const row = [...document.querySelectorAll('#crewFeedList .th-own')].find(r => /Move the container/.test(r.textContent));
@@ -61,7 +61,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('⤵ Flush — done with it on the crew-wide note takes it off the card at once (waiting for every man would keep it forever); the note to Phil alone stays after Eric\'s flush until Phil flushes it too', await page.evaluate(async () => {
     thOwnFlush('5'); thOwnFlush('6'); await new Promise(r => setTimeout(r, 40));
     const own = [...document.querySelectorAll('#crewFeedList .th-own')].map(r => r.textContent.replace(/\s+/g, ' '));
-    const gone5 = !own.some(t => /Move the container/.test(t)), stays6 = own.some(t => /call the inspector/.test(t) && /⤵ flushed by you ✓/.test(t));
+    const gone5 = !own.some(t => /Move the container/.test(t)), stays6 = own.some(t => /call the inspector/.test(t) && /⚙ you are done with it ✓/.test(t));
     window._files['/clore daylog/crew/phil/app data/entries.json'] = JSON.stringify({ entries: [{ id: 31, ts: new Date().toISOString(), type: 'Note', details: '↩ Will do', job: 'Oak House', vis: 'Eric', re: { owner: 'Eric', id: 6 } }, { id: 32, ts: new Date().toISOString(), type: 'Note', details: 'Eric: Phil, call the inspector back\n↩ Phil: Will do', job: 'Oak House', sharedRef: 6, who: 'Eric' }] });
     await checkCrewLogs(); renderCrewFeed();
     const own2 = [...document.querySelectorAll('#crewFeedList .th-own')].map(r => r.textContent.replace(/\s+/g, ' '));

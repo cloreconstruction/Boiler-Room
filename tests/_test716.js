@@ -300,12 +300,12 @@ const { chromium } = require('playwright');
     crewShared = [{ id: 7, ts: new Date(Date.now() - 3600000).toISOString(), text: 'Did the trim come?', job: 'Oak House', toAll: true, ask: 'answered' }, { id: 900, ts: new Date().toISOString(), text: 'The owner okayed moving the trailer', job: 'Oak House', ask: 'open' }];
     crewAsks = [{ id: 900, q: 'The owner okayed moving the trailer', job: 'Oak House' }]; renderCrewAsks(); prefs.crewFold = false; renderCrewShared();
     const rows = [...$('crewSharedList').querySelectorAll('.sum-row')];
-    return $('crewAskCard').style.display === 'none' && rows.length === 2 && /⚠ NEEDS YOUR ATTENTION · The owner okayed/.test(rows[0].textContent.replace(/\s+/g, ' ')) && !![...rows[0].querySelectorAll('button')].find(b => /Flush to the grinder/.test(b.textContent)) && !![...rows[0].querySelectorAll('button')].find(b => /💬 Respond/.test(b.textContent));
+    return $('crewAskCard').style.display === 'none' && rows.length === 2 && /⚠ NEEDS YOUR ATTENTION · The owner okayed/.test(rows[0].textContent.replace(/\s+/g, ' ')) && !![...rows[0].querySelectorAll('button')].find(b => /To the grinder/.test(b.textContent)) && !![...rows[0].querySelectorAll('button')].find(b => /💬 Respond/.test(b.textContent));
   }));
   ok('a tap on ⤵ Flush: into his running log (the words, the job, "Eric:" in front), the copy carries sharedRef so Eric\'s phone reads it as seen — no answer box to fill; the ⚠ item stays until Eric flushes it too', await phil.page.evaluate(() => {
     [...$('crewSharedList').querySelectorAll('.sum-row')][0].querySelector('.th-flush').click();
     const e = entries.find(x => x.sharedRef === 900);
-    return !!e && e.job === 'Oak House' && /^Eric: The owner okayed moving the trailer/.test(e.details) && !e.mine && /⤵ flushed by you ✓/.test($('crewSharedList').textContent);
+    return !!e && e.job === 'Oak House' && /^Eric: The owner okayed moving the trailer/.test(e.details) && !e.mine && /⚙ in your grinder ✓/.test($('crewSharedList').textContent);
   }));
   ok('an answered question sits in his WITH ERIC log marked "📢 ANSWERED"', await phil.page.evaluate(() => {
     crewShared = [{ id: 7, ts: new Date().toISOString(), text: 'Did the trim come?', job: 'Oak House', toAll: true, ask: 'answered' }];

@@ -2514,9 +2514,13 @@
      send/urgency block go dim AND dead — not dim-but-still-tappable, which would be a lie.
      The who-sees-it row itself stays live: that row IS the unlock.
      Never colour alone — the dimming is backed by the 🔒 glyph and a spelled-out line. */
-  body.crew-locked #qnTagChips, body.crew-locked #qnTagFixed, body.crew-locked #nTagChips, body.crew-locked #crewRoute {
+  body.crew-locked #qnTagChips, body.crew-locked #nTagChips, body.crew-locked #crewRoute {
     opacity: 0.38; pointer-events: none; filter: saturate(0.15);
   }
+  /* 🧾 v7.77 — Eric: "If he pushed receipt it should automatically highlight send to eric." So the 🧾 Receipt chip is never dead
+     behind 🔒 Just me on a crew phone — a tap on it is the way out of the lock (it lights 📨 Just Eric). Anything else in the
+     fixed row still obeys the lock. */
+  body.crew-locked #qnTagFixed .pick-chip:not(.rcpt-chip) { opacity: 0.38; pointer-events: none; filter: saturate(0.15); }
   /* 🔒 v5.49 — the owner's lock is lighter than the crew's: only the siren dies, so the
      dimming is scoped to that one chip rather than the whole block. */
   body.owner-locked #qnVisChips .pick-chip[disabled] { opacity: 0.38; filter: saturate(0.15); pointer-events: none; }
@@ -3597,7 +3601,8 @@
     <div class="pk-top">
       <span class="pk-title">🎒 POCKET LIST</span>
       <span class="pk-cap"><button type="button" class="pk-tiny" onclick="pocketCapSet(-1)" aria-label="hold one less" title="hold one less">−</button><b id="pocketCount">0/8</b><button type="button" class="pk-tiny" onclick="pocketCapSet(1)" aria-label="hold one more" title="hold one more">+</button></span>
-      <button type="button" class="pk-tiny pk-flush" onclick="pocketFlush()" aria-label="flush: clear the list, everything goes to the grinder's pile" title="clear the list — everything goes to the grinder's pile">⤵ Flush</button>
+      <!-- ⚙ v7.77 — Eric: "lets find a new name for flush, sounds to toilet like. to the grinder? grind it?" Every plate that said ⤵ Flush says the grinder now -->
+      <button type="button" class="pk-tiny pk-flush" onclick="pocketFlush()" aria-label="grind all: clear the list, everything goes to the grinder's pile" title="clear the list — everything goes to the grinder's pile">⚙ Grind all</button>
     </div>
     <div class="pk-in">
       <input type="text" id="pocketIn" placeholder="think of it, type it, tap + · today and tomorrow" title="What is not done by tomorrow goes to the grinder's pile on its own" enterkeyhint="done" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();pocketAddFromBox();}">
@@ -3743,7 +3748,7 @@
       <button type="button" id="cfFoldBtn" class="card-sub" style="margin: 0; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; flex: 1; text-align: left;"
         onclick="crewFeedFold()" aria-expanded="true">👷 FROM THE CREW</button>
       <!-- ⤵ v7.15 — "a flush like the pocket list does": the pocket's own plate -->
-      <button type="button" id="cfFlushBtn" class="pk-tiny pk-flush" onclick="crewFeedFlushAll()" title="everything this card lists goes into your running log — the card clears">⤵ Flush</button>
+      <button type="button" id="cfFlushBtn" class="pk-tiny pk-flush" onclick="crewFeedFlushAll()" title="everything this card lists goes into your running log — the card clears">⚙ Grind all</button>
       <select id="cfShowN" class="mini-sel" title="How many crew notes show" style="width: auto; min-height: 28px; padding: 2px 8px; font-size: var(--fs12, 12px);"
         onchange="prefs.crewFeedN = this.value; scheduleSave(); renderCrewFeed();">
         <option value="3">3</option><option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="all">All</option>
@@ -4716,7 +4721,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.76 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.77 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6966,7 +6971,25 @@ function qnHeadsToggle() { qnHeads = !qnHeads; renderTagChips(); }
 let qnRcpt = false, qnCat = '', _qnCatMore = false;
 // 🧾 v6.25 — tapping the chip opens the category WINDOW (Eric: inline chips next to the tags
 // "looks like more tags — super confusing"). Tap again any time to change or un-receipt it.
-function qnRcptToggle() { if (!qnRcpt) { qnRcpt = true; renderTagChips(); } catModalOpen(); }
+function qnRcptToggle() {
+  if (!qnRcpt) {
+    qnRcpt = true;
+    crewToEric('🧾 A receipt goes to Eric — 📨 Just Eric is lit');   // 🧾 v7.77 — Eric: "If he pushed receipt it should automatically highlight send to eric."
+    renderTagChips();
+  }
+  catModalOpen();
+}
+// 🧾 v7.77 — on a crew phone a receipt, or anything for the bookkeeper, is FOR ERIC: the unlock row goes to 📨 Just Eric by itself
+// (from 🔒 Just me, where it would never have left the phone, and from 🔓 All crew, where every crew phone would have got it).
+// A personal tag still wins — that note stays locked to the phone. Says so once, in words, only when the row actually moved.
+function crewToEric(word) {
+  if (!isCrew()) return false;
+  if (typeof personalTagOn === 'function' && personalTagOn()) return false;
+  if (!qnVis && qnVisNames.size === 1 && qnVisNames.has('Eric')) return false;   // already Just Eric
+  setVis('Eric');
+  if (word) toast(word);
+  return true;
+}
 // 🚚 v7.44 — FUEL AND MAINTENANCE GO ON A TRUCK. Eric: "on the what kind of cost is this pop up window when someone selects fuel a
 // little pop up window should come up to select the truck also it could say fuel or maintenence so other truck related costs are
 // assigned to that truck." ⛽ Fuel and 🔧 Truck maintenance (a new overhead category — recorded for the books, never billed to a
@@ -7395,7 +7418,7 @@ function catLearn(job, cat, vendor) {
 function renderCatRow() { ['qnCatRow', 'nCatRow'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; }); }
 let qnJobPick = ''; // v4.66 — the quick-note job pick lives for ONE note, then the wheel resets
 function knownTags() {
-  if (!prefs.tags) prefs.tags = CREW_NAME ? [] : ['Shevaun', 'Logan', 'Home Depot']; // starter set — Eric's own examples; grows as he types names (🏷 v7.16 — never on a crew phone: those are Eric's people)
+  if (!prefs.tags) prefs.tags = CREW_NAME ? [] : ['Shevaun', 'Bookkeeper', 'Home Depot']; // starter set — Eric's own examples; grows as he types names (🏷 v7.16 — never on a crew phone: those are Eric's people)
   // 🧹 v5.27 — ONE-TIME scrub: the broken-Shortcut era filled the chips with dates, times
   // and phone numbers. Sweep them out once; the junk guard keeps new ones from getting in.
   if (!prefs.tagScrub1) {
@@ -7452,6 +7475,7 @@ function toBookkeeper() {
   if (!knownTags().some(g => g.toLowerCase() === 'bookkeeper')) prefs.tags.push('Bookkeeper');
   qnSel.add('Bookkeeper');
   if (!t) { $('askText').value = 'Receipt'; }
+  crewToEric();   // 🧾 v7.77 — Eric: "when he pushes to grinder or bookkeeper on his phone it comes to my from phil" — never left on the phone behind 🔒 Just me
   saveQuickNote();
 }
 function personalTagOn() {
@@ -7569,7 +7593,7 @@ function renderTagChips() {
   // ⚠ v6.24 — heads-up is a BUILT-IN chip, always first: it flags consequence, not topic
   const headsChip = `<button type="button" class="pick-chip lockchip${qnHeads ? ' sel is-down' : ''}" onclick="qnHeadsToggle()" aria-pressed="${qnHeads}"
       title="Marks this note as something that bites later work — the Wizard surfaces it first and the job card counts it">${qnHeads ? '⚠ HEADS-UP — ON THE JOB CARD' : '⚠ Heads-up'}</button>`;
-  const rcptChip = `<button type="button" class="pick-chip lockchip${qnRcpt ? ' sel is-down' : ''}" onclick="qnRcptToggle()" aria-pressed="${qnRcpt}"
+  const rcptChip = `<button type="button" class="pick-chip lockchip rcpt-chip${qnRcpt ? ' sel is-down' : ''}" onclick="qnRcptToggle()" aria-pressed="${qnRcpt}"
       title="A typed or dictated purchase — opens the category window and files it toward the job's budget pile">${qnRcpt ? (qnCat ? '🧾 ' + esc(qnCat) + (qnTruck ? ' · 🚚 ' + esc(qnTruck) : '') + ' — tap to change' : '🧾 RECEIPT — tap to pick category') : '🧾 Receipt'}</button>`;
   const chipOf = t => {   // 📋 v6.97 — the Build List chip · ⚠ v7.32 — Eric: "on tag it, lets take the heads up off and make the needs attention in box 5 the same thing" (headsChip stays built, never drawn)
     if (_tagArm === t) return `<button type="button" class="pick-chip" style="border-color: var(--err, #c0392b); color: var(--err, #c0392b); font-weight: var(--fw8, 800);" onclick="tagDelete('${escq(t)}')">✕ delete ${esc(t)}?</button>`;
@@ -8130,10 +8154,13 @@ async function aiDescribePhoto(f) {
   // 🧠 v5.42 — labeling a receipt or a jobsite shot is the ⚡ quick brain's best work
   const { r } = await aiCall({
       max_tokens: 1000,   // 🛒 v7.43 — room for the items · 🧾 v7.55 — and their prices and codes
-      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"ONE short plain sentence: what the photo shows and the stage of work — no filler","category":"best match from this list or empty: ' + RCPT_CATS.join(', ') + '","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"rdate":"YYYY-MM-DD purchase/receipt date if visible on a receipt/invoice, else empty","due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"pastDue":amount shown as past due, overdue, or previous balance unpaid, as a number, else null,"balance":total balance or amount outstanding as a number if this is a statement, else null,"acctLast4":"ONLY the last four digits of any account or loan number, else empty","expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty","items":[{"n":"what was bought, in a few plain words — many receipts print a SHORT CODE LINE and then a FULLER DESCRIPTION LINE for the same item (Home Depot, Lowe\'s): use the fuller description, spelled out in plain words; when only a store code or an abbreviation is printed and you cannot read it as a product with confidence, copy that text EXACTLY as printed and set raw to true; never guess what it might be","q":quantity as a number or null,"each":price of one as a number when printed, else null,"total":the line total as a number when printed, else null,"sku":"the item\'s own code as printed on its line — a UPC, SKU, item, model or internet number of five or more characters — else empty","raw":true if n was copied exactly as printed else false}] (up to 12 lines in the order printed, only for a receipt or an invoice — an empty list for anything else)}',
+      system: 'You label photos for a construction day-log app (residential builder, Kenai Peninsula, Alaska). Reply with ONLY a single-line JSON object: {"desc":"ONE short plain sentence: what the photo shows and the stage of work — no filler","category":"best match from this list or empty: ' + RCPT_CATS.join(', ') + '","vendor":"store or vendor name if this is a receipt/invoice/statement, else empty","total":final total as a number if receipt/invoice, else null,"rdate":"YYYY-MM-DD purchase/receipt date if visible on a receipt/invoice, else empty","due":"YYYY-MM-DD if this is a bill/statement/invoice showing a payment due date, else empty","dueAmt":payment or minimum amount due as a number if shown, else null,"pastDue":amount shown as past due, overdue, or previous balance unpaid, as a number, else null,"balance":total balance or amount outstanding as a number if this is a statement, else null,"acctLast4":"ONLY the last four digits of any account or loan number, else empty","expires":"YYYY-MM-DD if an insurance policy, vehicle registration, license, bond, or permit shows an expiration or renewal date, else empty","items":[{"n":"what was bought, in a few plain words — many receipts print a SHORT CODE LINE and then a FULLER DESCRIPTION LINE for the same item (Home Depot, Lowe\'s): use the fuller description, spelled out in plain words; when only a store code or an abbreviation is printed and you cannot read it as a product with confidence, copy that text EXACTLY as printed and set raw to true; never guess what it might be","q":quantity as a number or null,"each":price of one as a number when printed, else null,"total":the line total as a number when printed, else null,"sku":"the item\'s own code as printed on its line — a UPC, SKU, item, model or internet number of five or more characters — else empty","raw":true if n was copied exactly as printed else false}] (up to 12 lines in the order printed, only for a receipt or an invoice — an empty list for anything else)} ' +
+        // 📅 v7.77 — a supply-house invoice printed 10-01-26 came back as a day in January: the read now knows these papers are
+        // American (month first), is told today's date to check itself against, and leaves a date empty rather than guess
+        'DATES on these papers are AMERICAN, MONTH FIRST: 10-01-26, 10/01/26 and 10/01/2026 all mean October 1, 2026 (2026-10-01), never January. A receipt is nearly always dated today or within the last few weeks, and a due date is never before the purchase date: when the date you read does not fit that, read the digits again, and when you still cannot read a date with confidence leave it empty — never guess a date.',
       messages: [{ role: 'user', content: [
         srcBlock,
-        { type: 'text', text: isPdf ? 'Label this document.' : 'Label this photo.' }
+        { type: 'text', text: (isPdf ? 'Label this document.' : 'Label this photo.') + ' Today is ' + localDay(new Date()) + '.' }
       ] }]
   }, 'photo');
   if (!r.ok) throw new Error('AI ' + r.status);
@@ -8175,7 +8202,7 @@ function receiptLines(p) {
   const money = n => '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
   const dayOnly = /^\d{4}-\d{2}-\d{2}$/;
   const L = [];
-  if (dayOnly.test(p.rdate || '')) L.push('📅 ' + p.rdate);
+  if (dayOnly.test(p.rdate || '') && p.rdate <= tomorrowStr()) L.push('📅 ' + p.rdate);   // 📅 v7.77 — a purchase dated in the future is a misread: no date beats a wrong one
   if (p.vendor) L.push('🏪 ' + p.vendor);
   if (p.total != null && p.total !== '') L.push('💵 ' + money(p.total));
   const items = receiptItemsLine(p); if (items) L.push(items);   // 🛒 v7.43
@@ -10268,7 +10295,7 @@ const URG_WORDS = { now: '🔥 needs it NOW', hours: '⏳ within a few hours', t
 // log. Emails, client asks, questions and Grinder matches stay one at a time — those need his
 // eyes. Two taps before anything fires (⚠ SURE?), the same guard the clock-out scrap has.
 const REV_BULK = {
-  qb:   { verb: false,  pick: p => p.kind === 'qb', glyph: '📒', word: 'QuickBooks bank lines', btn: '✕ SKIP ALL', hint: "Logan's books already have every one of these — skipping loses nothing" },
+  qb:   { verb: false,  pick: p => p.kind === 'qb', glyph: '📒', word: 'QuickBooks bank lines', btn: '✕ SKIP ALL', hint: "QuickBooks already has every one of these — skipping loses nothing" },
   nag:  { verb: false,  pick: p => p.kind === 'todo' && /^jobsilence:/.test(String(p.id)), glyph: '🕸', word: 'quiet-job nags', btn: '✕ CLEAR ALL', hint: 'to-dos are parked anyway · retire finished jobs in ⚙ Setup → Jobs and these stop coming' },
   text: { verb: 'pile', pick: p => p.kind === 'text', glyph: '💬', word: 'texts', btn: '📚 PILE ALL', hint: 'each lands on the log under its sender — read them there' },
   crew: { verb: 'log',  pick: p => p.kind === 'crew', glyph: '👷', word: 'crew notes', btn: '✓ LOG ALL', hint: 'each logged under who sent it' }
@@ -10315,7 +10342,7 @@ function revBulk(k) {
   finally { _revBulk = false; window.toast = keepToast; }
   renderTodos(); renderKpis(); renderLog(); renderTagChips(); scheduleSave();
   renderPendBanner(); renderReview(); savePendingSoon();
-  toast(k === 'qb' ? `✕ ${n} QuickBooks lines skipped — Logan's books still have every one ✓`
+  toast(k === 'qb' ? `✕ ${n} QuickBooks lines skipped — the books still have every one ✓`
     : k === 'nag' ? `✕ ${n} quiet-job nags cleared — finished jobs come off in ⚙ Setup → Jobs ✓`
     : k === 'text' ? `📚 ${n} texts piled under their senders — they're on the log ✓`
     : `✓ ${n} crew notes logged ✓`);
@@ -10402,7 +10429,7 @@ function renderReview() {
         body = `<div class="rev-text"><b>$${(+p.payload.amt).toFixed(2)}${p.payload.who ? ' — ' + esc(p.payload.who) : ''}</b> on ${esc(p.payload.d)}</div>
         <div class="rev-why">${[p.payload.memo, qcat].filter(Boolean).map(esc).join(' · ')}</div>
         <div class="rev-why">${qcat ? `QuickBooks files this under <b>${esc(qcat)}</b> — but its books have no job on it, so that part is yours.`
-          : 'Logan\'s books have this — your log doesn\'t. QuickBooks has no job on a bill payment, so this part only you can answer.'}</div>
+          : 'The books have this — your log doesn\'t. QuickBooks has no job on a bill payment, so this part only you can answer.'}</div>
         ${hints.length ? `<div class="rev-row" style="margin-top: 8px;">${hints.map(h =>
           `<button type="button" class="pick-chip" onclick="qbVendUse('${escq(String(p.id))}', '${escq(h.job)}')">🔁 ${esc(h.job)} — ${h.n === 1 ? 'last time' : 'last ' + h.n + ' times'}</button>`).join('')}</div>` : ''}
         ${revJobWheel(p, '🏠 Which job is this money on?')}`; }
@@ -10447,7 +10474,7 @@ function renderReview() {
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'never')">🚫 Never this sender</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not important — it stays on the log</button>`)
         : p.kind === 'bill'
-        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'logan')">📗 Logan pays it</button>
+        ? `<button class="btn-primary" onclick="reviewAct('${escq(String(p.id))}', 'logan')">📗 The bookkeeper pays it</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'auto')">🔁 Autopay — never ask about ${esc(String(p.payload.who || 'them').slice(0, 24))}</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', 'pay')">✓ I'll pay it — remind me</button>
            <button class="btn-ghost" onclick="reviewAct('${escq(String(p.id))}', false)">✕ Not a bill</button>`
@@ -10590,7 +10617,7 @@ function reviewAct(id, accept) {
       } else {
         // 📗 Logan pays it — the photo's entry wears the bookkeeper tag, the same mark the receipts window reads
         if (ent) { ent.tags = Array.isArray(ent.tags) ? ent.tags : []; if (!ent.tags.includes('Bookkeeper')) ent.tags.push('Bookkeeper'); }
-        toast(ent ? '📗 Logan pays it — the receipt is tagged for the bookkeeper ✓' : '📗 Logan pays it ✓');
+        toast(ent ? '📗 The bookkeeper pays it — the receipt is tagged for them ✓' : '📗 The bookkeeper pays it ✓');
       }
       scheduleSave();
     } else if (p.kind === 'todos') {
@@ -10748,6 +10775,17 @@ function reviewAct(id, accept) {
         if (pay.vis === 'crew' && pay.type === 'Note') extra.vis = 'crew';
         if (pay.hours != null) extra.hours = +pay.hours;
         if (pay.category) extra.category = pay.category;
+        // 🧾 v7.77 — a crew receipt arrives whole: the Wizard's read (the amount lives in it), the 🧾 mark and the Bookkeeper
+        // mark ride into his log — off the crew member's own entry as it stands now, else off the card (crewRcptBits)
+        if (pay.type === 'Note') {
+          const src = crewNoteSrc(pay.from, p.id), rb = { ...crewRcptBits(pay), ...crewRcptBits(src) };
+          if (!extra.category && src && String(src.category || '').trim()) extra.category = String(src.category).trim();
+          if (rb.ai) extra.ai = rb.ai;
+          if (rb.rcpt) extra.rcpt = true;
+          if (rb.billable === false) extra.billable = false;
+          if (rb.bk) { extra.tags = ['Bookkeeper']; extra.bkBy = pay.from; }   // Eric: "yes to bookkeeper mark counts"
+          extra.cg = (rb.ai ? 'a' : '') + (rb.rcpt ? 'r' : '') + (rb.bk ? 'b' : '');
+        }
         if (pay.type === 'Note' && pay.truck && TRUCK_CATS.includes(pay.category)) { extra.truck = pay.truck; if (pay.truckOdo != null && isFinite(+pay.truckOdo)) extra.truckOdo = +pay.truckOdo; }   // 🚚 v7.44 — a crew member's fuel or maintenance receipt keeps its truck in Eric's log
         if (pay.day && /^\d{4}-\d{2}-\d{2}$/.test(pay.day) && pay.day !== localDay(new Date())) extra.ts = new Date(pay.day + 'T12:00:00');
         extra.noSniff = true;
@@ -12186,7 +12224,7 @@ const CH_PATH = () => DBX_ROOT + '/App Data/crew-hours.json';
 const CH_KEEP = () => DBX_ROOT + '/App Data/Time Clock';
 const CH_FOUND_DIR = '/Clore Project Tracker/QB Exports';
 const CH_FILE_RE = /^Clore-PPE-(\d{4}-\d{2}-\d{2})(?: \(\d+\))?\.xlsx$/i;
-const CH_LIGHTS = [['📥', 'GATHER', 'gather and OK the hours'], ['👍', 'APPROVED', 'approved'], ['📗', 'TO LOGAN', 'sent to Logan'], ['💵', 'PAID', 'paid']];
+const CH_LIGHTS = [['📥', 'GATHER', 'gather and OK the hours'], ['👍', 'APPROVED', 'approved'], ['📗', 'SENT', 'sent to the bookkeeper'], ['💵', 'PAID', 'paid']];
 const CH_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 let _ch = null, _chT = null, _chDirty = false, _chPpe = '', _chView = ['week', 'job', 'who'].includes(lsGet('daylog-chview')) ? lsGet('daylog-chview') : 'week', _chOpen = '', _chFound = [], _chBuf = {}, _chArm = '', _chArmT = 0, _chNote = null, _chAskSent = '', _chMailEdit = false, _chHist = false;
 
@@ -12400,7 +12438,7 @@ async function chBringIn(buf, name, src) {
       const hit = new Set(moved.map(x => x.p));
       P.ok = Object.fromEntries(Object.entries(old.ok || {}).filter(([k]) => !hit.has(k)));
       P.chg = moved.slice(0, 40);
-      chHistAdd(P, `🔁 a newer file changed ${moved.length} day${moved.length === 1 ? '' : 's'}` + (old.sentAt ? ` — it HAD been sent to Logan on ${String(old.sentAt).slice(0, 10)}` : old.apAt ? ' — it had been approved' : ''));
+      chHistAdd(P, `🔁 a newer file changed ${moved.length} day${moved.length === 1 ? '' : 's'}` + (old.sentAt ? ` — it HAD been sent to the bookkeeper on ${String(old.sentAt).slice(0, 10)}` : old.apAt ? ' — it had been approved' : ''));
       said = `🔁 The hours CHANGED in this file — ${moved.length} day${moved.length === 1 ? '' : 's'}. Back to ① — look, OK and send again`;
     }
   }
@@ -12541,12 +12579,12 @@ function chArmed(key) {   // two taps for anything that takes a light back off
 }
 function chOk(i) {
   const P = chCur(); if (!P) return; const j = chJobs(P)[i]; if (!j) return;
-  if (chLit(P) >= 3) { toast('It has gone to Logan — take the 📗 light off first if the hours need another look', false); return; }
+  if (chLit(P) >= 3) { toast('It has gone to the bookkeeper — take the 📗 light off first if the hours need another look', false); return; }
   P.ok = P.ok || {};
   if (P.ok[j.p]) delete P.ok[j.p]; else { P.ok[j.p] = new Date().toISOString(); P.chg = (P.chg || []).filter(c => c.p !== j.p); }
   const was = !!P.apAt, all = chApCheck(P);
   chSaveSoon(P); renderCrewHours();
-  if (all && !was) toast('✓ Every job is OK\'d — the pay period is APPROVED. 📗 Send it to Logan when you are ready');
+  if (all && !was) toast('✓ Every job is OK\'d — the pay period is APPROVED. 📗 Send it to the bookkeeper when you are ready');
 }
 function chOkAll() {
   const P = chCur(); if (!P || chLit(P) >= 3) return;
@@ -12558,15 +12596,15 @@ function chOkAll() {
 function chCube(n) {
   const P = chCur(); if (!P) return; const lit = chLit(P), left = chJobs(P).filter(j => !(P.ok || {})[j.p]).length;
   if (n === 1) { toast(lit === 1 ? `① ${left} job${left === 1 ? '' : 's'} left to OK — open one, look, tap its OK box` : '① The hours are gathered and OK\'d'); return; }
-  if (n === 2) { if (lit === 1) chOkAll(); else toast(lit === 2 ? '② Approved — tap a job\'s ✓ to reopen it, or 📗 send it to Logan' : '② Approved ' + String(P.apAt || '').slice(0, 10)); return; }
+  if (n === 2) { if (lit === 1) chOkAll(); else toast(lit === 2 ? '② Approved — tap a job\'s ✓ to reopen it, or 📗 send it to the bookkeeper' : '② Approved ' + String(P.apAt || '').slice(0, 10)); return; }
   if (n === 3) {
-    if (lit < 2) { toast('OK every job first — then it can go to Logan', false); return; }
+    if (lit < 2) { toast('OK every job first — then it can go to the bookkeeper', false); return; }
     if (lit === 2) { chSend(); return; }
-    if (lit === 3) { if (!chArmed('c3')) return; P.sentAt = ''; chHistAdd(P, '↩ the 📗 light taken back off'); chSaveSoon(P); renderCrewHours(); toast('📗 off — it reads APPROVED again. What Logan already has is still his'); return; }
+    if (lit === 3) { if (!chArmed('c3')) return; P.sentAt = ''; chHistAdd(P, '↩ the 📗 light taken back off'); chSaveSoon(P); renderCrewHours(); toast('📗 off — it reads APPROVED again. What the bookkeeper already has is still theirs'); return; }
     toast('Take 💵 PAID off first', false); return;
   }
   if (n === 4) {
-    if (lit < 3) { toast('Send it to Logan first — 💵 comes after', false); return; }
+    if (lit < 3) { toast('Send it to the bookkeeper first — 💵 comes after', false); return; }
     if (lit === 3) { P.paidAt = new Date().toISOString(); chHistAdd(P, '💵 marked PAID'); chSaveSoon(P); renderCrewHours(); toastUndo('💵 PAID — this pay period is done', () => { P.paidAt = ''; chSaveSoon(P); renderCrewHours(); }); return; }
     if (!chArmed('c4')) return; P.paidAt = ''; chHistAdd(P, '↩ 💵 PAID taken back off'); chSaveSoon(P); renderCrewHours();
   }
@@ -12603,7 +12641,7 @@ function chNoteSave() {
   };
   const a = put('notes', 'chNoteBox'), b = put('mine', 'chMineBox');
   _chNote = null; chSheetDraw();
-  if (a || b) { chSaveSoon(P); renderCrewHours(); toast([a > 0 ? '✎ the fix rides to Logan with the file' : a < 0 ? '✎ the fix is off' : '', b > 0 ? '● your note is kept — only you see it' : b < 0 ? '● your note is off' : ''].filter(Boolean).join(' · ')); }
+  if (a || b) { chSaveSoon(P); renderCrewHours(); toast([a > 0 ? '✎ the fix rides to the bookkeeper with the file' : a < 0 ? '✎ the fix is off' : '', b > 0 ? '● your note is kept — only you see it' : b < 0 ? '● your note is off' : ''].filter(Boolean).join(' · ')); }
 }
 function chNoteDel(id, key) { const P = chCur(); if (!P) return; const k = key === 'mine' ? 'mine' : 'notes'; P[k] = (P[k] || []).filter(x => x.id !== id); chSaveSoon(P); renderCrewHours(); }
 const chNoteWhere = (P, n) => n.who ? `${n.f || n.who}${n.d >= 0 ? ' · ' + chDayWord(P.ppe, n.d) : ''}` : 'the whole pay period';
@@ -12617,9 +12655,9 @@ function chSheetDraw() {
   host.innerHTML = `<div class="ch-sheet" onclick="if (event.target === this) chNoteSave()"><div class="ch-sheet-box" role="dialog" aria-label="the day">
     <div class="ch-sh-head"><b>${pp ? esc(pp.f) + (N.d >= 0 ? ' · ' + chDayWord(P.ppe, N.d) : '') : 'The whole pay period'}</b><span>${pp && N.d >= 0 ? (tot ? chF(tot) + ' h' + (parts.length > 1 ? ' on ' + parts.length + ' jobs' : '') : 'no hours this day') : 'ending ' + chMD(P.ppe)}</span></div>
     ${parts.map(q => `<div class="ch-sh-job"><span class="ch-tag${/unknown/i.test(q.p) ? ' unk' : ''}">${esc(q.tag)}</span><div><b>${esc(chJobName(q.p))}</b> · ${chF(q.x)} h<small>${esc(q.svc.map(([s, x]) => chSvcName(s) + ' ' + chF(x)).join(' · '))}</small>${q.note.length ? `<small>the time clock's note: ${esc(q.note.join(' · '))}</small>` : ''}</div></div>`).join('')}
-    <label class="ch-sh-l" for="chNoteBox">✎ A FIX FOR LOGAN <small>— rides with the file when you send it. The hours are not changed here; the fix is made in the time clock.</small></label>
+    <label class="ch-sh-l" for="chNoteBox">✎ A FIX FOR THE BOOKKEEPER <small>— rides with the file when you send it. The hours are not changed here; the fix is made in the time clock.</small></label>
     <textarea id="chNoteBox" rows="2" class="grow" style="width: 100%; font-size: 16px;" placeholder="e.g. should be 8 hours, he left at 2">${val('notes')}</textarea>
-    <label class="ch-sh-l mine" for="chMineBox">● MY NOTE <small>— your record only. It is never sent to Logan or anyone.</small></label>
+    <label class="ch-sh-l mine" for="chMineBox">● MY NOTE <small>— your record only. It is never sent to the bookkeeper or anyone.</small></label>
     <textarea id="chMineBox" rows="2" class="grow" style="width: 100%; font-size: 16px;" placeholder="e.g. rained out after lunch">${val('mine')}</textarea>
     <button type="button" class="btn-primary" id="chSheetDone" style="width: 100%; margin-top: 10px; font-weight: var(--fw8, 800);" onclick="chNoteSave()">✓ DONE — it is saved</button></div></div>`;
 }
@@ -12641,9 +12679,9 @@ function chSendWords(P) {
 }
 function chSend() {
   const P = chCur(); if (!P || CREW_NAME) return;
-  if (chLit(P) < 2) { toast('OK every job first — then it can go to Logan', false); return; }
+  if (chLit(P) < 2) { toast('OK every job first — then it can go to the bookkeeper', false); return; }
   const to = String(prefs.loganMail || '').trim();
-  if (!to) { _chMailEdit = true; renderCrewHours(); const b = $('chMailBox'); if (b) b.focus(); toast('Where does Logan\'s mail go? Type his portal address once — it is remembered', false); return; }
+  if (!to) { _chMailEdit = true; renderCrewHours(); const b = $('chMailBox'); if (b) b.focus(); toast('Where does the bookkeeper\'s mail go? Type the portal address once — it is remembered', false); return; }
   const buf = _chBuf[P.ppe];
   if (!buf) { if (P.keep) { chWarm(); toast('⏳ Getting the Excel file ready — tap 📗 again in a moment', false); } else toast('The Excel file is not on this device — drop it in again (the hours will match) and then send', false); return; }
   const words = chSendWords(P), subject = `Crew hours — pay period ending ${chMD(P.ppe)}/${P.ppe.slice(0, 4)} — APPROVED`;
@@ -12667,12 +12705,12 @@ function chSendByHand(files, to, subject, words) {
 }
 function chSent(how) {
   const P = chCur(); if (!P) return;
-  P.sentAt = new Date().toISOString(); _chAskSent = ''; chHistAdd(P, '📗 sent to Logan (' + how + ')');
+  P.sentAt = new Date().toISOString(); _chAskSent = ''; chHistAdd(P, '📗 sent to the bookkeeper (' + how + ')');
   if (!knownTags().some(g => g.toLowerCase() === 'bookkeeper')) prefs.tags.push('Bookkeeper');
   const nn = (P.notes || []).length;
-  addEntry('Note', `📗 Crew hours → Logan: pay period ending ${chMD(P.ppe)} · ${chF(chTot(P))} h · ${P.people.length} people${nn ? ` · ${nn} note${nn === 1 ? '' : 's'} from you` : ''}`, jobs.find(j => /^(shop|internal)/i.test(j)) || '—', { tags: ['Bookkeeper'], chRef: P.ppe });
+  addEntry('Note', `📗 Crew hours → the bookkeeper: pay period ending ${chMD(P.ppe)} · ${chF(chTot(P))} h · ${P.people.length} people${nn ? ` · ${nn} note${nn === 1 ? '' : 's'} from you` : ''}`, jobs.find(j => /^(shop|internal)/i.test(j)) || '—', { tags: ['Bookkeeper'], chRef: P.ppe });
   chSaveSoon(P); if ($('chBox')) renderCrewHours();
-  toast('📗 SENT TO LOGAN ✓ — tap 💵 when the crew is paid');
+  toast('📗 SENT TO THE BOOKKEEPER ✓ — tap 💵 when the crew is paid');
 }
 
 function renderCrewHours() {
@@ -12688,26 +12726,26 @@ function renderCrewHours() {
   else {
     const d = chDates(P.ppe), lit = chLit(P), js = chJobs(P), okN = js.filter(j => (P.ok || {})[j.p]).length, flags = chFlags(P), tot = chTot(P), to = String(prefs.loganMail || '').trim();
     const word = lit === 1 ? `<b>① GATHER</b> — ${okN} of ${js.length} job${js.length === 1 ? '' : 's'} OK'd${flags.length ? ` · ${flags.length} to look at` : ''}`
-      : lit === 2 ? `<b>② APPROVED</b> ${chMD(String(P.apAt).slice(0, 10))} — ready to go to Logan`
-      : lit === 3 ? `<b>③ SENT TO LOGAN</b> ${chMD(String(P.sentAt).slice(0, 10))} — tap 💵 when the crew is paid`
+      : lit === 2 ? `<b>② APPROVED</b> ${chMD(String(P.apAt).slice(0, 10))} — ready to go to the bookkeeper`
+      : lit === 3 ? `<b>③ SENT TO THE BOOKKEEPER</b> ${chMD(String(P.sentAt).slice(0, 10))} — tap 💵 when the crew is paid`
       : `<b>④ PAID</b> ${chMD(String(P.paidAt).slice(0, 10))} — this pay period is done`;
     const cubes = CH_LIGHTS.map(([ic, wd, say], i) => { const on = i < lit, armed = _chArm === 'c' + (i + 1); return `<button type="button" class="ch-cube${on ? ' on' : ''}${i === lit - 1 ? ' now' : ''}${armed ? ' armed' : ''}" onclick="chCube(${i + 1})" aria-pressed="${on}" aria-label="${i + 1} — ${say}: ${on ? 'lit' : 'not yet'}${armed ? ' — tap again to take it off' : ''}"><span class="mb-i" aria-hidden="true">${armed ? '⚠' : ic}</span><b>${armed ? 'SURE?' : wd}</b>${on && !armed ? '<i class="mb-ck" aria-hidden="true">✓</i>' : ''}</button>`; }).join('');
-    const mailRow = (_chMailEdit || !to) && lit >= 2 ? `<div class="ch-mail"><label for="chMailBox">Logan's portal address — typed once, remembered</label><div class="frow" style="gap: 6px; flex-wrap: nowrap;"><input type="email" id="chMailBox" value="${esc(to)}" placeholder="name@…" autocomplete="off" autocapitalize="off" style="flex: 1; min-width: 0; min-height: 46px; font-size: 16px;" onkeydown="if (event.key === 'Enter') chMailSave()"><button type="button" class="btn-primary" style="flex: none;" onclick="chMailSave()">✓ Save</button></div></div>`
+    const mailRow = (_chMailEdit || !to) && lit >= 2 ? `<div class="ch-mail"><label for="chMailBox">The bookkeeper's portal address — typed once, remembered</label><div class="frow" style="gap: 6px; flex-wrap: nowrap;"><input type="email" id="chMailBox" value="${esc(to)}" placeholder="name@…" autocomplete="off" autocapitalize="off" style="flex: 1; min-width: 0; min-height: 46px; font-size: 16px;" onkeydown="if (event.key === 'Enter') chMailSave()"><button type="button" class="btn-primary" style="flex: none;" onclick="chMailSave()">✓ Save</button></div></div>`
       : (to && lit >= 2 ? `<div class="hint" style="margin: 4px 0 0;">to <b>${esc(to)}</b> · <a href="javascript:void(0)" style="color: var(--accent); font-weight: var(--fw7, 700); text-decoration: none;" onclick="_chMailEdit = true; renderCrewHours()">✎ change</a></div>` : '');
     const ready = !!_chBuf[P.ppe];
     const send = _chAskSent === P.ppe ? `<div class="ch-ask"><b>Did it go?</b> Both files are in your downloads; your mail opened with the address and the words.<div class="frow" style="gap: 6px; margin-top: 6px;"><button type="button" class="btn-primary" onclick="chSent('by hand')">✓ Yes — mark it SENT</button><button type="button" class="btn-ghost" onclick="_chAskSent = ''; renderCrewHours()">✕ Not yet</button></div></div>`
-      : lit === 2 ? `<button type="button" id="chSendBtn" class="btn-primary ch-send" onclick="chSend()">📗 SEND TO LOGAN<small>the Excel file, unchanged · your notes${ready ? '' : ' · ⏳ getting the file ready'}</small></button>${mailRow}`
+      : lit === 2 ? `<button type="button" id="chSendBtn" class="btn-primary ch-send" onclick="chSend()">📗 SEND TO THE BOOKKEEPER<small>the Excel file, unchanged · your notes${ready ? '' : ' · ⏳ getting the file ready'}</small></button>${mailRow}`
       : lit >= 3 ? `<div class="hint" style="margin: 2px 0 0;">📗 sent ${chMD(String(P.sentAt).slice(0, 10))}${P.keep || ready ? ` · <a href="javascript:void(0)" id="chSendAgain" style="color: var(--accent); font-weight: var(--fw7, 700); text-decoration: none;" onclick="chSend()">send it again</a>` : ''}</div>`
-      : `<div class="ch-send off" aria-disabled="true">📗 SEND TO LOGAN<small>lights up when every job is OK'd</small></div>`;
+      : `<div class="ch-send off" aria-disabled="true">📗 SEND TO THE BOOKKEEPER<small>lights up when every job is OK'd</small></div>`;
     const need = flags.length ? `<div class="ch-need"><div class="ch-nh">⚠ NEEDS A LOOK · ${flags.length}</div>${flags.map(t => `<div class="ch-nf">${t}</div>`).join('')}</div>` : '';
     // 🗓 v7.00 — two lists that never mix: what rides to Logan, and what is only his
     const noteList = (key, head) => (P[key] || []).length ? `<div class="ch-nh ${key === 'mine' ? 'mine' : 'fix'}">${head} · ${P[key].length}</div>` + P[key].map(n => `<div class="ch-nf"><b>${esc(chNoteWhere(P, n))}</b> — ${esc(n.t)} <a href="javascript:void(0)" class="ch-nx" onclick="chNoteDel('${escq(n.id)}', '${key}')" aria-label="take this note off">✕</a></div>`).join('') : '';
-    const notes = `<div class="ch-notes">${noteList('notes', '✎ FIXES FOR LOGAN — they ride with the file')}${noteList('mine', '● MY NOTES — only you see these, never sent')}
-      <div class="frow" style="gap: 6px; flex-wrap: wrap; margin-top: 4px;"><button type="button" class="btn-ghost" style="font-size: var(--fs12, 12px);" onclick="chNoteOpen(-1, -1, 'fix')">➕ a fix for Logan</button><button type="button" class="btn-ghost" style="font-size: var(--fs12, 12px);" onclick="chNoteOpen(-1, -1, 'mine')">➕ a note for me</button><span class="hint" style="margin: 0; align-self: center;">— or tap any day box</span></div></div>`;
+    const notes = `<div class="ch-notes">${noteList('notes', '✎ FIXES FOR THE BOOKKEEPER — they ride with the file')}${noteList('mine', '● MY NOTES — only you see these, never sent')}
+      <div class="frow" style="gap: 6px; flex-wrap: wrap; margin-top: 4px;"><button type="button" class="btn-ghost" style="font-size: var(--fs12, 12px);" onclick="chNoteOpen(-1, -1, 'fix')">➕ a fix for the bookkeeper</button><button type="button" class="btn-ghost" style="font-size: var(--fs12, 12px);" onclick="chNoteOpen(-1, -1, 'mine')">➕ a note for me</button><span class="hint" style="margin: 0; align-self: center;">— or tap any day box</span></div></div>`;
     const tags = chTags(P), tagIx = Object.keys(tags);
     const has = (key, n, dd) => (P[key] || []).some(x => x.who === n && x.d === dd);
     const marks = (n, dd) => (has('notes', n, dd) ? '<i class="fx" aria-hidden="true">✎</i>' : '') + (has('mine', n, dd) ? '<i class="mn" aria-hidden="true">●</i>' : '');
-    const markWords = (n, dd) => (has('notes', n, dd) ? ' · has a fix for Logan' : '') + (has('mine', n, dd) ? ' · has your own note' : '');
+    const markWords = (n, dd) => (has('notes', n, dd) ? ' · has a fix for the bookkeeper' : '') + (has('mine', n, dd) ? ' · has your own note' : '');
     const strip = (pi, n, f, h, w) => h.slice(w * 7, w * 7 + 7).map((x, i) => { const dd = w * 7 + i; return `<button type="button" class="ch-c ${x ? 'h' : 'e'}${i === 0 || i === 6 ? ' we' : ''}${has('notes', n, dd) ? ' nt' : ''}${has('mine', n, dd) ? ' mn' : ''}" onclick="chNoteOpen(${pi}, ${dd})" aria-label="${esc(f)} · ${chDayWord(P.ppe, dd)} · ${x ? chF(x) + ' hours' : 'no hours'}${markWords(n, dd)} — tap for the work types and notes">${x ? chF(x) : '·'}${marks(n, dd)}</button>`; }).join('');
     // a day in the BY WEEK calendar: ALL his jobs that day. One job = the hours and its letter; two or more = the box split
     // by a line, a part a job (two shades — the LETTER is what tells them apart), the day's total under; the hover says it.
@@ -12728,7 +12766,7 @@ function renderCrewHours() {
           (who.length ? dow(w) + who.map(r => `<div class="ch-pr"><div class="ch-pn">${esc(r.pp.f)}<small>${esc(r.pp.g)}</small></div>${[0, 1, 2, 3, 4, 5, 6].map(i => wcell(r.pi, r.pp, w * 7 + i, i)).join('')}<div class="ch-pt">${chF(r.t)}</div></div>`).join('') +
             `<div class="ch-pr all"><div class="ch-pn">everyone</div>${all.map((x, i) => `<span class="ch-all${i === 0 || i === 6 ? ' we' : ''}">${x ? chF(x) : '·'}</span>`).join('')}<div class="ch-pt">${chF(wt)}</div></div>` : '<div class="hint" style="margin: 4px 0 0;">no hours this week</div>') + `</div>`;
       }).join('') +
-      `<div class="ch-key">A box split by a line = more than one job that day: a part a job, its <b>letter</b> beside its hours, the day's total under. <b>✎</b> a fix for Logan · <b>●</b> your own note. Tap any day for the work types and the notes.</div>`;
+      `<div class="ch-key">A box split by a line = more than one job that day: a part a job, its <b>letter</b> beside its hours, the day's total under. <b>✎</b> a fix for the bookkeeper · <b>●</b> your own note. Tap any day for the work types and the notes.</div>`;
     else if (_chView === 'job') folds = js.map((j, i) => {
       const open = _chOpen === 'j' + i, unk = /unknown/i.test(j.p), ppl = Object.entries(j.ppl).sort((a, b) => chSum(b[1].h, 0, 14) - chSum(a[1].h, 0, 14));
       return `<div class="ch-job${unk ? ' unk' : ''}"><div class="ch-jh"><button type="button" class="ch-jt" aria-expanded="${open}" onclick="chFold('j${i}')" title="${esc(j.p)}">${open ? '▾' : '▸'} <span class="ch-tag${unk ? ' unk' : ''}">${esc(tags[j.p])}</span> ${unk ? '⚠ ' : ''}${esc(chJobName(j.p).toUpperCase())}<small>${chF(j.tot)} h · ${ppl.length} ${ppl.length === 1 ? 'person' : 'people'} · wk 1 ${chF(j.w[0])} · wk 2 ${chF(j.w[1])}</small></button>
@@ -12759,7 +12797,7 @@ function renderCrewHours() {
   const others = keys.filter(k => k !== _chPpe);
   box.innerHTML = `<div id="chBox"><h3 class="mat-head"><span>⏱ Crew hours</span> <span id="chSaveWord" class="hint" style="margin: 0; font-size: var(--fs11, 11px);">${_chDirty ? '⏳ saving…' : '✓ saved'}</span>
       <span class="mat-head-btns"><button type="button" class="btn-ghost req-x x-plate x-small" style="min-width: 44px;" onclick="chClose()" aria-label="close crew hours" title="close crew hours">✕</button></span></h3>
-    <div class="hint" style="margin: 0 0 8px;">${P ? 'Tap a day for the work types · ✎ a fix rides to Logan · ● a note of your own stays with you.' : 'From Phil\'s time clock, every two weeks. Read here, never changed — tap a day to see the work types; a wrong day gets a ✎ fix that rides to Logan, and ● a note of your own stays with you.'}</div>
+    <div class="hint" style="margin: 0 0 8px;">${P ? 'Tap a day for the work types · ✎ a fix rides to the bookkeeper · ● a note of your own stays with you.' : 'From Phil\'s time clock, every two weeks. Read here, never changed — tap a day to see the work types; a wrong day gets a ✎ fix that rides to the bookkeeper, and ● a note of your own stays with you.'}</div>
     ${door}${body}${P ? `<div class="ch-door" style="margin-top: 12px;">${drop}</div>` : ''}${chRemHtml()}
     ${others.length ? `<div class="ch-others"><div class="ch-nh" style="color: var(--ink-2);">OTHER PAY PERIODS</div>${others.map(k => { const o = S.periods[k], l = chLit(o); return `<button type="button" class="ch-other" onclick="chPick('${escq(k)}')"><span><b>ending ${chMD(k)}/${k.slice(2, 4)}</b> · ${chF(chTot(o))} h</span><span class="ch-mini" role="img" aria-label="${CH_LIGHTS[l - 1][2]}">${[1, 2, 3, 4].map(n => `<i${n <= l ? ' class="on"' : ''}></i>`).join('')}<small>${'①②③④'[l - 1]} ${CH_LIGHTS[l - 1][1]}</small></span></button>`; }).join('')}</div>` : ''}</div>`;
 }
@@ -13023,7 +13061,7 @@ function renderVisChips() {
   // 📖 v5.53 — the standing one-liner that builds trust: what each chip DOES, in plain words
   const ex = $('visExplain');
   if (ex) ex.innerHTML = mine
-    ? '🔒 stays on <b>this phone only</b> — never syncs · 📨 goes to Eric · 🔓 the whole crew sees it, and their Wizards can look it up · ⚠ pins it at the top of Eric\'s page until it is answered' + (lsGet('daylog-push-secret') ? ' and rings his phone, in his hours.' : '.')   // 🔔 v7.42
+    ? '🔒 stays on <b>this phone only</b> — never syncs · 📨 goes to Eric · 🔓 the whole crew sees it, and their Wizards can look it up · ⚠ pins it at the top of Eric\'s page until it is answered' + (lsGet('daylog-push-secret') ? ' and rings his phone, in his hours.' : '.') + ' 🧾 Receipt and 📗 To the bookkeeper light 📨 Just Eric by themselves.'   // 🔔 v7.42 · 🧾 v7.77
     : `🔒 <b>just yours</b> — saved on this phone and in your own Dropbox; no crew phone gets it · 📨 goes to ${buddy ? esc(buddy) + '\'s phone' : 'their phone'}, marked for them · 🔓 every crew phone sees it, and their Wizards can look it up · ⚠ stays up big on their page until somebody answers` + (prefs.pushSecret ? ' and rings their phones, each in his own hours.' : ' (their phones ring once the push secret is in — ⚙ Setup → 🔔 Notifications).') + ` A note you unlock rings them too, as "From Eric".`;   // 🔔 v7.42 · 👷 v7.47 — the crew's phones ring now
   ['qnVisChips', 'nVisChips'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; chipFit(el, cols); });
   // the personal lock: every chip but 🔒 goes dim and dead, with the reason on the glass
@@ -13064,9 +13102,10 @@ function lockGate() {
   ['qnTagChips', 'qnTagFixed', 'nTagChips', 'routeChips', 'urgChips'].forEach(id => {   // 🏷 v7.43 — the fixed row above the fold obeys the lock too
     const el = $(id); if (!el) return;
     el.querySelectorAll('button, select, input').forEach(b => {
-      if (locked) b.setAttribute('disabled', ''); else b.removeAttribute('disabled');
+      const free = id === 'qnTagFixed' && b.classList.contains('rcpt-chip');   // 🧾 v7.77 — the receipt chip stays live: a tap on it lights 📨 Just Eric
+      if (locked && !free) b.setAttribute('disabled', ''); else b.removeAttribute('disabled');
     });
-    el.setAttribute('aria-disabled', locked ? 'true' : 'false');
+    el.setAttribute('aria-disabled', locked && id !== 'qnTagFixed' ? 'true' : 'false');
   });
   // 🔒 v5.49 — Eric wanted the same lock on his phone. His tags stay live (a private note
   // still gets filed — that's his whole system), but ❓ NEEDS AN ANSWER cannot ride a note
@@ -15116,7 +15155,7 @@ function renderAskStrip() {
   const asks = entries.filter(e => e.ask && !e.askSeen && !e.sample).slice(0, 4);
   box.innerHTML = asks.map(e => e.askDone
     ? `<div class="req-strip req-answered"><div class="req-txt">📢 ${esc((e.details || '').slice(0, 70))}</div>
-        <div class="req-stages"><span class="req-st on">✓ SENT</span><span class="req-arrow">→</span><span class="req-st on">${e.askFlush ? `✓ SEEN by ${esc(e.askFlush)} — no answer needed (⤵ flushed into their log)` : '★ ANSWERED — it\'s in your 📥 review pile'}</span></div>
+        <div class="req-stages"><span class="req-st on">✓ SENT</span><span class="req-arrow">→</span><span class="req-st on">${e.askFlush ? `✓ SEEN by ${esc(e.askFlush)} — no answer needed (⚙ it is in their log)` : '★ ANSWERED — it\'s in your 📥 review pile'}</span></div>
         <button class="btn-ghost req-x" onclick="dismissAsk('${escq(String(e.id))}')">✕ Got it</button></div>`
     : `<div class="req-strip"><div class="req-txt">📢 ${esc((e.details || '').slice(0, 70))}</div>
         <div class="req-stages"><span class="req-st on">✓ SENT — up on their phones</span><span class="req-arrow">→</span><span class="req-st">· ANSWERED</span></div></div>`).join('');
@@ -15147,7 +15186,7 @@ function renderCrewAsks() {
       <div class="crew-ask-q">${esc(a.q || '')}${a.job ? `<span class="hint" style="margin: 0;"> — ${esc(a.job)}</span>` : ''}</div>
       <textarea id="askAns-${esc(String(a.id))}" rows="2" class="grow" placeholder="answer here — 36 and a half, swings left…"></textarea>
       <button class="btn-primary" style="margin-top: 6px;" onclick="answerAsk('${escq(String(a.id))}', '${escq(a.job || '')}')">↩ Send the answer</button>
-      <button type="button" class="btn-ghost crew-ask-flush" style="margin-top: 6px; width: 100%;" onclick="crewAskFlush('${escq(String(a.id))}', '${escq(a.job || '')}')">⤵ Flush it — no answer needed · it goes in your log</button>
+      <button type="button" class="btn-ghost crew-ask-flush" style="margin-top: 6px; width: 100%;" onclick="crewAskFlush('${escq(String(a.id))}', '${escq(a.job || '')}')">⚙ To the grinder — no answer needed · it goes in your log</button>
     </div>`).join('');
 }
 // ⤵ v7.16 — Eric: "Under the 'Eric needs an answer,' there can be a 'flush it' or 'log it' button." A note he sent with ⚠ that
@@ -15159,10 +15198,10 @@ function crewAskFlush(id, job) {
   if (crewPreview) { toast('👁 Preview — on a crew phone this takes it off the card, into their log, and tells you they saw it'); return; }
   const a = crewAsks.find(x => String(x.id) === String(id));
   const q = String((a && a.q) || '').trim();
-  addEntry('Note', `⤵ Seen — no answer needed: ${q}`.slice(0, 600), jobs.includes(job) ? job : '—', { askRef: +id || id, askFlush: true });
+  addEntry('Note', `⚙ Seen — no answer needed: ${q}`.slice(0, 600), jobs.includes(job) ? job : '—', { askRef: +id || id, askFlush: true });
   asksAnswered.add(String(id)); lsSet('daylog-asks-answered', JSON.stringify([...asksAnswered].slice(-50)));
   renderCrewAsks();
-  toast('⤵ Off the card — it is in your log, and Eric sees you got it ✓');
+  toast('⚙ Off the card — it is in your log, and Eric sees you got it ✓');
 }
 function answerAsk(id, job) {
   if (crewPreview) { toast('👁 Preview — on a crew phone this sends the answer straight to you'); return; }
@@ -15185,7 +15224,7 @@ function renderCrewShared0() {
     ? entries.filter(e => e.vis && !e.sample && !e.re && (!e.ask || e.askDone)).filter(e => visFor(e, prefs.previewAs || crew[0] || '')).map(e => ({ id: e.id, ts: e.ts, text: e.details, job: e.job, tags: e.tags, toAll: e.vis === 'crew', ph: e.photoPath || (e.photoPaths || [])[0], ask: e.ask ? (e.askFlush ? 'seen' : 'answered') : undefined, ...brdShareBits(e) }))
     : crewSharedRows();   // 💬 v7.33 — Eric's notes, my own two-sided ones, ⚠ first
   card.style.display = (isCrew() && all.length) ? '' : 'none';
-  if (!isCrew() || !all.length) return;
+  if (!isCrew() || !all.length) { const bl = $('crewSharedList'); if (bl) bl.innerHTML = ''; return; }   // ⚙ v7.77 — nothing stale under a hidden card (as v7.34 did for Eric's)
   // 🧭 v5.80 — Eric: "Phil should be able to sort my From Erics by job or by tag."
   const feJobs = [...new Set(all.map(n => n.job).filter(j => j && j !== '—'))].sort();
   const feTags = [...new Set(all.flatMap(n => n.tags || []))].sort();
@@ -15231,10 +15270,10 @@ function renderCrewShared0() {
       return `<div class="sum-row th-own${st.pulse ? ' th-new' : ''}" data-th="${esc(CREW_NAME)}:${id}" style="cursor: default; font-size: 14.5px; display: block;">
       <span>${st.pulse ? '<b class="th-newtag">↩ NEW REPLY · </b>' : ''}📨 <b style="letter-spacing:.5px;">YOU → ERIC · </b>${n.attn ? '<b style="letter-spacing:.5px;">⚠ NEEDS ERIC\'S ATTENTION · </b>' : ''}${esc(n.text || '')}<span class="hint" style="margin: 0;"> — ${esc(n.job || '')}${isNaN(d) ? '' : ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></span>
       ${thLinesHtml(CREW_NAME, n.id)}
-      <div>${thCubesHtml(st, 'Eric')}</div>
+      <div>${thCubesHtml(st, 'Eric', true)}</div>
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${n.ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(n.ph)}')">📷 Open the picture</button>` : ''}
-        ${n.done ? '<span class="pick-chip sel" aria-disabled="true">⤵ flushed by you ✓</span>' : `<button type="button" class="pick-chip th-flush" onclick="thOwnFlush('${id}')" title="done with it — it leaves the card once Eric flushes it too">⤵ Flush — done with it</button>`}
+        ${n.done ? '<span class="pick-chip sel" aria-disabled="true">⚙ you are done with it ✓</span>' : `<button type="button" class="pick-chip th-flush" onclick="thOwnFlush('${id}')" title="done with it — it leaves the card once Eric takes it to the grinder too">⚙ Done with it</button>`}
         <button type="button" class="pick-chip th-respond" onclick="thRespondOpen('${escq(CREW_NAME)}', '${id}', 'Eric')">💬 Respond</button>
       </div>
       <div id="thBox-${escq(CREW_NAME)}-${id}"></div>
@@ -15248,7 +15287,7 @@ function renderCrewShared0() {
       ${st.responded || st.theirFlushed || st.myFlushed ? `<div>${thCubesHtml(st, 'Eric')}</div>` : ''}
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${n.ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(n.ph)}')">📷 Open the picture</button>` : ''}
-        ${st.myFlushed ? '<span class="pick-chip sel" aria-disabled="true">⤵ flushed by you ✓</span>' : `<button type="button" class="pick-chip th-flush" onclick="thSharedFlush('${id}')" title="into your log with the whole back-and-forth; Eric sees you flushed it">⤵ Flush to the grinder</button>`}
+        ${st.myFlushed ? '<span class="pick-chip sel" aria-disabled="true">⚙ in your grinder ✓</span>' : `<button type="button" class="pick-chip th-flush" onclick="thSharedFlush('${id}')" title="into your log with the whole back-and-forth; Eric sees you took it">⚙ To the grinder</button>`}
         <button type="button" class="pick-chip th-respond" onclick="thRespondOpen('Eric', '${id}', 'Eric', ${n.board ? 'true' : 'false'})">💬 Respond</button>
         ${n.board && (n.boardDone || crewBoardDoneSet().has(String(n.id))) ? `<span class="pick-chip sel" aria-disabled="true">✓ DONE${n.boardDone && n.boardDone !== CREW_NAME ? ' — ' + esc(n.boardDone) : ''}</span>` : ''}
       </div>
@@ -15326,11 +15365,14 @@ function thState(owner, id, theirFlushed, myFlushed) {
   const lastMine = [thSeenAt(owner, id), ...mine.map(r => r.at)].sort().pop() || '';
   return { responded: theirs.length > 0, pulse: !!newest && newest > lastMine, theirFlushed: !!theirFlushed, myFlushed: !!myFlushed, twoSided: rs.length > 0, byNames: [...new Set(theirs.map(r => r.by))] };   // 💬 v7.34 — who responded, by name
 }
-function thCubesHtml(st, them) {
+function thCubesHtml(st, them, own) {
   const rb = st.byNames && st.byNames.length ? st.byNames.join(', ') : them, fb = st.flushedBy || them;   // 💬 v7.34 — names on a crew-wide note
   const w1 = st.responded ? (st.pulse ? `↩ ${rb} responded — new` : `↩ ${rb} responded`) : 'no response yet';
-  const w2 = st.theirFlushed ? `⤵ ${fb} flushed it` : `${them} has not flushed it`;
-  const words = [st.responded ? w1 : '', st.theirFlushed ? w2 : '', st.myFlushed ? '⤵ flushed by you' : ''].filter(Boolean).join(' · ');
+  // ⚙ v7.77 — no "flushed" in the words any more. On MY OWN note (`own`) the other side took it to the grinder (a copy in their
+  // log) and I am done with it; on THEIR note they are done with it and my copy is in my grinder.
+  const w2 = own ? (st.theirFlushed ? `⚙ ${fb} took it to the grinder` : `${them} has not taken it to the grinder`)
+    : (st.theirFlushed ? `⚙ ${fb} is done with it` : `${them} is not done with it yet`);
+  const words = [st.responded ? w1 : '', st.theirFlushed ? w2 : '', st.myFlushed ? (own ? '⚙ you are done with it' : '⚙ in your grinder') : ''].filter(Boolean).join(' · ');
   return `<span class="th-cubes" title="${esc(w1)} · ${esc(w2)}"><span class="th-cube${st.responded ? ' lit' : ''}${st.pulse ? ' pulse' : ''}" aria-label="${esc(w1)}"></span><span class="th-cube${st.theirFlushed ? ' lit' : ''}" aria-label="${esc(w2)}"></span><span class="th-word">${esc(words)}</span></span>`;
 }
 // the item itself: my own note (entries) or the other side's (crewShared on a crew phone, _crewLog on Eric's)
@@ -15391,7 +15433,7 @@ function thRespondSend(owner, id, who, done) {
 // a crew phone flushes Eric's item: a copy into this log — the words of both sides — carrying sharedRef (Eric's sweep reads it as "seen")
 function thFlushedSet() { try { return new Set(JSON.parse(lsGet('daylog-shared-flushed') || '[]')); } catch (e) { return new Set(); } }
 function thSharedFlush(id) {
-  if (crewPreview) { toast('👁 Preview — on a crew phone this puts your note into their log and tells you they flushed it'); return; }
+  if (crewPreview) { toast('👁 Preview — on a crew phone this puts your note into their log and tells you they took it to the grinder'); return; }
   const n = (crewShared || []).find(x => String(x.id) === String(id)); if (!n) return;
   const lines = thLines('Eric', id), nid = isNaN(+id) ? id : +id;
   const seenWas = thSeenAt('Eric', id);
@@ -15400,12 +15442,12 @@ function thSharedFlush(id) {
   thMark('Eric', id);
   renderCrewShared();
   // 💬 v7.74 — Phil: "And I accidentally flushed." The plate sits a thumb from 💬 Respond — so a flush can be taken back
-  toastUndo('⤵ Into your log ✓ — Eric sees you flushed it', () => {
+  toastUndo('⚙ In your grinder ✓ — Eric sees you took it', () => {
     entries = entries.filter(x => !(x.id === made.id && x.sharedRef != null));   // by its number — a sync may have swapped the objects since
     const f = thFlushedSet(); f.delete(String(id)); lsSet('daylog-shared-flushed', JSON.stringify([...f]));
     thSeenPut('Eric', id, seenWas);
     renderAll(); scheduleSave(); renderCrewShared();
-    toast('↩ Not flushed after all — it is back as it was');
+    toast('↩ Taken back — it is as it was');
   });
 }
 function thSeenPut(owner, id, at) { prefs.thSeen = prefs.thSeen || {}; if (at) prefs.thSeen[thKey(owner, id)] = at; else delete prefs.thSeen[thKey(owner, id)]; }
@@ -15460,11 +15502,11 @@ function thOwnFlush(id) {
   const draw = () => { if (CREW_NAME) renderCrewShared(); else { publishSharedNotes(); renderCrewFeed(); } };
   draw();
   // 💬 v7.74 — a flush can be taken back (the plate sits a thumb from 💬 Respond)
-  toastUndo('⤵ Done with it ✓ — it leaves the card once they flush it too', () => {
+  toastUndo('⚙ Done with it ✓ — it leaves the card once they take it to the grinder too', () => {
     Object.keys(was).forEach(k => { if (was[k] === undefined) delete e[k]; else e[k] = was[k]; });
     thSeenPut(thMe(), id, seenWas);
     scheduleSave(); draw();
-    toast('↩ Not flushed after all — it is back as it was');
+    toast('↩ Taken back — it is as it was');
   });
 }
 // a crew phone's own two-sided notes (Eric responded, or it went ⚠) sit on WITH ERIC beside his
@@ -15536,6 +15578,52 @@ function crewFeedTake(name, folder, list) {
     && (e.type === 'Note' || e.type === 'Done') && String(e.details || '').trim() && cfForMe(e))
     .slice(0, 120).map(e => ({ e, who: name, folder, key: `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}` }));
 }
+// ================= 🧾 v7.77 — A CREW RECEIPT ARRIVES WHOLE =================
+// Eric, with Phil's supply-house receipt on his WITH PHIL card: "what buttons did phil push in what order to get here? meaning did
+// he file this receipt correctly? did he push 'to the bookkeeper'?" He had — 🧙 read, 🧾 Receipt and its category, 📗 — and none of
+// it would have reached Eric's log: the Sort card and the road into his log carried the words, the job, the category and the
+// picture, and DROPPED the Wizard's read (`ai` — the only place the receipts windows look for the amount), the 🧾 mark and the
+// Bookkeeper mark. "yes fix the flush … yes to bookkeeper mark counts." A crew note now carries all three:
+//   · the read (`ai`) — the receipt has its amount, its store and its day, and waits on its job under 📥 Bills that came in and
+//     🧾 Receipts to approve exactly like one of his own;
+//   · the 🧾 mark (`rcpt`), and an overhead pick's "not billable";
+//   · the Bookkeeper mark — the tag itself, so it counts under 📗 SENT TO THE BOOKKEEPER, with who marked it (`bkBy`).
+// They are read off the crew member's OWN entry at the moment of the tap (a read that landed after the card was made rides too),
+// else off the card. A crew receipt that went into his log BEFORE this build is healed on the next crew sweep (crewRcptHeal):
+// each piece is added ONCE (`cg` remembers which), and never over anything his copy already holds.
+function crewRcptBits(e) {
+  const o = {};
+  if (!e || typeof e !== 'object') return o;
+  const ai = String(e.ai || '').trim(); if (ai) o.ai = ai.slice(0, 2000);
+  if (e.rcpt) o.rcpt = true;
+  if (e.billable === false) o.billable = false;
+  if (e.bk || (Array.isArray(e.tags) && e.tags.some(t => String(t).toLowerCase() === 'bookkeeper'))) o.bk = true;
+  return o;
+}
+function crewNoteSrc(name, key) {   // the crew member's own entry behind a card's key — crew:<name>:<id>:<day>
+  return (_crewLog[name] || []).find(x => x && `crew:${name}:${x.id}:${String(x.ts).slice(0, 10)}` === key) || null;
+}
+function crewRcptWord(e) {   // what the WITH PHIL row says about it, so he sees how it was filed before he sends it on
+  const b = crewRcptBits(e), cat = String(e.category || '').trim();
+  if (!b.rcpt && !cat && !b.bk) return '';
+  const noAmt = (b.rcpt || cat) && !/💵 \$/.test(b.ai || '');
+  return ((b.rcpt || cat) ? ` · 🧾 ${esc(cat || 'receipt')}` : '') + (b.bk ? ' · 📗 bookkeeper' : '') + (noAmt ? ' · <b>⚠ no amount read</b>' : '');
+}
+function crewRcptHeal(name) {
+  let n = 0;
+  entries.forEach(x => {
+    if (!x || x.type !== 'Note' || typeof x.crewKey !== 'string' || !x.crewKey.startsWith(`crew:${name}:`)) return;
+    const b = crewRcptBits(crewNoteSrc(name, x.crewKey)), got = String(x.cg || '');
+    let add = '';
+    if (b.ai && !got.includes('a')) { if (!String(x.ai || '').trim()) x.ai = b.ai; add += 'a'; }
+    if (b.rcpt && !got.includes('r')) { if (!x.rcpt) x.rcpt = true; add += 'r'; }
+    if (b.bk && !got.includes('b')) { if (!(x.tags || []).includes('Bookkeeper')) { x.tags = [...(x.tags || []), 'Bookkeeper']; x.bkBy = name; } add += 'b'; }
+    if (add) { x.cg = got + add; n++; }
+  });
+  if (n) { scheduleSave(); renderLog(); }
+  return n;
+}
+// ================= /🧾 v7.77 =================
 // ⤵ v7.15 — Eric: "From phil window needs to have a flush like the pocket list does and it goes into grinder like pocket list".
 // A flushed note goes into his running log the way ✓ Log it always put a crew note there (reviewAct 'log' — under Phil's name,
 // its Sort card cleared) and LEAVES THIS CARD for good: its key is kept in `prefs.crewFeedGone` (synced, so every one of his
@@ -15589,18 +15677,19 @@ function crewFeedFlushKeys(keys) {
   const keepToast = window.toast; window.toast = () => {};   // one word at the end, not one per note (the 🧹 sweep's way)
   _revBulk = true;
   let logged = 0;
+  _cfLoggedKeys = [];   // 🧾 v7.77 — which of them really went into his log just now (the toast says what became of a receipt)
   try {
     keys.forEach(k => {
       if (k.startsWith('own:')) { thOwnFlush(k.slice(4)); return; }   // 💬 v7.33 — my own two-sided note: done with it
       const r = byKey.get(k), waiting = pendingQueue.some(p => p.id === k);
       if (r) thMark(r.who, r.e.id);   // 💬 v7.33 — the pulse rests
-      if (!r) { if (waiting) { reviewAct(k, 'log'); logged++; } }
+      if (!r) { if (waiting) { reviewAct(k, 'log'); logged++; _cfLoggedKeys.push(k); } }
       else if (r.e.type === 'Done') {
         if (waiting) reviewAct(k, 'log');   // checks off the to-do it answers (srcRef), as ✓ on its Sort card always did
-        if (!cfInLog(r)) { pendingQueue.push(cfCardFor(r)); reviewAct(k, 'log'); logged++; }   // …and his words go into the log
+        if (!cfInLog(r)) { pendingQueue.push(cfCardFor(r)); reviewAct(k, 'log'); logged++; _cfLoggedKeys.push(k); }   // …and his words go into the log
       } else if (waiting) {
         if (cfInLog(r)) reviewAct(k, false);   // already in his log — its card just closes
-        else { reviewAct(k, 'log'); logged++; }
+        else { reviewAct(k, 'log'); logged++; _cfLoggedKeys.push(k); }
       }
       if (!have.has(k)) { gone.push(k); have.add(k); }
     });
@@ -15612,16 +15701,30 @@ function crewFeedFlushKeys(keys) {
   renderCrewFeed();
   return logged;
 }
+// 🧾 v7.77 — what became of a crew RECEIPT that just went into his log, in a few words for the toast: it waits on its job for his
+// tap (📥 Bills that came in on the estimates board · 🧾 Receipts to approve), or it has no amount on it and says so.
+let _cfLoggedKeys = [];
+function cfRcptSay() {
+  const keys = _cfLoggedKeys;
+  const got = entries.filter(x => x && keys.includes(x.crewKey) && isRcptEntry(x) && !isOverheadEntry(x));
+  if (!got.length) return '';
+  const hasPage = x => !(_portalIdx && Array.isArray(_portalIdx.clients)) || blClientIdx(x.job) >= 0;   // the client list not read yet = not ruled out
+  const amt = got.filter(x => estBillParse(x)), bare = got.length - amt.length, paged = amt.filter(hasPage), loose = amt.length - paged.length;
+  if (got.length === 1) return bare ? ' · ⚠ no amount was read off that receipt' : loose ? ' · 🧾 a receipt — its job has no client page, so it stays in your log'
+    : ` · 🧾 the receipt waits under ${got[0].job && got[0].job !== '—' ? got[0].job + ' → ' : ''}📥 Bills that came in`;
+  const parts = [paged.length ? `${paged.length} receipt${paged.length === 1 ? ' waits' : 's wait'} under 📥 Bills that came in` : '', loose ? `${loose} on a job with no client page` : '', bare ? `${bare} with no amount read` : ''].filter(Boolean);
+  return parts.length ? ' · 🧾 ' + parts.join(', ') : '';
+}
 function crewFeedFlushOne(key) {
   const n = crewFeedFlushKeys([key]);
-  toast(n ? '⤵ Into your running log — off the card ✓' : '⤵ Off the card ✓ — it was already handled, so it is not logged twice');
+  toast(n ? '⚙ In your grinder — off the card ✓' + cfRcptSay() : '⚙ Off the card ✓ — it was already handled, so it is not logged twice');
 }
 function crewFeedFlushAll() {
   const keys = _cfShownKeys.slice();
-  if (!keys.length) { toast('⤵ Nothing here to flush', false); return; }
+  if (!keys.length) { toast('⚙ Nothing here to grind', false); return; }
   const n = crewFeedFlushKeys(keys);
   _cfWho = ''; _cfJob = ''; _cfQ = ''; renderCrewFeed();   // the card goes back to showing whatever is left
-  toast(`⤵ ${keys.length} off the card — ${n ? n + ' into your running log' : 'all were already handled'}${n && n < keys.length ? `, ${keys.length - n} already handled` : ''} ✓`);
+  toast(`⚙ ${keys.length} off the card — ${n ? n + ' into your grinder' : 'all were already handled'}${n && n < keys.length ? `, ${keys.length - n} already handled` : ''} ✓${n ? cfRcptSay() : ''}`);
 }
 function crewFeedLog(key) { crewFeedFlushOne(key); }   // v7.13's name
 function crewFeedSearch(v) {
@@ -15650,9 +15753,9 @@ function renderCrewFeed0() {
   _cfShownKeys = list.map(r => r.key);   // ⤵ v7.15 — what ⤵ Flush takes: every note the card lists now, past the how-many cap too
   const fl = $('cfFlushBtn');
   if (fl) {
-    fl.textContent = narrowed ? `⤵ Flush these ${list.length}` : `⤵ Flush ${list.length}`;
+    fl.textContent = narrowed ? `⚙ Grind these ${list.length}` : `⚙ Grind all ${list.length}`;   // ⚙ v7.77 — "flush" is gone: the grinder's own name
     fl.disabled = !list.length;
-    fl.setAttribute('aria-label', `flush: ${list.length} note${list.length === 1 ? '' : 's'} go into your running log and off this card`);
+    fl.setAttribute('aria-label', `grind: ${list.length} note${list.length === 1 ? '' : 's'} go into your running log and off this card`);
   }
   const nRaw = prefs.crewFeedN == null ? '5' : String(prefs.crewFeedN);
   const cap = nRaw === 'all' ? list.length : Math.max(1, parseInt(nRaw, 10) || 5);
@@ -15690,10 +15793,10 @@ function renderCrewFeed0() {
       <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">${st.pulse ? '<b class="th-newtag">↩ NEW REPLY · </b>' : ''}📨 <b>you → ${esc(r.who === 'crew' ? 'the crew' : r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''}${e.ask && !e.askDone ? ' · <b>⚠ NEEDS THEIR ATTENTION</b>' : ''}</div>
       <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${esc(String(e.details || '').slice(0, 600))}</div>
       ${thLinesHtml('Eric', e.id)}
-      <div>${thCubesHtml(st, r.who === 'crew' ? 'the crew' : r.who)}</div>
+      <div>${thCubesHtml(st, r.who === 'crew' ? 'the crew' : r.who, true)}</div>
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(ph)}')">📷 Open the picture</button>` : ''}
-        ${e.threadDone ? '<span class="pick-chip sel" aria-disabled="true">⤵ flushed by you ✓</span>' : `<button type="button" class="pick-chip cf-flush th-flush" onclick="thOwnFlush('${escq(String(e.id))}')" title="done with it — it leaves the card${r.who === 'crew' ? '' : ' once ' + esc(r.who) + ' flushes it too'}">⤵ Flush — done with it</button>`}
+        ${e.threadDone ? '<span class="pick-chip sel" aria-disabled="true">⚙ you are done with it ✓</span>' : `<button type="button" class="pick-chip cf-flush th-flush" onclick="thOwnFlush('${escq(String(e.id))}')" title="done with it — it leaves the card${r.who === 'crew' ? '' : ' once ' + esc(r.who) + ' takes it to the grinder too'}">⚙ Done with it</button>`}
         <button type="button" class="pick-chip th-respond" onclick="thRespondOpen('Eric', '${escq(String(e.id))}', '${escq(r.who)}')">💬 Respond</button>
       </div>
       <div id="thBox-Eric-${escq(String(e.id))}"></div>
@@ -15702,13 +15805,13 @@ function renderCrewFeed0() {
     const waiting = cfWillLog(r);   // ⤵ v7.15 — what the flush will do with it, said on its plate
     const st = thState(r.who, e.id, !!e.threadDone, gone.has(r.key));
     return `<div class="sum-row cf-row${st.pulse ? ' th-new' : ''}" data-th="${escq(r.who)}:${escq(String(e.id))}" style="cursor: default; font-size: 14.5px; display: block;">
-      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">${st.pulse ? '<b class="th-newtag">↩ NEW REPLY · </b>' : ''}👷 <b>${esc(r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''} · ${cfForWord(e)}${e.type === 'Done' ? ' · ✅ finished' : ''}${e.route === 'Eric' && e.urg === 'now' ? ' · <b>⚠ NEEDS YOUR ATTENTION</b>' : ''}</div>
+      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">${st.pulse ? '<b class="th-newtag">↩ NEW REPLY · </b>' : ''}👷 <b>${esc(r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''} · ${cfForWord(e)}${crewRcptWord(e)}${e.type === 'Done' ? ' · ✅ finished' : ''}${e.route === 'Eric' && e.urg === 'now' ? ' · <b>⚠ NEEDS YOUR ATTENTION</b>' : ''}</div>
       <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${esc(String(e.details || '').slice(0, 600))}</div>
       ${thLinesHtml(r.who, e.id)}
       ${st.responded || st.theirFlushed || st.myFlushed ? `<div>${thCubesHtml(st, r.who)}</div>` : ''}
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(ph)}')">📷 Open the picture</button>` : ''}
-        ${st.myFlushed ? '<span class="pick-chip sel" aria-disabled="true">⤵ flushed by you ✓</span>' : `<button type="button" class="pick-chip cf-flush" onclick="crewFeedFlushOne('${escq(r.key)}')" title="${waiting ? 'Into your running log under ' + esc(r.who) + '\'s name, with the whole back-and-forth' : 'Already in your log — it just leaves this card'}">${waiting ? '⤵ Flush to the grinder' : '⤵ Flush — off the card'}</button>`}
+        ${st.myFlushed ? '<span class="pick-chip sel" aria-disabled="true">⚙ in your grinder ✓</span>' : `<button type="button" class="pick-chip cf-flush" onclick="crewFeedFlushOne('${escq(r.key)}')" title="${waiting ? 'Into your running log under ' + esc(r.who) + '\'s name, with the whole back-and-forth' : 'Already in your log — it just leaves this card'}">${waiting ? '⚙ To the grinder' : '⚙ Off the card — already in your log'}</button>`}
         <button type="button" class="pick-chip th-respond" onclick="thRespondOpen('${escq(r.who)}', '${escq(String(e.id))}', '${escq(r.who)}')">💬 Respond</button>
       </div>
       <div id="thBox-${escq(r.who)}-${escq(String(e.id))}"></div>
@@ -15965,6 +16068,7 @@ async function checkCrewLogs() {
       if (!j) continue;
       const name = f.name;
       crewFeedTake(name, f.path_display || f.path_lower, j.entries);   // 👷 v7.13 — the FROM THE CREW card reads the same log
+      crewRcptHeal(name);   // 🧾 v7.77 — a crew receipt already in his log gets the read and the marks it was missing
       // 📊 v5.09 — collect what this crew member has been asking their Wizard
       if (Array.isArray(j.askLog) && j.askLog.length) {
         try {
@@ -16026,8 +16130,11 @@ async function checkCrewLogs() {
           return;
         }
         const key = `crew:${name}:${e.id}:${String(e.ts).slice(0, 10)}`;
-        if (pendDone.has(key) || pendingQueue.some(p => p.id === key)) return;
+        if (pendDone.has(key)) return;
+        const have = pendingQueue.find(p => p.id === key);
+        if (have) { if (e.type === 'Note' && have.payload) Object.assign(have.payload, crewRcptBits(e)); return; }   // 🧾 v7.77 — a card made before the read landed (or by an older build) catches up
         pendingQueue.push({ id: key, kind: 'crew', source: name, payload: {
+          ...(e.type === 'Note' ? crewRcptBits(e) : {}),   // 🧾 v7.77 — the Wizard's read, the 🧾 mark and the Bookkeeper mark ride to the card (ai · rcpt · billable · bk)
           from: name, type: e.type, text: e.details || '', job: e.job || '',
           hours: e.hours, category: e.category || '', route: e.route || '', urg: e.urg || '',
           miles: e.miles, truck: e.truck || '', odometer: e.odometer, startOdometer: e.startOdometer, truckOdo: e.truckOdo,
@@ -17342,7 +17449,7 @@ function estWhatDraw() {
   const wayRow = (d, r) => { const p = r.p, labor = p.kind === 'labor', pi = (d.x.pend || []).indexOf(p);
     return rcpt({ e: r.e, kind: labor ? 'labor' : 'way', cat: d.x.n, amt: p.a, shown: estPendMk(p), v: labor ? '' : p.v,
       mover: labor ? '' : moverHtml(!!(w.move && w.move.ci === d.i && w.move.pi === pi), `estMoveOpen(${d.i}, ${pi})`, 'estMoveGo()', d.i, `Move it off ${esc(d.x.n)} — onto which category?`, 'Their page follows at once: it comes off this line and goes under the new one. The receipt in your log gets the new category too.'),
-      say: [labor ? `👷 Labor — week of ${esc(laborWeekLabel(p.wk))} (${+p.hrs || 0} h)` : '', p.ts ? 'sent to their page ' + esc(estDayWord(p.ts) || p.ts) : '', estBillToLogan(p) ? '📗 with Logan' : '', (p.mv || []).length ? '🏷 moved here from ' + esc(p.mv[p.mv.length - 1].from) : ''].filter(Boolean).join(' · ') }); };
+      say: [labor ? `👷 Labor — week of ${esc(laborWeekLabel(p.wk))} (${+p.hrs || 0} h)` : '', p.ts ? 'sent to their page ' + esc(estDayWord(p.ts) || p.ts) : '', estBillToLogan(p) ? '📗 with the bookkeeper' : '', (p.mv || []).length ? '🏷 moved here from ' + esc(p.mv[p.mv.length - 1].from) : ''].filter(Boolean).join(' · ') }); };
   const takenRow = (d, r) => { const t = r.t, labor = t.kind === 'labor';
     return rcpt({ e: r.e, kind: labor ? 'labor' : 'taken', cat: d.x.n, amt: t.a, v: labor ? '' : t.v,
       say: [labor ? `👷 Labor — week of ${esc(laborWeekLabel(t.wk))} (${+t.hrs || 0} h)` : '', t.ts ? 'sent ' + esc(estDayWord(t.ts) || t.ts) : '', t.inv ? `📗 on invoice #${esc(t.inv)}${t.invD ? ' · ' + esc(estDayWord(t.invD) || t.invD) : ''}${t.why === 'qb' ? ' (matched to the cent)' : ' (your tap)'}` : t.cl ? (t.why === 'qb' ? '📗 the books took it in (the category\'s total grew by it) ' : '✓ you said it is on their invoice ') + esc(estDayWord(t.cl) || t.cl) : ''].filter(Boolean).join(' · ') }); };   // 📗 v7.58 — an invoice line on the trail is named; the old growth clear says what it was
@@ -17693,11 +17800,11 @@ function renderEstimates() {
       ${bills.map(e => { const p = estBillParse(e); const gi = estBillGuess(e); const inc = !!(window._estBillInc || {})[e.id];
         const toLogan = (e.tags || []).includes('Bookkeeper') || e.shared;
         return `<div class="frow" style="gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px;">
-        <span style="font-weight: var(--fw7, 700); flex: 1; min-width: 130px;">🏪 ${esc(p.v || 'Unknown vendor')}${p.d ? ` <span class="hint" style="margin: 0;">📅 ${esc(p.d)}</span>` : ''}${e.photoPath ? ` <span style="cursor: pointer;" title="see the invoice" onclick="openEntryPhoto(${e.id}, event)">📷</span>` : ''}${toLogan ? ' <span class="hint" style="margin: 0;">📗 with Logan</span>' : ''}</span>
+        <span style="font-weight: var(--fw7, 700); flex: 1; min-width: 130px;">🏪 ${esc(p.v || 'Unknown vendor')}${p.d ? ` <span class="hint" style="margin: 0;">📅 ${esc(p.d)}</span>` : ''}${e.photoPath ? ` <span style="cursor: pointer;" title="see the invoice" onclick="openEntryPhoto(${e.id}, event)">📷</span>` : ''}${toLogan ? ' <span class="hint" style="margin: 0; white-space: nowrap;">📗 with the bookkeeper</span>' : ''}</span>
         <div class="field" style="margin: 0; width: 100px;"><label style="font-size: var(--fs10, 10px);">Amount</label><input id="estBillA-${e.id}" inputmode="decimal" value="${p.amt || ''}" style="font-weight: var(--fw8, 800);"></div>
         <div class="field" style="margin: 0; min-width: 150px; flex: 1;"><label style="font-size: var(--fs10, 10px);">Budget category</label><select id="estBillC-${e.id}">${estCatOptions(gi)}</select></div>
         <button type="button" class="pick-chip${inc ? '' : ' sel'}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;" onclick="estBillIncFlip(${e.id})">${inc ? '✓ markup already in' : '+' + estMk() + '% rides on top'}</button>
-        <button type="button" class="pick-chip sel" style="font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); min-height: 30px;" onclick="estBillApprove(${e.id})">✓ ONTO THEIR PAGE</button>
+        <button type="button" class="pick-chip est-bill-send" style="font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); min-height: 30px;" onclick="estBillApprove(${e.id})" title="Puts this bill on their page under RECEIPTS RECEIVED — nothing is there until you tap">📤 Send to their page</button><!-- 📤 v7.77 — Eric: "the button that says onto their page is lit up with gold, make is not lit up and put send to their page" — a lit plate with a ✓ read as ALREADY on their page; it is an unlit action now -->
         <button type="button" class="btn-ghost req-x" onclick="estBillSkip(${e.id})">🏢 not budget</button>
       </div>`; }).join('')}
       <div class="frow" style="gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px;">
@@ -17707,7 +17814,7 @@ function renderEstimates() {
         <button type="button" class="pick-chip${window._estHandInc ? '' : ' sel'}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;" onclick="estHandIncFlip()">${window._estHandInc ? '✓ markup already in' : '+' + estMk() + '% rides on top'}</button>
         <button type="button" class="pick-chip sel" style="font-size: var(--fs11, 11px); font-weight: var(--fw8, 800); min-height: 30px;" onclick="estBillHand()">➕ ADD BILL BY HAND</button>
       </div>
-      <div class="hint" style="margin: 6px 0 0;">These are the grinder's receipt reads for this job. ✓ Approve = it shows on their page under RECEIPTS RECEIVED — NOT ON AN INVOICE YET, markup riding invisibly, and it comes off that line's estimated remaining cost. When a QuickBooks run catches it, retire the line inside its category. 🏢 not budget just leaves it in the log.</div>
+      <div class="hint" style="margin: 6px 0 0;">These are the grinder's receipt reads for this job. 📤 Send to their page = it shows on their page under RECEIPTS RECEIVED — NOT ON AN INVOICE YET, markup riding invisibly, and it comes off that line's estimated remaining cost. When a QuickBooks run catches it, retire the line inside its category. 🏢 not budget just leaves it in the log.</div>
     </div>`; })()}
     ${(() => {
       // 🕯 v6.66 — one row per category, drawn by rowOf; the sections underneath decide WHERE it sits.
@@ -17849,8 +17956,8 @@ function renderEstimates() {
           ${receiptPlate}
           ${pe && pe.photoPath ? `<button type="button" class="pick-chip est-pend-ph" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="openEntryPhoto(${pe.id}, event)" aria-label="look at the receipt's picture">📷 picture</button>` : ''}
           ${p.kind === 'labor' ? '' : `<button type="button" class="pick-chip est-pend-mv" style="font-size: var(--fs105, 10.5px); min-height: 28px; border-style: dashed;" onclick="estMoveOpen(${ci}, ${pi})" title="on the wrong category? move it to the right one — their page follows">🏷 Wrong category? Move it</button>`}
-          <button type="button" class="pick-chip${lg ? ' sel' : ''}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;${lg ? '' : ' border-style: dashed;'}" onclick="estPendLogan(${ci}, ${pi})" title="has this invoice gone to Logan for processing? Lights itself if it went through TO THE BOOKKEEPER">${lg ? '📗 WITH LOGAN' : '○ sent to Logan?'}</button>
-          <button type="button" class="pick-chip est-pend-inv${nudge ? ' sel' : ''}" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="estPendClear(${ci}, ${pi}, 'qb')" title="Logan has put this receipt on the homeowner's invoice — take it off their receipts list (it stays settled in your log)">✓ It's on their invoice</button>
+          <button type="button" class="pick-chip${lg ? ' sel' : ''}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;${lg ? '' : ' border-style: dashed;'}" onclick="estPendLogan(${ci}, ${pi})" title="has this invoice gone to the bookkeeper for processing? Lights itself if it went through TO THE BOOKKEEPER">${lg ? '📗 WITH THE BOOKKEEPER' : '○ sent to the bookkeeper?'}</button>
+          <button type="button" class="pick-chip est-pend-inv${nudge ? ' sel' : ''}" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="estPendClear(${ci}, ${pi}, 'qb')" title="The bookkeeper has put this receipt on the homeowner's invoice — take it off their receipts list (it stays settled in your log)">✓ It's on their invoice</button>
           <!-- ↩ v6.34 — Eric: "how can i edit, change or take back". Off their page, and the
                receipt goes back to waiting in the log so it can be fixed and sent again. -->
           <button type="button" class="pick-chip" style="font-size: var(--fs105, 10.5px); min-height: 28px; border-style: dashed;" onclick="estPendClear(${ci}, ${pi}, 'back')" title="Wrong amount or wrong job? Off their page, and the receipt is offered again in the log">↩ Take back</button>
@@ -18477,7 +18584,7 @@ function renderRcptReview() {
   const overBlock = over.length ? `<div style="font-weight: var(--fw8, 800); font-size: var(--fs115, 11.5px); letter-spacing: .4px; margin: 14px 0 2px;">🏢 OVERHEAD ON THIS JOB — ${over.length}, ${money(overTot)} · recorded, never billed to them</div>` +
     over.map(e => { const p = estBillParse(e) || {}; return `<div class="g-step" style="margin-top: 8px;">
       <div style="font-size: 13px;"><b>${esc((e.details || '').slice(0, 70))}</b></div>
-      <div style="font-size: var(--fs12, 12px); opacity: .8; margin-top: 3px;">${esc(localDay(new Date(e.ts)))}${p.v ? ' · 🏪 ' + esc(p.v) : ''} · 🏢 ${esc(String(e.category || '').trim())} · ${money(p.amt)} · goes to Logan as not billable</div>
+      <div style="font-size: var(--fs12, 12px); opacity: .8; margin-top: 3px;">${esc(localDay(new Date(e.ts)))}${p.v ? ' · 🏪 ' + esc(p.v) : ''} · 🏢 ${esc(String(e.category || '').trim())} · ${money(p.amt)} · goes to the bookkeeper as not billable</div>
     </div>`; }).join('') : '';
   const oneRow = e => {
     const p = estBillParse(e) || {};
@@ -22016,7 +22123,7 @@ function qbFreshBodyHtml() {
     : r.state === 'unlisted' ? `<b>NOT ON THE BOOKS RUN'S LIST</b> — the run has never been told about this page, so its money never moves${r.page ? ` (their page shows ${fig(r.page)})` : ''}. Tell Claude which QuickBooks customer it is.`
     : r.state === 'noread' ? `<b>COULD NOT READ THE PAGE</b> to check it — open this again in a moment`
     : `<b>NOT REWRITTEN</b>${r.why ? ' — ' + esc(r.why) : ' — the run gave no reason'} · the pages have not been checked yet`;
-  if (!qbFresh) return `<div class="hint">No QuickBooks run has left a receipt yet. The next time Logan's three reports come in and Claude processes them, this fills in — one line per client page, saying plainly whether its budget matches the books.</div>`;
+  if (!qbFresh) return `<div class="hint">No QuickBooks run has left a receipt yet. The next time the bookkeeper's three reports come in and Claude processes them, this fills in — one line per client page, saying plainly whether its budget matches the books.</div>`;
   return `<div class="hint" style="margin: 0 0 10px;">Last run: <b>${esc(when || qbFresh.importDate || 'unknown')}</b>${qbFresh.importDate ? ` · books through <b>${esc(qbFresh.importDate)}</b>` : ''}${(qbFresh.source || []).length ? `<br>Read from: ${(qbFresh.source || []).slice(0, 4).map(esc).join(' · ')}` : ''}</div>
       <div class="qbf-tally ${all && !miss.length ? 'ok' : 'warn'}" id="qbfTally">${all && !miss.length ? '✓' : '⚠'} <b>${done} of ${all}</b> client budget${all === 1 ? '' : 's'} ${checked ? 'match the books' : 'refreshed'}${quiet.length ? ` · ${quiet.length} not in QuickBooks yet` : ''}${miss.length ? ` · ${miss.length} need${miss.length === 1 ? 's' : ''} a look` : ''}${checked ? '' : (_qbfCheck && _qbfCheckStamp === qbFreshStamp(qbFresh)) ? ' · the pages could not be read to check them' : ' · ⏳ checking the pages…'}</div>
       ${rows.length ? rows.map(r => `<div class="qbf-row" data-state="${r.state}">
@@ -22827,7 +22934,7 @@ function buildAskContext(question) {
     if (e.cats && e.cats.length) o.cat = e.cats.join(', '); else if (e.category) o.cat = e.category;
     if (e.truck) o.truck = e.truck;   // 🚚 v7.44 — which truck a trip, a fill-up or a repair belongs to
     if (e.who && e.who !== 'Me') o.who = e.who;
-    if (e.shared) o.sentTo = e.sharedTo || 'Logan';
+    if (e.shared) o.sentTo = e.sharedTo || 'the bookkeeper';
     if (e.billable === false) o.billable = false;
     if (e.filedTo) o.filed = e.filedTo;
     if (e.ocr) o.photoText = e.ocr.slice(0, 400);
@@ -22908,7 +23015,7 @@ function buildAskContext(question) {
   // 🧙 v7.16 — a pocket leftover already rides in POCKET NOT DONE: on the board list too, it came out twice ("8 items twice", 09-25)
   const boardCtx = (typeof boardLines === 'function' ? boardLines() : []).filter(l => l.k !== 'p' && !(l.src && ['flushed', 'over', 'swept'].includes(l.src.pocket)) && jobOk(l.job)).slice(0, 60).map(l => ({ job: l.job, t: brdWords(l.t), p: l.p, sub: (l.sub || []).map(s => (s.done ? '✓ done: ' : '○ open: ') + s.t) }));
   const boardDoneCtx = live.filter(e => jobOk(e.job) && e.board && e.board.done && +new Date(e.board.done) >= Date.now() - 7 * 86400000).slice(0, 40).map(e => ({ job: e.job, t: brdWords(e.details), by: e.board.by || 'Eric', day: localDay(new Date(e.board.done)) }));
-  return `TODAY: ${new Date().toString()}${drefLine}${jobLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${subsCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos.filter(o => jobOk(o.j)))}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — flushed, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nLINES ERIC TOOK OFF HIS LISTS (✕ v7.16 — he said each is no longer relevant: leave it, and anything that is plainly the same item, out of summaries, lists and to-dos from now on; talk about one only if he asks about it by name; newest first): ${JSON.stringify((prefs.wizGone || []).slice(0, 60).map(g => g.line))}\nRECENT LOG (his own notes and records first, newest first; then the newest texts and emails; then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
+  return `TODAY: ${new Date().toString()}${drefLine}${jobLine}${rangeLine}${sweepLine}${crewCtx}${crewAskCtx}${cardCtx}${subsCtx}${followCtx}\nJOBS: ${JSON.stringify(jobs)}\nCREW: Eric (owner), ${crew.join(', ')}. Logan = bookkeeper, Shevaun = C&C properties paperwork.\nTAGS IN USE (people & places Eric tags notes with): ${JSON.stringify(knownTags())}\nOPEN TRUCK TRIPS: ${JSON.stringify(openTrips)}\nOPEN TO-DOS: ${JSON.stringify(openTodos.filter(o => jobOk(o.j)))}\nPOCKET LIST (his quick list for today and tomorrow — things he means to do, still open): ${JSON.stringify(pocket().map(x => ({ t: x.t, day: x.day })))}\nPOCKET DONE (he checked these off, last two weeks, newest first): ${JSON.stringify(pocketDoneCtx)}\nPOCKET NOT DONE (left unfinished — sent on to the grinder by him, overflow or not done by the next morning): ${JSON.stringify(pocketLeftCtx)}\nBOARD — OPEN LINES (his task board by job; p = priority 0 none … 3 high; sub = steps under a line): ${JSON.stringify(boardCtx)}\nBOARD — DONE THIS WEEK (who finished each line): ${JSON.stringify(boardDoneCtx)}\nCORRECTIONS ERIC MADE (his fixes to earlier answers — they beat the records; newest first; line = the answer line he fixed): ${JSON.stringify((prefs.wizFixes || []).slice(0, 30))}\nLINES ERIC TOOK OFF HIS LISTS (✕ v7.16 — he said each is no longer relevant: leave it, and anything that is plainly the same item, out of summaries, lists and to-dos from now on; talk about one only if he asks about it by name; newest first): ${JSON.stringify((prefs.wizGone || []).slice(0, 60).map(g => g.line))}\nRECENT LOG (his own notes and records first, newest first; then the newest texts and emails; then any older word-matches the search pulled in — check every one of them, the old ones are down the bottom): ${JSON.stringify(slim)}`;
 }
 // 🧙 v4.99 — answers keep receipts: the Wizard cites which entries it used, the answer
 // offers their photos, a follow-up within 15 minutes remembers the exchange, and
@@ -23271,7 +23378,7 @@ async function askInstant(what) {
     // goes smart. Eric can force either one in ⚙ Setup → the Wizard.
     const askBody = {
         max_tokens: WIZ_MAX_TOKENS,   // 🧙 v7.35 — 12000 (was 4000, v7.21): Sonnet 5 bills its THINKING inside this ceiling, and a list question thought the whole 4000 away and answered nothing
-        system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 only if Eric SAYS it is urgent — a quick personal reminder ("remind me to…") is pri 1 no matter how old it gets>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or Logan). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Entries carry their weekday next to the date, and a note that said a relative day-word carries "saidDay" — the translation of that word against the NOTE\'S OWN date (a note\'s "tomorrow" is the day after that note, never after today); always trust saidDay over the bare word. Entries flagged "headsUp" are landmines Eric marked ⚠ — things that bite later work; when the question is about upcoming work, a job, or "what do I need to know", surface matching headsUp entries FIRST and mark each with ⚠. Never invent amounts or dates. For a SUMMARY or a LIST of what is open: open items only, and each item ONCE — the same thing can sit in the log, the board, the pocket and a to-do, so merge them; leave out anything done, answered, checked off or cleared, and every line in LINES ERIC TOOK OFF HIS LISTS; CORRECTIONS ERIC MADE beat the records; cite only entry ids that appear in RECENT LOG. When your answer relies on specific log entries, end with one final line exactly like: SOURCES: 123, 456 — listing those entries\' "id" values (omit the line entirely if none apply). Numbers read from a photo ("photoText") can be OCR-garbled — when an amount or count comes only from photoText, say it may be worth checking the photo.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
+        system: 'You are Claude inside Clore DayLog, the construction day-log app used by Eric Clore of Clore Construction (Kenai Peninsula, Alaska). Two modes:\n(1) COMMAND — if Eric is telling you to create a to-do (phrases like "make a todo", "add a to-do", "remind me to", "put on my list"), respond with ONLY a single-line JSON object, no other text: {"action":"add_todo","text":"<the task, cleanly worded>","job":"<best matching job from JOBS list, or empty string>","who":"<Me, or a crew name if the task is for them>","due":"<YYYY-MM-DD if a date/day was given, resolve relative dates like tomorrow using TODAY, else empty>","pri":<0-3, default 1; 3 only if Eric SAYS it is urgent — a quick personal reminder ("remind me to…") is pri 1 no matter how old it gets>}\n(1b) BREAKDOWN — if Eric pastes or describes something with MULTIPLE tasks in it (an email, a plan, "break this down", "work through this step by step"), respond with ONLY single-line JSON: {"action":"add_todos","items":[{"text":"...","job":"...","who":"...","due":"...","pri":1}, ...]} — one item per concrete actionable step, in the order the work should happen, max 10; skip vague non-actions; each item same fields as add_todo.\n(2) QUESTION — otherwise answer from the log data. Be direct and concise — lead with the answer, then brief supporting detail. Use **bold** for key numbers and dates. Dollar amounts with 2 decimals. If the log doesn\'t contain the answer but a DROPBOX FILES list is provided and one matches, point Eric to that file by name and folder. Otherwise say so plainly and suggest where it might be (his Dropbox files, the hourly deep check, or the bookkeeper). Entries may carry tags — people or places (see TAGS IN USE). If Eric asks for everything for a tag ("give me the Shevaun list", "what\'s tagged Home Depot"), gather EVERY entry carrying that tag into one clean numbered list, newest last, ready to send to that person or shop from at that store. Entries carry their weekday next to the date, and a note that said a relative day-word carries "saidDay" — the translation of that word against the NOTE\'S OWN date (a note\'s "tomorrow" is the day after that note, never after today); always trust saidDay over the bare word. Entries flagged "headsUp" are landmines Eric marked ⚠ — things that bite later work; when the question is about upcoming work, a job, or "what do I need to know", surface matching headsUp entries FIRST and mark each with ⚠. Never invent amounts or dates. For a SUMMARY or a LIST of what is open: open items only, and each item ONCE — the same thing can sit in the log, the board, the pocket and a to-do, so merge them; leave out anything done, answered, checked off or cleared, and every line in LINES ERIC TOOK OFF HIS LISTS; CORRECTIONS ERIC MADE beat the records; cite only entry ids that appear in RECENT LOG. When your answer relies on specific log entries, end with one final line exactly like: SOURCES: 123, 456 — listing those entries\' "id" values (omit the line entirely if none apply). Numbers read from a photo ("photoText") can be OCR-garbled — when an amount or count comes only from photoText, say it may be worth checking the photo.' + (CREW_NAME ? ` The person asking is ${CREW_NAME}, a crew member of Clore Construction — NOT Eric. They see only their own log and the NOTES ERIC SHARED list. Answer them directly and never reference data outside those.` : ''),
         messages: [{ role: 'user', content: buildAskContext(what) + fileCtx + '\n\nERIC\'S QUESTION: ' + what }]
     };
     let { r, model: aiWho, fell: aiFell } = await aiCall(askBody, 'wizard', what, { signal: wizAc.signal });
@@ -23436,6 +23543,11 @@ function wizReopen(at) {
 // overflow goes to the grinder so it'll come up in summaries. and the flush button so it clears
 // and sends all to the grinder." prefs.pocketMax (2–30, 8 to start). Over the cap, the OLDEST
 // leaves as a pocket note on the log — the newest stay in sight; ⤵ Flush sends them all.
+// ⚙ v7.77 — Eric: "lets find a new name for flush, sounds to toilet like. to the grinder? grind it?" The plates say ⚙ Grind all /
+// ⚙ Grind, and a pocket item sent on unfinished is stamped "🎒 To the grinder — …" (it was "🎒 Flushed — …"; a note stamped the old
+// way keeps its words — POCKET_STAMP_RE reads both). Inside, the state is still `pocket: 'flushed'`.
+const POCKET_STAMP = '🎒 To the grinder — ';
+const POCKET_STAMP_RE = /^🎒 (Flushed|To the grinder|Overflow|Not done) — /;
 function pocketCap() { const n = +prefs.pocketMax; return n >= 2 && n <= 30 ? n : 8; }
 function pocketCapSet(d) {
   prefs.pocketMax = Math.min(30, Math.max(2, pocketCap() + d));
@@ -23454,10 +23566,10 @@ function pocketOverflow() {
 }
 function pocketFlush() {
   const items = pocket().splice(0, pocket().length);
-  if (!items.length) { toast('🎒 Nothing to flush', false); return 0; }
-  items.forEach(it => addEntry('Note', `🎒 Flushed — ${it.t}`, '—', { noSniff: true, tags: ['pocket'], pocket: 'flushed' }));
+  if (!items.length) { toast('🎒 Nothing to grind', false); return 0; }
+  items.forEach(it => addEntry('Note', `${POCKET_STAMP}${it.t}`, '—', { noSniff: true, tags: ['pocket'], pocket: 'flushed' }));
   scheduleSave(); renderPocket(); renderLog();
-  toast(`⤵ ${items.length} sent to the grinder's pile — the list is clear`);
+  toast(`⚙ ${items.length} sent to the grinder's pile — the list is clear`);
   return items.length;
 }
 function pocket() { return Array.isArray(prefs.pocket) ? prefs.pocket : (prefs.pocket = []); }
@@ -23499,9 +23611,9 @@ function pocketEditSave(id, v) {
 function pocketFlushOne(id) {
   const i = pocket().findIndex(x => x.id === id); if (i < 0) return;
   const it = pocket().splice(i, 1)[0];
-  addEntry('Note', `🎒 Flushed — ${it.t}`, '—', { noSniff: true, tags: ['pocket'], pocket: 'flushed' });
+  addEntry('Note', `${POCKET_STAMP}${it.t}`, '—', { noSniff: true, tags: ['pocket'], pocket: 'flushed' });
   scheduleSave(); renderPocket(); renderLog(); if ($('revModal') && $('revModal').classList.contains('show')) renderReview();
-  toast(`⤵ Flushed — it is on the board and the summary now ✓`);
+  toast(`⚙ To the grinder — it is on the board and the summary now ✓`);
 }
 function pocketDrop(id) { const i = pocket().findIndex(x => x.id === id); if (i < 0) return; pocket().splice(i, 1); scheduleSave(); renderPocket(); }
 function pocketSweep() {
@@ -23536,7 +23648,7 @@ function renderPocket() {
   const row = it => `<div class="pk-row" data-id="${esc(it.id)}"><span class="pk-t" onclick="pocketEditStart('${esc(it.id)}')" title="tap to edit">${esc(it.t)}</span>
     <button type="button" class="pk-btn" onclick="pocketDone('${esc(it.id)}')" aria-label="done">✓ Done</button>
     <button type="button" class="pk-btn pk-ghost" onclick="pocketEditStart('${esc(it.id)}')" aria-label="edit the words" title="edit">✎</button>
-    <button type="button" class="pk-btn pk-ghost" onclick="pocketFlushOne('${esc(it.id)}')" aria-label="flush it to the grinder — it lands on the board and the summary" title="flush to the grinder">⤵ Flush</button></div>`;
+    <button type="button" class="pk-btn pk-ghost" onclick="pocketFlushOne('${esc(it.id)}')" aria-label="grind it: to the grinder — it lands on the board and the summary" title="to the grinder">⚙ Grind</button></div>`;
   const now = items.filter(x => x.day <= today), later = items.filter(x => x.day === tom);
   box.innerHTML = (now.length ? '<div class="pk-h">TODAY</div>' + now.map(row).join('') : '') +
     (later.length ? '<div class="pk-h">TOMORROW</div>' + later.map(row).join('') : '') +
@@ -23559,7 +23671,7 @@ let _revTab = 'sort', _sumSpan = 'week', _sumSec = null;
 // 🎒 v7.14 — Eric: "When I click Summary, just under Needs You is the Pocket List, which I like. But instead, I want the pocket
 // not done, just under the needs you." The leftovers lead now; the live list follows them.
 const SUM_SECS = [['need', '⚠ NEEDS YOU'], ['pocket', '🎒 POCKET — not done'], ['get', '🎒 POCKET LIST'], ['people', '👥 PEOPLE'], ['money', '💵 MONEY'],
-  ['photos', '📷 PHOTOS'], ['wizard', '🧙 WIZARD'], ['sched', '📅 SCHEDULE'], ['logan', '📗 SENT TO LOGAN'], ['record', '📜 THE RECORD']];
+  ['photos', '📷 PHOTOS'], ['wizard', '🧙 WIZARD'], ['sched', '📅 SCHEDULE'], ['logan', '📗 SENT TO THE BOOKKEEPER'], ['record', '📜 THE RECORD']];
 function revTabsHtml() {
   const n = pendingQueue.length + revRcptRows().n, b = boardLines().length;   // 📋 v6.79 — the third tab wears the open-line count
   return `<div class="rev-tabs"><button type="button" class="rev-tab${_revTab === 'sort' ? ' on' : ''}" onclick="revTab('sort')" aria-pressed="${_revTab === 'sort'}">📥 SORT${n ? ` · ${n}` : ''}</button><button type="button" class="rev-tab${_revTab === 'summary' ? ' on' : ''}" onclick="revTab('summary')" aria-pressed="${_revTab === 'summary'}">📊 SUMMARY</button><button type="button" class="rev-tab${_revTab === 'board' ? ' on' : ''}" onclick="revTab('board')" aria-pressed="${_revTab === 'board'}">📋 BOARD${b ? ` · ${b}` : ''}</button></div>`;
@@ -23630,14 +23742,14 @@ function renderSummary() {
   // check them as done or no longer relevant." Four plates on every row, and ✓ All done / ✕ None needed on top (two taps).
   // The list no longer follows TODAY / THIS WEEK: a leftover stays here until HE clears it (or it is 14 days old).
   S.pocket = pocketLeftList().sort((a, b) => +new Date(b.ts) - +new Date(a.ts)).map(e =>
-    line('🎒', `<b class="pk-w">${esc(pocketWords(e))}</b> ${edw('n', e.id)}`, `<span class="pk-leftrow"><span class="pk-meta">${e.pocket === 'flushed' ? 'flushed' : e.pocket === 'over' ? 'overflow' : 'not done'} · ${when(e)}</span><span class="pk-acts">
+    line('🎒', `<b class="pk-w">${esc(pocketWords(e))}</b> ${edw('n', e.id)}`, `<span class="pk-leftrow"><span class="pk-meta">${e.pocket === 'flushed' ? 'sent to the grinder' : e.pocket === 'over' ? 'overflow' : 'not done'} · ${when(e)}</span><span class="pk-acts">
       <button type="button" class="pk-mini" onclick="pocketBack(${e.id}, 0)" aria-label="back onto today's pocket list" title="back onto today's pocket list"><span aria-hidden="true">↩</span><b>Today</b></button>
       <button type="button" class="pk-mini" onclick="pocketBack(${e.id}, 1)" aria-label="back onto tomorrow's pocket list" title="back onto tomorrow's pocket list"><span aria-hidden="true">➡</span><b>Tomorrow</b></button>
       <button type="button" class="pk-mini pk-ok" onclick="pocketLeftDone(${e.id})" aria-label="it got done — check it off" title="it got done — check it off"><span aria-hidden="true">✓</span><b>Done</b></button>
       <button type="button" class="pk-mini pk-no" onclick="pocketLeftDrop(${e.id})" aria-label="no longer relevant — clear it" title="no longer relevant — clear it"><span aria-hidden="true">✕</span><b>Not needed</b></button></span></span>${pocketSendHtml('n', e.id)}`));
   // 📗 SENT TO LOGAN — the bookkeeper tag, shared notes, receipts sent onto a client page
   S.logan = es.filter(e => (e.tags || []).includes('Bookkeeper') || e.shared || e.budg === 'sent').map(e =>
-    line(e.budg === 'sent' ? '🏠' : '📗', `<b>${esc(e.job || '—')}</b> — ${words(e)}`, `${e.budg === 'sent' ? 'on their page' : 'to Logan'} · ${when(e)}`));
+    line(e.budg === 'sent' ? '🏠' : '📗', `<b>${esc(e.job || '—')}</b> — ${words(e)}`, `${e.budg === 'sent' ? 'on their page' : 'to the bookkeeper'} · ${when(e)}`));
   // 📜 THE RECORD — by day, newest first: the counts, then the first note lines
   const days = {};
   es.forEach(e => { const d = localDay(e.ts); (days[d] = days[d] || []).push(e); });
@@ -23665,7 +23777,7 @@ function renderSummary() {
 }
 
 // 🎒 v6.78 — the words of a pocket note without its stamp, and the way back onto tomorrow's pocket
-function pocketWords(e) { return String(e.details || '').replace(/^🎒 (Flushed|Overflow|Not done) — /, '').trim(); }
+function pocketWords(e) { return String(e.details || '').replace(POCKET_STAMP_RE, '').trim(); }
 // ✎ v7.35 — Eric: "on the pocket list both in the not done and done i think it needs an edit text button as i often word things
 // very differently for myself and would want to add or correct it before making it a phil or crew task and sending it onto them."
 // A ✎ after the words on every pocket row of the Summary (the live list, ✓ done, and POCKET — not done): the words become a box
@@ -23694,7 +23806,7 @@ function pocketItemWordsSave(id, v) {
 function pocketNoteWordsSave(id, v) {
   const e = entries.find(x => String(x.id) === String(id)), t = String(v || '').trim().slice(0, 300);
   if (e && t && t !== pocketWords(e).replace(/^✓\s*/, '')) {
-    const stamp = (String(e.details || '').match(/^(🎒 (?:Flushed|Overflow|Not done) — |✓ )/) || [''])[0];   // the stamp stays, the words change
+    const stamp = (String(e.details || '').match(/^(🎒 (?:Flushed|To the grinder|Overflow|Not done) — |✓ )/) || [''])[0];   // the stamp stays, the words change
     e.details = stamp + t;
     scheduleSave(); renderLog(); toast('✎ Kept — the new words go wherever it goes next ✓');
   }
@@ -24545,7 +24657,7 @@ function boardLines() {
   return L;
 }
 function brdFind(k, id) { return k === 't' ? todos.find(t => String(t.id) === String(id)) : k === 'p' ? pocket().find(x => String(x.id) === String(id)) : entries.find(e => String(e.id) === String(id)); }
-function brdWords(t) { return String(t || '').replace(/^🎒 (Flushed|Overflow|Not done) — /, ''); }
+function brdWords(t) { return String(t || '').replace(POCKET_STAMP_RE, ''); }
 // the order inside a heading: lines he has not placed first (priority, then newest), then the ones he arranged
 function brdCmp(a, b) {
   if (a.ord == null && b.ord == null) return (b.p - a.p) || b.ts.localeCompare(a.ts);
@@ -24572,7 +24684,7 @@ function renderBoard() {
     if (l.k === 't') bits.push(l.due ? `📅 due ${esc(l.due)}` : 'to-do');
     else {
       const e = l.src;
-      if (e.pocket === 'flushed') bits.push('🎒 flushed'); else if (e.pocket === 'over') bits.push('🎒 overflow'); else if (e.pocket === 'swept') bits.push('🎒 not done');
+      if (e.pocket === 'flushed') bits.push('🎒 from the pocket'); else if (e.pocket === 'over') bits.push('🎒 overflow'); else if (e.pocket === 'swept') bits.push('🎒 not done');
       if (e.mail) bits.push('📧 email');
       if (e.heads) bits.push('⚠ heads-up');
       const to = Array.isArray(e.sendTo) ? e.sendTo : [];
@@ -24670,7 +24782,7 @@ function brdEditSave(k, id) {
   if (!t) { toast('The words are empty — ✓ takes a line off instead', false); return; }
   if (k === 't') x.text = t;
   else if (k === 'p') { x.t = t.slice(0, 140); renderPocket(); }   // 🎒 v6.82 — the pocket item itself
-  else { brdTouch(x); const stamp = (String(x.details || '').match(/^🎒 (Flushed|Overflow|Not done) — /) || [''])[0]; x.details = stamp + t; if (x.vis) publishSharedNotes(); }
+  else { brdTouch(x); const stamp = (String(x.details || '').match(POCKET_STAMP_RE) || [''])[0]; x.details = stamp + t; if (x.vis) publishSharedNotes(); }
   _brdOpen = ''; scheduleSave(); if (k === 'e') renderLog();
   renderReview(); toast('✎ Saved ✓');
 }
@@ -24937,7 +25049,7 @@ function renderAskRecent() {
     })()),
     ...shownEntries.map(e => { const k = kindOf(e), d = (e.details || '').replace(/^(Text|Email) from /, ''); return {
       ts: +new Date(e.ts), kind: k, who: personOf(e), e,
-      h: `${GLYPH[k]} <span class="arq">${k === 'pocket' && POCKET_WORD[e.pocket] ? `<b>${POCKET_WORD[e.pocket]}</b> — ${esc(pocketWords(e).slice(0, 60))}` : esc((k === 'pocket' ? d.replace(/^🎒 /, '') : d).slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && !isOverheadEntry(e) && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}${truckCostBit(e)}${!CREW_NAME ? rcptLampHtml(e) : ''}</span>` }; })
+      h: `${GLYPH[k]} <span class="arq">${k === 'pocket' && POCKET_WORD[e.pocket] ? `<b>${POCKET_WORD[e.pocket]}</b> — ${esc(pocketWords(e).slice(0, 60))}` : esc((k === 'pocket' ? d.replace(/^🎒 /, '').replace(/^Flushed — /, 'To the grinder — ') : d).slice(0, 70))}${!CREW_NAME && e.ai && /💵 \$/.test(e.ai) && !e.budg && !isOverheadEntry(e) && e.job && e.job !== '—' ? (e.category ? ' <b style="white-space: nowrap;" onclick="estQuickUpcoming(' + e.id + ', event)">🔮 → Upcoming</b>' : ' <b style="white-space: nowrap;" onclick="estJumpFromEntry(' + e.id + ', event)">💰 → Budget</b>') : ''}${truckCostBit(e)}${!CREW_NAME ? rcptLampHtml(e) : ''}</span>` }; })
   ].filter(it => !isNaN(it.ts));
   // 🎒 v7.07 — under the 🎒 plate, what is ON the pocket list right now leads (it is not on the log until it is checked
   // off or flushed), then every pocket note, newest first. A tap on one still on the list goes to the list itself.
@@ -25339,7 +25451,7 @@ function renderWhoSelects() {
   });
   renderShareToSelect();
 }
-const SHARE_REGULARS = ['Logan', 'Phil', 'Shevaun'];
+const SHARE_REGULARS = ['Bookkeeper', 'Phil', 'Shevaun'];
 function renderShareToSelect() {
   const sel = $('fcShareTo');
   if (!sel) return;
@@ -26146,7 +26258,7 @@ function logRowHtml(e) {
       : e.synced ? '<span class="sdot ok" title="Saved to Dropbox">✓</span>'
       : '<span class="sdot pend" title="Not saved to Dropbox yet">○</span>';
     const truckBit = e.truck ? `<span>·</span><span>${esc(e.truck)}${e.odometer != null ? ` @ ${e.odometer.toLocaleString()}` : ''}</span>` : '';
-    const sharedBit = e.shared ? `<span>·</span><span class="log-shared" title="Sent via File + Share">📤 sent → ${esc(e.sharedTo || 'Logan')}</span>` : '';
+    const sharedBit = e.shared ? `<span>·</span><span class="log-shared" title="Sent via File + Share">📤 sent → ${esc(e.sharedTo || 'the bookkeeper')}</span>` : '';
     const whoBit = e.who && e.who !== 'Me' ? `<span>·</span><span title="Tagged for ${esc(e.who)}">→ ${esc(e.who)}</span>` : '';
     const headsBit = e.heads ? `<span>·</span><span style="font-weight: var(--fw8, 800);" title="Heads-up — this bites later work">⚠ HEADS-UP</span>` : '';
     const tagBit = (e.tags || []).length ? `<span>·</span>` + e.tags.map(t => `<span style="cursor: pointer;" title="Show everything tagged ${esc(t)}" onclick="logFilterTag('${escq(t)}', event)">🏷 ${esc(t)}</span>`).join(' ') : '';
@@ -26458,7 +26570,7 @@ function csvString(list) {
     '"' + ((e.tags || []).join('; ')) + '"',
     '"' + (e.truck ?? '') + '"', e.odometer ?? '',
     e.miles ?? '', e.amount ?? '', e.hours ?? '', '"' + e.filedTo + '"',
-    e.shared ? '"' + (e.sharedTo || 'Logan') + '"' : '',
+    e.shared ? '"' + (e.sharedTo || 'Bookkeeper') + '"' : '',
     (e.billable === false || isOverheadEntry(e)) ? '"no"' : ''   // 🏢 v6.35 — overhead receipts reach Logan's CSV as billable = no
   ].join(','));
   return head + '\n' + rows.join('\n');
@@ -26477,7 +26589,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.76';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.77';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

@@ -165,7 +165,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     $('chNoteBox').value = 'should be 10, he left at 4'; chNoteSave();
     const c2 = [..._fold(/OAK HOUSE/).closest('.ch-job').querySelectorAll('.ch-pr')[1].querySelectorAll('.ch-c')][2], list = document.querySelector('#revBox .ch-notes').textContent.replace(/\s+/g, ' ');
     chNoteOpen(-1, -1); $('chNoteBox').value = 'Bo gets a pay grade next week'; chNoteSave();
-    return /Bo · Tue 9\/29/.test(head) && /13\.0 h/.test(head) && /A FIX FOR LOGAN/.test(head) && /hours are not changed here/.test(head) && c2.classList.contains('nt') && /✎/.test(c2.textContent) && /has a fix for Logan/.test(c2.getAttribute('aria-label')) && /FIXES FOR LOGAN — they ride with the file · 1/.test(list) && /Bo · Tue 9\/29 — should be 10, he left at 4/.test(list) &&
+    return /Bo · Tue 9\/29/.test(head) && /13\.0 h/.test(head) && /A FIX FOR THE BOOKKEEPER/.test(head) && /hours are not changed here/.test(head) && c2.classList.contains('nt') && /✎/.test(c2.textContent) && /has a fix for the bookkeeper/.test(c2.getAttribute('aria-label')) && /FIXES FOR THE BOOKKEEPER — they ride with the file · 1/.test(list) && /Bo · Tue 9\/29 — should be 10, he left at 4/.test(list) &&
       _P().notes.length === 2 && _P().notes[1].who === '' && _P().sig === sig0 && chSig(_P()) === sig0 && _lit() === '1100';
   }));
 
@@ -176,7 +176,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     Object.defineProperty(navigator, 'canShare', { value: d => !!(d && d.files && d.files.length), configurable: true, writable: true });
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window._clip = t; return Promise.resolve(); } }, configurable: true });
     _said.length = 0; $('chSendBtn').click();
-    const a = !_shared && !!$('chMailBox') && /Type his portal address once/.test(_said.join(' '));
+    const a = !_shared && !!$('chMailBox') && /Type the portal address once/.test(_said.join(' '));
     $('chMailBox').value = 'not an address'; chMailSave(); const b = !prefs.loganMail && /does not look like an email/.test(_said.join(' '));
     $('chMailBox').value = 'books@example.test'; chMailSave();
     return a && b && prefs.loganMail === 'books@example.test' && !$('chMailBox') && /to books@example\.test/.test(_txt());
@@ -194,7 +194,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('📗 SEND rides the tap onto the phone\'s send sheet with TWO files: the time clock\'s Excel exactly as it came — same name, same bytes — and his approval as a text file', sd.rode && sd.litBefore === '1100' && sd.same && sd.names.join(',') === 'Clore-PPE-2026-10-10.xlsx|application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,Clore-PPE-2026-10-10 - approved by Eric.txt|text/plain', JSON.stringify({ rode: sd.rode, names: sd.names, same: sd.same }));
   ok('the words say it is approved and unchanged, each person\'s two weeks, his notes, and what is worth a look — and Logan\'s address is copied for the To line (a web page cannot fill it when a file rides along)', /pay period ending Sat 10\/10\/2026 \(9\/27 – 10\/10\)/.test(sd.words) && /APPROVED by Eric/.test(sd.words) && /attached, unchanged/.test(sd.words) && /Alder, Ann \(L3\): week 1 40\.0 h · week 2 17\.5 h · total 57\.5 h/.test(sd.words) && /Birch, Bo \(L1\).*the time clock counts 5\.0 h of that as overtime/.test(sd.words) && /All together: 87\.5 h/.test(sd.words) &&
     /NOTES FROM ERIC:\n- Bo · Tue 9\/29: should be 10, he left at 4\n- the whole pay period: Bo gets a pay grade next week/.test(sd.words) && /WORTH A LOOK[\s\S]*- Bo — 2\.5 h with no job on it/.test(sd.words) && !/</.test(sd.words) && sd.text === sd.words && /APPROVED$/.test(sd.title) && sd.clip === 'books@example.test' && /is copied — paste it on the To line/.test(sd.said), sd.words);
-  ok('when the sheet comes back ③ TO LOGAN lights, and a 📗 note lands in the log under Internal / Admin tagged Bookkeeper (it shows under SENT TO LOGAN)', sd.lit === '1110' && /③ SENT TO LOGAN/.test(sd.word) && sd.added === 1 && sd.e.type === 'Note' && sd.e.job === 'Internal / Admin' && (sd.e.tags || []).includes('Bookkeeper') && sd.e.ref === '2026-10-10' && /Crew hours → Logan: pay period ending 10\/10 · 87\.5 h · 3 people · 2 notes from you/.test(sd.e.d) && sd.tag, JSON.stringify(sd.e));
+  ok('when the sheet comes back ③ TO LOGAN lights, and a 📗 note lands in the log under Internal / Admin tagged Bookkeeper (it shows under SENT TO LOGAN)', sd.lit === '1110' && /③ SENT TO THE BOOKKEEPER/.test(sd.word) && sd.added === 1 && sd.e.type === 'Note' && sd.e.job === 'Internal / Admin' && (sd.e.tags || []).includes('Bookkeeper') && sd.e.ref === '2026-10-10' && /Crew hours → the bookkeeper: pay period ending 10\/10 · 87\.5 h · 3 people · 2 notes from you/.test(sd.e.d) && sd.tag, JSON.stringify(sd.e));
   ok('once it has gone the OK boxes are locked, in words — a light comes off only from the far end, and only on a second tap', await page.evaluate(async () => {
     _said.length = 0; _okBox(/OAK HOUSE/).click(); const a = /take the 📗 light off first/.test(_said.join(' ')) && _lit() === '1110';
     _cube(3).click(); const b = _cube(3).classList.contains('armed') && /SURE\?/.test(_cube(3).textContent) && /tap again to take it off/.test(_cube(3).getAttribute('aria-label')) && _lit() === '1110';
@@ -205,7 +205,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     _cube(4).click(); const a = _lit() === '1111' && /④ PAID/.test($('chWord').textContent); window._undo(); const b = _lit() === '1110';
     _cube(4).click(); _cube(4).click(); const c = _lit() === '1111' && _cube(4).classList.contains('armed'); _cube(4).click(); const d = _lit() === '1110';
     _said.length = 0; _cube(3).click(); _cube(3).click(); const e = _lit() === '1100' && /reads APPROVED again/.test(_said.join(' '));
-    _said.length = 0; _cube(4).click(); const f = _lit() === '1100' && /Send it to Logan first/.test(_said.join(' '));
+    _said.length = 0; _cube(4).click(); const f = _lit() === '1100' && /Send it to the bookkeeper first/.test(_said.join(' '));
     return a && b && c && d && e && f;
   }));
   ok('with no send sheet in the browser: both files go to the downloads, the mail app opens with the address, the subject and the words — and because only he knows whether it went, HE says so', await page.evaluate(async () => {
@@ -229,7 +229,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     _said.length = 0; await chDrop([new File([newer], 'Clore-PPE-2026-10-10.xlsx')]); r.again = _said.join(' | '); r.lit3 = _lit();
     return r;
   });
-  ok('a newer file for the SAME period with different hours drops it back to ① and says exactly what moved; only the job that changed loses its OK; his notes stay; the history keeps that it HAD been sent', nf.lit === '1000' && nf.ok === 'O - Pine Cabin|UNKNOWN PROJECT' && nf.need.some(t => /^🔁 changed since you OK'd it — Ann · Oak House · Tue 9\/29: 10\.0 → 8\.0 h$/.test(t)) && nf.notes === 2 && /HAD been sent to Logan/.test(nf.hist) && /The hours CHANGED in this file — 1 day/.test(nf.said), JSON.stringify(nf));
+  ok('a newer file for the SAME period with different hours drops it back to ① and says exactly what moved; only the job that changed loses its OK; his notes stay; the history keeps that it HAD been sent', nf.lit === '1000' && nf.ok === 'O - Pine Cabin|UNKNOWN PROJECT' && nf.need.some(t => /^🔁 changed since you OK'd it — Ann · Oak House · Tue 9\/29: 10\.0 → 8\.0 h$/.test(t)) && nf.notes === 2 && /HAD been sent to the bookkeeper/.test(nf.hist) && /The hours CHANGED in this file — 1 day/.test(nf.said), JSON.stringify(nf));
   ok('the first original is not written over — the newer file is kept beside it; OK-ing the changed job clears the 🔁 line and re-approves; the same file again changes nothing', nf.twoKept === 2 && / \(1\)\.xlsx$/.test(nf.keep) && nf.after === false && nf.lit2 === '1100' && /Already in — the hours in this file are the same/.test(nf.again) && nf.lit3 === '1100', JSON.stringify({ keep: nf.keep, two: nf.twoKept, again: nf.again }));
 
   console.log('— 📥 found in Dropbox · other doors · bad files —');

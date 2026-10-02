@@ -171,7 +171,7 @@ const { chromium } = require('playwright');
     window._bill = p;
     return !!p && p.kind === 'bill' && p.payload.who === 'Peninsula Overhead Doors' && p.payload.amt === 3290 && p.payload.due === '2026-10-10' && p.payload.job === 'Mery' && p.payload.fname === 'IMG_0002.jpg' &&
       /Bill spotted — who pays it\?/.test(t) && /\$3,290\.00 · due 2026-10-10/.test(t) && /from Peninsula Overhead Doors/.test(t) && /🏪 Peninsula Overhead Doors/.test(t) &&
-      /📗 Logan pays it/.test(t) && /🔁 Autopay — never ask about Peninsula Overhead Doo/.test(t) && /✓ I'll pay it — remind me/.test(t) && /✕ Not a bill/.test(t) && !/ADD IT/.test(t);
+      /📗 The bookkeeper pays it/.test(t) && /🔁 Autopay — never ask about Peninsula Overhead Doo/.test(t) && /✓ I'll pay it — remind me/.test(t) && /✕ Not a bill/.test(t) && !/ADD IT/.test(t);
   }));
 
   ok('the job wheel on the card starts where the wheel was when he took the photo — his own pick, pre-lit', await page.evaluate(() =>
@@ -221,7 +221,7 @@ const { chromium } = require('playwright');
     const p = pendingQueue[0]; renderReview();
     const shows = /📷 Look at it/.test($('revBox').textContent);
     reviewAct(String(p.id), 'logan');
-    return shows && (e.tags || []).includes('Bookkeeper') && !pendingQueue.length && /Logan pays it/.test($('toast').textContent);
+    return shows && (e.tags || []).includes('Bookkeeper') && !pendingQueue.length && /The bookkeeper pays it/.test($('toast').textContent);
   }));
 
   ok('✕ Not a bill → the card goes, nothing is learned, nothing is added', await page.evaluate(() => {

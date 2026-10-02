@@ -71,7 +71,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   ok('the pocket flush sits under GENERAL, stamp off the words, "🎒 flushed" in small print; the to-do shows its due day', await page.evaluate(() => {
     const f = document.querySelector(`.bd-line[data-key="e:${_e.flush.id}"]`), t = document.querySelector('.bd-line[data-key="t:900"]');
-    return !!f && f.closest('.bd-body').dataset.job === '—' && /call the gravel guy/.test(f.querySelector('.bd-t').textContent) && !/Flushed —/.test(f.querySelector('.bd-t').textContent) && /🎒 flushed/.test(f.textContent) &&
+    return !!f && f.closest('.bd-body').dataset.job === '—' && /call the gravel guy/.test(f.querySelector('.bd-t').textContent) && !/Flushed —/.test(f.querySelector('.bd-t').textContent) && /🎒 from the pocket/.test(f.textContent) &&
       !!t && t.closest('.bd-body').dataset.job === 'Mery' && /📅 due/.test(t.textContent);
   }));
 

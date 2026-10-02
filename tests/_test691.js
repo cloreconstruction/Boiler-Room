@@ -240,7 +240,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const words = btns.map(b => b.textContent.replace(/\s+/g, '')).join('|'), rects = btns.map(b => b.getBoundingClientRect());
     const oneRow = new Set(rects.map(r => Math.round(r.top))).size === 1, small = rects.every(r => r.height >= 40 && r.height <= 48 && r.width <= 84), narrow = rects.reduce((s, r) => s + r.width, 0) <= 300;
     const big = parseFloat(getComputedStyle(lines[0].querySelector('.sum-m > b')).fontSize) >= 15 && parseFloat(getComputedStyle(btns[0].querySelector('b')).fontSize) <= 11;
-    const labelled = btns.every(b => !!b.getAttribute('aria-label')) && /flushed ·/.test(lines[0].querySelector('.pk-meta').textContent);
+    const labelled = btns.every(b => !!b.getAttribute('aria-label')) && /sent to the grinder ·/.test(lines[0].querySelector('.pk-meta').textContent);
     btns[2].click();   // ✓ Done
     const did = entries.some(e => e.pocket === 'done') && document.querySelectorAll('.rev-sec-body[data-sec="pocket"] .pk-acts').length === 2;
     const fits = $('revBox').scrollWidth <= $('revBox').clientWidth + 1;

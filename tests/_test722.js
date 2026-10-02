@@ -76,7 +76,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await checkSharedNotes(); renderCrewShared();
     const card = $('crewSharedCard'), t = card.textContent.replace(/\s+/g, ' ').trim();
     const row = [...card.querySelectorAll('*')].find(el => el.children.length && /thermostats/.test(el.textContent) && !/WITH ERIC/.test(el.textContent)) || card;
-    return { shown: card.style.display !== 'none', head: /WITH ERIC/.test(t), words: /check the thermostats at the cabin/.test(t), job: /Pine Cabin/.test(t), tag: /pocket/.test(t), flush: /⤵ Flush to the grinder/.test(t), respond: /💬 Respond/.test(t), asks: !!document.querySelector('#crewAskCard') && $('crewAskCard').style.display !== 'none' && /thermostats/.test($('crewAskCard').textContent), attn: /NEEDS YOUR ATTENTION/.test(t), t: t.slice(0, 300) };
+    return { shown: card.style.display !== 'none', head: /WITH ERIC/.test(t), words: /check the thermostats at the cabin/.test(t), job: /Pine Cabin/.test(t), tag: /pocket/.test(t), flush: /⚙ To the grinder/.test(t), respond: /💬 Respond/.test(t), asks: !!document.querySelector('#crewAskCard') && $('crewAskCard').style.display !== 'none' && /thermostats/.test($('crewAskCard').textContent), attn: /NEEDS YOUR ATTENTION/.test(t), t: t.slice(0, 300) };
   }, out.shared);
   ok('his WITH ERIC card shows it — the words, the job, 🏷 pocket, ⤵ Flush to the grinder and 💬 Respond (💬 v7.33); it is NOT marked ⚠ (⚠ was off)', seen.shown && seen.head && seen.words && seen.job && seen.tag && seen.flush && seen.respond && !seen.asks && !seen.attn, JSON.stringify(seen));
   await phil.ctx.close();

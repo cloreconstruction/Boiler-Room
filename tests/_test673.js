@@ -79,7 +79,7 @@ const { chromium } = require('playwright');
 
   // 🎒 v7.16 — Eric: "The pocket list needs to be separated from the grinder 5 steps. It's in the same bigger window." Its own card now,
   // right above the grinder's card (still just above ①, his v6.75 spot) — no longer inside the grinder's window.
-  ok('the list is its own card, right above the grinder card and ① PICK THE JOB (v6.75 spot, v7.16 own window): one line, a + button, the cap between − and +, ⤵ Flush, empty words', await page.evaluate(() => {
+  ok('the list is its own card, right above the grinder card and ① PICK THE JOB (v6.75 spot, v7.16 own window): one line, a + button, the cap between − and +, ⚙ Grind all (v7.77 — it was ⤵ Flush), empty words', await page.evaluate(() => {
     prefs.pocketMax = 8; renderPocket();
     const card = $('pocketCard');
     const k = [...document.querySelector('.wrap').children].map(e => e.id).filter(Boolean);
@@ -89,11 +89,11 @@ const { chromium } = require('playwright');
       $('pocketCount').textContent === '0/8' && !!document.querySelector('.pk-flush') && document.querySelectorAll('.pk-cap .pk-tiny').length === 2;
   }));
 
-  ok('type it, tap + (or Enter): it lands under TODAY with ✓ Done, ✎ and ⤵ Flush (v6.84 — the ✕ and ➡ plates are gone); the count says 2 of 8', await page.evaluate(() => {
+  ok('type it, tap + (or Enter): it lands under TODAY with ✓ Done, ✎ and ⚙ Grind (v7.77 — it was ⤵ Flush; v6.84 — the ✕ and ➡ plates are gone); the count says 2 of 8', await page.evaluate(() => {
     $('pocketIn').value = 'screws for Hertz'; pocketAddFromBox();
     $('pocketIn').value = 'call the inspector'; $('pocketIn').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const t = $('pocketList').textContent;
-    return pocket().length === 2 && $('pocketIn').value === '' && /TODAY/.test(t) && /call the inspector/.test(t) && /screws for Hertz/.test(t) && /✓ Done/.test(t) && /⤵ Flush/.test(t) && /✎/.test(t) && !/➡ Tomorrow/.test(t) && !/✕/.test(t) && $('pocketCount').textContent === '2/8';
+    return pocket().length === 2 && $('pocketIn').value === '' && /TODAY/.test(t) && /call the inspector/.test(t) && /screws for Hertz/.test(t) && /✓ Done/.test(t) && /⚙ Grind/.test(t) && /✎/.test(t) && !/➡ Tomorrow/.test(t) && !/✕/.test(t) && $('pocketCount').textContent === '2/8';
   }));
 
   ok('pocketTomorrow (the summary\'s ↩ uses it) moves an item under TOMORROW', await page.evaluate(() => {
@@ -119,13 +119,13 @@ const { chromium } = require('playwright');
     return !pocket().some(x => x.t === 'oops') && entries.length === n;
   }));
 
-  ok('✎ edits the words in place; ⤵ Flush sends that one item to the log as a flushed note, off the list (v6.84)', await page.evaluate(() => {
+  ok('✎ edits the words in place; ⚙ Grind sends that one item to the log stamped "🎒 To the grinder —", off the list (v6.84; v7.77 the words)', await page.evaluate(() => {
     pocketAdd('gravel'); const it = pocket().find(x => x.t === 'gravel');
     pocketEditStart(it.id); const inp = document.querySelector('.pk-row input.pk-edit'); if (!inp) return false;
     inp.value = 'gravel for the drive'; inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const edited = it.t === 'gravel for the drive' && /gravel for the drive/.test($('pocketList').textContent) && !document.querySelector('.pk-row input');
     const n = entries.length; pocketFlushOne(it.id);
-    return edited && !pocket().some(x => x.id === it.id) && entries.length === n + 1 && entries[0].pocket === 'flushed' && /🎒 Flushed — gravel for the drive/.test(entries[0].details) && entries[0].job === '—';
+    return edited && !pocket().some(x => x.id === it.id) && entries.length === n + 1 && entries[0].pocket === 'flushed' && /🎒 To the grinder — gravel for the drive/.test(entries[0].details) && entries[0].job === '—';
   }));
 
   ok('over the cap the OLDEST goes to the grinder\'s pile as a pocket note — the newest stay in sight (v6.75)', await page.evaluate(() => {
@@ -149,13 +149,13 @@ const { chromium } = require('playwright');
     return a && b && c && d;
   }));
 
-  ok('⤵ Flush clears the list and sends every item to the grinder\'s pile; an empty flush just says so', await page.evaluate(() => {
+  ok('⚙ Grind all clears the list and sends every item to the grinder\'s pile; an empty one just says so (v7.77 — it was ⤵ Flush)', await page.evaluate(() => {
     prefs.pocket = []; pocketAdd('one'); pocketAdd('two');
     const n = entries.length;
     const flushed = pocketFlush();
     const notes = entries.slice(0, 2).map(e => e.details).sort().join('|');
     const empty = pocketFlush();
-    return flushed === 2 && pocket().length === 0 && entries.length === n + 2 && notes === '🎒 Flushed — one|🎒 Flushed — two' && entries[0].pocket === 'flushed' && empty === 0 && /Nothing to flush/.test($('toast').textContent);
+    return flushed === 2 && pocket().length === 0 && entries.length === n + 2 && notes === '🎒 To the grinder — one|🎒 To the grinder — two' && entries[0].pocket === 'flushed' && empty === 0 && /Nothing to grind/.test($('toast').textContent);
   }));
 
   ok('the nightly sweep: what was not done yesterday leaves the list as a "not done" note tagged pocket; today\'s and tomorrow\'s stay', await page.evaluate(() => {

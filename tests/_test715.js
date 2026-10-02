@@ -39,15 +39,15 @@ const { chromium } = require('playwright');
   console.log('— ⤵ v7.15 a flush plate on the card, and on every row —');
   const head = await page.evaluate(() => ({ btn: ($('cfFlushBtn') || {}).textContent, sameStyle: $('cfFlushBtn').classList.contains('pk-flush') && $('cfFlushBtn').classList.contains('pk-tiny'),
     rowBtns: [...document.querySelectorAll('#crewFeedList .cf-flush')].map(b => b.textContent.trim()) }));
-  ok('the card\'s head wears the pocket\'s own ⤵ Flush plate, with the count it will take: ⤵ Flush 4', head.btn === '⤵ Flush 4' && head.sameStyle, JSON.stringify(head));
-  ok('every row has its own ⤵ Flush: "into your log" while its Sort card waits, "off the card" once it was handled', head.rowBtns.filter(t => t === '⤵ Flush to the grinder').length === 3 && head.rowBtns.filter(t => t === '⤵ Flush — off the card').length === 1   /* 💬 v7.33 — Eric's words */, JSON.stringify(head.rowBtns));
+  ok('the card\'s head wears the pocket\'s own ⤵ Flush plate, with the count it will take: ⤵ Flush 4', head.btn === '⚙ Grind all 4' && head.sameStyle, JSON.stringify(head));
+  ok('every row has its own ⤵ Flush: "into your log" while its Sort card waits, "off the card" once it was handled', head.rowBtns.filter(t => t === '⚙ To the grinder').length === 3 && head.rowBtns.filter(t => t === '⚙ Off the card — already in your log').length === 1   /* 💬 v7.33 — Eric's words */, JSON.stringify(head.rowBtns));
 
   ok('narrowed by the search ("dumpster") the plate says ⤵ Flush these 1 — and flushing takes only that one', await page.evaluate(() => {
     _cfQ = 'dumpster'; renderCrewFeed();
     const lab = $('cfFlushBtn').textContent;
     crewFeedFlushAll();
     const e = entries.find(x => /Dumpster full at Pine/.test(x.details || ''));
-    return lab === '⤵ Flush these 1' && !!e && e.who === 'Phil' && !pendingQueue.some(p => /crew:Phil:12:/.test(p.id)) && _cfQ === '' && $('cfFlushBtn').textContent === '⤵ Flush 3';
+    return lab === '⚙ Grind these 1' && !!e && e.who === 'Phil' && !pendingQueue.some(p => /crew:Phil:12:/.test(p.id)) && _cfQ === '' && $('cfFlushBtn').textContent === '⚙ Grind all 3';
   }));
   const r1 = await rows();
   ok('…the other three stay on the card', r1.length === 3 && !r1.some(t => /Dumpster/.test(t)), JSON.stringify(r1.map(t => t.slice(0, 40))));
@@ -59,7 +59,7 @@ const { chromium } = require('playwright');
     const dup = entries.filter(x => /Already dealt with/.test(x.details || '')).length;
     return entries.length === before + 2 && trim && trim.who === 'Phil' && win && win.who === 'Phil' && dup === 0
       && !pendingQueue.some(p => /^crew:Phil:/.test(p.id)) && getComputedStyle($('crewFeedCard')).display === 'none'
-      && /3 off the card — 2 into your running log, 1 already handled/.test(_said.join(' '));
+      && /3 off the card — 2 into your grinder, 1 already handled/.test(_said.join(' '));   // ⚙ v7.77 — his word for where it goes
   }));
   ok('what was flushed is remembered in his synced settings (prefs.crewFeedGone), so the next sweep does not bring it back', await page.evaluate(async () => {
     await checkCrewLogs(); renderCrewFeed();
@@ -70,7 +70,7 @@ const { chromium } = require('playwright');
     window._files['/clore daylog/crew/phil/app data/entries.json'] = JSON.stringify({ entries: _phil });
     await checkCrewLogs();
     const t = [...document.querySelectorAll('#crewFeedList .cf-row')].map(r => r.textContent);
-    return t.length === 1 && /Pump truck booked/.test(t[0]) && $('cfFlushBtn').textContent === '⤵ Flush 1';
+    return t.length === 1 && /Pump truck booked/.test(t[0]) && $('cfFlushBtn').textContent === '⚙ Grind all 1';
   }));
   ok('a single row\'s ⤵ Flush logs it and it leaves the card (the card hides when nothing is left)', await page.evaluate(() => {
     document.querySelector('#crewFeedList .cf-flush').click();
@@ -95,7 +95,7 @@ const { chromium } = require('playwright');
     const plate = document.querySelector('#crewFeedList .cf-flush').textContent.trim();
     document.querySelector('#crewFeedList .cf-flush').click();
     const e = entries.find(x => /Siding done on the north wall/.test(x.details || ''));
-    return noCard && plate === '⤵ Flush to the grinder' && !!e && e.who === 'Phil' && e.type === 'Note' && e.details === 'Phil: ✅ FINISHED: Siding done on the north wall'
+    return noCard && plate === '⚙ To the grinder' && !!e && e.who === 'Phil' && e.type === 'Note' && e.details === 'Phil: ✅ FINISHED: Siding done on the north wall'
       && e.job === 'Oak House' && !pendingQueue.some(p => /crew:Phil:18:/.test(p.id)) && pendDone.has(e.crewKey);
   }));
   ok('a note his OTHER device already logged (its card came back on this one) is NOT logged twice — old entries matched by name, exact words and day', await page.evaluate(async () => {
@@ -107,7 +107,7 @@ const { chromium } = require('playwright');
     await checkCrewLogs();
     const carded = pendingQueue.some(p => /crew:Phil:19:/.test(p.id));
     const plates = [...document.querySelectorAll('#crewFeedList .cf-row')].map(r => r.textContent.replace(/\s+/g, ' '));
-    const tilePlate = /Tile is on site.*Flush — off the card/.test(plates.find(t => /Tile is on site/.test(t)) || '');
+    const tilePlate = /Tile is on site.*Off the card — already in your log/.test(plates.find(t => /Tile is on site/.test(t)) || '');
     const before = entries.length;
     $('cfFlushBtn').click();
     const tiles = entries.filter(x => /Tile is on site/.test(x.details || '')).length, grout = entries.filter(x => /Grout is on site/.test(x.details || '')).length;
@@ -122,7 +122,7 @@ const { chromium } = require('playwright');
     const plate = [...document.querySelectorAll('#crewFeedList .cf-row')].map(r => r.textContent.replace(/\s+/g, ' ')).find(t => /Not paid for the deck/.test(t)) || '';
     $('cfFlushBtn').click();
     const e = entries.find(x => /Not paid for the deck yet/.test(x.details || ''));
-    return carded && /Flush to the grinder/.test(plate) && todos[0].done === true && !!e && e.details === 'Phil: ✅ FINISHED: Not paid for the deck yet' && e.who === 'Phil'
+    return carded && /To the grinder/.test(plate) && todos[0].done === true && !!e && e.details === 'Phil: ✅ FINISHED: Not paid for the deck yet' && e.who === 'Phil'
       && !pendingQueue.some(p => /crew:Phil:21:/.test(p.id));
   }));
   ok('the key is on every crew note the flush logs, so the next check is exact', await page.evaluate(() => {

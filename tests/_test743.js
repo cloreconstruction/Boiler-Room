@@ -141,11 +141,15 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
 
   console.log('— 👷 Phil\'s phone —');
   const phil = await open(() => { try { localStorage.setItem('daylog-crew-name', 'Phil'); localStorage.setItem('daylog-crew-root', '/Phil'); localStorage.setItem('daylog-crew-jobs', JSON.stringify(['Oak House'])); } catch (e) {} });
-  ok('a crew phone: the same order (② the photo, ③ the words); behind 🔒 Just me the two fixed chips are dead with the rest of the tags; ⑤ says a locked note stays on this phone only', await phil.page.evaluate(() => {
+  // 🧾 v7.77 — Eric: "If he pushed receipt it should automatically highlight send to eric." So behind 🔒 Just me the 🧾 Receipt chip is
+  // the ONE chip that stays live on a crew phone (a tap on it lights 📨 Just Eric — _test777); his own tags are still dead.
+  ok('a crew phone: the same order (② the photo, ③ the words); behind 🔒 Just me his own tags are dead and the 🧾 Receipt chip alone stays live (v7.77); ⑤ says a locked note stays on this phone only', await phil.page.evaluate(() => {
     window.scheduleSave = () => {}; qnVis = ''; qnVisNames.clear(); renderVisChips(); renderTagChips(); lockGate();
     const st = [...document.querySelectorAll('#qnCard .g-step')].map(e => e.querySelector('.g-step-label').textContent.replace(/\s+/g, ' ').trim());
-    const fx = [...document.querySelectorAll('#qnTagFixed .pick-chip')];
-    return CREW_NAME === 'Phil' && /^2 ADD A PHOTO OR FILE/.test(st[1]) && /^3 SAY IT/.test(st[2]) && document.body.classList.contains('crew-locked') && fx.length >= 1 && fx.every(b => b.disabled) && /🔒 stays on this phone only — never syncs/.test($('visExplain').textContent);
+    const fx = [...document.querySelectorAll('#qnTagFixed .pick-chip')], own = [...document.querySelectorAll('#qnTagChips button')];
+    return CREW_NAME === 'Phil' && /^2 ADD A PHOTO OR FILE/.test(st[1]) && /^3 SAY IT/.test(st[2]) && document.body.classList.contains('crew-locked') && fx.length >= 1
+      && fx.every(b => b.classList.contains('rcpt-chip') ? !b.disabled : b.disabled) && fx.some(b => b.classList.contains('rcpt-chip')) && own.length >= 1 && own.every(b => b.disabled)
+      && /🔒 stays on this phone only — never syncs/.test($('visExplain').textContent);
   }));
   await phil.ctx.close();
 

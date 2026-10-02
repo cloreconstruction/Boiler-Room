@@ -91,7 +91,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     await page.evaluate(() => { const st = schedSteps('Oak House'); schedDoneToggle('Oak House', st[1].id); schedSet('Oak House', st[1].id, 'who', 'crew'); });
     const st = await steps();
     const noWheel = await page.evaluate(() => { openSchedule('Oak House'); _schedOpen = schedSteps('Oak House')[1].id; renderSchedule(); const r = !$('schSid') && $('schWho').value === 'crew'; return r; });
-    await page.evaluate(() => { const st = schedSteps('Oak House'); schedSet('Oak House', st[1].id, 'who', 'sub'); schedSet('Oak House', st[1].id, 'sid', 'sDK'); schedSet('Oak House', st[1].id, 'note', 'Pat said Tuesday, waiting on the permit'); closeReview(); });
+    // (v7.77 — found on a FRIDAY: who → crew puts the step on the crew's next work day (v7.76: a step never starts on a day it does
+    // not work), so on Fri–Sun the "under way" step had slid to Monday and read ○ ahead for the rest of the suite. Back as a sub's
+    // step it is put on the sub's latest work day up to today again, exactly as the fixture set it.)
+    await page.evaluate(() => { const st = schedSteps('Oak House'); schedSet('Oak House', st[1].id, 'who', 'sub'); schedSet('Oak House', st[1].id, 'sid', 'sDK'); schedSet('Oak House', st[1].id, 'note', 'Pat said Tuesday, waiting on the permit'); schedSet('Oak House', st[1].id, 'start', schedWorkOn('sub', localDay(new Date()), -1)); closeReview(); });
     return gone && st[1].sid === '' && st[1].who === 'crew' && noWheel && await page.evaluate(() => schedClean({ n: 'x', who: 'crew', sid: 'sDK' }).sid === '' && schedClean({ n: 'x', who: 'sub', sid: 'sDK' }).sid === 'sDK');
   })(), JSON.stringify(await steps()));
 

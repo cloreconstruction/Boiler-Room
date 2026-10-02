@@ -79,7 +79,7 @@ const { chromium } = require('playwright');
   ok('⤵ Flush on a row puts that note in Eric\'s running log under Phil, its card leaves the sort pile, and the row leaves this card', await page.evaluate(() => {
     const before = pendingQueue.length;
     const row = [...document.querySelectorAll('#crewFeedList .cf-row')].find(r => /Window order/.test(r.textContent));
-    [...row.querySelectorAll('button')].find(b => /Flush/.test(b.textContent)).click();
+    [...row.querySelectorAll('button')].find(b => /To the grinder/.test(b.textContent)).click();
     const e = entries.find(x => /Window order for Oak confirmed/.test(x.details || ''));
     const row2 = [...document.querySelectorAll('#crewFeedList .cf-row')].find(r => /Window order/.test(r.textContent));
     return !!e && e.who === 'Phil' && pendingQueue.length === before - 1 && !row2;

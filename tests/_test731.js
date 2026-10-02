@@ -62,7 +62,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ok('⤵ Flush on the FROM PHIL card: the journal note lands in Eric\'s log as "Phil: 📖 Journal photos …" WITH the picture and the 📖 stamp — the Oak House journal window lists that picture, picked; the wall note lands with both pictures and no stamp; the plain note lands with neither', await page.evaluate(async () => {
     const key = id => pendingQueue.find(p => new RegExp('^crew:Phil:' + id + ':').test(p.id)).id;
     const k21 = key(21), k22 = key(22), k23 = key(23);
-    const btn = [...document.querySelectorAll('#crewFeedList .cf-flush')].find(b => /Flush to the grinder/.test(b.textContent) && b.closest('.cf-row').textContent.includes('Journal photos'));   // 💬 v7.33 — the plate's words
+    const btn = [...document.querySelectorAll('#crewFeedList .cf-flush')].find(b => /To the grinder/.test(b.textContent) && b.closest('.cf-row').textContent.includes('Journal photos'));   // 💬 v7.33 — the plate's words
     if (btn) btn.click(); else reviewAct(k21, 'log');
     await new Promise(r => setTimeout(r, 80));
     reviewAct(k22, 'log'); reviewAct(k23, 'log');

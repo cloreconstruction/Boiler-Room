@@ -78,10 +78,10 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— ⤵ a flush can be taken back —');
   ok('his own note flushed: it STAYS on his card (⤵ flushed by you ✓) until Eric flushes it too — and the toast offers Undo; Undo puts it back exactly as it was', await (async () => {
     await page.evaluate(() => thOwnFlush('11')); await page.waitForTimeout(100);
-    const a = await page.evaluate(() => { const r = document.querySelector('#crewSharedList [data-th="Phil:11"]'); return { there: !!r, done: !!r && /⤵ flushed by you ✓/.test(r.textContent), stamp: !!entries.find(e => e.id === 11).threadDone, toast: $('toast').textContent, btn: !!$('toast').querySelector('button') }; });
+    const a = await page.evaluate(() => { const r = document.querySelector('#crewSharedList [data-th="Phil:11"]'); return { there: !!r, done: !!r && /⚙ you are done with it ✓/.test(r.textContent), stamp: !!entries.find(e => e.id === 11).threadDone, toast: $('toast').textContent, btn: !!$('toast').querySelector('button') }; });
     await page.evaluate(() => $('toast').querySelector('button').click()); await page.waitForTimeout(100);
-    const b = await page.evaluate(() => { const r = document.querySelector('#crewSharedList [data-th="Phil:11"]'), e = entries.find(x => x.id === 11); return { plate: !!r && !!r.querySelector('.th-flush') && /⤵ Flush — done with it/.test(r.textContent), stamp: 'threadDone' in e, seen: (prefs.thSeen || {})['Phil:11'] || '' }; });
-    return a.there && a.done && a.stamp && /^⤵ Done with it ✓ — it leaves the card once they flush it too/.test(a.toast) && a.btn && b.plate && !b.stamp && !b.seen;
+    const b = await page.evaluate(() => { const r = document.querySelector('#crewSharedList [data-th="Phil:11"]'), e = entries.find(x => x.id === 11); return { plate: !!r && !!r.querySelector('.th-flush') && /⚙ Done with it/.test(r.textContent), stamp: 'threadDone' in e, seen: (prefs.thSeen || {})['Phil:11'] || '' }; });
+    return a.there && a.done && a.stamp && /^⚙ Done with it ✓ — it leaves the card once they take it to the grinder too/.test(a.toast) && a.btn && b.plate && !b.stamp && !b.seen;
   })());
   ok('one of Eric\'s notes flushed to the grinder: a copy lands in his log — Undo takes the copy back out and the plate returns', await (async () => {
     const n0 = await page.evaluate(() => entries.length);
@@ -89,7 +89,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const a = await page.evaluate(() => ({ n: entries.length, copy: entries.some(e => e.sharedRef === 201 && /^Eric: A plain note from Eric number 1/.test(e.details)), set: JSON.parse(localStorage.getItem('daylog-shared-flushed') || '[]').includes('201'), toast: $('toast').textContent }));
     await page.evaluate(() => $('toast').querySelector('button').click()); await page.waitForTimeout(100);
     const b = await page.evaluate(() => ({ n: entries.length, copy: entries.some(e => e.sharedRef === 201), set: JSON.parse(localStorage.getItem('daylog-shared-flushed') || '[]').includes('201'), plate: !!document.querySelector('#crewSharedList [data-th="Eric:201"] .th-flush') }));
-    return a.n === n0 + 1 && a.copy && a.set && /^⤵ Into your log ✓ — Eric sees you flushed it/.test(a.toast) && b.n === n0 && !b.copy && !b.set && b.plate;
+    return a.n === n0 + 1 && a.copy && a.set && /^⚙ In your grinder ✓ — Eric sees you took it/.test(a.toast) && b.n === n0 && !b.copy && !b.set && b.plate;
   })());
 
   console.log('— 🔔 a tap on the alert lands on the note —');

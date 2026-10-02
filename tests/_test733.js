@@ -64,15 +64,15 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const row = [...document.querySelectorAll('#crewFeedList .sum-row')][0], t = row.textContent.replace(/\s+/g, ' ');
     const cubes = row.querySelectorAll('.th-cube'), btns = [...row.querySelectorAll('button')].map(b => b.textContent.trim());
     return /↩ you .*Use the tan/.test(t) && /↩ Phil .*Thanks/.test(t) && cubes.length === 2 && cubes[0].classList.contains('lit') && cubes[0].classList.contains('pulse') && !cubes[1].classList.contains('lit') && /↩ Phil responded — new/.test(t) &&
-      btns.includes('⤵ Flush to the grinder') && btns.includes('💬 Respond') && !btns.some(b => /Add your notes|tell Eric/.test(b));
+      btns.includes('⚙ To the grinder') && btns.includes('💬 Respond') && !btns.some(b => /Add your notes|tell Eric/.test(b));
   }), await eric.page.evaluate(() => [...document.querySelectorAll('#crewFeedList .sum-row')][0].outerHTML.slice(0, 900)));
   ok('Phil\'s flushed note: cube ② lit (⤵ Phil flushed it), cube ① unlit (no response from him — mine does not count)', await eric.page.evaluate(() => {
     const row = [...document.querySelectorAll('#crewFeedList .sum-row')][3], cubes = row.querySelectorAll('.th-cube');
-    return cubes.length === 2 && !cubes[0].classList.contains('lit') && cubes[1].classList.contains('lit') && /⤵ Phil flushed it/.test(row.textContent);
+    return cubes.length === 2 && !cubes[0].classList.contains('lit') && cubes[1].classList.contains('lit') && /⚙ Phil is done with it/.test(row.textContent);
   }));
   ok('Eric\'s own note on the card: Phil\'s response under it, cube ① lit and pulsing, plates ⤵ Flush — done with it · 💬 Respond', await eric.page.evaluate(() => {
     const row = [...document.querySelectorAll('#crewFeedList .sum-row')][1], t = row.textContent.replace(/\s+/g, ' '), cubes = row.querySelectorAll('.th-cube'), btns = [...row.querySelectorAll('button')].map(b => b.textContent.trim());   // v7.74 — second: it has a new reply
-    return /↩ Phil .*Yes, tan is fine/.test(t) && cubes[0].classList.contains('lit') && cubes[0].classList.contains('pulse') && !cubes[1].classList.contains('lit') && btns.includes('⤵ Flush — done with it') && btns.includes('💬 Respond');
+    return /↩ Phil .*Yes, tan is fine/.test(t) && cubes[0].classList.contains('lit') && cubes[0].classList.contains('pulse') && !cubes[1].classList.contains('lit') && btns.includes('⚙ Done with it') && btns.includes('💬 Respond');
   }));
   ok('💬 Respond on Phil\'s note: a box under it; ↩ Send makes a note in Eric\'s log with re → Phil:30, unlocked for Phil, ↩ in front of the words; the pulse rests; the thread shows ↩ you', await eric.page.evaluate(async () => {
     const row = [...document.querySelectorAll('#crewFeedList .sum-row')][0];
@@ -91,13 +91,13 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const row2 = [...document.querySelectorAll('#crewFeedList .sum-row')].find(r => /gate code/.test(r.textContent));
     const upKey = Object.keys(_up).find(p => /\/Phil\/shared\.json$/i.test(p)); const sh = JSON.parse((upKey && _up[upKey]) || '{}');
     const reRows = (sh.notes || []).filter(n => n.re && n.re.owner === 'Phil' && n.re.id === 30);
-    return !!c && c.who === 'Phil' && /\n↩ Eric: Use the tan\n↩ Phil: Thanks\n↩ Eric: Try 4321$/.test(c.details) && !!row2 && /⤵ flushed by you ✓/.test(row2.textContent) &&
+    return !!c && c.who === 'Phil' && /\n↩ Eric: Use the tan\n↩ Phil: Thanks\n↩ Eric: Try 4321$/.test(c.details) && !!row2 && /⚙ in your grinder ✓/.test(row2.textContent) &&
       sh.seen && !!sh.seen['30'] && reRows.length === 2 && (sh.notes || []).some(n => n.id === 5 && n.ask === 'answered');
   }), await eric.page.evaluate(() => JSON.stringify({ c: entries.find(x => /^Phil: Need/.test(x.details || '')), up: Object.keys(_up), sh: (() => { try { const s = JSON.parse(_up[Object.keys(_up).find(p => /\/Phil\/shared\.json$/i.test(p))]); return { seen: s.seen, notes: s.notes.map(n => [n.id, n.ask, n.re, n.done]) }; } catch (e) { return String(e); } })() })));
   ok('⤵ Flush — done with it on Eric\'s own note: threadDone stamped, the thread kept on the entry, the row stays until Phil flushes it; when his flushed copy arrives (sharedRef 5) the row leaves; and Phil flushing his own ⚠ note (threadDone) takes that row off too — the plain Trim note leaves on Eric\'s flush alone', await eric.page.evaluate(async () => {
     thOwnFlush('5'); await new Promise(r => setTimeout(r, 30));
     const e5 = entries.find(x => x.id === 5);
-    const stays = !!e5.threadDone && Array.isArray(e5.thread) && e5.thread.some(t => t.by === 'Phil' && /tan is fine/.test(t.t)) && [...document.querySelectorAll('#crewFeedList .sum-row')].some(r => /Soffit color/.test(r.textContent) && /⤵ flushed by you ✓/.test(r.textContent));
+    const stays = !!e5.threadDone && Array.isArray(e5.thread) && e5.thread.some(t => t.by === 'Phil' && /tan is fine/.test(t.t)) && [...document.querySelectorAll('#crewFeedList .sum-row')].some(r => /Soffit color/.test(r.textContent) && /⚙ you are done with it ✓/.test(r.textContent));   // ⚙ v7.77 — "flushed" is gone from the words
     _phil.unshift({ id: 36, ts: new Date().toISOString(), type: 'Note', details: 'Eric: Soffit color — tan or gray?\n↩ Phil: Yes, tan is fine', job: 'Oak House', sharedRef: 5, who: 'Eric' });
     _phil.find(x => x.id === 30).threadDone = new Date().toISOString(); _save();
     await checkCrewLogs();
@@ -131,11 +131,11 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   }), await phil.page.evaluate(() => JSON.stringify([...document.querySelectorAll('#crewSharedList .sum-row')].map(r => r.textContent.replace(/\s+/g, ' ').trim().slice(0, 80)))));
   ok('my own ⚠ note: Eric\'s response under it (↩ Eric: Use the tan), cube ① lit + pulsing, cube ② lit (⤵ Eric flushed it — from `seen`), plates ⤵ Flush — done with it · 💬 Respond', await phil.page.evaluate(() => {
     const row = [...document.querySelectorAll('#crewSharedList .sum-row')][0], t = row.textContent.replace(/\s+/g, ' '), cubes = row.querySelectorAll('.th-cube'), btns = [...row.querySelectorAll('button')].map(b => b.textContent.trim());
-    return /↩ Eric .*Use the tan/.test(t) && cubes.length === 2 && cubes[0].classList.contains('lit') && cubes[0].classList.contains('pulse') && cubes[1].classList.contains('lit') && /⤵ Eric flushed it/.test(t) && btns.includes('⤵ Flush — done with it') && btns.includes('💬 Respond');
+    return /↩ Eric .*Use the tan/.test(t) && cubes.length === 2 && cubes[0].classList.contains('lit') && cubes[0].classList.contains('pulse') && cubes[1].classList.contains('lit') && /⚙ Eric took it to the grinder/.test(t) && btns.includes('⚙ Done with it') && btns.includes('💬 Respond');
   }), await phil.page.evaluate(() => [...document.querySelectorAll('#crewSharedList .sum-row')][0].outerHTML.slice(0, 900)));
   ok('Eric\'s rows: 📷 (none here) · ⤵ Flush to the grinder · 💬 Respond — no ✎ Add your notes, no ✓ Done — tell Eric', await phil.page.evaluate(() => {
     const btns = [...document.querySelectorAll('#crewSharedList .sum-row')].slice(1).flatMap(r => [...r.querySelectorAll('button')].map(b => b.textContent.trim()));
-    return btns.filter(b => b === '⤵ Flush to the grinder').length === 3 && btns.filter(b => b === '💬 Respond').length === 3 && !btns.some(b => /Add your notes|tell Eric/.test(b));
+    return btns.filter(b => b === '⚙ To the grinder').length === 3 && btns.filter(b => b === '💬 Respond').length === 3 && !btns.some(b => /Add your notes|tell Eric/.test(b));
   }), await phil.page.evaluate(() => JSON.stringify([...document.querySelectorAll('#crewSharedList button')].map(b => b.textContent.trim()))));
   ok('💬 Respond on Eric\'s ⚠ note: ↩ Send makes a note in MY log with re → Eric:5, unlocked for Eric, ↩ in front — no ✓ Done chip (not a Board line)', await phil.page.evaluate(async () => {
     const row = [...document.querySelectorAll('#crewSharedList .sum-row')][1];
@@ -160,7 +160,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const row2 = [...document.querySelectorAll('#crewSharedList .sum-row')].find(r => /Pick the soffit/.test(r.textContent));
     const plain = [...document.querySelectorAll('#crewSharedList .sum-row')].find(r => /plain old note/.test(r.textContent)); plain.querySelector('.th-flush').click(); await new Promise(r => setTimeout(r, 40));
     const c2 = entries.find(x => x.details === 'Eric: a plain old note');
-    return !!c && String(c.sharedRef) === '6' && c.who === 'Eric' && /\n↩ Phil: ✓ Done$/.test(c.details) && !!row2 && /⤵ flushed by you ✓/.test(row2.textContent) &&
+    return !!c && String(c.sharedRef) === '6' && c.who === 'Eric' && /\n↩ Phil: ✓ Done$/.test(c.details) && !!row2 && /⚙ in your grinder ✓/.test(row2.textContent) &&
       !!c2 && String(c2.sharedRef) === '9' && ![...document.querySelectorAll('#crewSharedList .sum-row')].some(r => /plain old note/.test(r.textContent));
   }), await phil.page.evaluate(() => JSON.stringify({ e: entries.slice(0, 3).map(x => [x.details, x.sharedRef]), rows: [...document.querySelectorAll('#crewSharedList .sum-row')].map(r => r.textContent.replace(/\s+/g, ' ').slice(0, 60)) })));
   ok('⤵ Flush — done with it on my own ⚠ note (Eric already flushed it): threadDone stamped, the thread kept, and the row leaves the card', await phil.page.evaluate(async () => {

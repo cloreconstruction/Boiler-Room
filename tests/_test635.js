@@ -138,7 +138,7 @@ const { chromium } = require('playwright');
 
   ok('overhead on this job sits in its own section with a total, never a check box', await page.evaluate(() => {
     const t = $('revBox').textContent;
-    return /OVERHEAD ON THIS JOB — 1, \$60\.00/.test(t) && /fuel for the truck/.test(t) && /goes to Logan as not billable/.test(t);
+    return /OVERHEAD ON THIS JOB — 1, \$60\.00/.test(t) && /fuel for the truck/.test(t) && /goes to the bookkeeper as not billable/.test(t);
   }));
 
   ok('a paired one tells him where to take it back; an unpaired one too', await page.evaluate(() => {

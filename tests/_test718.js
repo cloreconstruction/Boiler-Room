@@ -135,7 +135,7 @@ const { chromium } = require('playwright');
     window.dbxDownload = async path => /App Data\/entries\.json$/.test(path) ? _up : null;
     await pullRemote(); await new Promise(r => setTimeout(r, 100));
     const w = entries.map(e => e.details);
-    return ['✓ text the painter', '🎒 Flushed — check the gutter', 'my own reminder', 'the trim is here'].every(x => w.includes(x)) && pocket().some(x => x.t === 'pick up the hinges') &&
+    return ['✓ text the painter', '🎒 To the grinder — check the gutter', 'my own reminder', 'the trim is here'].every(x => w.includes(x)) && pocket().some(x => x.t === 'pick up the hinges') &&
       nextId > Math.max(...entries.map(e => e.id));
   }));
   ok('his Summary offers the same four, from his side: 🔒 Just me · 📨 Just Eric · 🔓 All crew · ⚠ Needs attention', await p.evaluate(() => {

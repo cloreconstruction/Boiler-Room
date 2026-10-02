@@ -95,7 +95,7 @@ const { chromium } = require('playwright');
 
   ok('the POCKET LIST (v7.07; it was TO GET) has the pocket item and the pocket note; SENT TO LOGAN has the bookkeeper note and the receipt on their page', await (async () => {
     const g = await body('get'), l = await body('logan');
-    return /gravel for the drive/.test(g) && /screws for Hertz/.test(g) && /sent Logan the August receipts/.test(l) && /to Logan/.test(l) && /lumber package/.test(l) && /on their page/.test(l);
+    return /gravel for the drive/.test(g) && /screws for Hertz/.test(g) && /sent Logan the August receipts/.test(l) && /to the bookkeeper/.test(l) && /lumber package/.test(l) && /on their page/.test(l);
   })());
 
   ok('THE RECORD is by day, newest first, with the counts: hours, miles, emails, receipts', await (async () => {
