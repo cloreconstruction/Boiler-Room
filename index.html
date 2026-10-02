@@ -1928,6 +1928,15 @@
   .est-num.guess { color: var(--warn, #ffa657); text-decoration: underline dashed; text-underline-offset: 4px; }
   .est-guess-word { color: var(--warn, #ffa657); letter-spacing: .2px; }
   .est-bid.guess { border: 2px dashed var(--warn, #ffa657) !important; }
+  /* 🗒 v7.78 — A NOTE ON EACH NUMBER. Eric: "on the estimate page i want estimate 1 and estimate 2 to have their own text boxes. so i
+     can put note on each number." Each number sits on its own line with its note box beside it; on a PC the two pairs sit side by side. */
+  .est-nums { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; margin-top: 6px; }
+  .est-board .est-numline { display: flex; gap: 5px; align-items: stretch; }
+  .est-board .est-numline input { min-width: 0 !important; }
+  .est-board .est-numline .est-numamt { flex: 0 0 104px; width: 104px; font-weight: var(--fw8, 800); }
+  .est-board .est-numline .est-numnote { flex: 1 1 auto; width: 100%; }
+  .est-board .est-numline .est-numnote:placeholder-shown { opacity: .75; }
+  @media (min-width: 701px) { .est-nums { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 5px 12px; } }
   .est-guess-say { margin: 6px 0 0; font-size: var(--fs12, 12px); line-height: 1.45; color: var(--warn, #ffa657); }
   .est-board .pick-chip.est-guess-filter { width: 100%; text-align: left; justify-content: flex-start; margin: 0 0 8px; min-height: 40px !important; border: 2px dashed var(--warn, #ffa657) !important; white-space: normal; line-height: 1.3; }
   .est-board .pick-chip.est-guess-filter.sel { border-style: solid !important; }
@@ -1947,6 +1956,13 @@
   .only-me { outline: 2.5px dashed var(--mine); outline-offset: 2px; }
   .set-section.only-me { outline-width: 3px; outline-offset: 3px; }
   .pf-visbox.only-me { outline-offset: 4px; border-radius: 6px; }
+  /* ┄ v7.78 — Eric: "in setup i want to be able to turn on and off the blue dotted lines for phils views" — ⚙ Setup → Appearance
+     has a switch for each kind: the dashed edge on what only he sees (here), and the dotted frame of the 👁 preview (further down). */
+  body.dash-mine-off .only-me { outline: none; }
+  body.dash-mine-off .only-me-key { display: none; }
+  .dot-chips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  #dotChips .pick-chip { width: 100%; min-height: 46px !important; text-align: left; justify-content: flex-start; white-space: normal; line-height: 1.3; }   /* the id outranks the skins' .pick-chip sizes */
+  #dotChips .pick-chip:not(.sel) { border-style: dashed; }
   /* 🎛 v7.40 — WHAT THEY SEE: one plate per part of the homeowner's page, in words; off = dashed and dim, never colour alone */
   .pv-box { max-width: 560px; margin: 0 auto; padding: 4px 0 24px; }
   .pv-head { display: flex; align-items: center; gap: 10px; font-size: 17px; letter-spacing: .5px; margin: 0 0 8px; }
@@ -2507,6 +2523,7 @@
     background: var(--accent); color: var(--accent-ink); margin-bottom: 12px; font-family: inherit;
   }
   body.crew-preview::after { content: ''; position: fixed; inset: 0; border: 5px dotted #3fa9ff; pointer-events: none; z-index: 399; }   /* 👁 v7.32 — Eric: "whenever im on 'see as phil' the whole main page should be outlined by a blue dotted line" — the gold banner says PREVIEW in words, the frame says it at a glance */
+  body.dash-frame-off.crew-preview::after { display: none; }   /* ┄ v7.78 — his switch in ⚙ Setup → Appearance takes the frame off; the gold banner still says PREVIEW */
   #crewRoute { display: none; }   /* ⚠ v7.13 — on a crew phone too: ⚠ Needs attention in UNLOCK IT took its place */
   /* 🔒 v5.44 — Eric: "when the locked button is on, gray out the buttons that are tagging
      someone else or sending to somebody else. You have to click the unlock button and then
@@ -4439,6 +4456,14 @@
       <div class="set-sub-h" style="margin-top: 14px; font-weight: 800;">🔤 Letters</div>
       <div class="chips-row font-chips" id="fontChips"></div>
       <div class="hint" style="margin-top: 8px;">The small bold words are the hard part: B, C, D and E draw every small label bigger and less heavy. A is how it has always looked. Your pick syncs to all your devices; C, D and E need the internet once to fetch their letters.</div>
+      <!-- ┄ v7.78 — Eric: "in setup i want to be able to turn on and off the blue dotted lines for phils views". Two kinds are drawn
+           for him, each with its own switch: the dashed edge on what only he sees in the Project portal, and the dotted frame round
+           the page while he looks as a crew member. His phones only (a crew phone draws neither, and has no switch). -->
+      <div id="dotBlock" style="display: none;">
+        <div class="set-sub-h" style="margin-top: 14px; font-weight: 800;">┄ Blue dotted lines</div>
+        <div class="dot-chips" id="dotChips"></div>
+        <div class="hint" id="dotHint" style="margin-top: 8px;"></div>
+      </div>
     </div>
     <div class="set-section" id="setDayGoal">
       <h4>Day goal</h4>
@@ -4721,7 +4746,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.77 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.78 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6756,6 +6781,7 @@ function openPanel(name) {
       if ($('unlockWho')) $('unlockWho').innerHTML = crew.map(c => `<option>${esc(c)}</option>`).join('');
       renderQbLights(); initSetupCollapse(); }   // 🏠 v6.65 — the portal no longer renders here
     if (name === 'settings') { $('sDayGoal').value = prefs.dayGoal || 8; $('sAiPhotos').checked = prefs.aiPhotos !== false; $('sRobotSkip').checked = robotSkipOn(); if ($('sMailSort')) $('sMailSort').checked = mailSortOn(); $('sAiModel').value = aiMode(); setAiModelHint(); renderPipeRows(); }
+    if (name === 'settings') renderDotChips();   // ┄ v7.78 — the two blue-dotted-line switches, worded with today's crew names
     if (name === 'vault') vaultOpenInit();
     if (name === 'summary') summaryOpenInit();
     if (name === 'find') findOpenInit();
@@ -6877,6 +6903,54 @@ function renderFontChips() {
     return `<button type="button" class="pick-chip font-chip${on ? ' sel' : ''}" data-font="${k}" onclick="setFont('${k}')" aria-pressed="${on}" style="font-family: ${fam.replace(/"/g, '&quot;')};${k === 'a' ? '' : ' font-weight: 600;'}">
       <span class="fc-l">${on ? '✓ ' : ''}${k.toUpperCase()}</span><span class="fc-n">${esc(o.name)}</span><span class="fc-s">${esc(o.sub)}</span></button>`;
   }).join('');
+}
+// ================= ┄ v7.78 — THE BLUE DOTTED LINES, ON OR OFF =================
+// Eric: "in setup i want to be able to turn on and off the blue dotted lines for phils views". Two kinds of blue dotted line are drawn
+// for him, and each has its own switch in ⚙ Setup → Appearance (both start ON, as they were):
+//   mine  — the dashed edge on what ONLY HE sees in the 🏠 Project portal (v7.09: the plates the office crew do not get), with the
+//           key line at the top of the portal that says what the edge means;
+//   frame — the dotted frame round the whole page while he looks as a crew member (v7.32's 👁 preview).
+// prefs.dots holds only what is OFF ({ mine: false, frame: false }) so it rides to his other devices; a mirror on the phone paints
+// it before the first pull. Words still carry both when the lines are off: the plates in the portal keep their own names, and the
+// gold PREVIEW banner stays. A crew phone draws neither kind and has no switch.
+const DOT_KINDS = ['mine', 'frame'];
+let _dotsOffNow = { mine: false, frame: false };   // what is painted on this screen right now (the switches read this, so they are right before the first pull too)
+function dotsOff() { const d = (prefs && prefs.dots) || {}; return { mine: d.mine === false, frame: d.frame === false }; }
+function dotsPaint(off) {
+  _dotsOffNow = { mine: !!(off && off.mine), frame: !!(off && off.frame) };
+  document.body.classList.toggle('dash-mine-off', _dotsOffNow.mine);
+  document.body.classList.toggle('dash-frame-off', _dotsOffNow.frame);
+}
+function dotsApply() { const off = dotsOff(); dotsPaint(off); lsSet('daylog-dots-off', DOT_KINDS.filter(k => off[k]).join(',')); renderDotChips(); }
+function setDots(k) {
+  if (CREW_NAME || !DOT_KINDS.includes(k)) return;
+  const d = (prefs.dots && typeof prefs.dots === 'object') ? prefs.dots : (prefs.dots = {});
+  DOT_KINDS.forEach(x => { if (_dotsOffNow[x]) d[x] = false; });   // what the phone remembered before the first pull is kept
+  const turnOff = !_dotsOffNow[k];   // it is on now → this tap turns it off
+  if (turnOff) d[k] = false; else delete d[k];
+  dotsApply(); scheduleSave();
+  const who = dotsWho();
+  toast(k === 'mine'
+    ? (turnOff ? '┄ Dashed edges OFF — nothing in your Project portal is outlined now' : `┄ Dashed edges ON — a dashed edge marks what only you see (${who.office} does not)`)
+    : (turnOff ? '┄ Dotted frame OFF — the gold banner still says PREVIEW' : `┄ Dotted frame ON — round the page while you look as ${who.preview}`));
+}
+function dotsWho() {
+  const off = (typeof officeFolks === 'function' ? officeFolks() : []).filter(Boolean);
+  return { office: off.length ? off.join(' and ') : 'the office crew', preview: (prefs && prefs.previewAs) || (crew && crew[0]) || 'the crew', anyOffice: off.length > 0 };
+}
+function renderDotChips() {
+  const blk = $('dotBlock'), box = $('dotChips'); if (!blk || !box) return;
+  blk.style.display = CREW_NAME ? 'none' : '';
+  if (CREW_NAME) { box.innerHTML = ''; return; }
+  const off = _dotsOffNow, who = dotsWho();
+  const plate = (k, on, onWord, offWord) => `<button type="button" class="pick-chip${on ? ' sel' : ''}" data-dot="${k}" aria-pressed="${on}" onclick="setDots('${k}')">${on ? '✓ ON — ' + onWord : '○ OFF — ' + offWord}</button>`;
+  box.innerHTML =
+    plate('mine', !off.mine, `the dashed edge on what only you see in the Project portal (${esc(who.office)} does not)`, 'no dashed edge on what only you see in the Project portal') +
+    plate('frame', !off.frame, `the dotted frame round the page while you look as ${esc(who.preview)}`, `no dotted frame while you look as ${esc(who.preview)}`);
+  const h = $('dotHint');
+  if (h) h.textContent = 'Tap one to turn it off or back on. These lines are only ever drawn on your own phone and PC: the crew never see them. '
+    + (who.anyOffice ? '' : 'Nobody on the crew is set as office right now, so the portal has no dashed edges to draw. ')
+    + 'With the frame off, the gold PREVIEW banner still tells you when you are looking as a crew member. Your pick syncs to all your devices.';
 }
 // 🔒 v6.81 — Eric: "Whenever there's a drop-down list and personal is on it (such as picking the job), I want the
 // personal to always be on top." Every job wheel and job grid goes through personalFirst(). The grinder's ① wheel
@@ -17778,7 +17852,7 @@ function renderEstimates() {
     ${wayAll || inAll ? `<div class="est-what-row" id="estWhatAll">${wayAll ? `<button type="button" class="est-what" data-what="way" onclick="estWhatOpen(-1, 'way')" aria-label="${money0(wayAll)} on the way on this job — see what it is">📥 ${money0(wayAll)} on the way ›</button>` : ''}${inAll ? `<button type="button" class="est-what" data-what="in" onclick="estWhatOpen(-1, 'in')" aria-label="${money0(inAll)} in on this job — see what it is">📗 ${money0(inAll)} in ›</button>` : ''}<span class="hint" style="margin: 0;">the whole job — tap to see what it is</span></div>` : ''}
     ${guessN ? `<button type="button" class="pick-chip est-guess-filter${_estGuessOnly ? ' sel' : ''}" id="estGuessBtn" aria-pressed="${_estGuessOnly}" onclick="estGuessOnly()">${_estGuessOnly ? `✓ ≈ ONLY THE BEST GUESSES (${guessN}) — tap to show everything` : `≈ ${guessN} best guess${guessN > 1 ? 'es' : ''} — ${money0(guessTot)} with no bid behind it yet · tap to see only those`}</button>` : ''}
     <button type="button" class="btn-ghost est-help-btn" onclick="estHelp()" aria-expanded="${_estHelp}">${_estHelp ? '▾' : '▸'} ? How this works</button>
-    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing. <b>≈ Placeholder — best guess:</b> no bid yet? Open the category, tap ≈ ➕ placeholder, type your own number. The row wears ≈ and a dashed edge until a real bid backs it — type the real number and tap the ≈ plate again, or add the bid and tap ○ use this. Once the category is ✓ ON PAGE their page says it too: ≈ on the number and the word PLACEHOLDER — a rough figure that holds the spot until the real bid comes in, which may be higher or lower. <b>☑ Two separate things in one category</b> (two vanities, say): open the category and tap <b>☐ use this too</b> on the second bid — both are used, the category's number is the two added together, and that total is what their page shows. ○ use this instead goes back to one bid; ☑ USING BOTH — tap to take this off drops one. In a category that offers the homeowner choices, a bid you use that is not one of the choices is counted in every choice. <b>📄 A receipt on the way:</b> tap 📄 The receipt to open it (its words, the day, the amount, 📷 its picture — or 🔍 Find the paper for an old filing), 🏷 Wrong category? Move it to put it on the right line. <b>📥 on the way · $ in:</b> tap either one — on a row, or the two at the top for the whole job — to see what it is made of: each receipt's amount, date, store and category, and 📷 its picture. <b>Every category is always on the list.</b> ✕ remove category takes one off this board and it stays off; ↩ at the foot of the board puts it back. <b>🏷 A receipt on the wrong category:</b> tap 📥 on the way, then 🏷 Wrong category? Move it on that receipt (or the same plate on the bill inside the open category) and pick the right one — their page follows at once. <b>✓ A category that is finished:</b> open it and tap ✓ Mark this category COMPLETE — the estimate is locked, the row says what it came to (under or over), and their page says COMPLETE and counts nothing more as remaining on that line. ↩ Reopen takes it back. <b>⏳ Save for later:</b> open a category and tap ⏳ Let them save this for later — their page puts a Save for later button on that line; when they tap it the line comes off ESTIMATED REMAINING COSTS and onto their ⏳ SAVED FOR LATER card (they can put it back), this row says ⏳ THEY SAVED IT FOR LATER, and it lands in your review pile like a pick. When a line adds bids together, ○ can wait on ONE bid offers just that part (give it a homeowner name in the 🏠 box — that name and its number are the only things about the bid their page sees). Taking the offer off puts the line back on their estimate. <b>🔄 Updated:</b> when a number that is on their page changes, their line says 🔄 UPDATED with the day, what it was and what it is now, and this category asks you why — type it and tap ✓ Say it on their page (they read those words — no vendor names); the sign stays a month, or ✕ takes it off.</div>
+    <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing. <b>≈ Placeholder — best guess:</b> no bid yet? Open the category, tap ≈ ➕ placeholder, type your own number. The row wears ≈ and a dashed edge until a real bid backs it — type the real number and tap the ≈ plate again, or add the bid and tap ○ use this. Once the category is ✓ ON PAGE their page says it too: ≈ on the number and the word PLACEHOLDER — a rough figure that holds the spot until the real bid comes in, which may be higher or lower. <b>☑ Two separate things in one category</b> (two vanities, say): open the category and tap <b>☐ use this too</b> on the second bid — both are used, the category's number is the two added together, and that total is what their page shows. ○ use this instead goes back to one bid; ☑ USING BOTH — tap to take this off drops one. In a category that offers the homeowner choices, a bid you use that is not one of the choices is counted in every choice. <b>📄 A receipt on the way:</b> tap 📄 The receipt to open it (its words, the day, the amount, 📷 its picture — or 🔍 Find the paper for an old filing), 🏷 Wrong category? Move it to put it on the right line. <b>📥 on the way · $ in:</b> tap either one — on a row, or the two at the top for the whole job — to see what it is made of: each receipt's amount, date, store and category, and 📷 its picture. <b>Every category is always on the list.</b> ✕ remove category takes one off this board and it stays off; ↩ at the foot of the board puts it back. <b>🏷 A receipt on the wrong category:</b> tap 📥 on the way, then 🏷 Wrong category? Move it on that receipt (or the same plate on the bill inside the open category) and pick the right one — their page follows at once. <b>✓ A category that is finished:</b> open it and tap ✓ Mark this category COMPLETE — the estimate is locked, the row says what it came to (under or over), and their page says COMPLETE and counts nothing more as remaining on that line. ↩ Reopen takes it back. <b>⏳ Save for later:</b> open a category and tap ⏳ Let them save this for later — their page puts a Save for later button on that line; when they tap it the line comes off ESTIMATED REMAINING COSTS and onto their ⏳ SAVED FOR LATER card (they can put it back), this row says ⏳ THEY SAVED IT FOR LATER, and it lands in your review pile like a pick. When a line adds bids together, ○ can wait on ONE bid offers just that part (give it a homeowner name in the 🏠 box — that name and its number are the only things about the bid their page sees). Taking the offer off puts the line back on their estimate. <b>🔄 Updated:</b> when a number that is on their page changes, their line says 🔄 UPDATED with the day, what it was and what it is now, and this category asks you why — type it and tap ✓ Say it on their page (they read those words — no vendor names); the sign stays a month, or ✕ takes it off. <b>🗒 A note on each number:</b> Estimate 1 and Estimate 2 each have their own note box beside them — what that number is (labor, materials, whose price). Those notes stay in the office; the homeowner never sees them.</div>
     ${(() => { const bills = estBillCands();
       // 📥 v6.02 — Eric: "keep it small until it has something to deal with." Nothing waiting
       // = one thin line you can tap open to file a bill by hand. A bill arrives = it opens
@@ -17908,12 +17982,17 @@ function renderEstimates() {
           <div class="frow"><button type="button" class="btn-primary" style="min-height: 40px; font-weight: var(--fw8, 800);" onclick="estUpdWhy(${ci})">✓ Say it on their page</button><button type="button" class="btn-ghost req-x" style="min-height: 40px;" onclick="estUpdOff(${ci})">✕ Take the UPDATED sign off</button></div></div>` : ''}
         ${parts.length >= 2 ? `<div class="est-sum-say" id="estSum-${ci}">☑ <b>${isChoice ? `${parts.length} bids used together` : useWord + ' BIDS'}</b> — ${parts.map(b => money0(estBidRaw(b))).join(' + ')} = <b>${money0(rawT)}</b>${rawT !== tot ? ` → <b>${money0(tot)}</b> to the client` : ''}. That total is this category's number${isChoice ? ' (the choice they make, plus what is used with every choice)' : ''}.</div>` : ''}
         ${(x.bids || []).map((b, bi) => `<div class="est-bid${b.guess ? ' guess' : ''}" data-bi="${bi}" style="margin-top: 8px; padding: 8px; border: 1.5px solid ${b.acc ? 'var(--accent)' : 'var(--border)'}; border-radius: 8px;${b.acc ? '' : ' opacity: .85;'}">
-          <div class="frow" style="gap: 5px; align-items: center; flex-wrap: wrap;">
+          <div class="frow est-userow" style="gap: 5px; align-items: center; flex-wrap: wrap;">
             ${usePlate(b, bi)}
-            <div class="field" style="flex: 1; min-width: 86px; margin: 0;"><label style="font-size: var(--fs10, 10px);">Estimate 1</label>
-              <input inputmode="decimal" value="${b.e1 || ''}" placeholder="$" style="font-weight: var(--fw8, 800);" onchange="estBidSet(${ci}, ${bi}, 'e1', this.value)"></div>
-            <div class="field" style="flex: 1; min-width: 86px; margin: 0;"><label style="font-size: var(--fs10, 10px);">Estimate 2</label>
-              <input inputmode="decimal" value="${b.e2 || ''}" placeholder="$" style="font-weight: var(--fw8, 800);" onchange="estBidSet(${ci}, ${bi}, 'e2', this.value)"></div>
+          </div>
+          <div class="est-nums">${[1, 2].map(n => `
+            <div class="field est-numrow"><label for="estE${n}-${ci}-${bi}" style="font-size: var(--fs10, 10px);">Estimate ${n}</label>
+              <div class="est-numline">
+                <input id="estE${n}-${ci}-${bi}" class="est-numamt" inputmode="decimal" data-fk="${ci}:${bi}:e${n}" value="${b['e' + n] || ''}" placeholder="$" onchange="estBidSet(${ci}, ${bi}, 'e${n}', this.value)">
+                <input class="est-numnote" data-fk="${ci}:${bi}:n${n}" value="${esc(b['n' + n] || '')}" maxlength="160" placeholder="🗒 note on this number" aria-label="note on Estimate ${n}" title="what this number is — it stays in the office, the homeowner never sees it" oninput="estNumNoteLive(${ci}, ${bi}, 'n${n}', this.value)" onchange="estBidSet(${ci}, ${bi}, 'n${n}', this.value)">
+              </div></div>`).join('')}
+          </div>
+          <div class="frow" style="gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 6px;">
             <span class="hint" style="margin: 0; font-weight: var(--fw8, 800); white-space: nowrap;">= ${money0((+b.e1 || 0) + (+b.e2 || 0))}${!b.inc && estMk() ? ` <span style="opacity:.75">→ ${money0(Math.round(((+b.e1 || 0) + (+b.e2 || 0)) * (1 + estMk() / 100) * 100) / 100)} to client</span>` : ''}</span>
             <button type="button" class="pick-chip${b.inc ? '' : ' sel'}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;" onclick="estBidInc(${ci}, ${bi})" title="whether the ${estMk()}% markup rides on top of this number or is already inside it">${b.inc ? '✓ markup already in' : '+' + estMk() + '% rides on top'}</button>
             <button type="button" class="pick-chip${b.opt ? ' sel' : ''}" style="font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;${b.opt ? '' : ' border-style: dashed;'}" onclick="estBidOpt(${ci}, ${bi})" title="put this bid on the homeowner's page as a tap-to-choose option — flag 2 or more and their page asks them to choose">${b.opt ? '👁 THEY SEE THIS OPTION' : '○ let them choose this'}</button>
@@ -17924,10 +18003,10 @@ function renderEstimates() {
             <button type="button" class="btn-ghost req-x" style="font-size: var(--fs11, 11px); color: var(--err, #c0392b);" onclick="estBidDel(${ci}, ${bi})">${_estArm === 'bd' + ci + '_' + bi ? '⚠ SURE?' : '✕'}</button>
           </div>
           ${b.opt || (b.later && !isChoice) ? `<input type="text" value="${esc(b.lbl || '')}" placeholder="${b.opt ? `🏠 what the homeowner sees it called — Vinyl siding, Repaint existing… (Option ${optIdx[bi] + 1} if blank)` : `🏠 what the homeowner sees this part called — Second bath vanity… (${esc(estPartName(x, b))} if blank)`}"
-            style="width: 100%; margin-top: 5px; font-size: var(--fs12, 12px); padding: 5px 8px; font-weight: var(--fw7, 700);" onchange="estBidSet(${ci}, ${bi}, 'lbl', this.value)">` : ''}
+            style="width: 100%; margin-top: 5px; font-size: var(--fs12, 12px); padding: 5px 8px; font-weight: var(--fw7, 700);" data-fk="${ci}:${bi}:lbl" onchange="estBidSet(${ci}, ${bi}, 'lbl', this.value)">` : ''}
           <div class="frow" style="gap: 5px; margin-top: 5px; align-items: center; flex-wrap: nowrap;">
             <input type="text" value="${esc(b.note || '')}" placeholder="${b.shN ? '🗒 description — THE HOMEOWNER SEES THIS with the estimate' : '🗒 whose bid, what it covers, good through… (never leaves the office)'}"
-              style="flex: 1; min-width: 0; font-size: var(--fs12, 12px); padding: 5px 8px; opacity: ${b.note ? '1' : '.75'};${b.shN ? ' border-color: var(--accent);' : ''}" onchange="estBidSet(${ci}, ${bi}, 'note', this.value)">
+              style="flex: 1; min-width: 0; font-size: var(--fs12, 12px); padding: 5px 8px; opacity: ${b.note ? '1' : '.75'};${b.shN ? ' border-color: var(--accent);' : ''}" data-fk="${ci}:${bi}:note" onchange="estBidSet(${ci}, ${bi}, 'note', this.value)">
             <button type="button" class="pick-chip${b.shN ? ' sel' : ''}" style="flex: none; font-size: var(--fs10, 10px); padding: 4px 8px; min-height: 26px;${b.shN ? '' : ' border-style: dashed;'}" onclick="estBidShN(${ci}, ${bi})" title="let the homeowner read this note next to the estimate — so they know what they're choosing">${b.shN ? '🏠 THEY SEE THIS NOTE' : '🏢 office only'}</button>
           </div>
           <div class="chips-row" style="margin-top: 4px; display: flex; gap: 5px; flex-wrap: wrap;">
@@ -18019,14 +18098,65 @@ function renderEstimates() {
     </div>
     </div>`;   // 🕯 v6.66 — the closing paragraph moved up into "? How this works"
 }
+// ================= 🗒 v7.78 — A NOTE ON EACH NUMBER =================
+// Eric: "on the estimate page i want estimate 1 and estimate 2 to have their own text boxes. so i can put note on each number."
+// Every bid's two numbers each have a note box beside them (b.n1 · b.n2, 160 letters): what THAT number is — labor, materials,
+// whose price, an allowance. The bid's own note under them stays as it was (the one he can show the homeowner).
+// 🧱 THE WALL: a note on a number is his own scratch. It is never in the cut their page is written from (estCut names what goes,
+// and these are not named), it never asks for a publish, and it changes no figure — so it is kept on a COMPLETE line too.
+// 👍 THE THUMB STAYS IN THE BOX IT MOVED TO. A bid is four boxes in a row now (number · note · number · note). A note's change
+// redraws nothing. A number's change redraws the board — which used to throw away the box he had just tapped (his tap landed on a
+// box that was gone a moment later, and a plate tapped straight after typing did nothing). When his own change fires while he is
+// on his way to another box or plate (a press or Tab inside the board, just now), the redraw waits until the browser has moved him
+// there, then draws and puts him back in that same box (found by its data-fk) with what he has typed there and the caret where it
+// was. With no press in the air (Enter, or code calling in) it draws at once, as ever.
+let _estGest = 0, _estDown = false, _estRedrawT = null, _estRedrawWant = false;
+document.addEventListener('pointerdown', ev => { if (ev.target && ev.target.closest && ev.target.closest('.est-board')) { _estGest = Date.now(); _estDown = true; } }, true);
+['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, () => {
+  if (!_estDown) return;
+  _estDown = false; _estGest = Date.now();
+  if (_estRedrawWant) { clearTimeout(_estRedrawT); _estRedrawT = setTimeout(estRedrawNow, 0); }   // after this press's own click has landed on what it pressed
+}, true));
+document.addEventListener('keydown', ev => { if (ev.key === 'Tab' && ev.target && ev.target.closest && ev.target.closest('.est-board')) _estGest = Date.now(); }, true);
+function estRedraw() {
+  const ev = window.event, his = !!(ev && ev.isTrusted && ev.type === 'change');
+  if (!his || !(_estDown || Date.now() - _estGest < 700)) { renderEstimates(); return; }
+  _estRedrawWant = true;
+  clearTimeout(_estRedrawT);
+  _estRedrawT = setTimeout(estRedrawNow, _estDown ? 700 : 0);   // a mouse still held down: wait for it to come up, never longer than this
+}
+function estRedrawNow() {
+  clearTimeout(_estRedrawT); _estRedrawT = null;
+  if (!_estRedrawWant) return;
+  _estRedrawWant = false;
+  if (!_estD) return;
+  const a = document.activeElement, fk = a && a.dataset && a.closest && a.closest('.est-board') ? (a.dataset.fk || '') : '';
+  const val = fk ? a.value : '', s0 = fk ? a.selectionStart : 0, s1 = fk ? a.selectionEnd : 0;
+  renderEstimates();
+  if (!fk) return;
+  const el = document.querySelector('.est-board [data-fk="' + fk + '"]');
+  if (!el) return;
+  if (el.value !== val) el.value = val;   // what he has typed in the box he moved to — its own change stores it
+  el.focus();
+  try { el.setSelectionRange(s0, s1); } catch (e) {}
+}
+// what he is typing into a number's note is in the board's data as he types, so no redraw can take it (the change trims and stores it)
+function estNumNoteLive(ci, bi, k, v) {
+  const b = _estD && ((_estD.cats[ci] || {}).bids || [])[bi];
+  if (!b || (k !== 'n1' && k !== 'n2')) return;
+  b[k] = String(v).slice(0, 160);
+  scheduleEstSave();
+}
 function estBidSet(ci, bi, k, v) {
-  if (estLocked(ci)) return;   // ✓ v7.50 — a COMPLETE category is locked
+  const numNote = k === 'n1' || k === 'n2';   // 🗒 v7.78 — a note on a number: his scratch, kept on a COMPLETE line too
+  if (!numNote && estLocked(ci)) return;   // ✓ v7.50 — a COMPLETE category is locked
   const b = ((_estD.cats[ci] || {}).bids || [])[bi];
   if (!b) return;
   if (k === 'e1' || k === 'e2') { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); b[k] = isFinite(n) ? Math.round(n * 100) / 100 : 0; }
   else b[k] = String(v).trim().slice(0, 160);
+  if (numNote) { if (!b[k]) delete b[k]; scheduleEstSave(); return; }   // office-side only: the board's own file, no publish, no redraw
   scheduleEstSave(_estD.cats[ci].appr && (b.acc || b.opt)); // a number or label their page carries changed → it follows
-  renderEstimates();
+  estRedraw();
 }
 function estBidAdd(ci, guess) {   // ≈ v7.45 — `guess`: the line starts marked as his best guess, its number box ready to type in
   if (estLocked(ci)) return;   // ✓ v7.50 — a COMPLETE category is locked
@@ -26589,7 +26719,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.77';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.78';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -27168,6 +27298,7 @@ async function pullRemote() {
     if (Array.isArray(j.trucks) && j.trucks.length) trucks = j.trucks;
     if (Array.isArray(j.crew)) crew = j.crew;
     if (j.prefs) { prefs = j.prefs; applySkin(prefs.skin || ''); applyFont(prefs.font || 'a'); }   // 🔤 v7.19 — his letters follow him
+    if (j.prefs) dotsApply();   // ┄ v7.78 — and his blue dotted lines, on or off
     entries = (j.entries || []).map(e => ({ ...e, ts: new Date(e.ts), synced: true }));
     todos = (j.todos || []).map(t => ({ ...t }));
     // 🎒 v7.18 — a crew phone's private shelf comes back after the pull (the file never had it): his "🔒 Just me" notes, his
@@ -27399,6 +27530,8 @@ if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').match
 skinPaint(lsGet('daylog-skin') || '');   // 🎨 v6.85 — always one of the six; an old name or nothing = Calm Brass
 fontPaint(lsGet('daylog-font') || 'a');   // 🔤 v7.19 — the letters he picked, before anything is drawn (A = as it always was)
 renderFontChips();
+{ const o = (lsGet('daylog-dots-off') || '').split(','); dotsPaint({ mine: o.includes('mine'), frame: o.includes('frame') }); }   // ┄ v7.78 — the blue dotted lines he turned off stay off from the first paint
+renderDotChips();
 renderSkinChips();
 loadCreds();
 if (!dbx.appKey) dbx.appKey = lsGet('daylog-appkey') || '';
