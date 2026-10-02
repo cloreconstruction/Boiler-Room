@@ -3334,6 +3334,17 @@
   .th-word { margin-left: 4px; }
   @keyframes thPulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
   @media (prefers-reduced-motion: reduce) { .th-cube.pulse { animation: none; outline: 2px solid var(--accent); outline-offset: 1px; } }
+  /* 💬 v7.80 — on Eric's WITH PHIL card a conversation folds to the original note and the newest words; one plate opens the rest.
+     The light: a pulsing lamp at the front of the row's top line, with its words (↩ RESPONSE WAITING · ⚠ ALERT WAITING) */
+  .th-fold { display: block; width: 100%; text-align: left; margin: 2px 0 4px; padding: 6px 9px; min-height: 36px; border: 1px dashed var(--border); border-radius: 8px; background: transparent; color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: var(--fw7, 700); line-height: 1.3; cursor: pointer; }
+  .th-fold[aria-expanded="true"] { border-style: solid; }
+  .th-line.th-early[hidden] { display: none !important; }
+  .cf-lamp { display: inline-block; width: 11px; height: 11px; border-radius: 50%; color: var(--accent); background: currentColor; vertical-align: -1px; margin-right: 5px; animation: cfLamp 1.1s ease-in-out infinite; }
+  .cf-lamp.alert { color: var(--warn, #ffa657); }
+  @keyframes cfLamp { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 transparent; } 50% { opacity: .35; box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 40%, transparent); } }
+  @media (prefers-reduced-motion: reduce) { .cf-lamp { animation: none; box-shadow: 0 0 0 2px var(--surface-1, #1e1a14), 0 0 0 4px currentColor; } }
+  .th-newtag.alert { color: var(--warn, #ffa657); }
+  .sum-row.th-alert { outline: 2px solid var(--warn, #ffa657); outline-offset: -2px; border-radius: 8px; }
   .bd-t { flex: 1 1 auto; min-width: 0; font-size: 15px; line-height: 1.35; cursor: pointer; overflow-wrap: anywhere; }
   .bd-t .bd-meta { font-size: var(--fs12, 12px); color: var(--ink-muted); }
   .bd-ck { flex: 0 0 44px; min-height: 44px; border: 2px solid var(--accent); border-radius: 10px; background: var(--surface-1); color: var(--ink); font: inherit; font-size: 18px; font-weight: var(--fw8, 800); cursor: pointer; }
@@ -4763,7 +4774,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.79 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.80 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -15443,6 +15454,55 @@ function thLinesHtml(owner, id) {
   const rs = thResponses(owner, id); if (!rs.length) return '';
   return `<div class="th-lines">${rs.map(r => `<div class="th-line${r.by === thMe() ? ' mine' : ''}"><b>↩ ${esc(r.by === thMe() ? 'you' : r.by)}</b> <span class="hint" style="margin: 0;">${esc(thWhen(r.at))}</span> ${esc(r.t)}</div>`).join('')}</div>`;
 }
+// ================= 💬 v7.80 — THE CONVERSATION FOLDS; A LIGHT FOR WHAT WAITS ON HIM =================
+// Eric: "On the From Phil, I'd like the conversations to be folded with just the recent alert and the original message. Everything
+// else can be folded until unfolded but there should be a light for response waiting or alert waiting that pulses".
+// THE FOLD (his WITH PHIL card; a crew phone's WITH ERIC card is as it was): every conversation opens folded — the original note,
+// then one plate that says how many earlier messages there are, then the NEWEST. The newest is every word from the other side
+// since his own last (his response, or taking it to the grinder), so two answers in a row are never half-hidden; with nothing new
+// it is the one last message, whoever sent it. A fold never hides words he has not seen. A tap on the plate opens the whole
+// conversation in place, and shuts it again; it stays open through every redraw until the app is reloaded (_thUnfolded, memory
+// only). The folded words stay on the page, hidden, so nothing that reads the row's words lost them.
+// THE LIGHT: at the front of a row's top line, a pulsing lamp with its words — ↩ RESPONSE WAITING (the other side answered and he
+// has not: v7.33's pulse) or ⚠ ALERT WAITING (a crew member's ⚠ Needs attention note he has not answered, taken to the grinder or
+// logged) — and the row's edge; the card's head counts them behind the same lamp, so they show with the card folded too. Under
+// reduced motion the lamp holds still with a ring. The words carry it, never the colour alone.
+let _thUnfolded = new Set();   // owner:id of the conversations he opened, this session
+function thLastMine(owner, id, rs) {   // the last thing I did on the item: my newest response, or my mark (thMark — a response, the grinder)
+  const me = thMe();
+  return [thSeenAt(owner, id), ...(rs || thResponses(owner, id)).filter(r => r.by === me).map(r => r.at)].sort().pop() || '';
+}
+function thFoldWord(early, all, open) {
+  return open ? `▾ The whole conversation, ${all} messages — tap to fold it` : `▸ ${early} earlier message${early === 1 ? '' : 's'} — tap to see the whole conversation`;
+}
+function thFoldLinesHtml(owner, id) {
+  const rs = thResponses(owner, id); if (!rs.length) return '';
+  const me = thMe(), k = thKey(owner, id), last = thLastMine(owner, id, rs);
+  const nNew = rs.filter(r => r.by !== me && r.at > last).length;   // their words since my last — always the end of the conversation
+  const early = rs.length - Math.max(1, nNew), open = _thUnfolded.has(k);
+  const line = (r, i) => `<div class="th-line${r.by === me ? ' mine' : ''}${i < early ? ' th-early' : ' th-recent'}"${i < early && !open ? ' hidden' : ''}><b>↩ ${esc(r.by === me ? 'you' : r.by)}</b> <span class="hint" style="margin: 0;">${esc(thWhen(r.at))}</span> ${esc(r.t)}</div>`;
+  const plate = early > 0 ? `<button type="button" class="th-fold" data-thk="${esc(k)}" data-n="${early}" data-all="${rs.length}" aria-expanded="${open}" onclick="thFoldTap(this)">${thFoldWord(early, rs.length, open)}</button>` : '';
+  return `<div class="th-lines th-folding">${plate}${rs.map(line).join('')}</div>`;
+}
+function thFoldTap(btn) {
+  const k = (btn && btn.dataset.thk) || '', box = btn && btn.closest('.th-lines');
+  if (!k || !box) return;
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  if (open) _thUnfolded.add(k); else _thUnfolded.delete(k);
+  box.querySelectorAll('.th-early').forEach(el => { el.hidden = !open; });
+  btn.setAttribute('aria-expanded', String(open));
+  btn.textContent = thFoldWord(+btn.dataset.n || 0, +btn.dataset.all || 0, open);
+}
+// what on a row of his card waits on HIM: 'alert' · 'reply' · ''
+function cfWaitOf(r, pulse, myFlushed) {
+  if (!r.own && r.e.route === 'Eric' && r.e.urg === 'now' && !myFlushed && !thLastMine(r.who, r.e.id) && !cfInLog(r)) return 'alert';
+  return pulse ? 'reply' : '';
+}
+function cfWaitTag(w) {
+  if (!w) return '';
+  return `<span class="cf-lamp${w === 'alert' ? ' alert' : ''}" aria-hidden="true"></span><b class="th-newtag cf-wait${w === 'alert' ? ' alert' : ''}">${w === 'alert' ? '⚠ ALERT WAITING' : '↩ RESPONSE WAITING'} · </b>`;
+}
+// ================= /💬 v7.80 =================
 // the pulse rests on the last thing I did on the item (my response, my flush) — kept in prefs, so my other devices agree
 function thSeenAt(owner, id) { return ((prefs.thSeen || {})[thKey(owner, id)]) || ''; }
 function thMark(owner, id) {
@@ -15732,7 +15792,7 @@ function crewFeedRows() {
   const attn = r => r.own ? (r.e.ask && !r.e.askDone ? 1 : 0) : (r.e.route === 'Eric' && r.e.urg === 'now' ? 1 : 0);
   const tsOf = r => r.e.ts instanceof Date ? r.e.ts.toISOString() : String(r.e.ts || '');   // my own rows carry a Date, his an ISO string
   // 💬 v7.74 — words from the other side that I have not answered come first (r.fresh), then ⚠, then newest
-  return [...rows, ...own].map(r => { r.fresh = thState(r.own ? 'Eric' : r.who, r.e.id).pulse; return r; })
+  return [...rows, ...own].map(r => { r.fresh = thState(r.own ? 'Eric' : r.who, r.e.id).pulse; r.wait = cfWaitOf(r, r.fresh, !r.own && gone.has(r.key)); return r; })   // 💬 v7.80 — what waits on him
     .sort((a, b) => ((b.fresh ? 1 : 0) - (a.fresh ? 1 : 0)) || (attn(b) - attn(a)) || tsOf(b).localeCompare(tsOf(a)));
 }
 function crewFeedFold() { prefs.crewFeedFold = !prefs.crewFeedFold; scheduleSave(); renderCrewFeed(); }
@@ -15854,10 +15914,13 @@ function renderCrewFeed0() {
   const folded = prefs.crewFeedFold === true;
   const btn = $('cfFoldBtn');
   if (btn) {   // brightness + glyph + the spelled word: never a bare caret
-    const nw = all.filter(r => r.fresh).length, nwW = nw ? ` · ↩ ${nw} new repl${nw === 1 ? 'y' : 'ies'}` : '';   // 💬 v7.74 — said on the fold too
-    btn.textContent = folded
-      ? `▸ 👷 ${title} — ${all.length} note${all.length === 1 ? '' : 's'}${nwW}, tap to open`
-      : `▾ 👷 ${title} — showing ${Math.min(cap, list.length)} of ${narrowed ? list.length + ' found' : all.length}${nwW}, tap to fold`;
+    // 💬 v7.74 — said on the fold too · 💬 v7.80 — in his words, behind the same pulsing lamp as the rows: alerts and responses waiting on him
+    const nA = all.filter(r => r.wait === 'alert').length, nR = all.filter(r => r.wait === 'reply').length;
+    const waitW = [nA ? `⚠ ${nA} alert${nA === 1 ? '' : 's'} waiting` : '', nR ? `↩ ${nR} response${nR === 1 ? '' : 's'} waiting` : ''].filter(Boolean).join(' · ');
+    const nwW = waitW ? ` · <span class="cf-lamp${nA ? ' alert' : ''}" aria-hidden="true"></span>${esc(waitW)}` : '';
+    btn.innerHTML = (folded
+      ? `▸ 👷 ${esc(title)} — ${all.length} note${all.length === 1 ? '' : 's'}`
+      : `▾ 👷 ${esc(title)} — showing ${Math.min(cap, list.length)} of ${narrowed ? list.length + ' found' : all.length}`) + nwW + (folded ? ', tap to open' : ', tap to fold');
     btn.setAttribute('aria-expanded', folded ? 'false' : 'true');
   }
   const body = $('crewFeedList');
@@ -15881,9 +15944,9 @@ function renderCrewFeed0() {
     if (r.own) {   // 💬 v7.33 — my own note to him, two-sided (he responded, or it asks ⚠)
       const seenNames = Object.keys(e.seenBy || {}), st = thState('Eric', e.id, seenNames.length > 0, !!e.threadDone); st.flushedBy = seenNames.join(', ');   // 💬 v7.34
       return `<div class="sum-row cf-row th-own${st.pulse ? ' th-new' : ''}" data-th="Eric:${escq(String(e.id))}" style="cursor: default; font-size: 14.5px; display: block;">
-      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">${st.pulse ? '<b class="th-newtag">↩ NEW REPLY · </b>' : ''}📨 <b>you → ${esc(r.who === 'crew' ? 'the crew' : r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''}${e.ask && !e.askDone ? ' · <b>⚠ NEEDS THEIR ATTENTION</b>' : ''}</div>
+      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">${cfWaitTag(st.pulse ? 'reply' : '')}📨 <b>you → ${esc(r.who === 'crew' ? 'the crew' : r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''}${e.ask && !e.askDone ? ' · <b>⚠ NEEDS THEIR ATTENTION</b>' : ''}</div>
       <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${esc(String(e.details || '').slice(0, 600))}</div>
-      ${thLinesHtml('Eric', e.id)}
+      ${thFoldLinesHtml('Eric', e.id)}
       <div>${thCubesHtml(st, r.who === 'crew' ? 'the crew' : r.who, true)}</div>
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(ph)}')">📷 Open the picture</button>` : ''}
@@ -15894,11 +15957,11 @@ function renderCrewFeed0() {
     </div>`;
     }
     const waiting = cfWillLog(r);   // ⤵ v7.15 — what the flush will do with it, said on its plate
-    const st = thState(r.who, e.id, !!e.threadDone, gone.has(r.key));
-    return `<div class="sum-row cf-row${st.pulse ? ' th-new' : ''}" data-th="${escq(r.who)}:${escq(String(e.id))}" style="cursor: default; font-size: 14.5px; display: block;">
-      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">${st.pulse ? '<b class="th-newtag">↩ NEW REPLY · </b>' : ''}👷 <b>${esc(r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''} · ${cfForWord(e)}${crewRcptWord(e)}${e.type === 'Done' ? ' · ✅ finished' : ''}${e.route === 'Eric' && e.urg === 'now' ? ' · <b>⚠ NEEDS YOUR ATTENTION</b>' : ''}</div>
+    const st = thState(r.who, e.id, !!e.threadDone, gone.has(r.key)), w = r.wait != null ? r.wait : cfWaitOf(r, st.pulse, st.myFlushed);   // 💬 v7.80
+    return `<div class="sum-row cf-row${st.pulse ? ' th-new' : ''}${w === 'alert' ? ' th-alert' : ''}" data-th="${escq(r.who)}:${escq(String(e.id))}" style="cursor: default; font-size: 14.5px; display: block;">
+      <div class="hint" style="margin: 0 0 3px; font-size: var(--fs12, 12px);">${cfWaitTag(w)}👷 <b>${esc(r.who)}</b> · ${esc(when)}${e.job && e.job !== '—' ? ' · ' + esc(e.job) : ''} · ${cfForWord(e)}${crewRcptWord(e)}${e.type === 'Done' ? ' · ✅ finished' : ''}${e.route === 'Eric' && e.urg === 'now' ? ' · <b>⚠ NEEDS YOUR ATTENTION</b>' : ''}</div>
       <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${esc(String(e.details || '').slice(0, 600))}</div>
-      ${thLinesHtml(r.who, e.id)}
+      ${thFoldLinesHtml(r.who, e.id)}
       ${st.responded || st.theirFlushed || st.myFlushed ? `<div>${thCubesHtml(st, r.who)}</div>` : ''}
       <div class="chips-row" style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
         ${ph ? `<button type="button" class="pick-chip" onclick="showPhoto('${escq(ph)}')">📷 Open the picture</button>` : ''}
@@ -26842,7 +26905,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.79';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.80';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

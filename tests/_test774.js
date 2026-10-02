@@ -127,8 +127,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     window.dbxDownload = async p => window._files[p] ?? null;
   });
   await page.evaluate(async () => { await checkCrewLogs(); }); await page.waitForTimeout(150);
-  ok('on Eric\'s card the same: his five-day-old note with Phil\'s fresh answer leads the three shown, says ↩ NEW REPLY, and the fold counts it', await page.evaluate(() => { const rs = [...document.querySelectorAll('#crewFeedList .sum-row')]; const t = rs[0].textContent.replace(/\s+/g, ' ').trim();
-    return rs.length === 3 && rs[0].dataset.th === 'Eric:5' && rs[0].classList.contains('th-new') && /^↩ NEW REPLY · 📨 you →\s*Phil/.test(t) && /Ordered, here Friday/.test(t) && !rs[1].classList.contains('th-new') && /· ↩ 1 new reply, tap to fold$/.test($('cfFoldBtn').textContent.trim()); }),
+  // 💬 v7.80 — on HIS card the words are his own ("a light for response waiting or alert waiting that pulses"): ↩ RESPONSE WAITING behind a pulsing lamp
+  ok('on Eric\'s card the same: his five-day-old note with Phil\'s fresh answer leads the three shown, says ↩ RESPONSE WAITING (v7.80), and the fold counts it', await page.evaluate(() => { const rs = [...document.querySelectorAll('#crewFeedList .sum-row')]; const t = rs[0].textContent.replace(/\s+/g, ' ').trim();
+    return rs.length === 3 && rs[0].dataset.th === 'Eric:5' && rs[0].classList.contains('th-new') && /^↩ RESPONSE WAITING · 📨 you →\s*Phil/.test(t) && /Ordered, here Friday/.test(t) && !rs[1].classList.contains('th-new') && /· ↩ 1 response waiting, tap to fold$/.test($('cfFoldBtn').textContent.trim()); }),
     await page.evaluate(() => JSON.stringify({ th: [...document.querySelectorAll('#crewFeedList .sum-row')].map(r => r.dataset.th + (r.classList.contains('th-new') ? '*' : '')), first: document.querySelector('#crewFeedList .sum-row').textContent.replace(/\s+/g, ' ').trim().slice(0, 140), fold: $('cfFoldBtn').textContent.trim() })));
   ok('a tap on the crew\'s alert lands on it there too (the card folded first); his own flush has Undo', await (async () => {
     await page.evaluate(() => { prefs.crewFeedFold = true; renderCrewFeed(); window.scrollTo(0, 0); pushTapSet('crew-ask'); }); await page.waitForTimeout(500);

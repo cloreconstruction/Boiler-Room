@@ -86,7 +86,7 @@ const { chromium } = require('playwright');
   }));
   ok('the "how many" wheel caps it, and the fold says how many wait in words', await page.evaluate(() => {
     prefs.crewFeedN = '3'; renderCrewFeed(); const a = document.querySelectorAll('#crewFeedList .cf-row').length === 3 && /showing 3 of 4/.test($('cfFoldBtn').textContent);
-    crewFeedFold(); const b = /▸ 👷 WITH THE CREW — 4 notes, tap to open/.test($('cfFoldBtn').textContent) && $('crewFeedList').style.display === 'none';
+    crewFeedFold(); const b = /▸ 👷 WITH THE CREW — 4 notes · ⚠ 1 alert waiting, tap to open/.test($('cfFoldBtn').textContent) && $('crewFeedList').style.display === 'none';   // 💬 v7.80 — Phil's ⚠ note nobody has answered yet: an alert waiting, said on the fold
     crewFeedFold(); prefs.crewFeedN = 'all'; renderCrewFeed(); return a && b;
   }));
   ok('with only Phil sending, it reads FROM PHIL', await page.evaluate(() => {
