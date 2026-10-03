@@ -1,5 +1,6 @@
 // client-portal.mjs — serves each client's curated tracker data and logs what they tap.
-// GET  ?c=<code>            -> the client's JSON (read from Eric's Dropbox; code IS the key)
+// GET  ?c=<code>            -> the client's JSON (read from Eric's Dropbox; code IS the key — and since v7.81 it must be a code
+//                              on the list in index.json: no other file in the folder is ever served, whatever it is asked for by)
 // GET  ?c=<code>&p=<name>   -> a released journal photo from that client's own photos folder
 // GET  ?c=<code>&boards=1   -> the shared Option Boards library (only boards switched ON)
 // GET  ?c=<code>&bimg=<f>   -> one poster picture from that library, rendered to JPEG
@@ -56,6 +57,32 @@ async function up(t, path, body) {
 // every header this file builds gets the same escaping the app has always used.
 const hsafe = o => JSON.stringify(o).split('').map(ch => ch.charCodeAt(0) > 126 ? '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0') : ch).join('');
 const clean = s => String(s || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40);
+// 🚪 v7.81 — THE DOOR OPENS ONLY FOR A CLIENT'S CODE. Until now a code was only cleaned (letters, digits, dashes) and the door
+// then served `<that name>.json` out of the Client Portal folder — so a caller who asked for a file that is NOT a client page
+// was handed it: the list of every client's code, an office estimates board, an office Build List, the invoice lines, the push
+// files. (Found 2026-10-02, while one more office file was about to be put in that folder.) Now a code must be ON THE LIST —
+// index.json's own clients[].code, case aside — before anything is read or written for it, GET and POST alike; anything else
+// is "not found", exactly as a wrong code always was. The list is kept in memory for half a minute (one page load asks many
+// times); a code that is not on it makes the door look once more (a page made a moment ago), no more than once in five
+// seconds; a list that cannot be read lets nobody in — what was known a moment ago stands.
+let _codes = { at: 0, set: null };
+async function clientCodes(t, force) {
+  const now = Date.now();
+  if (!force && _codes.set && now - _codes.at < 30000) return _codes.set;
+  let j = null;
+  try { j = JSON.parse(await dl(t, `${BASE}/index.json`) || 'null'); } catch (e) { j = null; }
+  if (j && Array.isArray(j.clients)) _codes = { at: now, set: new Set(j.clients.map(x => String((x && x.code) || '').toLowerCase()).filter(Boolean)) };
+  else if (_codes.set) _codes.at = now;   // the read failed: the list of a moment ago stands, and is not asked for again at once
+  return _codes.set || new Set();
+}
+async function isClient(t, c) {
+  const k = String(c || '').toLowerCase();
+  if (!k) return false;
+  let s = await clientCodes(t, false);
+  if (s.has(k)) return true;
+  if (!_codes.set || Date.now() - _codes.at > 5000) s = await clientCodes(t, true);
+  return s.has(k);
+}
 // 🖼 v6.50 — OPTION BOARDS. Eric's posters ("Sheetrock / Drywall Options" and the rest) live
 // ONCE and serve every client: one shared library, not a copy per job. The board file and its
 // pictures are only ever handed out to a caller who already proved a real client code.
@@ -85,6 +112,7 @@ const portal = async (req, context) => {
     const c = clean(url.searchParams.get('c'));
     if (!c) return new Response(JSON.stringify({ error: 'missing code' }), { status: 400 });
     const t = await dbxToken();
+    if (!(await isClient(t, c))) return new Response(JSON.stringify({ error: 'not found' }), { status: 404 });   // 🚪 v7.81 — only a code on the list
     // 📷 a released journal photo — only from THIS code's own folder, code checked first
     const p = String(url.searchParams.get('p') || '').replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 80);
     if (p) {
@@ -164,6 +192,7 @@ const portal = async (req, context) => {
     const c = clean(b.c);
     if (!c) return new Response('bad', { status: 400 });
     const t = await dbxToken();
+    if (!(await isClient(t, c))) return new Response('nope', { status: 404 });   // 🚪 v7.81 — only a code on the list
     if (await dl(t, `${BASE}/${c}.json`) == null) return new Response('nope', { status: 404 });
     // 🔔 v6.68 — HOMEOWNER PINGS: this phone's subscription, in THIS client's own file
     // (push-<code>.json). Never Eric's App Data/push-subs.json — his and the crew's alerts must

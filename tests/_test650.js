@@ -131,7 +131,8 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   ] };
   const mkFn = (opts = {}) => {
     const st = { wrote: {}, headers: [] };
-    const files = { '/Clore DayLog/App Data/Client Portal/abc.json': JSON.stringify(opts.page || { name: 'Mery', updated: '2026-09-07' }),
+    const files = { '/Clore DayLog/App Data/Client Portal/index.json': JSON.stringify({ clients: [{ key: 'abc', job: 'Oak House', code: 'abc' }] }),   // 🚪 v7.81 — the door opens only for a code on the list
+      '/Clore DayLog/App Data/Client Portal/abc.json': JSON.stringify(opts.page || { name: 'Mery', updated: '2026-09-07' }),
       '/Clore DayLog/App Data/Option Boards/boards.json': JSON.stringify(opts.lib === null ? {} : (opts.lib || LIB)),
       '/Clore DayLog/App Data/Client Portal/asks-abc.json': JSON.stringify(opts.asks || []) };
     global.fetch = async (url, init = {}) => {

@@ -25,7 +25,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath, pathToFileURL
   const portal = (await import(pathToFileURL(path.join(repo, 'netlify', 'functions', 'client-portal.mjs')).href)).default;
   const PAGE = '/Clore DayLog/App Data/Client Portal/test-1234.json', ASKS = '/Clore DayLog/App Data/Client Portal/asks-test-1234.json';
   const mkPortal = (files = {}) => {
-    const state = { files: { ...files }, ups: [], rings: 0 };
+    const state = { files: { '/Clore DayLog/App Data/Client Portal/index.json': JSON.stringify({ clients: [{ key: 'test', job: 'Oak House', code: 'test-1234' }] }), ...files }, ups: [], rings: 0 };   // 🚪 v7.81 — the door opens only for a code on the list
     global.fetch = async (url, init = {}) => {
       const u = String(url);
       if (u.includes('oauth2/token')) return { ok: true, json: async () => ({ access_token: 't' }) };

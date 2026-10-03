@@ -111,7 +111,7 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— ☁ v6.68 client-portal: the opt-in door, and a manifest per page —');
   const portal = (await import(fileUrl(path.join(repo, 'netlify', 'functions', 'client-portal.mjs')))).default;
   const mkPortal = (files = {}) => {
-    const state = { files: { ...files }, ups: [] };
+    const state = { files: { '/Clore DayLog/App Data/Client Portal/index.json': JSON.stringify({ clients: [{ key: 'test', job: 'Oak House', code: 'test-1234' }] }), ...files }, ups: [] };   // 🚪 v7.81 — the door opens only for a code on the list
     global.fetch = async (url, init = {}) => {
       const u = String(url);
       if (u.includes('oauth2/token')) return { ok: true, json: async () => ({ access_token: 't' }) };
