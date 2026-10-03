@@ -200,15 +200,15 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const live = { float: getComputedStyle(tools).float, tt: getComputedStyle(counts0).textTransform, above: tools.getBoundingClientRect().bottom <= first0.querySelector('b').getBoundingClientRect().top + 1, ownLine: counts0.getBoundingClientRect().top >= h4.querySelector('button').getBoundingClientRect().bottom - 2 };
     tools.querySelector('.rm-dots').click();
     const t2 = [...document.querySelectorAll('#revBox .set-section')].find(s => /GARAGE/.test(s.querySelector('h4').textContent)).querySelector('.mat-rm-tools');
-    const more = [...t2.querySelectorAll('button')].filter(vis).length === 7; t2.querySelector('.rm-dots').click();
+    const more = [...t2.querySelectorAll('button')].filter(vis).length === 8; t2.querySelector('.rm-dots').click();   // 🔀 v7.82 — 💰 (the estimates at this category's lines) joined the heading: eight with ⋯ open
     const first = sec.querySelector('.mat-item'), name = first.querySelector('b').getBoundingClientRect(), tb = tools.getBoundingClientRect();
     const counts = h4.querySelector('.mat-counts'), cs = getComputedStyle(counts);
     const plates = [..._row('Loft railing (cable)').querySelectorAll('.mat-line2 .mat-box')], tops = new Set(plates.map(p => Math.round(p.getBoundingClientRect().top)));
     const parts = { shown, more, float: live.float, above: live.above, tt: live.tt, ownLine: live.ownLine,
       n: plates.length, rows: tops.size, sizes: plates.map(p => Math.round(p.getBoundingClientRect().width) + 'x' + Math.round(p.getBoundingClientRect().height)).join(' '), page: document.documentElement.scrollWidth <= document.documentElement.clientWidth, box: $('revBox').scrollWidth <= $('revBox').clientWidth + 1 };
-    return parts.shown === '⋯ ➕ item' && parts.more && parts.float === 'none' && parts.above && parts.tt === 'none' && parts.ownLine && parts.n === 8 && parts.rows === 1 && plates.every(p => p.getBoundingClientRect().width >= 34 && p.getBoundingClientRect().height >= 40) && parts.page && parts.box ? true : JSON.stringify(parts);   // 🚧 v7.25 — eight plates, 34px on the phone
+    return parts.shown === '⋯ 💰 ➕ item' && parts.more && parts.float === 'none' && parts.above && parts.tt === 'none' && parts.ownLine && parts.n === 8 && parts.rows === 1 && plates.every(p => p.getBoundingClientRect().width >= 34 && p.getBoundingClientRect().height >= 40) && parts.page && parts.box ? true : JSON.stringify(parts);   // 🚧 v7.25 — eight plates, 34px on the phone
   });
-  ok('nothing is floated over the first row any more: the heading is the name, ➕ item and ⋯ (move · fold in · template · delete behind it), the counts in plain case on their own line; all eight plates of a row sit on ONE line', ph === true, ph);
+  ok('nothing is floated over the first row any more: the heading is the name, 💰 (its price — the estimates), ➕ item and ⋯ (move · fold in · template · delete behind it), the counts in plain case on their own line; all eight plates of a row sit on ONE line', ph === true, ph);
 
   ok('the top of the board is short: the counts and "? how this works" — the legend and the instructions fold behind it; the title and ✕ no longer fight for a line', await page.evaluate(() => {
     const hint = [...$('revBox').querySelectorAll('.hint')].find(h => h.querySelector('a')), a = hint.querySelector('a');

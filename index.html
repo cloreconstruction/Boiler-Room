@@ -983,6 +983,13 @@
   .biz-ctl { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 6px; }
   .biz-ctl .mini-sel { flex: 1 1 140px; min-width: 0; min-height: 36px; font-size: 13px; }
   .biz-chart { display: block; overflow: visible; color: var(--ink-1); }
+  /* 📈 v7.82 — Eric: "the money charts are really big on pc almost hard to see". A chart is drawn 360 wide and stretched to the
+     window; on a wide monitor that made every bar and letter five times its size. On a PC the Business windows keep a readable
+     column and a chart stops at 640px (the phone is untouched). */
+  @media (min-width: 701px) {
+    #bizBox { max-width: 880px; margin-left: auto; margin-right: auto; }
+    #bizBox .biz-chart { max-width: 640px; margin-left: auto; margin-right: auto; }
+  }
   .biz-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs12, 12px); color: var(--ink-2); margin-top: 6px; }
   .biz-sw { display: inline-block; width: 14px; height: 10px; vertical-align: middle; margin-right: 5px; border-radius: 2px; }
   .biz-sw.bar { background: #3aa6a0; }
@@ -1850,6 +1857,68 @@
   .sch-inbox .sch-moves .btn-primary { flex: 2 1 180px; white-space: normal; line-height: 1.25; }
   .pf-sched { width: 100%; min-height: 48px; margin: 0 0 10px; font-weight: var(--fw8, 800); white-space: normal; line-height: 1.3; }
   @media (min-width: 701px) { .sch-box { max-width: 1100px; margin: 0 auto; } }
+  /* 👁 🔀 📌 v7.82 — the look-only estimates, the flip between the two boards, the hit list */
+  .flip-back { display: block; width: 100%; min-height: 46px; margin: 0 0 8px; padding: 8px 12px; text-align: left; font-weight: var(--fw8, 800); border: 2px solid var(--accent); border-radius: 10px; white-space: normal; line-height: 1.3; }
+  .est-board > h3 + .flip-back, .est-board > h3 + .est-ro-say, .hit-box > h3 + .flip-back { margin-top: 22px; }   /* clear of the window's ✕, which hangs below the title */
+  .est-ro-say { margin: 0 0 8px; padding: 8px 11px; border: 1.5px solid var(--accent); border-radius: 10px; font-size: 14px; line-height: 1.4; background: color-mix(in srgb, var(--accent) 9%, transparent); }
+  .est-only { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 0 0 8px; padding: 7px 10px; border: 1.5px dashed var(--accent); border-radius: 10px; font-size: 13.5px; line-height: 1.35; }
+  .est-only > span { flex: 1 1 180px; min-width: 0; }
+  .est-only .btn-ghost { min-height: 40px; }
+  .est-ro .est-ro-inert { cursor: default; }
+  .est-ro input:disabled, .est-ro select:disabled, .est-ro textarea:disabled { opacity: 1; color: var(--ink-1); -webkit-text-fill-color: currentColor; background: transparent; border-style: dotted; cursor: default; }
+  .est-flip { display: inline; padding: 2px 0; margin: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; white-space: normal; }
+  .est-flip:hover, .mat-flip-ec:hover { color: var(--accent); }
+  .mat-flip-ec { display: inline; padding: 2px 0; margin: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: var(--fw7, 700); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; white-space: normal; text-align: left; }
+  .hit-door { display: inline-flex; align-items: center; min-height: 40px; margin: 0 0 8px; font-weight: var(--fw8, 800); }
+  .ms-doors { display: grid; gap: 6px; }
+  .ms-doors .btn-ghost { width: 100%; min-height: 46px; padding: 8px 12px; text-align: left; font-weight: var(--fw8, 800); white-space: normal; line-height: 1.3; }
+  .mat-item.flip-here { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+  .hit-box { max-width: 760px; margin: 0 auto; }
+  .hit-jobfield { margin: 0 0 10px; }
+  .hit-job { width: 100%; min-height: 48px; font-size: 16px; font-weight: var(--fw8, 800); }
+  .hit-new { display: flex; gap: 6px; margin: 0 0 6px; }
+  .hit-new input { flex: 1; min-width: 0; min-height: 46px; font-size: 16px; padding: 8px 11px; }
+  .hit-new-go { flex: none; min-height: 46px; min-width: 76px; font-weight: var(--fw8, 800); }
+  .hit-kinds, .hit-where { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 0; }
+  #hitBox .hit-kinds .pick-chip, #hitAddBox .hit-kinds .pick-chip, #hitAddBox .hit-where .pick-chip { font-size: 12.5px; padding: 6px 10px; min-height: 38px; }
+  #hitAddBox .hit-where .pick-chip { flex: 1 1 140px; }
+  #hitAddBox textarea, #hitBox .hit-open textarea { width: 100%; font: inherit; font-size: 16px; line-height: 1.4; padding: 9px 11px; }
+  .hit-count { margin: 12px 0 8px; font-size: 14px; color: var(--ink-2); }
+  .hit-count b { color: var(--ink-1); }
+  .hit-list { display: grid; gap: 8px; }
+  .hit-row { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); padding: 8px; }
+  .hit-row.hit-next { border: 2.5px solid var(--accent); }
+  .hit-row.open { border-color: var(--accent); }
+  .hit-row.done { opacity: .8; }
+  .hit-line { display: flex; gap: 8px; align-items: flex-start; }
+  .hit-ck { flex: 0 0 44px; height: 44px; border: 2px solid var(--accent); border-radius: 10px; background: transparent; color: var(--ink-1); font: inherit; font-size: 20px; font-weight: var(--fw8, 800); cursor: pointer; }
+  .hit-row.done .hit-ck { background: color-mix(in srgb, var(--good, #8fd694) 22%, transparent); border-color: var(--good, #8fd694); }
+  .hit-words { flex: 1; min-width: 0; cursor: pointer; padding: 2px 0; }
+  .hit-top-line { display: block; font-size: 16px; line-height: 1.35; overflow-wrap: anywhere; }
+  .hit-top-line b { font-weight: var(--fw7, 700); }
+  .hit-row.done .hit-top-line b { text-decoration: line-through; font-weight: 400; }
+  .hit-nexttag { display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 6px; background: var(--accent); color: var(--accent-ink, #111); font-size: 12px; font-weight: var(--fw8, 800); letter-spacing: .4px; vertical-align: 1px; }
+  .hit-n { display: inline-block; min-width: 22px; margin-right: 4px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .hit-kind { margin-right: 5px; }
+  .hit-words small { display: block; margin-top: 3px; font-size: 12.5px; line-height: 1.4; color: var(--ink-2); overflow-wrap: anywhere; }
+  .hit-moves { display: flex; gap: 4px; flex: none; }
+  .hit-mv { width: 40px; height: 44px; border: 1.5px solid var(--border); border-radius: 9px; background: transparent; color: var(--ink-1); font: inherit; font-size: 16px; cursor: pointer; }
+  .hit-mv:disabled { opacity: .3; cursor: default; }
+  .hit-open { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .hit-open .field { margin: 0 0 8px; }
+  .hit-acts { display: grid; gap: 6px; margin-top: 10px; }
+  .hit-acts .btn-ghost { width: 100%; min-height: 44px; padding: 8px 12px; text-align: left; white-space: normal; line-height: 1.3; font-weight: var(--fw7, 700); }
+  .hit-acts .hit-del { color: var(--err, #c0392b); }
+  .hit-acts .hit-del.armed { border: 2px solid var(--err, #c0392b); font-weight: var(--fw8, 800); }
+  .hit-done-fold { width: 100%; min-height: 44px; margin-top: 12px; text-align: left; font-weight: var(--fw8, 800); }
+  .hit-list-done { margin-top: 8px; }
+  .hit-jobs { display: grid; gap: 8px; }
+  .hit-job-row { display: block; width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); color: var(--ink-1); font: inherit; text-align: left; cursor: pointer; }
+  .hit-job-row.has { border: 2px solid var(--accent); }
+  .hit-job-top { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; font-size: 16px; }
+  .hit-job-top b { min-width: 0; overflow-wrap: anywhere; }
+  .hit-job-top span { flex: none; font-size: 13.5px; color: var(--ink-2); font-weight: var(--fw7, 700); }
+  .hit-job-row small { display: block; margin-top: 5px; font-size: 13.5px; line-height: 1.4; color: var(--ink-2); overflow-wrap: anywhere; }
   .sb-pickrow .pick-chip.sel .sb-dim { color: inherit; opacity: .8; }   /* on the lit plate the small words take the plate's own ink */
   .sb-pickrow .sb-pickadd { border-style: dashed; }
   #subsSetupBox .sb-master { margin-bottom: 8px; }
@@ -2998,6 +3067,9 @@
   /* 📜 v6.78 — Eric: "the words 'running log' on the main page need to be bigger and bolder, the 'all' button
      underneath it is bigger and catches my eye first and I miss the 'running log' quite a bit." */
   .rl-head .qn-div-label { font-size: 17px; letter-spacing: 1.4px; padding: 7px 14px; border-radius: 8px; }
+  /* 📜 v7.82 — the log's name is its fold; folded, the card is its heading alone (the search window still shows the log) */
+  .rl-fold { border: 0; font-family: inherit; cursor: pointer; min-height: 40px; }
+  #runLogCard.rl-folded > #askRecent, #runLogCard.rl-folded > #logDbxHits, #runLogCard.rl-folded > #rlWinNote { display: none; }
   /* ✓✓ v5.06 verification lamps: word + glyph + weight, never color alone */
   .vv { white-space: nowrap; letter-spacing: .4px; }
   .vv-on { font-weight: var(--fw8, 800); opacity: 1; }
@@ -3822,7 +3894,8 @@
        the whole book, newest first, tap 🔍 and the searches open right here. -->
   <div class="card ask-card" id="runLogCard">
     <div class="qn-div rl-head" style="border-top: 0; margin-top: 0; padding-top: 0;">
-      <span class="qn-div-label">📜 RUNNING LOG</span>
+      <!-- 📜 v7.82 — Eric: "the running log should be foldable". Its own name is the fold: ▾ open · ▸ folded (the count beside it says so in words) -->
+      <button type="button" class="qn-div-label rl-fold" id="rlFoldBtn" onclick="rlFold()" aria-expanded="true" title="tap to fold the log">▾ 📜 RUNNING LOG</button>
       <span style="display: flex; align-items: center; gap: 6px;">
         <span class="hint" id="rlCount" style="margin: 0; font-size: var(--fs11, 11px);"></span>
         <!-- 🧾 v6.32 — Eric: "maybe the running log needs a receipt filter button? then i can
@@ -4774,7 +4847,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.81 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.82 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -12157,6 +12230,7 @@ function openPortalWin() {
   box.innerHTML = `${winX('closePortalWin()')}<h3>🏠 Project portal</h3>
     <div class="hint" style="margin: 0 0 8px;">One live page per job, at an unguessable address. Tap a job to unfold its buttons; text the link once and it updates as the books do. 🔄 rotate kills the old link instantly.</div>
     ${portalSchedHtml()}
+    <div id="pfHitTopHost">${portalHitHtml()}</div><!-- 📌 v7.82 — every job's hit list, one door (Eric and the office) -->
     <div id="qbFreshStrip"></div>
     <div id="portalList"><button class="btn-ghost" onclick="renderPortalList()">🔄 Load the projects</button> <span class="hint">Tap if the list doesn't fill itself in.</span></div>
     <!-- ← v6.81 — Eric: "At the bottom of the project portal, I need a back button. I keep pushing 'Build the page.'" Under the list, in every state. -->
@@ -15117,6 +15191,346 @@ function portalSchedHtml() {
   return `<button type="button" class="btn-ghost pf-sched" onclick="openSchedule('*')">📅 Schedule — every job on one week grid${n ? ` · ${n} with a plan` : ''}${w ? ` · 📥 ${w} plan${w === 1 ? '' : 's'} waiting` : ''}</button>`;
 }
 // ================= /📅 v7.67 =================
+// ================= 📌 v7.82 — THE HIT LIST =================
+// Eric: "phil is going to start just managment and bids and drawings etc. i want to make a hit list and put it in priority order so
+// that he can click on a project and have the list that needs to be done in order and he can work on one job each day and work
+// through the list. where is a good place to put that without complicating any current page and it needs to be connected into the
+// project portal somehow so that as i'm workking on estimates or build list i can send to phils hit list and pull it up and
+// reorder it".
+// ONE LIST A JOB, IN ORDER. A 📌 Hit list plate in every job's fold of the 🏠 Project portal (his fold and the office fold) and one
+// at the top of the portal for every job; the list is its own window — no page that was there before changes its layout. A line
+// is a thing to do: its words, a kind (💰 bid · 📐 drawing · 🛒 pick / order · 📞 call · 📝 other — a glyph AND a word), a note, who
+// put it on and when, and where it came from. The first line that is not done is ▸ NEXT. ⬆ ⬇ move a line one place, ⤒ sends it to
+// the top; the box on its left = done (who and when; it folds under ✓ DONE and one tap puts it back); a tap on the words opens
+// the line: its words, its note, its kind, ⤒, ✕ take it off (two taps).
+// FED FROM THE PAGES HE WORKS IN: 📌 To the hit list in an open estimate category, and 📌 Send to the hit list in a Build List
+// row's ✎ window, open a small box OVER the board — the words (the line's name is already in it), the kind, bottom or top of the
+// list — and the line lands on that job's list without the board being left. The line remembers where it came from: its open row
+// has 💰 Open the estimates at … / 📋 Open the Build List at … with ↩ back to the list; and both boards wear a 📌 Hit list door
+// at their top, with ↩ back to the board.
+// WHO: Eric and the office crew (Phil) read and change it — both phones work the same file in the shared Client Portal folder
+// (hitlist-<code>.json). Every change reads the file first, changes that one thing, and writes it back, one change at a time; a
+// read that FAILS changes nothing (an empty list is never written over a real one). A field phone has no plate. 🧱 The file is
+// office-side: the homeowner's door serves only a client's own page (v7.81) and has no route for it; the app itself never puts a
+// figure in a line (the words are his own).
+const HIT_KINDS = [['bid', '💰', 'bid'], ['draw', '📐', 'drawing'], ['buy', '🛒', 'pick / order'], ['call', '📞', 'call'], ['other', '📝', 'other']];
+let _hit = {};            // code → { lines, at } — what this phone last read of each job's list
+let _hitJob = '*', _hitOpen = '', _hitArm = '', _hitArmT = null, _hitDoneOpen = false, _hitNewK = 'other';
+let _hitBack = null;      // opened from a board: { to: 'est' | 'mat', i, st, flip } — its close goes back there
+let _hitAdd = null;       // the small box over a board: { code, src, t, k, top }
+let _hitAllAt = 0, _hitLine = Promise.resolve();
+function hitCan() { return crewPreview ? amOffice() : (!CREW_NAME || (amOffice() && !!_portalRoot)); }
+function hitMe() { return CREW_NAME || 'Eric'; }
+function hitWho(n) { return String(n || '') === hitMe() && !crewPreview ? 'you' : String(n || ''); }
+function hitPath(code) { return portalRoot() + '/hitlist-' + code + '.json'; }
+function hitKind(k) { return HIT_KINDS.find(x => x[0] === k) || HIT_KINDS[4]; }
+function hitId() { return 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function hitDayWord(iso) { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); }
+function hitClean(l) {   // one shape and its sizes, whichever phone wrote it
+  if (!l || typeof l !== 'object') return null;
+  const t = String(l.t || '').replace(/\s+/g, ' ').trim().slice(0, 200); if (!t) return null;
+  const o = { id: String(l.id || '').replace(/[^a-z0-9]/gi, '').slice(0, 24) || hitId(), t, k: hitKind(l.k)[0], by: String(l.by || '').slice(0, 30), at: String(l.at || '').slice(0, 30) };
+  const note = String(l.note || '').trim().slice(0, 400); if (note) o.note = note;
+  if (l.done) { o.done = String(l.done).slice(0, 30); o.doneBy = String(l.doneBy || '').slice(0, 30); }
+  const s = l.src;
+  if (s && typeof s === 'object' && (s.from === 'est' || s.from === 'mat') && String(s.name || '').trim()) {
+    o.src = { from: s.from, name: String(s.name).trim().slice(0, 80) };
+    if (s.from === 'mat') { o.src.id = String(s.id || '').slice(0, 24); if (s.room) o.src.room = String(s.room).slice(0, 60); }
+  }
+  return o;
+}
+function hitHeal(j) { const seen = new Set(); return { v: 1, updated: String((j && j.updated) || ''), lines: (j && Array.isArray(j.lines) ? j.lines : []).map(hitClean).filter(l => l && !seen.has(l.id) && seen.add(l.id)).slice(0, 300) }; }
+function hitCodes() { return (((_portalIdx || {}).clients) || []).filter(c => c && c.code); }
+function hitClient(code) { return hitCodes().find(c => c.code === code) || null; }
+function hitIdxOf(code) { return (((_portalIdx || {}).clients) || []).findIndex(c => c && c.code === code); }
+function hitLinesOf(code) { return ((_hit[code] || {}).lines) || []; }
+function hitOpenN(code) { return hitLinesOf(code).filter(l => !l.done).length; }
+function hitAllN() { return hitCodes().reduce((s, c) => s + hitOpenN(c.code), 0); }
+function hitHas(code, src) {   // is there a line still to do that came from this category / this row?
+  if (!code || !src) return false;
+  return hitLinesOf(code).some(l => !l.done && l.src && l.src.from === src.from && (src.from === 'mat' ? l.src.id === src.id : String(l.src.name).trim().toLowerCase() === String(src.name || '').trim().toLowerCase()));
+}
+// the file as it stands. A list that is not there yet is an empty list; a read that FAILED is null — never an empty list, which
+// the next change would write over the real one (v6.28's lesson)
+async function hitRead(code) {
+  let raw = null;
+  try { raw = await dbxDownload(hitPath(code)); } catch (e) { return null; }
+  if (raw == null) { let there = true; try { there = await dbxPathExists(hitPath(code)); } catch (e) { return null; } return there ? null : hitHeal(null); }
+  try { return hitHeal(JSON.parse(raw)); } catch (e) { return null; }
+}
+async function hitLoad(code) { const d = await hitRead(code); if (d) _hit[code] = { lines: d.lines, at: Date.now() }; return !!d; }
+// every job's list in one go: ONE listing of the folder says which jobs have a list at all, and only those are read
+async function hitLoadAll(force) {
+  if (!hitCan() || !dbx.refreshToken || !hitCodes().length) return;
+  if (!force && Date.now() - _hitAllAt < 5 * 60000) return;
+  _hitAllAt = Date.now();
+  let names = null;
+  try { const r = await dbxList({ path: portalRoot(), recursive: false }); if (r && Array.isArray(r.entries) && !r.partial) names = new Set(r.entries.map(f => String((f && f.name) || '').toLowerCase())); } catch (e) { names = null; }
+  if (!names) { _hitAllAt = 0; return; }
+  await Promise.all(hitCodes().map(c => names.has(('hitlist-' + c.code + '.json').toLowerCase()) ? hitLoad(c.code) : (_hit[c.code] = { lines: [], at: Date.now() }, true)));
+  hitFresh();
+}
+// what a plate says, and the plates that are on the screen right now
+function hitPlateWord(code) { const n = hitOpenN(code); return '📌 Hit list' + (n ? ' · ' + n + ' to do' : ''); }
+function hitDoorWord(code) { return hitPlateWord(code) + ' ›'; }
+function hitTopWord() { const n = hitAllN(), j = hitCodes().filter(c => hitOpenN(c.code)).length; return '📌 Hit lists — what to do next, job by job' + (n ? ` · ${n} to do on ${j} job${j === 1 ? '' : 's'}` : ''); }
+function hitPlateHtml(c) { return c && hitCan() ? `<button type="button" class="btn-ghost pf-hit" data-code="${esc(c.code)}" onclick="openHitList('${escq(c.code)}')">${hitPlateWord(c.code)}</button>` : ''; }
+function portalHitHtml() { return hitCan() ? `<button type="button" class="btn-ghost pf-sched pf-hittop" id="pfHitTop" onclick="openHitList('*')">${hitTopWord()}</button>` : ''; }
+function hitPlatesSync() {
+  document.querySelectorAll('.pf-hit[data-code]').forEach(b => { b.textContent = hitPlateWord(b.dataset.code); });
+  document.querySelectorAll('.hit-door[data-code]').forEach(b => { b.textContent = hitDoorWord(b.dataset.code); });
+  const h = $('pfHitTopHost'); if (h) h.innerHTML = portalHitHtml();   // (an office phone knows it may have the plate only once the shared folder is found)
+}
+// a list just changed or just landed: the plates follow; the window follows too — unless he is typing in it (a redraw would take
+// the words out from under his thumbs; the next tap draws it)
+function hitFresh() {
+  hitPlatesSync();
+  if (!$('hitBox')) return;
+  const a = document.activeElement;
+  if (a && a.closest && a.closest('#hitBox') && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
+  renderHitList();
+}
+// ONE CHANGE: shown at once on this phone, then made for real against the file as it stands (read → change → write), one at a time
+function hitOp(code, fn, quiet) {
+  if (!hitCan() || !code) return Promise.resolve(false);
+  const local = hitLinesOf(code).map(l => ({ ...l, ...(l.src ? { src: { ...l.src } } : {}) }));
+  // (his own tap is drawn at once, whatever has the focus; what lands later from the file is drawn only when he is not typing)
+  if (fn(local) !== false) { _hit[code] = { lines: local, at: (_hit[code] || {}).at || 0 }; hitPlatesSync(); if (!quiet && $('hitBox')) renderHitList(); }
+  const run = async () => {
+    const d = await hitRead(code);
+    if (!d) { toast('📌 Could not read the hit list — that change did not save. Try again on a better signal', false); await hitLoad(code); return false; }
+    if (fn(d.lines) === false) { _hit[code] = { lines: d.lines, at: Date.now() }; return false; }   // nothing to change any more (another phone took the line off, say)
+    d.updated = new Date().toISOString();
+    try { await dbxUpload(hitPath(code), JSON.stringify({ v: 1, updated: d.updated, lines: d.lines })); }
+    catch (e) { toast('📌 The hit list did not save — check the connection', false); await hitLoad(code); return false; }
+    _hit[code] = { lines: d.lines, at: Date.now() };
+    return true;
+  };
+  const p = _hitLine.then(run, run).then(ok => { if (quiet) hitPlatesSync(); else hitFresh(); return ok; }, () => { hitFresh(); return false; });
+  _hitLine = p;
+  return p;
+}
+// ---- the window
+function openHitList(code, back) {
+  if (!hitCan()) { toast('📌 The hit list is Eric\'s and the office\'s', false); return; }
+  _hitJob = code && code !== '*' && hitClient(code) ? code : '*';
+  _hitOpen = ''; _hitArm = ''; _hitDoneOpen = false; _hitNewK = 'other'; _hitBack = back || null;
+  renderHitList();
+  $('revModal').classList.add('show', 'mat-full');
+  document.body.classList.add('modal-open');
+  const w = $('revModal'); if (w) w.scrollTop = 0;
+  if (_hitJob === '*') hitLoadAll(true);
+  else hitLoad(_hitJob).then(ok => { hitFresh(); if (!ok) toast('📌 Could not read this job\'s hit list — check the connection', false); });
+}
+function hitClose() {
+  const b = _hitBack; _hitBack = null; _hitOpen = ''; _hitArm = '';
+  if (b && b.to === 'est') { estReopen(b.i, b.st, b.flip || null); return; }
+  if (b && b.to === 'mat') { matReopen(b.i, b.st, b.flip || null); return; }
+  closeReview();
+}
+function hitPick(code) {
+  _hitJob = code && code !== '*' && hitClient(code) ? code : '*'; _hitOpen = ''; _hitArm = ''; _hitDoneOpen = false;
+  renderHitList();
+  if (_hitJob !== '*') hitLoad(_hitJob).then(() => hitFresh()); else hitLoadAll(false);
+}
+function hitKindChips(sel, on) { return HIT_KINDS.map(([k, g, w]) => `<button type="button" class="pick-chip hit-kindchip${sel === k ? ' sel' : ''}" data-k="${k}" aria-pressed="${sel === k}" onclick="${on(k)}">${sel === k ? '✓ ' : ''}${g} ${w}</button>`).join(''); }
+function hitSrcWord(s) { return !s ? '' : s.from === 'est' ? '💰 ' + s.name : '📋 ' + s.name; }
+function hitRowHtml(l, n, total) {
+  const kd = hitKind(l.k), id = escq(l.id), isOpen = _hitOpen === l.id, next = !l.done && n === 0;
+  const small = [kd[2], l.src ? esc(hitSrcWord(l.src)) : '', l.note ? '🗒 ' + esc(l.note.slice(0, 90)) + (l.note.length > 90 ? '…' : '') : '',
+    l.done ? '✓ done ' + esc(hitDayWord(l.done)) + (l.doneBy ? ' by ' + esc(hitWho(l.doneBy)) : '') : (l.by ? 'from ' + esc(hitWho(l.by)) : '') + (l.at ? (l.by ? ' · ' : '') + esc(hitDayWord(l.at)) : '')].filter(Boolean).join(' · ');
+  return `<div class="hit-row${next ? ' hit-next' : ''}${isOpen ? ' open' : ''}${l.done ? ' done' : ''}" data-id="${esc(l.id)}">
+    <div class="hit-line">
+      <button type="button" class="hit-ck" onclick="hitDone('${id}')" aria-pressed="${!!l.done}" aria-label="${l.done ? 'done — tap to put it back on the list' : 'mark it done: ' + esc(l.t)}" title="${l.done ? 'done — tap to put it back on the list' : 'mark it done'}">${l.done ? '✓' : ''}</button>
+      <div class="hit-words" role="button" tabindex="0" aria-expanded="${isOpen}" onclick="hitOpenTap('${id}')" onkeydown="if (event.key === 'Enter') { event.preventDefault(); hitOpenTap('${id}'); }">
+        <span class="hit-top-line">${next ? '<span class="hit-nexttag">▸ NEXT</span>' : l.done ? '' : `<span class="hit-n">${n + 1}.</span>`}<span class="hit-kind" aria-hidden="true">${kd[1]}</span><b>${esc(l.t)}</b></span>
+        <small>${small}</small>
+      </div>
+      ${l.done ? '' : `<span class="hit-moves"><button type="button" class="hit-mv" onclick="hitMove('${id}', -1)" aria-label="move it up one place" title="up one place"${n === 0 ? ' disabled' : ''}>⬆</button><button type="button" class="hit-mv" onclick="hitMove('${id}', 1)" aria-label="move it down one place" title="down one place"${n === total - 1 ? ' disabled' : ''}>⬇</button></span>`}
+    </div>
+    ${isOpen ? `<div class="hit-open">
+      <div class="field"><label for="hitT-${esc(l.id)}">The words</label><textarea id="hitT-${esc(l.id)}" rows="2" maxlength="200" onchange="hitSet('${id}', 't', this.value)">${esc(l.t)}</textarea></div>
+      <div class="field"><label for="hitN-${esc(l.id)}">Note</label><textarea id="hitN-${esc(l.id)}" rows="2" maxlength="400" placeholder="who to call, what to bring, where the drawing is…" onchange="hitSet('${id}', 'note', this.value)">${esc(l.note || '')}</textarea></div>
+      <div class="hit-kinds" role="group" aria-label="what kind of thing it is">${hitKindChips(l.k, k => `hitSet('${id}', 'k', '${k}')`)}</div>
+      <div class="hit-acts">
+        ${l.src ? `<button type="button" class="btn-ghost hit-src" onclick="hitGoSrc('${id}')">${l.src.from === 'est' ? '💰 Open the estimates at ' + esc(l.src.name) : '📋 Open the Build List at ' + esc(l.src.name)} ›</button>` : ''}
+        ${!l.done && n > 0 ? `<button type="button" class="btn-ghost hit-totop" onclick="hitTop('${id}')">⤒ To the top — do it next</button>` : ''}
+        <button type="button" class="btn-ghost hit-del${_hitArm === l.id ? ' armed' : ''}" onclick="hitDel('${id}')">${_hitArm === l.id ? '⚠ SURE? Tap again — off the list' : '✕ Take it off the list'}</button>
+        <button type="button" class="btn-ghost hit-fold" onclick="hitOpenTap('${id}')">▴ Fold</button>
+      </div></div>` : ''}
+  </div>`;
+}
+function renderHitList() {
+  const box = $('revBox'); if (!box) return;
+  if (_hitJob !== '*' && !hitClient(_hitJob)) _hitJob = '*';
+  const cl = hitCodes(), one = _hitJob !== '*' ? hitClient(_hitJob) : null, allN = hitAllN();
+  const keepNew = ($('hitNewT') || {}).value || '';
+  let body = '';
+  if (one) {
+    const lines = hitLinesOf(one.code), open = lines.filter(l => !l.done), done = lines.filter(l => l.done).sort((a, b) => String(b.done).localeCompare(String(a.done)));
+    body = `<div class="hit-new"><input type="text" id="hitNewT" maxlength="200" placeholder="➕ a line — what needs doing…" aria-label="a new line for this job's hit list" onkeydown="if (event.key === 'Enter') { event.preventDefault(); hitNewGo(); }"><button type="button" class="btn-primary hit-new-go" onclick="hitNewGo()">➕ Add</button></div>
+      <div class="hit-kinds" id="hitNewKinds" role="group" aria-label="what kind of thing the new line is">${hitKindChips(_hitNewK, k => `hitNewKind('${k}')`)}</div>
+      <div class="hit-count" id="hitCount">${!_hit[one.code] ? '⏳ reading the list…' : open.length ? `<b>${open.length} to do</b>${done.length ? ' · ' + done.length + ' done' : ''} — in the order to do them` : (done.length ? `✓ Nothing left to do — ${done.length} done` : '○ Nothing on this job\'s list yet — add a line above, or 📌 from the estimates or the Build List')}</div>
+      <div class="hit-list" id="hitList">${open.map((l, n) => hitRowHtml(l, n, open.length)).join('')}</div>
+      ${done.length ? `<button type="button" class="btn-ghost hit-done-fold" id="hitDoneFold" onclick="_hitDoneOpen = !_hitDoneOpen; renderHitList()" aria-expanded="${_hitDoneOpen}">${_hitDoneOpen ? '▾' : '▸'} ✓ DONE — ${done.length}</button>
+        ${_hitDoneOpen ? `<div class="hit-list hit-list-done" id="hitDoneList">${done.map((l, n) => hitRowHtml(l, n, done.length)).join('')}</div>` : ''}` : ''}`;
+  } else {
+    const rows = cl.map(c => ({ c, open: hitLinesOf(c.code).filter(l => !l.done), known: !!_hit[c.code] }));
+    rows.sort((a, b) => (b.open.length > 0) - (a.open.length > 0));   // the jobs with something to do first; the portal's own order otherwise (a stable sort)
+    body = `<div class="hit-count" id="hitCount">${allN ? `<b>${allN} to do</b> on ${rows.filter(r => r.open.length).length} job${rows.filter(r => r.open.length).length === 1 ? '' : 's'} — tap a job to work its list` : '○ No job has a line on its list yet — tap a job to start one'}</div>
+      <div class="hit-jobs" id="hitJobs">${rows.map(r => { const nx = r.open[0];
+        return `<button type="button" class="hit-job-row${r.open.length ? ' has' : ''}" data-code="${esc(r.c.code)}" onclick="hitPick('${escq(r.c.code)}')" aria-label="${esc(r.c.job)} — ${r.open.length} to do — open its list">
+          <span class="hit-job-top"><b>${esc(r.c.job)}</b> <span>${!r.known ? '…' : r.open.length ? r.open.length + ' to do' : 'nothing on it'} ›</span></span>
+          ${nx ? `<small><span class="hit-nexttag">▸ NEXT</span> ${hitKind(nx.k)[1]} ${esc(nx.t)}</small>` : ''}</button>`; }).join('') || '<div class="hint">No client pages yet.</div>'}</div>`;
+  }
+  box.innerHTML = `<div id="hitBox" class="hit-box"><h3>📌 ${one ? esc(one.job) + ' — hit list' : 'Hit lists — every job'} ${winX('hitClose()', 'close the hit list')}</h3>
+    ${_hitBack ? `<button type="button" class="btn-ghost flip-back" id="hitBackBtn" onclick="hitClose()">↩ Back to ${_hitBack.to === 'est' ? 'the 💰 estimates' : 'the 📋 Build List'}</button>` : ''}
+    <div class="hint" style="margin: 0 0 8px;">What needs doing on a job, in the order to do it — the first line is <b>▸ NEXT</b>. ${one ? 'The box on the left marks a line done; ⬆ ⬇ move it; a tap on the words opens it.' : 'One list a job.'}</div>
+    <div class="field hit-jobfield"><label for="hitJob">Which job</label><select id="hitJob" class="hit-job${one ? ' sel-on' : ''}" onchange="hitPick(this.value)">
+      <option value="*"${one ? '' : ' selected'}>📋 Every job${allN ? ' · ' + allN + ' to do' : ''}</option>
+      ${cl.map(c => `<option value="${esc(c.code)}"${one && one.code === c.code ? ' selected' : ''}>${esc(c.job)}${hitOpenN(c.code) ? ' · ' + hitOpenN(c.code) + ' to do' : ''}</option>`).join('')}</select></div>
+    ${body}
+    <div class="rev-row" style="margin-top: 14px;"><button type="button" class="btn-ghost x-plate" style="flex: 1;" onclick="hitClose()">${_hitBack ? '↩ Back' : '✕ Close'}</button></div></div>`;
+  const nb = $('hitNewT'); if (nb && keepNew) nb.value = keepNew;
+}
+function hitNewKind(k) { _hitNewK = hitKind(k)[0]; const h = $('hitNewKinds'); if (h) h.innerHTML = hitKindChips(_hitNewK, x => `hitNewKind('${x}')`); const b = $('hitNewT'); if (b) b.focus(); }
+function hitNewGo() {
+  const code = _hitJob, b = $('hitNewT'); if (code === '*' || !b) return;
+  const t = String(b.value || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  if (!t) { toast('Say what needs doing first', false); b.focus(); return; }
+  const L = hitClean({ id: hitId(), t, k: _hitNewK, by: hitMe(), at: new Date().toISOString() });
+  b.value = ''; _hitNewK = 'other';
+  hitOp(code, lines => { if (lines.some(l => l.id === L.id)) return false; lines.push({ ...L }); });
+  const nb = $('hitNewT'); if (nb) nb.focus();
+}
+function hitOpenTap(id) { _hitOpen = _hitOpen === id ? '' : id; _hitArm = ''; renderHitList(); }
+function hitDone(id) {
+  const code = _hitJob, l = hitLinesOf(code).find(x => x.id === id); if (!l) return;
+  const on = !l.done, at = new Date().toISOString(), who = hitMe();
+  if (_hitOpen === id) _hitOpen = '';
+  hitOp(code, lines => { const x = lines.find(y => y.id === id); if (!x || !!x.done === on) return false; if (on) { x.done = at; x.doneBy = who; } else { delete x.done; delete x.doneBy; } });
+  if (on) toastUndo(`✓ Done — ${l.t.slice(0, 60)}`, () => hitOp(code, lines => { const x = lines.find(y => y.id === id); if (!x || !x.done) return false; delete x.done; delete x.doneBy; }));
+  else toast('↩ Back on the list — ' + l.t.slice(0, 60));
+}
+function hitMove(id, d) {   // one place up or down among the lines still to do
+  hitOp(_hitJob, lines => {
+    const open = lines.filter(l => !l.done), k = open.findIndex(l => l.id === id), o = open[k + d];
+    if (k < 0 || !o) return false;
+    const a = lines.indexOf(open[k]), b = lines.indexOf(o);
+    [lines[a], lines[b]] = [lines[b], lines[a]];
+  });
+}
+function hitTop(id) {
+  hitOp(_hitJob, lines => { const k = lines.findIndex(l => l.id === id); if (k <= 0) return false; const [x] = lines.splice(k, 1); lines.unshift(x); });
+  toast('⤒ At the top — it is NEXT');
+}
+function hitSet(id, k, v) {
+  const code = _hitJob;
+  if (k === 'k') { hitOp(code, lines => { const x = lines.find(y => y.id === id); if (!x || x.k === hitKind(v)[0]) return false; x.k = hitKind(v)[0]; }); return; }
+  const val = String(v || '').replace(/\s+/g, ' ').trim().slice(0, k === 't' ? 200 : 400);
+  if (k === 't' && !val) { toast('A line needs its words — ✕ takes it off the list', false); hitFresh(); return; }
+  // the words and the note save WITHOUT a redraw (his next tap would land on a plate that was just thrown away — v7.78's lesson); the row's own line follows by hand
+  hitOp(code, lines => { const x = lines.find(y => y.id === id); if (!x) return false; if (k === 't') { if (x.t === val) return false; x.t = val; } else { if ((x.note || '') === val) return false; if (val) x.note = val; else delete x.note; } }, true);
+  if (k === 't') { const b = [...document.querySelectorAll('#hitBox .hit-row')].find(r => r.dataset.id === id); const w = b && b.querySelector('.hit-top-line b'); if (w) w.textContent = val; }
+}
+function hitDel(id) {
+  if (_hitArm !== id) { _hitArm = id; renderHitList(); clearTimeout(_hitArmT); _hitArmT = setTimeout(() => { if (_hitArm === id) { _hitArm = ''; hitFresh(); } }, 4000); return; }
+  _hitArm = ''; _hitOpen = '';
+  hitOp(_hitJob, lines => { const k = lines.findIndex(l => l.id === id); if (k < 0) return false; lines.splice(k, 1); });
+  toast('✕ Off the list');
+}
+// a line's way back to where it came from: the estimates at that category, or the Build List at that row — ↩ there comes back here
+async function hitGoSrc(id) {
+  const code = _hitJob, l = hitLinesOf(code).find(x => x.id === id), i = hitIdxOf(code);
+  if (!l || !l.src || i < 0) return;
+  const flip = { to: 'hit', code };
+  _hitOpen = ''; _hitBack = null;
+  if (l.src.from === 'est') {
+    if (!(await estReopen(i, { open: [l.src.name], q: '', only: null, top: 0 }, flip))) return;
+    const ci = _estD.cats.findIndex(x => String(x.n).trim().toLowerCase() === String(l.src.name).trim().toLowerCase());
+    if (ci < 0) { toast(`💰 “${l.src.name}” is no longer a line on this job's estimates`, false); return; }
+    setTimeout(() => { const r = document.querySelector(`.est-board .est-row[data-ci="${ci}"]`); if (r && r.scrollIntoView) r.scrollIntoView({ block: 'start' }); }, 40);
+    return;
+  }
+  if (!(await matReopen(i, { shut: null }, flip))) return;
+  const ri = _matD.rooms.findIndex(r => (r.items || []).some(x => x.id === l.src.id));
+  if (ri < 0) { toast(`📋 “${l.src.name}” is no longer a row on this job's Build List`, false); return; }
+  _matRmShut = new Set(_matD.rooms.map((r, k) => k).filter(k => k !== ri));
+  renderMatMgr();
+  setTimeout(() => { const r = [...document.querySelectorAll('#revBox .mat-item')].find(el => el.dataset.id === l.src.id); if (r) { r.scrollIntoView({ block: 'center' }); r.classList.add('flip-here'); setTimeout(() => r.classList.remove('flip-here'), 1800); } }, 60);
+}
+// ---- 📌 from a board: the small box over it
+function hitAddOpen(code, src, words, kind) {
+  if (!hitCan() || !code) return;
+  const had = src ? hitLinesOf(code).filter(l => !l.done && l.src && l.src.from === src.from && (src.from === 'mat' ? l.src.id === src.id : String(l.src.name).trim().toLowerCase() === String(src.name).trim().toLowerCase())) : [];
+  _hitAdd = { code, src: src || null, t: words || '', k: hitKind(kind)[0], top: false, had: had.map(l => l.t) };
+  hitAddDraw();
+  setTimeout(() => { const b = $('hitAddT'); if (b) { b.focus(); const n = b.value.length; try { b.setSelectionRange(n, n); } catch (e) {} } }, 40);
+  if (!_hit[code]) hitLoad(code).then(() => hitPlatesSync());
+}
+function hitAddClose() { _hitAdd = null; const h = $('hitAddHost'); if (h) h.innerHTML = ''; }
+function hitAddKind(k) { if (_hitAdd) { _hitAdd.k = hitKind(k)[0]; hitAddDraw(); const b = $('hitAddT'); if (b) b.focus(); } }
+function hitAddTop(top) { if (_hitAdd) { _hitAdd.top = !!top; hitAddDraw(); const b = $('hitAddT'); if (b) b.focus(); } }
+function hitAddDraw() {
+  let host = $('hitAddHost'); if (!host) { host = document.createElement('div'); host.id = 'hitAddHost'; document.body.appendChild(host); }
+  const a = _hitAdd; if (!a) { host.innerHTML = ''; return; }
+  const c = hitClient(a.code) || {}, keep = ($('hitAddT') || {}).value;
+  if (keep != null) a.t = keep;
+  host.innerHTML = `<div class="we-sheet est-what-sheet hit-add-sheet" onclick="if (event.target === this) hitAddClose()"><div class="we-box" id="hitAddBox" role="dialog" aria-label="put a line on the hit list">
+    <div class="we-head"><b>📌 To the hit list</b><span>${esc(c.job || '')}</span><button type="button" class="btn-ghost x-plate x-small" style="min-width: 44px;" onclick="hitAddClose()" aria-label="close" title="close">✕</button></div>
+    ${a.had && a.had.length ? `<div class="hint hit-add-had" style="margin: 8px 0 0;">📌 Already on the list from here: ${a.had.slice(0, 3).map(t => '“' + esc(t) + '”').join(' · ')}${a.had.length > 3 ? ' · + ' + (a.had.length - 3) + ' more' : ''}</div>` : ''}
+    <div class="field" style="margin: 8px 0 0;"><label for="hitAddT">What needs doing</label><textarea id="hitAddT" rows="2" maxlength="200" oninput="if (_hitAdd) _hitAdd.t = this.value" onkeydown="if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); hitAddGo(); }">${esc(a.t)}</textarea></div>
+    <div class="hit-kinds" role="group" aria-label="what kind of thing it is">${hitKindChips(a.k, k => `hitAddKind('${k}')`)}</div>
+    <div class="hit-where" role="group" aria-label="where on the list it goes">
+      <button type="button" class="pick-chip${a.top ? '' : ' sel'}" aria-pressed="${!a.top}" onclick="hitAddTop(false)">${a.top ? '○' : '✓'} ⤓ Bottom of the list</button>
+      <button type="button" class="pick-chip${a.top ? ' sel' : ''}" aria-pressed="${!!a.top}" onclick="hitAddTop(true)">${a.top ? '✓' : '○'} ⤒ Top — do it next</button></div>
+    ${a.src ? `<div class="hint" style="margin: 8px 0 0;">The line remembers where it came from — ${a.src.from === 'est' ? '💰 the estimates · ' + esc(a.src.name) : '📋 the Build List · ' + (a.src.room ? esc(a.src.room) + ' · ' : '') + esc(a.src.name)} — and opens it from the list.</div>` : ''}
+    <div class="rev-row" style="margin-top: 12px; gap: 8px;"><button type="button" class="btn-primary hit-add-go" style="flex: 2; min-height: 46px; font-weight: var(--fw8, 800);" onclick="hitAddGo()">📌 Put it on the list</button><button type="button" class="btn-ghost" style="flex: 1; min-height: 46px;" onclick="hitAddClose()">✕ Never mind</button></div>
+  </div></div>`;
+}
+async function hitAddGo() {
+  const a = _hitAdd; if (!a) return;
+  const t = String((($('hitAddT') || {}).value != null ? $('hitAddT').value : a.t) || '').replace(/\s+/g, ' ').trim().replace(/[:\-–—]\s*$/, '').trim().slice(0, 200);
+  if (!t) { toast('Say what needs doing first', false); return; }
+  const L = hitClean({ id: hitId(), t, k: a.k, by: hitMe(), at: new Date().toISOString(), src: a.src });
+  const code = a.code, top = a.top;
+  hitAddClose();
+  const ok = await hitOp(code, lines => { if (lines.some(l => l.id === L.id)) return false; if (top) lines.unshift({ ...L }); else lines.push({ ...L }); });
+  if (ok) toastUndo(`📌 On the hit list${top ? ' — at the top' : ''}: ${t.slice(0, 60)}`, () => hitOp(code, lines => { const k = lines.findIndex(l => l.id === L.id); if (k < 0) return false; lines.splice(k, 1); }).then(hitBoardFresh));
+  hitBoardFresh();
+}
+// a board that opens before this job's list was ever read: read it once, so "on the hit list" and the door's count are true
+// (only the door's words follow when it lands — the board itself is not redrawn under his thumbs; its next draw says the rest)
+function hitWarm(code) { if (hitCan() && code && !_hit[code] && dbx.refreshToken) hitLoad(code).then(ok => { if (ok) hitPlatesSync(); }).catch(() => {}); }
+// the board under the box says "on the hit list" once the line is on — redrawn unless he is typing on it
+function hitBoardFresh() {
+  hitPlatesSync();
+  const a = document.activeElement, typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest && a.closest('#revBox, #matSheetHost');
+  if (typing) return;
+  if (_estD && _estIdx >= 0 && document.querySelector('#revBox .est-board')) renderEstimates();
+  else if (_matD && _matIdx != null && $('matSaveWord')) renderMatMgr();
+}
+function hitAddEst(ci) {
+  const x = _estD && _estD.cats[ci], c = (((_portalIdx || {}).clients) || [])[_estIdx]; if (!x || !c) return;
+  hitAddOpen(c.code, { from: 'est', name: x.n }, x.n + ': ', 'bid');
+}
+function hitAddMat(id) {
+  const it = _matD && matFindItem(id), c = (((_portalIdx || {}).clients) || [])[_matIdx]; if (!it || !c) return;
+  const room = (_matD.rooms.find(r => (r.items || []).includes(it)) || {}).name || '';
+  hitAddOpen(c.code, { from: 'mat', id: it.id, name: it.n, room }, it.n + ': ', matIsBuy(it) ? 'buy' : 'other');
+}
+// the 📌 Hit list door at the top of each board: the board leaves the window (what waits is saved first), the list opens, ↩ comes back
+async function estToHit() {
+  const c = (((_portalIdx || {}).clients) || [])[_estIdx]; if (!c || !hitCan()) return;
+  const i = _estIdx, flip = _estFlip, st = await estLeave();
+  openHitList(c.code, { to: 'est', i, st, flip });
+}
+async function matToHit() {
+  const c = (((_portalIdx || {}).clients) || [])[_matIdx]; if (!c || !hitCan()) return;
+  const i = _matIdx, flip = _matFlip, st = await matLeave();
+  openHitList(c.code, { to: 'mat', i, st, flip });
+}
+// ================= /📌 v7.82 =================
 let crewShared = [];
 async function checkSharedNotes() {
   if (!CREW_NAME || !dbx.refreshToken) return;
@@ -16326,19 +16740,26 @@ function renderPortalFold(box, offRoot) {
              Tracker, Receipts, or estimates but he should be able to click on Plans, Build List, and Journal" — and no
              Rotate / Rename / Remove, no 🎛 they-can-see switches, no ➕ new page. v7.14 — Eric: "Phil and crew don't need
              to see what they look at on the project portal. And not the copy link either." Four plates, two by two. -->
+        <!-- 👁 v7.82 — Eric: "im ready for phil to see money. never crew pay but billable labor rates is fine. and he can see the
+             estimates page now and the build list for sure, also want him to see view as the client. the schedule for sure."
+             💰 Estimates (to look — the changes stay Eric's), 📅 the job's schedule and 📌 its hit list join the fold. -->
         <div class="pf-acts">
           <button class="btn-ghost" onclick="openPlanRack(${i})">📐 Plans</button>
           <button class="btn-ghost" onclick="openJournal(${i})">📖 Journal</button>
           <button class="btn-ghost" onclick="openMaterials(${i})">📋 Build List</button>
-          <button class="btn-ghost" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
+          <button class="btn-ghost" onclick="openEstimates(${i})">💰 Estimates</button>
+          <button class="btn-ghost" onclick="openSchedule('${escq(portalAppJob(c))}')">📅 Schedule</button>
+          ${hitPlateHtml(c)}
+          <button class="btn-ghost pf-wide" onclick="clientPreviewOpen(${i})">👁 View as this client</button>
           ${subsPlateHtml(c)}
         </div>` : `<button class="btn-ghost req-x" onclick="clientPreviewOpen(${i})">👁 Open the client's page</button>
         <div class="pf-acts">${subsPlateHtml(c)}</div>`) : ''}
       </div>`;
     }).join('') + `<div style="margin-top:8px;"><button class="btn-ghost" onclick="findPortalRoot(true).then(() => renderPortalList())">🔄 Look again</button>
-      ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — Plans, the Journal and the Build List are yours to work. The money stays on Eric\'s phone.</span>'
+      ${off ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE — Plans, the Journal, the Build List and the 📌 hit list are yours to work. 💰 Estimates and the 📅 Schedule are yours to look at; Eric makes the changes there.</span>'
         : amOffice() ? '<span class="hint" style="margin-left:8px;">🏢 You are OFFICE, but the shared <b>Client Portal</b> folder has not turned up on this phone yet — accept the Dropbox share, then tap 🔄 Look again.</span>' : ''}</div>`
       : '<span class="hint">Eric hasn\'t turned any client pages on yet.</span>';
+  hitPlatesSync(); hitLoadAll(false);   // 📌 v7.82 — the hit lists' counts on the plates (read once, then every five minutes)
 }
 // ================= 💰 v7.51 — THE DOWN-PAYMENT METER =================
 // Eric: "I get a … down payment before any project starts and I would like a meter at the top of each client page that only the
@@ -16673,7 +17094,9 @@ async function renderPortalList() {
         <button class="btn-ghost" onclick="openPlanRack(${i})">📐 Plans</button>
         <button class="btn-ghost" onclick="openJournal(${i})">📖 Journal</button>
         <button class="btn-ghost" onclick="openMaterials(${i})">📋 Build List</button>
-        <button class="btn-ghost${om}" onclick="openEstimates(${i})">💰 Estimates</button>
+        <button class="btn-ghost" onclick="openEstimates(${i})">💰 Estimates</button><!-- 👁 v7.82 — the office crew look at the estimates now: no dashed edge -->
+        <button class="btn-ghost" onclick="openSchedule('${escq(portalAppJob(c))}')">📅 Schedule</button>
+        ${hitPlateHtml(c)}
         <button class="btn-ghost${om}" onclick="portalCopy(${i})">📋 Copy link</button>
         <button class="btn-ghost${om}" onclick="portalIntel(${i})">📊 What they look at</button>
         ${subsPlateHtml(c)}
@@ -16717,6 +17140,7 @@ async function renderPortalList() {
     <button class="btn-primary" style="width: 100%;" onclick="portalNew()">➕ Build the page</button>
     <div class="hint" id="npMsg" style="margin-top: 6px;">The page starts empty and fills itself: the nightly QuickBooks run puts the money in, the journal and Build List are yours to fill. The link is unguessable — nobody sees it until you text it.</div></div>
 `;
+  hitPlatesSync(); hitLoadAll(false);   // 📌 v7.82 — the hit lists' counts on the plates (read once, then every five minutes)
 }
 // which job's buttons are unfolded — one at a time, and it remembers within the session
 let _portalOpen = -1;
@@ -17358,15 +17782,174 @@ async function estBidGuess(ci, bi) {
     : `✓ ${x.n} — a real bid backs it now. The highlight is off${onPage ? ', here and on their page' : ''}.`);
 }
 let _estOpenCats = new Set();
-async function openEstimates(i) {
+// ================= 👁 v7.82 — THE OFFICE CREW LOOK AT THE ESTIMATES =================
+// Eric: "im ready for phil to see money. never crew pay but billable labor rates is fine. and he can see the estimates page now and
+// the build list for sure, also want him to see view as the client. the schedule for sure." Phil is moving to management, bids
+// and drawings. On an OFFICE phone (and in the 👁 preview as an office person) the estimates board opens to LOOK:
+//   · every category, bid, number, note and bid paper, the markup, what is on the way and what is in, 👁 their page from any
+//     line, the search, the flip to the Build List — all there;
+//   · nothing on it can be CHANGED from that phone: every box is shut, every plate that would change something is taken off (a
+//     plate that shows a STATE stays, and a tap on it says whose it is to change), and the board's own writers refuse — the file,
+//     the homeowner's page and the bid papers are written by Eric's phone alone (one writer: no stale board on a second phone can
+//     save over his numbers, and no stray thumb can move a homeowner's page);
+//   · nothing is read out of that phone's OWN log: the receipts behind the bills live in ERIC's log (the same entry number on a
+//     crew phone is a different note), so a bill there shows its amount, its day and its store and says the receipt is in Eric's
+//     log; the 📥 Bills that came in strip and the 🧾 NOT SENT tab — both made from the log — are not drawn;
+//   · no crew PAY is on this board at all (wages live in ⚙ Setup → wages and each crew member's own file, v5.x's wall); a week
+//     of crew labor on it is priced at the BILLABLE rate schedule, which he may see.
+// The down-payment meter, 🧾 Receipts to approve and the 📊 Project Tracker stay Eric's.
+function estRO() { return !!CREW_NAME || !!crewPreview; }
+function estLog() { return estRO() ? [] : entries; }   // the log the board may look into — never a crew phone's own
+function estROSay(ev) { if (ev && ev.stopPropagation) ev.stopPropagation(); toast('👁 You can look at the estimates here — changes are Eric\'s to make', false); return false; }
+// a plate may stay live on a look-only board when all it does is look (fold, search, 👁 their page, what is in a number, a bid
+// paper, the flip to the Build List, the hit list); anything else is taken off or made to say so
+const EST_RO_OK = /^(event\.stopPropagation\(\); ?)?(estFold|estPeek|estWhatOpen|estHelp|closeEstimates|estGuessOnly|estSearchClear|estSearchSet|estGoneFold|matOpenDoc|estFlipToMat|estFlipBack|estOnlyClear|hitAddEst|estToHit)\(/;
+function estROLock() {
+  const b = document.querySelector('#revBox .est-board');
+  if (!b) return;
+  b.classList.add('est-ro');
+  b.querySelectorAll('input, select, textarea').forEach(el => { if (el.id !== 'estSearch') { el.disabled = true; el.removeAttribute('onchange'); el.removeAttribute('oninput'); el.removeAttribute('onkeydown'); } });
+  b.querySelectorAll('input[type="file"]').forEach(el => el.remove());
+  b.querySelectorAll('[onclick]').forEach(el => {
+    const oc = el.getAttribute('onclick') || '';
+    if (EST_RO_OK.test(oc)) return;
+    // a chip that shows a STATE stays (inert, and says so); a button that only DOES something is taken off
+    const state = el.classList.contains('pick-chip') && !/^(event\.stopPropagation\(\); ?)?(estPendClear|estMoveOpen|estPutBack|estBillApprove|estBillIncFlip|estHandIncFlip|estBillHand)\(/.test(oc) && !oc.includes("$('estF-");
+    if (state || el.classList.contains('est-lamp')) { el.setAttribute('onclick', 'estROSay(event)'); el.setAttribute('aria-disabled', 'true'); el.classList.add('est-ro-inert'); el.removeAttribute('title'); }
+    else el.remove();
+  });
+}
+// ---------- 🔀 v7.82 — FLIP BETWEEN THE BUILD LIST AND THE ESTIMATES ----------
+// Eric: "is the build list and the estimates pages connected? I feel like i should be able to switch between them with a button on
+// each category so i can be working on the pick and delivery and schedule but then flip over to same category same item and work
+// on price." They were linked only by a read-only roll-up (a Build List row's "estimate line", counted under that category on
+// the estimates board). Now each side has a door to the other, at the same line:
+//   💰 on a Build List row that is tied to an estimate line (and in its ✎ window), and on every Build List category's heading →
+//      the estimates board at that line, unfolded and brought to the top (a category of rows tied to SEVERAL lines → the board
+//      narrowed to just those lines);
+//   📋 on an estimate category (its roll-up words on the folded row, and a plate in the open category) → the Build List narrowed
+//      to the rows tied to that line;
+//   ↩ a plate at the top of the board he flipped TO takes him back to the spot he left (the same category open, the same place).
+// Both boards live in the same window, so a flip saves what is waiting on the one and opens the other.
+let _estFlip = null;   // how he got to the estimates: { to: 'mat', st: the Build List as he left it, word } | { to: 'hit', code } — the way back
+let _matFlip = null;   // how he got to the Build List: { to: 'est', st: the estimates as he left them, word } | { to: 'hit', code }
+let _estOnly = null;   // the estimates narrowed to a few lines by a flip: { names: [lower-case], word }
+let _matEcF = '';      // the Build List narrowed to the rows tied to ONE estimate line (by its exact name)
+function estOnlyClear() { _estOnly = null; renderEstimates(); }
+function matEcFClear() { _matEcF = ''; renderMatMgr(); }
+function estFlipBackHtml() {
+  const b = _estFlip; if (!b) return '';
+  return `<button type="button" class="btn-ghost flip-back" id="estFlipBack" onclick="estFlipBack()">${b.to === 'hit' ? '↩ Back to the 📌 hit list' : '↩ Back to the 📋 Build List' + (b.word ? ' — ' + esc(b.word) : '')}</button>`;
+}
+function matFlipBackHtml() {
+  const b = _matFlip; if (!b) return '';
+  return `<button type="button" class="btn-ghost flip-back" id="matFlipBack" onclick="matFlipBack()">${b.to === 'hit' ? '↩ Back to the 📌 hit list' : '↩ Back to the 💰 estimates' + (b.word ? ' — ' + esc(b.word) : '')}</button>`;
+}
+// a board LEAVES the window without the window closing: whatever is waiting to be saved goes out first, and what he was looking at
+// is handed back (so ↩ can put him there again)
+async function estLeave() {
+  const st = { top: ($('revModal') || {}).scrollTop || 0, open: _estD ? [..._estOpenCats].map(k => (_estD.cats[k] || {}).n).filter(Boolean) : [], q: _estQ, only: _estOnly };
+  if (_estTimer) { clearTimeout(_estTimer); _estTimer = null; busyShow('💾 SAVING YOUR CHANGE…'); try { await estSave(); } catch (e) {} busyDone('💾 ✓ SAVED'); }
+  estWhatClose();
+  _estIdx = -1; _estD = null; _estPage = null; _estSales = null; _estFlip = null; _estOnly = null;
+  return st;
+}
+async function matLeave() {
+  const st = { top: ($('revModal') || {}).scrollTop || 0, shut: [..._matRmShut], tagF: _matTagF, stageF: _matStageF, q: _matQ, ecF: _matEcF, edit: _matEdit || '' };
+  if (_matSelEdit) matSelDone(_matSelEdit, true);
+  clearTimeout(_matSaveT);
+  for (let k = 0; k < 30 && _matSaving; k++) await new Promise(r => setTimeout(r, 100));   // a save already in the air lands first
+  if (_matDirty) { try { await matAutoSave(); } catch (e) {} }
+  _matArm = ''; _matEdit = ''; _matWhoFor = ''; matLightDisarm(); { const h = $('matSheetHost'); if (h) h.innerHTML = ''; }
+  _matFlip = null; _matEcF = '';
+  return st;
+}
+// …and comes back: opened again on the same job, put back the way he left it (st), with its own way back (flip) when it has one
+async function estReopen(i, st, flip) {
+  _estFlip = flip || null; _estOnly = (st && st.only) || null;
+  await openEstimates(i, true);
+  if (_estIdx !== i || !_estD) { _estFlip = null; _estOnly = null; return false; }
+  const want = new Set(((st && st.open) || []).map(n => String(n).trim().toLowerCase()));
+  _estD.cats.forEach((x, ci) => { if (want.has(String(x.n).trim().toLowerCase())) _estOpenCats.add(ci); });
+  _estQ = (st && st.q) || '';
+  renderEstimates();
+  const w = $('revModal'); if (w) w.scrollTop = (st && st.top) || 0;
+  return true;
+}
+async function matReopen(i, st, flip) {
+  await openMaterials(i);
+  if (_matIdx !== i || !_matD) return false;
+  _matFlip = flip || null;
+  _matTagF = (st && st.tagF) || ''; _matStageF = (st && st.stageF) || ''; _matQ = (st && st.q) || ''; _matEcF = (st && st.ecF) || '';
+  _matRmShut = st && Array.isArray(st.shut) ? new Set(st.shut.filter(k => k < _matD.rooms.length)) : new Set(_matD.rooms.map((r, k) => k));
+  renderMatMgr();
+  if (st && st.edit && matFindItem(st.edit)) matEditOpen(st.edit);
+  const w = $('revModal'); if (w) w.scrollTop = (st && st.top) || 0;
+  return true;
+}
+// 💰 → 📋 : from an estimate category to the Build List, narrowed to the rows tied to that line
+async function estFlipToMat(ci) {
+  const x = _estD && _estD.cats[ci]; if (!x || _estIdx < 0) return;
+  const i = _estIdx, name = x.n;
+  const st = await estLeave();
+  if (!st.open.some(n => n === name)) st.open.push(name);   // ↩ lands on that category, open
+  await matReopen(i, { ecF: name, shut: [] }, { to: 'est', st, word: name });
+}
+// 📋 → 💰 : from the Build List to the estimates, at the line(s) named — a row's own estimate line, or every line a category's rows are tied to
+async function matFlipToEst(cands, word, fromId) {
+  if (_matIdx == null || !_matD) return;
+  const names = [...new Set((cands || []).map(n => String(n || '').trim()).filter(Boolean))];
+  if (!names.length) { toast('💰 Nothing here is tied to an estimate line yet — ✎ a row → 💵 Money → 💰 Estimate line it belongs to', false); return; }
+  const i = _matIdx;
+  const st = await matLeave();
+  if (fromId) st.at = fromId;
+  if (!(await estReopen(i, { open: [], q: '', only: null, top: 0 }, { to: 'mat', st, word: word || '' }))) return;
+  const low = names.map(n => n.toLowerCase());
+  const found = []; _estD.cats.forEach((x, ci) => { if (low.includes(String(x.n).trim().toLowerCase())) found.push(ci); });
+  if (!found.length) { toast(`💰 “${names[0]}” is not a line on this job's estimates${estRO() ? '' : ' — ➕ category at the foot of the board adds it'}`, false); return; }
+  if (found.length === 1) _estOpenCats.add(found[0]);
+  else _estOnly = { names: found.map(ci => String(_estD.cats[ci].n).trim().toLowerCase()), word: word || 'that category' };
+  renderEstimates();
+  const first = found.slice().sort((a, b) => (catRank(_estD.cats[a].n) - catRank(_estD.cats[b].n)) || (a - b))[0];
+  setTimeout(() => { const r = document.querySelector(`.est-board .est-row[data-ci="${first}"]`); if (r && r.scrollIntoView) r.scrollIntoView({ block: 'start' }); }, 40);
+}
+// a Build List category's 💰: every estimate line its rows are tied to — and the category's own name when that IS a cost line
+function matRoomFlip(ri) {
+  const r = _matD && _matD.rooms[ri]; if (!r) return;
+  const ecs = (r.items || []).map(x => String(x.ec || '').trim()).filter(Boolean);
+  const own = typeof catKnown === 'function' && catKnown(r.name) ? [r.name] : [];
+  matFlipToEst([...ecs, ...own], r.name, '');
+}
+// ↩ the way back, from either board
+async function estFlipBack() {
+  const b = _estFlip; if (!b || _estIdx < 0) return;
+  const i = _estIdx;
+  await estLeave();
+  if (b.to === 'hit') { openHitList(b.code); return; }
+  if (!(await matReopen(i, b.st, null))) return;
+  const id = b.st && b.st.at;   // the row he flipped from: shown for a moment, so the eye lands on it
+  if (id && !(b.st && b.st.edit)) setTimeout(() => { const r = [...document.querySelectorAll('#revBox .mat-item')].find(el => el.dataset.id === id); if (r) { r.classList.add('flip-here'); setTimeout(() => r.classList.remove('flip-here'), 1800); } }, 60);
+}
+async function matFlipBack() {
+  const b = _matFlip; if (!b || _matIdx == null) return;
+  const i = _matIdx;
+  await matLeave();
+  if (b.to === 'hit') { openHitList(b.code); return; }
+  await estReopen(i, b.st, null);
+}
+async function openEstimates(i, keepFlip) {
   if (portalGuard()) return;
   // 💰 v6.07 opened this board to an OFFICE phone; 🏢 v7.09 — Eric: "I don't want him to have the Project Tracker,
-  // Receipts, or estimates" — so the money stays on his phone, whatever kind of crew phone asks.
-  if (CREW_NAME) { toast('💰 The estimates board is Eric\'s — the money stays on his phone', false); return; }
+  // Receipts, or estimates" — so the money stayed on his phone. 👁 v7.82 — Eric: "im ready for phil to see money. never crew pay
+  // but billable labor rates is fine. and he can see the estimates page now". An OFFICE phone that holds the shared Client Portal
+  // folder opens the board to LOOK (estRO — see the block above); a field phone is still turned away by portalGuard.
+  if (CREW_NAME && !(amOffice() && _portalRoot)) { toast('💰 The estimates board needs the shared Client Portal folder on this phone — 🏠 Project portal → 🔄 Look again', false); return; }
+  _estFlip = keepFlip === true ? _estFlip : null; _estOnly = keepFlip === true ? _estOnly : null;   // 🔀 v7.82 — a plain open has no way back and no narrowing
   _estIdx = i; _estArm = ''; _estOpenCats = new Set(); _estShowEmpty = new Set(); _estHelp = false; _estGuessOnly = false;   // 🕯 v6.66 — the folds start shut
   _estGoneOpen = false; estWhatClose();   // 👁 v7.49 — every category on the list, each folded to its one line; nothing left open from the last time
   _estQ = ''; _estQFirst = -1;   // 🔍 v7.79 — a fresh open starts with no search
   const c = _portalIdx.clients[i];
+  hitWarm(c.code);   // 📌 v7.82
   toast('⏳ Opening the estimates…');
   try { _estD = JSON.parse(await dbxDownload(estPath(c.code)) || 'null'); } catch (e) { _estD = null; }
   try { _estPage = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null'); } catch (e) { _estPage = null; }
@@ -17405,6 +17988,9 @@ async function openEstimates(i) {
   // Each bill written since v6.39 carries al: 1 — its base already counted the alias. Only a
   // bill WITHOUT that stamp (sent under Trash on v6.36–v6.38, or from a phone still on an older
   // build) gets lifted, once, and then stamped so it is never lifted again.
+  // 👁 v7.82 — a look-only phone shows the board as the file holds it: none of the heals below runs there (each one changes the
+  // board or their page, and only Eric's phone writes those)
+  if (estRO()) { renderEstimates(); $('revModal').classList.add('show', 'mat-full'); document.body.classList.add('modal-open'); return; }
   if (_estPage) {
     let lifted = 0; const used0 = estUsedBy();
     _estD.cats.forEach(x => { if (!EST_ALIASES[String(x.n || '').trim().toLowerCase()]) return;
@@ -17433,6 +18019,7 @@ function closeEstimates() {
   $('revModal').classList.remove('show', 'mat-full');
   modalOpenSync();   // 🏠 v6.65
   _estIdx = -1; _estD = null; _estPage = null; _estSales = null;
+  _estFlip = null; _estOnly = null; hitAddClose();   // 🔀 v7.82
 }
 // "in" per board category — every QB phase line lands on its best-matching category, once
 // 💵 v7.49 — the LINES themselves are kept (estUsedLines: the books' own name, the amount, the phase the books have it under), so a tap
@@ -17469,7 +18056,8 @@ function estFold(ci) { _estOpenCats.has(ci) ? _estOpenCats.delete(ci) : _estOpen
 // category on the job in the one order (the build). OFFICE-SIDE: it is on his board and nowhere else; nothing here writes anything.
 let _estWhat = null;   // { ci: the category shown (-1 = every one), from: the category he came in by, tab: 'way' | 'in' | 'log' }
 function estWhatOpen(ci, tab) {
-  if (!_estD || CREW_NAME || crewPreview) return;
+  if (!_estD) return;   // 👁 v7.82 — a look-only phone may look at what is in a number too (the board itself only opens for Eric and the office)
+  if (CREW_NAME && !amOffice()) return;   // …and a FIELD phone never draws it, whatever it holds — the board has no door there
   const one = Number.isInteger(ci) && ci >= 0 && _estD.cats[ci] ? ci : -1;
   _estWhat = { ci: one, from: one, tab: ['way', 'in', 'log'].includes(tab) ? tab : 'way' };
   estWhatDraw();
@@ -17549,12 +18137,12 @@ function estDayWord(d) {   // "Sep 12, 2026" from a day (YYYY-MM-DD), a Date or 
 // everything with money on ONE line of the board
 function estWhatRows(x) {
   const c = _portalIdx.clients[_estIdx] || {}, aj = portalAppJob(c);
-  const ent = id => (id == null ? null : (entries.find(e => e.id === id) || null));
+  const ent = id => (id == null ? null : (estLog().find(e => e.id === id) || null));   // 👁 v7.82 — never a crew phone's own log
   const key = String(x.n).trim().toLowerCase();
   const way = (x.pend || []).map(p => ({ p, e: ent(p.eid) }));
   const taken = ((_estD.cleared || [])).filter(t => t && String(t.n || '').trim().toLowerCase() === key && /qb/.test(String(t.why || ''))).map(t => ({ t, e: ent(t.eid) }));
   const busy = new Set([...way, ...taken].map(r => (r.p || r.t).eid).filter(id => id != null));
-  const log = entries.filter(e => e && (e.job === aj || e.job === c.job) && !e.sample && !e.personal && !(e.tags || []).includes('Personal') && !isPersonalJob(e.job) &&
+  const log = estLog().filter(e => e && (e.job === aj || e.job === c.job) && !e.sample && !e.personal && !(e.tags || []).includes('Personal') && !isPersonalJob(e.job) &&
     !qbImported(e) && !isOverheadEntry(e) && e.budg !== 'sent' && !busy.has(e.id) && String(e.category || '').trim().toLowerCase() === key && estBillParse(e)).map(e => ({ e }));
   const when = r => { const e = r.e, s = (r.p || r.t || {}).ts; return e ? +new Date(e.ts) : s ? +new Date(s + 'T12:00:00') : 0; };
   [way, taken, log].forEach(list => list.sort((a, b) => when(b) - when(a)));   // newest first
@@ -17563,6 +18151,7 @@ function estWhatRows(x) {
 function estWhatDraw() {
   const w = _estWhat;
   if (!w || !_estD) return;
+  if (estRO() && w.tab === 'log') w.tab = 'way';   // 👁 v7.82
   let host = $('estWhatHost'); if (!host) { host = document.createElement('div'); host.id = 'estWhatHost'; document.body.appendChild(host); }
   const keepTop = (host.querySelector('.we-box') || {}).scrollTop || 0, sameView = host.dataset.view === w.ci + ':' + w.tab;
   const c = _portalIdx.clients[_estIdx] || {};
@@ -17591,7 +18180,7 @@ function estWhatDraw() {
       ${items ? (() => { const ls = items.split('\n'), show = ls.slice(0, 7); return `<div class="ew-meta ew-items">${esc(show.join('\n'))}${ls.length > 7 ? '\n• + ' + (ls.length - 7) + ' more — 📄 The whole entry has them all' : ''}</div>`; })() : ''}
       ${e ? `<div class="ew-btns">${nPh ? `<button type="button" class="btn-primary ew-ph" onclick="openEntryPhoto(${e.id}, event)">📷 Look at the receipt${nPh > 1 ? ' · ' + nPh : ''}</button>` : '<span class="hint ew-noph" style="margin: 0; align-self: center;">no picture on this one</span>'}
         <button type="button" class="btn-ghost ew-ent" onclick="wizEntryOpen(${e.id}, '‹ Back to the list')">📄 The whole entry</button></div>`
-        : `<div class="ew-meta ew-dim">${o.kind === 'labor' ? '👷 a week of crew labor, priced from the weekly recap — no receipt behind it' : '✍ typed in by hand — no receipt behind it'}</div>`}
+        : `<div class="ew-meta ew-dim">${o.kind === 'labor' ? '👷 a week of crew labor, priced from the weekly recap — no receipt behind it' : o.eid != null ? (estRO() ? '🧾 the receipt is in Eric\'s log' : '📄 its entry is not in this device\'s log') : '✍ typed in by hand — no receipt behind it'}</div>`}
       ${o.mover || ''}
     </div>`;
   };
@@ -17602,11 +18191,11 @@ function estWhatDraw() {
         <div class="hint" style="margin: 6px 0 0;">${hint}</div></div>`
     : `<div class="ew-btns"><button type="button" class="btn-ghost ew-move-btn" onclick="${tap}">🏷 Wrong category? Move it</button></div>`;
   const wayRow = (d, r) => { const p = r.p, labor = p.kind === 'labor', pi = (d.x.pend || []).indexOf(p);
-    return rcpt({ e: r.e, kind: labor ? 'labor' : 'way', cat: d.x.n, amt: p.a, shown: estPendMk(p), v: labor ? '' : p.v,
-      mover: labor ? '' : moverHtml(!!(w.move && w.move.ci === d.i && w.move.pi === pi), `estMoveOpen(${d.i}, ${pi})`, 'estMoveGo()', d.i, `Move it off ${esc(d.x.n)} — onto which category?`, 'Their page follows at once: it comes off this line and goes under the new one. The receipt in your log gets the new category too.'),
+    return rcpt({ e: r.e, eid: p.eid, kind: labor ? 'labor' : 'way', cat: d.x.n, amt: p.a, shown: estPendMk(p), v: labor ? '' : p.v,
+      mover: labor || estRO() ? '' : moverHtml(!!(w.move && w.move.ci === d.i && w.move.pi === pi), `estMoveOpen(${d.i}, ${pi})`, 'estMoveGo()', d.i, `Move it off ${esc(d.x.n)} — onto which category?`, 'Their page follows at once: it comes off this line and goes under the new one. The receipt in your log gets the new category too.'),
       say: [labor ? `👷 Labor — week of ${esc(laborWeekLabel(p.wk))} (${+p.hrs || 0} h)` : '', p.ts ? 'sent to their page ' + esc(estDayWord(p.ts) || p.ts) : '', estBillToLogan(p) ? '📗 with the bookkeeper' : '', (p.mv || []).length ? '🏷 moved here from ' + esc(p.mv[p.mv.length - 1].from) : ''].filter(Boolean).join(' · ') }); };
   const takenRow = (d, r) => { const t = r.t, labor = t.kind === 'labor';
-    return rcpt({ e: r.e, kind: labor ? 'labor' : 'taken', cat: d.x.n, amt: t.a, v: labor ? '' : t.v,
+    return rcpt({ e: r.e, eid: t.eid, kind: labor ? 'labor' : 'taken', cat: d.x.n, amt: t.a, v: labor ? '' : t.v,
       say: [labor ? `👷 Labor — week of ${esc(laborWeekLabel(t.wk))} (${+t.hrs || 0} h)` : '', t.ts ? 'sent ' + esc(estDayWord(t.ts) || t.ts) : '', t.inv ? `📗 on invoice #${esc(t.inv)}${t.invD ? ' · ' + esc(estDayWord(t.invD) || t.invD) : ''}${t.why === 'qb' ? ' (matched to the cent)' : ' (your tap)'}` : t.cl ? (t.why === 'qb' ? '📗 the books took it in (the category\'s total grew by it) ' : '✓ you said it is on their invoice ') + esc(estDayWord(t.cl) || t.cl) : ''].filter(Boolean).join(' · ') }); };   // 📗 v7.58 — an invoice line on the trail is named; the old growth clear says what it was
   const logRow = (d, r) => rcpt({ e: r.e, kind: 'log', cat: d.x.n, amt: (estBillParse(r.e) || {}).amt, shown: estPendMk({ a: (estBillParse(r.e) || {}).amt }),
     mover: moverHtml(w.recat === r.e.id, `estRecatOpen(${r.e.id})`, 'estRecatGo()', d.i, `File it under which category instead of ${esc(d.x.n)}?`, 'It is not on their page — only the receipt in your log changes.'),
@@ -17638,7 +18227,7 @@ function estWhatDraw() {
   const name = all ? 'Every category' : (data[0] || { x: {} }).x.n;
   host.innerHTML = `<div class="we-sheet est-what-sheet" onclick="if (event.target === this) estWhatClose()"><div class="we-box" id="estWhatBox" role="dialog" aria-label="what is in the numbers — ${esc(name)}">
     <div class="we-head"><b>💵 ${esc(name)}</b><span>${esc(c.job || '')} · what is in the numbers</span><button type="button" class="btn-ghost x-plate x-small" style="min-width: 44px;" onclick="estWhatClose()" aria-label="close" title="close">✕</button></div>
-    <div class="ew-tabs">${tabBtn('way', '📥', 'ON THE WAY', m2(wayShown))}${tabBtn('in', '📗', 'IN', m2(inTot))}${tabBtn('log', '🧾', 'NOT SENT', String(logN))}</div>
+    <div class="ew-tabs">${tabBtn('way', '📥', 'ON THE WAY', m2(wayShown))}${tabBtn('in', '📗', 'IN', m2(inTot))}${estRO() ? '' : tabBtn('log', '🧾', 'NOT SENT', String(logN))}</div><!-- 👁 v7.82 — NOT SENT is made from Eric's log: not drawn on a look-only phone -->
     <div class="ew-scope">${w.from >= 0 ? `<button type="button" class="pick-chip${all ? '' : ' sel'}" data-scope="one" aria-pressed="${!all}" onclick="estWhatScope(false)">${all ? '○' : '✓'} ${esc(_estD.cats[w.from].n)} only</button>` : ''}<button type="button" class="pick-chip${all ? ' sel' : ''}" data-scope="all" aria-pressed="${all}" onclick="estWhatScope(true)">${all ? '✓' : '○'} Every category on this job</button></div>
     <div class="ew-say">${say}</div>
     <div class="ew-list" id="estWhatList">${body}</div>
@@ -17711,7 +18300,7 @@ function estBillCands() {
   // The journal, plans and materials all bridge the two with portalAppJob(); now so does
   // every receipt path. Eric's Peninsula Overhead Doors invoice is what surfaced it.
   const aj = portalAppJob(c);
-  return entries.filter(e => (e.job === aj || e.job === c.job) && !e.budg && !e.sample && !isOverheadEntry(e) && !(e.mail && !e.rcpt) &&
+  return estLog().filter(e => (e.job === aj || e.job === c.job) && !e.budg && !e.sample && !isOverheadEntry(e) && !(e.mail && !e.rcpt) &&   // 👁 v7.82 — estLog: never a crew phone's own log
     !e.personal && !(e.tags || []).includes('Personal') && !isPersonalJob(e.job) &&   // 🔒 v6.53 — the lock reaches the bill strip too
     estBillParse(e)).slice(0, 12);   // v6.41 — an email is a bill only once he 🧾-tags it
 }
@@ -17728,7 +18317,7 @@ function estBillGuess(e) {
 // 📗 has this bill gone to Logan? Lit by the TO THE BOOKKEEPER flow, or by Eric's own tap.
 function estBillToLogan(p) {
   if (p.bk) return true;
-  const e = p.eid != null ? entries.find(x => x.id === p.eid) : null;
+  const e = p.eid != null ? estLog().find(x => x.id === p.eid) : null;
   return !!(e && ((e.tags || []).includes('Bookkeeper') || e.shared));
 }
 function estPendMk(p) { return p.inc ? +p.a || 0 : Math.round((+p.a || 0) * (1 + estMk() / 100) * 100) / 100; }
@@ -17822,7 +18411,7 @@ function estSalesFree() {   // the lines not yet paired with a receipt (a line i
   const seen = {};
   return estSalesLines().filter(l => { seen[l.key] = (seen[l.key] || 0) + 1; return seen[l.key] > (spent[l.key] || 0); });
 }
-const estPendSince = p => { const e = p.eid != null ? entries.find(k => k.id === p.eid) : null, rd = e ? ((estBillParse(e) || {}).d || '') : ''; return /^\d{4}-\d{2}-\d{2}$/.test(rd) ? rd : String(p.ts || '').slice(0, 10); };
+const estPendSince = p => { const e = p.eid != null ? estLog().find(k => k.id === p.eid) : null, rd = e ? ((estBillParse(e) || {}).d || '') : ''; return /^\d{4}-\d{2}-\d{2}$/.test(rd) ? rd : String(p.ts || '').slice(0, 10); };
 // the line a receipt on the way matches: { line, same } — same = the line's item is this category; the caller decides what to do with the rest
 function estSalesHit(x, p, free) {
   if (!p || p.kind === 'labor' || !(+p.a > 0)) return null;
@@ -17938,10 +18527,10 @@ function estSearchGo() {   // Enter / the phone's Search key: open the first one
 function estSearchHtml(hitN) {
   const q = estQWords().length > 0, said = esc(_estQ.trim());
   // a category he took off this board that the words find: offered back, by name (🗑 v7.49's list)
-  const gone = q ? estGoneList() : [], goneHits = gone.filter(n => estQOk({ n }));
+  const gone = q && !estRO() ? estGoneList() : [], goneHits = gone.filter(n => estQOk({ n }));   // 👁 v7.82 — putting one back is his: not offered on a look-only phone
   const say = !q ? '' : hitN
     ? `🔍 <b>${hitN} categor${hitN === 1 ? 'y' : 'ies'}</b> match${hitN === 1 ? 'es' : ''} “${said}”${_estGuessOnly ? ' (among the best guesses)' : ''} — tap ${hitN === 1 ? 'it' : 'one'} to open it · ✕ clears the search`
-    : `🔍 No category on this board matches “${said}”${_estGuessOnly ? ' among the best guesses' : ''}${goneHits.length ? '' : ' — ➕ category at the foot of the board adds one'} · ✕ clears the search`;
+    : `🔍 No category on this board matches “${said}”${_estGuessOnly ? ' among the best guesses' : ''}${goneHits.length || estRO() ? '' : ' — ➕ category at the foot of the board adds one'} · ✕ clears the search`;
   return `<div class="mat-search est-search" role="search">
     <input type="search" id="estSearch" value="${esc(_estQ)}" placeholder="🔍 Find a category…" aria-label="find a category on this board" autocomplete="off" enterkeyhint="search" oninput="estSearchSet(this.value)" onkeydown="if (event.key === 'Enter') { event.preventDefault(); estSearchGo(); }">
     ${q ? `<button type="button" class="btn-ghost req-x mat-search-x" onclick="estSearchClear()" aria-label="clear the search">✕</button>` : ''}
@@ -18021,15 +18610,20 @@ function renderEstimates() {
   const qOn = estQWords().length > 0, qHitN = qOn ? _estD.cats.filter(x => estQOk(x) && (!_estGuessOnly || estIsGuess(x))).length : 0;
   $('revBox').innerHTML = `<div class="est-board"><h3>💰 ${esc(c.job)} — estimates
     ${winX('closeEstimates()', 'close estimates')}</h3>
+    ${estFlipBackHtml()}
+    ${estRO() ? `<div class="est-ro-say" id="estRoSay">👁 <b>LOOK ONLY</b> — every number, bid and note is here to read. Changes are Eric's to make, on his phone.</div>` : ''}
     ${estSearchHtml(qHitN)}
+    ${_estOnly ? `<div class="est-only" id="estOnly"><span>🔀 Showing only <b>${esc(_estOnly.word)}</b> — ${_estOnly.names.length} estimate line${_estOnly.names.length === 1 ? '' : 's'}</span><button type="button" class="btn-ghost req-x" onclick="estOnlyClear()">✕ show everything</button></div>` : ''}
     <div class="est-mid${qOn ? ' searching' : ''}"><div class="est-top">
     <div style="margin: 0 0 8px; font-size: 14px; line-height: 1.4;">${apprN ? `<b>${apprN} showing on their page — ${money0(totAppr)} approved.</b>` : '<b>Nothing is showing yet.</b>'}${needN ? ` · <b style="color: var(--warn, #ffa657);">⚠ ${needN} need${needN > 1 ? '' : 's'} you</b>` : ''}${doneN ? ` · <b class="est-done-word" id="estDoneN">✓ ${doneN} complete</b>` : ''}${heldN ? ` · <b class="est-held-word" id="estHeldN">⏳ ${heldN} saved for later by them — ${money0(heldTot)}</b>` : ''}${updN ? ` · <b class="est-upd-word" id="estUpdN">🔄 ${updN} updated on their page${updNoWhy ? ` — ${updNoWhy} with no why yet` : ''}</b>` : ''} <span class="hint" style="margin: 0;">· 💹 markup ${estMk()}%</span></div>
     ${dpHost(c.code, 'est')}
+    ${hitCan() ? `<button type="button" class="btn-ghost req-x hit-door" id="estHitDoor" data-code="${esc(c.code)}" onclick="estToHit()" title="this job's hit list — what needs doing, in order">${hitDoorWord(c.code)}</button>` : ''}
     ${wayAll || inAll ? `<div class="est-what-row" id="estWhatAll">${wayAll ? `<button type="button" class="est-what" data-what="way" onclick="estWhatOpen(-1, 'way')" aria-label="${money0(wayAll)} on the way on this job — see what it is">📥 ${money0(wayAll)} on the way ›</button>` : ''}${inAll ? `<button type="button" class="est-what" data-what="in" onclick="estWhatOpen(-1, 'in')" aria-label="${money0(inAll)} in on this job — see what it is">📗 ${money0(inAll)} in ›</button>` : ''}<span class="hint" style="margin: 0;">the whole job — tap to see what it is</span></div>` : ''}
     ${guessN ? `<button type="button" class="pick-chip est-guess-filter${_estGuessOnly ? ' sel' : ''}" id="estGuessBtn" aria-pressed="${_estGuessOnly}" onclick="estGuessOnly()">${_estGuessOnly ? `✓ ≈ ONLY THE BEST GUESSES (${guessN}) — tap to show everything` : `≈ ${guessN} best guess${guessN > 1 ? 'es' : ''} — ${money0(guessTot)} with no bid behind it yet · tap to see only those`}</button>` : ''}
     <button type="button" class="btn-ghost est-help-btn" onclick="estHelp()" aria-expanded="${_estHelp}">${_estHelp ? '▾' : '▸'} ? How this works</button>
     <div class="hint" id="estHelpBox" style="margin: 0 0 8px;${_estHelp ? '' : ' display: none;'}">🏢 Office-side until YOU light a lamp. Every category can hold several bids — <b>Estimate 1 + Estimate 2</b> on each line (one full bid, or materials + labor). Tap <b>○ use this</b> to pick the bid you're accepting; that number is what ✓ APPROVE sends to their page. 💹 The Clore markup rides on every number the client sees — they NEVER see the markup itself; a line can say ✓ already included instead (set it under 📥 Bills that came in). Everything saves itself. The "in" numbers ride the same QuickBooks runs as their page. Notes and bid papers NEVER reach the client — approving sends the category name and the accepted number, nothing else. Flag <b>2 or more</b> bids <b>👁 let them choose this</b> and their page prompts CHOOSE YOUR OPTION — until they tap, the total rides YOUR ✓ pick as the plan; once they tap, it follows their choice and shows here as 🏠 THEIR PICK. One alert per category, no matter how much they click around; 🔒 LOCK IT IN is their definite word. Give each offered bid a homeowner name. The office note stays home unless YOU flip 🏠 THEY SEE THIS NOTE on that exact bid — then it rides beside the estimate so they know what they're choosing. <b>≈ Placeholder — best guess:</b> no bid yet? Open the category, tap ≈ ➕ placeholder, type your own number. The row wears ≈ and a dashed edge until a real bid backs it — type the real number and tap the ≈ plate again, or add the bid and tap ○ use this. Once the category is ✓ ON PAGE their page says it too: ≈ on the number and the word PLACEHOLDER — a rough figure that holds the spot until the real bid comes in, which may be higher or lower. <b>☑ Two separate things in one category</b> (two vanities, say): open the category and tap <b>☐ use this too</b> on the second bid — both are used, the category's number is the two added together, and that total is what their page shows. ○ use this instead goes back to one bid; ☑ USING BOTH — tap to take this off drops one. In a category that offers the homeowner choices, a bid you use that is not one of the choices is counted in every choice. <b>📄 A receipt on the way:</b> tap 📄 The receipt to open it (its words, the day, the amount, 📷 its picture — or 🔍 Find the paper for an old filing), 🏷 Wrong category? Move it to put it on the right line. <b>📥 on the way · $ in:</b> tap either one — on a row, or the two at the top for the whole job — to see what it is made of: each receipt's amount, date, store and category, and 📷 its picture. <b>Every category is always on the list.</b> ✕ remove category takes one off this board and it stays off; ↩ at the foot of the board puts it back. <b>🏷 A receipt on the wrong category:</b> tap 📥 on the way, then 🏷 Wrong category? Move it on that receipt (or the same plate on the bill inside the open category) and pick the right one — their page follows at once. <b>✓ A category that is finished:</b> open it and tap ✓ Mark this category COMPLETE — the estimate is locked, the row says what it came to (under or over), and their page says COMPLETE and counts nothing more as remaining on that line. ↩ Reopen takes it back. <b>⏳ Save for later:</b> open a category and tap ⏳ Let them save this for later — their page puts a Save for later button on that line; when they tap it the line comes off ESTIMATED REMAINING COSTS and onto their ⏳ SAVED FOR LATER card (they can put it back), this row says ⏳ THEY SAVED IT FOR LATER, and it lands in your review pile like a pick. When a line adds bids together, ○ can wait on ONE bid offers just that part (give it a homeowner name in the 🏠 box — that name and its number are the only things about the bid their page sees). Taking the offer off puts the line back on their estimate. <b>🔄 Updated:</b> when a number that is on their page changes, their line says 🔄 UPDATED with the day, what it was and what it is now, and this category asks you why — type it and tap ✓ Say it on their page (they read those words — no vendor names); the sign stays a month, or ✕ takes it off. <b>🗒 A note on each number:</b> Estimate 1 and Estimate 2 each have their own note box beside them — what that number is (labor, materials, whose price). Those notes stay in the office; the homeowner never sees them. <b>🔍 Find a category:</b> type a few letters in the box at the top — what matches sits right under it; tap one to open it (Enter opens the first), ✕ clears the search. <b>👁 on every row:</b> tap it to see their page at that line — a change you just made is saved first; tap the banner at the top to come straight back to where you were. A dimmed 👁 means they do not see that line.</div>
-    ${(() => { const bills = estBillCands();
+    ${(() => { if (estRO()) return '';   // 👁 v7.82 — the bills strip is made from Eric's log and every plate on it writes: not drawn on a look-only phone
+      const bills = estBillCands();
       // 📥 v6.02 — Eric: "keep it small until it has something to deal with." Nothing waiting
       // = one thin line you can tap open to file a bill by hand. A bill arrives = it opens
       // itself and says how many, because that IS something to deal with — even if he shut
@@ -18112,7 +18706,8 @@ function renderEstimates() {
         !tot && nb ? `${nb} bid${nb > 1 ? 's' : ''}, none picked` : '',
         !done && over ? `<b style="color: var(--err, #b3452f);">over ${money0(over)}</b>` : '',
         x.appr && nOpt >= 2 ? `<b>🏠 ${theirPick != null ? `${pgB.lk ? '🔒 LOCKED IN' : 'they picked'} "${esc(pgB.opts[theirPick].t)}"` : nOpt + ' choices out — waiting on their pick'}</b>` : '',
-        mrBit,
+        // 🔀 v7.82 — the Build List's roll-up under this line is a door now: a tap flips to the Build List at the rows tied to it
+        mrBit ? `<button type="button" class="est-flip" data-flip="${ci}" onclick="event.stopPropagation(); estFlipToMat(${ci})" aria-label="open the Build List at the rows tied to ${esc(x.n)}">${mrBit} ›</button>` : '',
       ].filter(Boolean).join(' · ') +
         // 💵 v7.49 — Eric: "when it says a dollar amount is on the way, I need to be able to click on that and see what that is, as well
         // as how much money is already in." Both figures are doors now (a plate, underlined, ›) into what they are made of — side by
@@ -18155,7 +18750,8 @@ function renderEstimates() {
         <div class="est-bar-fill" style="height: 100%; width: ${barPct}%; background: ${barOver ? 'var(--err, #c0392b)' : 'var(--accent)'};"></div>${done && tot > 0 && under > 0 ? `<div class="est-bar-under" style="width: ${100 - barPct}%;" title="${money0(under)} under the estimate — never needed"></div>` : ''}</div><span class="est-bar-word${done && tot > 0 ? (under > 0 ? ' under' : under < 0 ? ' over' : '') : ''}">${done ? (tot > 0 && under > 0 ? `✓ ${money0(under)} UNDER` : tot > 0 && under < 0 ? `⚠ ${money0(-under)} OVER` : '✓ complete') : tot > 0 ? barPct + '% in' : 'no estimate'}</span></div>` : ''}
       ${open ? `
         ${done ? `<div class="est-done-say" id="estDoneSay-${ci}">🔒 <b>COMPLETE</b>${x.done.at ? ' since ' + esc(estDayWord(x.done.at) || x.done.at) : ''} — the estimate is locked${tot > 0 ? ` at <b>${money0(tot)}</b>; it came to <b>${money0(spent)}</b> (${money0(u)} in${pendUp ? ' + ' + money0(pendUp) + ' on the way' : ''})` : ''}. ↩ Reopen it to change a bid.${x.appr ? ' Their page says COMPLETE on this line and counts nothing more as remaining.' : ''}</div>` : ''}
-        ${updLive ? `<div class="est-upd-say" id="estUpd-${ci}">🔄 <b>Their page says UPDATED</b> ${esc(estDayWord(x.upd.at) || x.upd.at)} — was <b>${money0(x.upd.from)}</b>, now <b>${money0(x.upd.to)}</b>. ${estUpdWhyOk(x) ? `They read: <b>“${esc(x.upd.why)}”</b>` : x.upd.why ? `Your why was said for ${money0(x.upd.whyFor)} — the number is ${money0(x.upd.to)} now. Still right? Tap ✓ Say it, or change it:` : 'Why did it change? They read what you type here (no vendor names):'}
+        ${updLive && estRO() ? `<div class="est-upd-say" id="estUpd-${ci}">🔄 <b>Their page says UPDATED</b> ${esc(estDayWord(x.upd.at) || x.upd.at)} — was <b>${money0(x.upd.from)}</b>, now <b>${money0(x.upd.to)}</b>. ${estUpdWhyOk(x) ? `They read: <b>“${esc(x.upd.why)}”</b>` : 'No why is said on their page yet.'}</div>` : ''}
+        ${updLive && !estRO() ? `<div class="est-upd-say" id="estUpd-${ci}">🔄 <b>Their page says UPDATED</b> ${esc(estDayWord(x.upd.at) || x.upd.at)} — was <b>${money0(x.upd.from)}</b>, now <b>${money0(x.upd.to)}</b>. ${estUpdWhyOk(x) ? `They read: <b>“${esc(x.upd.why)}”</b>` : x.upd.why ? `Your why was said for ${money0(x.upd.whyFor)} — the number is ${money0(x.upd.to)} now. Still right? Tap ✓ Say it, or change it:` : 'Why did it change? They read what you type here (no vendor names):'}
           <input type="text" id="estWhy-${ci}" value="${esc(x.upd.why || '')}" placeholder="the real bid came in · a second vanity was added · the price went up" onkeydown="if (event.key === 'Enter') { event.preventDefault(); estUpdWhy(${ci}); }">
           <div class="frow"><button type="button" class="btn-primary" style="min-height: 40px; font-weight: var(--fw8, 800);" onclick="estUpdWhy(${ci})">✓ Say it on their page</button><button type="button" class="btn-ghost req-x" style="min-height: 40px;" onclick="estUpdOff(${ci})">✕ Take the UPDATED sign off</button></div></div>` : ''}
         ${parts.length >= 2 ? `<div class="est-sum-say" id="estSum-${ci}">☑ <b>${isChoice ? `${parts.length} bids used together` : useWord + ' BIDS'}</b> — ${parts.map(b => money0(estBidRaw(b))).join(' + ')} = <b>${money0(rawT)}</b>${rawT !== tot ? ` → <b>${money0(tot)}</b> to the client` : ''}. That total is this category's number${isChoice ? ' (the choice they make, plus what is used with every choice)' : ''}.</div>` : ''}
@@ -18200,14 +18796,14 @@ function renderEstimates() {
           // 📗 v7.58 — with the invoice lines in hand the pre-light is a LINE (the same amount, dated after the receipt, under another
           // item — his tap decides); without them, the old growth nudge
           const hit = _estSales ? estSalesHit(x, p) : null, nudge = _estSales ? !!hit : (used[x.n] || 0) >= (+p.base || 0) + (+p.a || 0) * 0.5;
-          const pe = p.eid != null ? entries.find(k => k.id === p.eid) : null;   // 💵 v7.49 — the receipt behind the bill: 📷 its picture, right here
+          const pe = p.eid != null ? estLog().find(k => k.id === p.eid) : null;   // 💵 v7.49 — the receipt behind the bill: 📷 its picture, right here · 👁 v7.82 — estLog: on a look-only phone the receipt is in Eric's log, not this one
           // 📄 v7.59 — Eric, on this row: "here i need to be able to open the receipt and move to another category if its in the wrong
           // one." 🏷 Move it was here (v7.50); the receipt itself was reachable only when it had a picture — his receipt had none on the
           // entry (a July File Cabinet filing whose paper sits in Dropbox under its own name), so the row offered nothing to open. Now
           // every receipt on the way wears 📄 The receipt — the whole entry (its words, day, amount, category; 📷 when it has one, and
           // 🔍 Find the paper when it was filed without one) — and the money and the day read as money and a day.
           const receiptPlate = pe ? `<button type="button" class="pick-chip est-pend-open" style="font-size: var(--fs105, 10.5px); min-height: 28px;" onclick="event.stopPropagation(); wizEntryOpen(${pe.id}, '‹ Back to the board'${p.kind === 'labor' ? '' : `, { move: { ci: ${ci}, pi: ${pi} } }`})" title="open the receipt — its words, the day, the amount, its picture; and move it from there">📄 The receipt</button>`
-            : p.eid != null ? `<span class="hint est-pend-noent" style="margin: 0;">📄 its entry is not in this device's log</span>` : '';
+            : p.eid != null ? `<span class="hint est-pend-noent" style="margin: 0;">${estRO() ? '🧾 the receipt is in Eric\'s log' : '📄 its entry is not in this device\'s log'}</span>` : '';
           return `<div class="frow est-pend-row" style="gap: 6px; align-items: center; margin-top: 8px; padding: 6px 8px; border: 1.5px dashed var(--accent); border-radius: 8px; flex-wrap: wrap;">
           <span style="flex: 1; min-width: 150px;">📥 <b>${fmtMoney(+p.a || 0)}</b>${p.v ? ' from ' + esc(p.v) : ''} <span class="hint" style="margin: 0;">→ ${fmtMoney(estPendMk(p))} on their page · sent ${esc(estDayWord(p.ts) || p.ts || '')}${hit ? ' · <b class="est-inv-hit">' + estSalesWord(hit) + ' — is that this one?</b>' : nudge ? ' · <b>📗 a QB run may have caught this</b>' : _estSales ? ' · <span class="est-inv-none">no invoice line for it yet</span>' : ''}</span></span>
           ${receiptPlate}
@@ -18219,6 +18815,13 @@ function renderEstimates() {
                receipt goes back to waiting in the log so it can be fixed and sent again. -->
           <button type="button" class="pick-chip" style="font-size: var(--fs105, 10.5px); min-height: 28px; border-style: dashed;" onclick="estPendClear(${ci}, ${pi}, 'back')" title="Wrong amount or wrong job? Off their page, and the receipt is offered again in the log">↩ Take back</button>
         </div>`; }).join('')}
+        <!-- 🔀 v7.82 — Eric: "switch between them with a button on each category … flip over to same category same item": the Build List
+             at this line's rows; and 📌 this category onto the job's hit list. The two DOORS sit in a row of their own, above the plates
+             that change the category — ✓ Mark this category COMPLETE still leads those (v7.50) -->
+        <div class="est-doors" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
+          <button type="button" class="btn-ghost req-x est-flip-btn" onclick="estFlipToMat(${ci})" title="the Build List, narrowed to the rows tied to this estimate line — picks, orders, deliveries, the schedule">📋 Build List — ${(_estMatRoll[String(x.n).trim().toLowerCase()] || {}).n ? (_estMatRoll[String(x.n).trim().toLowerCase()].n + ' row' + (_estMatRoll[String(x.n).trim().toLowerCase()].n === 1 ? '' : 's') + ' on this line') : 'no rows on this line yet'} ›</button>
+          ${hitCan() ? `<button type="button" class="btn-ghost req-x est-hit-add${hitHas((_portalIdx.clients[_estIdx] || {}).code, { from: 'est', name: x.n }) ? ' on' : ''}" onclick="hitAddEst(${ci})" title="put this category on the job's hit list — what needs doing, in order">${hitHas((_portalIdx.clients[_estIdx] || {}).code, { from: 'est', name: x.n }) ? '📌 ✓ ON THE HIT LIST — add another' : '📌 To the hit list'}</button>` : ''}
+        </div>
         <div class="chips-row" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
           <button type="button" class="btn-ghost req-x est-done-btn${done ? ' sel' : ''}" aria-pressed="${done}" onclick="estDone(${ci})" title="${done ? 'not finished after all — the estimate can be changed again' : 'this category is finished — lock the estimate and say what it came to'}">${done ? '↩ Reopen — not complete after all' : '✓ Mark this category COMPLETE'}</button>
           ${done ? '' : `<button type="button" class="btn-ghost req-x est-later-btn${x.later ? ' sel' : ''}" aria-pressed="${!!x.later}" onclick="estLaterToggle(${ci})" title="put a Save for later button on this line of their page — they can hold this part of the job for next year, and it comes off their remaining costs">${x.later ? '⏳ THEY CAN SAVE THIS FOR LATER — tap to take the offer off' : '⏳ Let them save this for later'}</button>`}
@@ -18248,7 +18851,8 @@ function renderEstimates() {
       needs.sort(byRank); byPh.forEach(list => list.sort(byRank));
       let out = '';
       const gOnly = _estGuessOnly, isG = ci => estIsGuess(_estD.cats[ci]);   // ≈ v7.45 — "only the best guesses": the same rows, the same sections, the rest left out
-      const isQ = ci => !qOn || estQOk(_estD.cats[ci]);   // 🔍 v7.79 — the search narrows the same rows in the same sections (with the ≈ filter, both narrow)
+      const isO = ci => !_estOnly || _estOnly.names.includes(String(_estD.cats[ci].n).trim().toLowerCase());   // 🔀 v7.82 — a flip from a Build List category tied to several lines: only those lines
+      const isQ = ci => isO(ci) && (!qOn || estQOk(_estD.cats[ci]));   // 🔍 v7.79 — the search narrows the same rows in the same sections (with the ≈ filter, both narrow)
       const needsShown = (gOnly ? needs.filter(isG) : needs).filter(isQ);
       _estQFirst = -1;
       if (needsShown.length) {
@@ -18271,17 +18875,18 @@ function renderEstimates() {
       return out;
     })()}
     </div></div>
-    <div class="frow" style="margin-top: 12px;">
+    ${estRO() ? '' : `<div class="frow" style="margin-top: 12px;">
       <div class="field" style="flex: 1;"><input type="text" id="estNewCat" placeholder="new category…" onkeydown="if(event.key==='Enter'){event.preventDefault();estAddCat();}"></div>
       <button class="btn-ghost" onclick="estAddCat()">➕ category</button>
-    </div>
-    ${(() => { const gone = estGoneList(); if (!gone.length) return '';   // 🗑 v7.49 — what he took off this board, and the way back
+    </div>`}
+    ${(() => { const gone = estRO() ? [] : estGoneList(); if (!gone.length) return '';   // 🗑 v7.49 — what he took off this board, and the way back (👁 v7.82 — his to put back: not drawn on a look-only phone)
       return `<div class="est-gone" id="estGone"><button type="button" class="btn-ghost est-gone-btn" onclick="estGoneFold()" aria-expanded="${_estGoneOpen}">${_estGoneOpen ? '▾' : '▸'} 🗑 ${gone.length} categor${gone.length > 1 ? 'ies' : 'y'} taken off this board — tap to put one back</button>
         ${_estGoneOpen ? `<div class="chips-row" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">${catSort(gone).map(n => `<button type="button" class="pick-chip est-back" onclick="estPutBack(${gone.indexOf(n)})" aria-label="put ${esc(n)} back on this board">↩ ${esc(n)}</button>`).join('')}</div>` : ''}</div>`; })()}
     <div class="rev-row" style="margin-top: 12px;">
       <button class="btn-ghost x-plate" style="flex: 1;" onclick="closeEstimates()">✕ Close</button>
     </div>
     </div>`;   // 🕯 v6.66 — the closing paragraph moved up into "? How this works"
+  if (estRO()) estROLock();   // 👁 v7.82 — a look-only phone: every box shut, every plate that would change something off
 }
 // ================= 🗒 v7.78 — A NOTE ON EACH NUMBER =================
 // Eric: "on the estimate page i want estimate 1 and estimate 2 to have their own text boxes. so i can put note on each number."
@@ -19250,6 +19855,7 @@ async function estApprove(ci) {
   toast(word ? `💰 ${name} is on their page — $${amt.toLocaleString()} ✓` : `🏢 ${name} pulled back to the office ✓`);
 }
 function scheduleEstSave(publish) {
+  if (CREW_NAME) return;   // 👁 v7.82 — a crew phone never writes the board or their page (his own 👁 preview is still HIS phone: the log's 🔮 → Upcoming works there as ever)
   if (publish) window._estPub = true;
   clearTimeout(_estTimer);
   _estTimer = setTimeout(estSave, 1200);
@@ -19257,6 +19863,7 @@ function scheduleEstSave(publish) {
 async function estSave() {
   const c = _portalIdx.clients[_estIdx];
   if (!c || !_estD) return;
+  if (CREW_NAME) { window._estPub = false; return; }   // 👁 v7.82 — one writer: Eric's phone
   _estD.updated = localDay(new Date());
   const doPub = !!window._estPub;
   const stamped = doPub ? estUpdStamp() : 0;   // 🔄 v7.61 — a number that is on their page changed: the line will say UPDATED (stamped before the cut and the board's own save)
@@ -19344,6 +19951,7 @@ function cpPush(code, kind) {
 }
 // the approved cut: category name + the ACCEPTED number only. Bids, notes, papers stay home.
 async function estPublish(c, cut) {
+  if (CREW_NAME) return;   // 👁 v7.82 — a homeowner's page is never written from a crew phone
   try {
     const pg = JSON.parse(await dbxDownload(portalRoot() + '/' + c.code + '.json') || 'null');
     if (!pg) return;
@@ -19377,6 +19985,7 @@ async function estAddDocs(ci, bi, files) {
   const b = ((_estD.cats[ci] || {}).bids || [])[bi];
   const c = _portalIdx.clients[_estIdx];
   if (!b || !c || !files || !files.length) return;
+  if (estRO()) { estROSay(); return; }   // 👁 v7.82
   const ok = [...files].filter(f => /^image\//.test(f.type) || f.type === 'application/pdf').slice(0, 6);
   if (!ok.length) { toast('Photos and PDFs only', false); return; }
   b.docs = b.docs || [];
@@ -19672,10 +20281,25 @@ async function portalRotate(i) {
   const c = _portalIdx.clients[i];
   const fresh = c.key + '-' + Math.random().toString(16).slice(2, 8);
   try {
-    await dbxRpc('files/move_v2', { from_path: (portalRoot() + '/' + c.code + '.json').toLowerCase(), to_path: portalRoot() + '/' + fresh + '.json' });
+    const mv = await dbxRpc('files/move_v2', { from_path: (portalRoot() + '/' + c.code + '.json').toLowerCase(), to_path: portalRoot() + '/' + fresh + '.json' });
+    if (!mv || mv.error_summary) throw new Error('the page did not move');   // 🔄 v7.82 — Dropbox refusing is an answer, not a throw: without this the list took the new code while the page kept the old one
     try { await dbxRpc('files/move_v2', { from_path: (portalRoot() + '/clicks-' + c.code + '.json').toLowerCase(), to_path: portalRoot() + '/clicks-' + fresh + '.json' }); } catch (e) {}
     try { await dbxRpc('files/move_v2', { from_path: (portalRoot() + '/photos-' + c.code).toLowerCase(), to_path: portalRoot() + '/photos-' + fresh }); } catch (e) {}
     try { await dbxRpc('files/move_v2', { from_path: (portalRoot() + '/asks-' + c.code + '.json').toLowerCase(), to_path: portalRoot() + '/asks-' + fresh + '.json' }); } catch (e) {}
+    // 🔄 v7.82 — A ROTATE LEFT THE JOB'S BOARDS BEHIND. Only the page, its clicks, its photos and its questions moved to the new code;
+    // the estimates board, the Build List (both halves), the plan rack, the invoice lines, the paid list and the hit list are all
+    // named by the code too, and stayed under the OLD one — so after a rotate the estimates and the Build List opened empty (the
+    // files were still there, under a name nothing asked for any more). Found while checking Rotate as the remedy for v7.81's
+    // door; nobody had rotated since those files came to exist. They move with the page now. NOT moved, on purpose: the
+    // homeowner's phone sign-ups (push-<code>.json — a ping would hand the NEW link to every phone that had the old one), and
+    // the folders whose paths are written inside the files (bid papers, Build List photos and papers, plan sets — they are
+    // never served, and the paths in the files keep working). The down payment he typed for the job follows the new code.
+    for (const pre of ['materials-', 'materials-office-', 'estimates-', 'plans-', 'sales-', 'paid-', 'hitlist-']) {
+      try { await dbxRpc('files/move_v2', { from_path: (portalRoot() + '/' + pre + c.code + '.json').toLowerCase(), to_path: portalRoot() + '/' + pre + fresh + '.json' }); } catch (e) {}
+    }
+    if (prefs.downPay && prefs.downPay[c.code]) { prefs.downPay[fresh] = prefs.downPay[c.code]; delete prefs.downPay[c.code]; scheduleSave(); }
+    if (_dpSeen[c.code]) { _dpSeen[fresh] = _dpSeen[c.code]; delete _dpSeen[c.code]; lsSet('daylog-dpseen', JSON.stringify(_dpSeen)); }
+    if (_hit[c.code]) { _hit[fresh] = _hit[c.code]; delete _hit[c.code]; }
     c.code = fresh;
     await dbxUpload(portalRoot() + '/index.json', JSON.stringify(_portalIdx));
     renderPortalList();
@@ -20582,6 +21206,7 @@ const MAT_STAGE_F = [
   ['old', '⏳ getting old', it => matOld(it)],   // ⏳ v7.25 — waited on him a week or more
   ['stuck', '🚧 stuck', it => matIsStuck(it)]];   // 🚧 v7.25 — cannot move until something happens
 function matStageOk(it) { const f = MAT_STAGE_F.find(x => x[0] === _matStageF); return !f || f[2](it); }
+function matEcOk(it) { return !_matEcF || String((it && it.ec) || '').trim().toLowerCase() === String(_matEcF).trim().toLowerCase(); }   // 🔀 v7.82 — the rows tied to the estimate line he flipped in by (its exact name, case aside)
 // 🔍 v7.63 — A SEARCH BOX ON THE BUILD LIST. Eric: "in the build list i need a search bar to find items or categories at the top
 // with the rest of the sorting stuff." The words he types find a ROW (its name, what it is, its note, the homeowner's pick, its
 // SKU, its tags) or a whole CATEGORY (its name — then every row in it shows); the board narrows to what matches, every matching
@@ -21010,7 +21635,9 @@ async function openMaterials(i) {
   // 🏢 v7.09 — Eric: "he should be able to click on Plans, Build List, and Journal." The board's files were always under
   // portalRoot() — the shared folder — so an office phone works the same board Eric does. (Field crew stop at portalGuard.)
   _matIdx = i; _matEdit = ''; _matWhoFor = ''; _matRmTools = -1; _matHelp = false; _matDirty = false; _matArm = ''; matLightDisarm(); _matTagF = ''; _matStageF = ''; _matQ = ''; _matPaste = false; _matPasteRows = null; _matPasteText = '';
+  _matFlip = null; _matEcF = '';   // 🔀 v7.82 — a plain open has no way back and no narrowing (a flip sets them after)
   const c = _portalIdx.clients[i];
+  hitWarm(c.code);   // 📌 v7.82
   toast('⏳ Loading the board…');
   matTplLoad();
   _matD = await matBoardRead(c);
@@ -21040,6 +21667,10 @@ function renderMatMgr() {
       <button type="button" class="btn-ghost req-x" style="font-size: var(--fs11, 11px);" onclick="_matHistShow = !_matHistShow; renderMatMgr()" aria-expanded="${_matHistShow}">${_matHistShow ? '▾' : '▸'} 🕘 history</button>
       <button type="button" class="btn-ghost req-x x-plate x-small" style="min-width: 44px;" onclick="matClose()" aria-label="close the board" title="close the board">✕</button>
     </span></h3>
+    ${matFlipBackHtml()}
+    ${hitCan() ? `<button type="button" class="btn-ghost req-x hit-door" id="matHitDoor" data-code="${esc(c.code)}" onclick="matToHit()" title="this job's hit list — what needs doing, in order">${hitDoorWord(c.code)}</button>` : ''}
+    ${_matEcF ? (() => { const n = _matD.rooms.reduce((s, r) => s + (r.items || []).filter(matEcOk).length, 0);
+      return `<div class="est-only mat-ecf" id="matEcF"><span>💰 Showing only the rows tied to the estimate line <b>${esc(_matEcF)}</b> — ${n ? n + ' row' + (n === 1 ? '' : 's') : 'none yet. To tie a row to it: ✎ the row → 💵 Money → 💰 Estimate line it belongs to'}</span><button type="button" class="btn-ghost req-x" onclick="matEcFClear()">✕ show the whole board</button></div>`; })() : ''}
     ${_matHistShow ? matHistHtml() : ''}
     <div class="hint" style="margin: 0 0 8px;">${_matD.rooms.length ? `${_matD.rooms.length} categories · ${_matD.rooms.reduce((s, r) => s + (r.items || []).length, 0)} items · ${need} waiting on the client · <a href="javascript:void(0)" style="color: var(--accent); font-weight: var(--fw7, 700); text-decoration: none; white-space: nowrap;" onclick="_matHelp = !_matHelp; renderMatMgr()" aria-expanded="${_matHelp}">${_matHelp ? '▾' : '▸'} ? how this works</a>${_matHelp ? `<span id="matHelpBox" style="display: block; margin-top: 6px; line-height: 1.55;">Tap a <b>light</b>, then tap it <b>again</b> — the first tap only asks ⚠ sure? and a line under the row says what will change. Lighting one lights every one before it; turning one off turns off every one after it. Something to buy: 👆 picked · 🛒 ordered · 📦 received · 📅 scheduled · 🔧 installed. A checklist item: 👷 on somebody's list · 📅 scheduled · ✅ done — 👷 is a name you pick, so it never lights by itself. A row's <b>steps</b> are in its window — tap the name. <b>⚠ 1st</b> sends a row to the top of its category — the rest waits on it. <b>⇄</b> at the end of every row turns it into a checklist item, or back into something to buy — a row that already has progress asks ⚠ sure? first. Tap a <b>name</b> to open the row; <b>✎ edit</b> (or hold the name) opens its window. <b>🚧 stuck</b> marks a row that cannot move until something happens — say what in its band. <b>⏳</b> cubes count the days a row has waited on you (one at 3 days, two at 7, three at 14) — an ordered row waits quietly until its expected arrival has passed. <b>🔍 Find</b> — type a word in the box at the top: it finds a row by its name, what it is, its note, the pick, its SKU or a tag, or a whole category by its name; the board narrows to what matches, ✕ clears it.</span>` : ''}` : 'No board yet — start from the master list and prune it to fit, or add rooms by hand.'}</div>
     ${_matD.rooms.length ? matSearchHtml() : ''}
@@ -21055,9 +21686,9 @@ function renderMatMgr() {
       </div>`; })()}
     ${matTopBarHtml()}
     ${_matD.rooms.map(((r, ri) => {
-      const its = (r.items || []).filter(x => (!_matTagF || matItemTags(x).includes(_matTagF)) && matStageOk(x) && matQOk(x, r))   // 📋 v6.89 — the trade AND the stage he asked for · 🔍 v7.63 — and the words he typed
+      const its = (r.items || []).filter(x => (!_matTagF || matItemTags(x).includes(_matTagF)) && matStageOk(x) && matQOk(x, r) && matEcOk(x))   // 📋 v6.89 — the trade AND the stage he asked for · 🔍 v7.63 — and the words he typed · 🔀 v7.82 — and the estimate line he flipped in by
         .sort((a, b) => (matItemDone(a) - matItemDone(b)) || (matIsFirst(b) - matIsFirst(a)));   // ⚠ v6.91 — a FIRST row rides at the top of its category (a stable sort: the rest keep their places) · ✓ v7.19 — a finished row sinks to the bottom
-      if ((_matTagF || _matStageF || matQWords()) && !its.length) return ''; // this category has nothing for that trade, that stage or those words
+      if ((_matTagF || _matStageF || matQWords() || _matEcF) && !its.length) return ''; // this category has nothing for that trade, that stage, those words or that estimate line
       const doneN = its.filter(matItemDone).length;
       const pct = its.length ? Math.round(doneN / its.length * 100) : 0;
       const shut = _matRmShut.has(ri);
@@ -21078,6 +21709,7 @@ function renderMatMgr() {
         <button class="btn-ghost req-x rm-more" style="padding: 5px 6px; min-width: 26px;" onclick="matRoomMove(${ri}, -1)" aria-label="move category up" ${ri === 0 ? 'disabled' : ''}>▲</button>
         <button class="btn-ghost req-x rm-more" style="padding: 5px 6px; min-width: 26px;" onclick="matRoomMove(${ri}, 1)" aria-label="move category down" ${ri === _matD.rooms.length - 1 ? 'disabled' : ''}>▼</button>
         <button class="btn-ghost req-x rm-more" style="padding: 5px 6px;" title="save this category as a reusable process template" onclick="matTplSave(${ri})">📑</button>
+        <button type="button" class="btn-ghost req-x mat-rm-est" style="padding: 5px 8px; min-width: 40px;" onclick="matRoomFlip(${ri})" aria-label="open the estimates at the lines this category's rows are tied to" title="flip to the 💰 estimates at this category's lines — the price side of the same work">💰</button><!-- 🔀 v7.82 -->
         <button class="btn-ghost req-x" onclick="matAddItem(${ri})">➕ item</button>
         <button class="btn-ghost req-x rm-more" style="color: var(--err, #c0392b);" onclick="matDelRoom(${ri})">${_matArm === 'room' + ri ? '⚠ SURE? Items go too' : '✕'}</button>
       </span></h4>
@@ -21150,7 +21782,7 @@ function matMgrItem(ri, it) {
           onchange="matSet('${escq(it.id)}', 'n', this.value)"
           onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></span>` :
       `<span role="button" class="mat-nm" style="flex: 1; min-width: 0; line-height: 1.3; cursor: pointer;" onclick="matItRowTap('${escq(it.id)}')" onpointerdown="matItemHoldStart('${escq(it.id)}')" onpointerup="matItemHoldEnd()" onpointerleave="matItemHoldEnd()" oncontextmenu="event.preventDefault()" title="tap or hold: the edit window — every detail is in there"><b>${esc(it.n)}</b>
-        <span class="hint" style="margin: 0; white-space: normal; overflow-wrap: anywhere;">· ${esc(word)}${matAgeHtml(it)}${matIsBuy(it) && matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${it.src === 'grinder' ? ' · ⚙ from the grinder' : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
+        <span class="hint" style="margin: 0; white-space: normal; overflow-wrap: anywhere;">· ${esc(word)}${matAgeHtml(it)}${matIsBuy(it) && matItemTags(it).length ? ` · 🏷 ${esc(matItemTags(it).slice(0, 2).join(', '))}${matItemTags(it).length > 2 ? '…' : ''}` : ''}${kids.length ? (openN ? ` · <b>${openN} open</b>` : ' · steps ✓') : ''}${it.src === 'grinder' ? ' · ⚙ from the grinder' : ''}${hitCan() && hitHas((((_portalIdx || {}).clients || [])[_matIdx] || {}).code, { from: 'mat', id: it.id }) ? ' · 📌 on the hit list' : ''}${kids.some(k => k.flag) ? ` · <b style="color: var(--err, #b3452f);">🚩 decision needed</b>` : ''}${pktN ? ` · 📁${pktN}` : ''}${matIsHm(it) ? ' · <b style="color: var(--client-blue);">🏠 client</b>' : ''}</span>${ready && matIsHm(it) && (it.s || 'pick') === 'pick' ? ' <b style="color: var(--accent);">● READY</b>' : ''}</span>`}
       ${editing ? '' : matQuickHtml(it)}
     </div>
     <div class="mat-line2">${matStripHtml(it)}${matRowBtnsHtml(it)}${matSelHtml(it)}</div>
@@ -21232,7 +21864,8 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
     <div class="field" style="min-width: 170px; flex: 1 1 100%;"><label>SKU / model · 🏢</label><input type="text" id="matSku-${id}" value="${esc(it.sku || '')}" placeholder="the Wizard fills this from a photo" onchange="matSet('${id}', 'sku', this.value)"></div>
     ${+it.est > 0 ? `<div class="hint" style="flex: 1 1 100%; margin: 0;">with this job's ${mk}% markup: <b>${fmtMoney(matMkUp(it.est, mk))}</b> · 🏢 office only — the client never sees a markup</div>` : ''}
     <div class="field" style="min-width: 170px; flex: 1 1 100%;"><label>💰 Estimate line it belongs to · 🏢</label>
-      <select id="matEc-${id}" onchange="matSet('${id}', 'ec', this.value)"><option value="">— none —</option>${catOptionsHtml(matEcList(it), it.ec)}</select></div>`;
+      <select id="matEc-${id}" onchange="matSet('${id}', 'ec', this.value); renderMatMgr()"><option value="">— none —</option>${catOptionsHtml(matEcList(it), it.ec)}</select>
+      <div class="hint" style="margin: 4px 0 0;">${it.ec ? '💰 Its price — above the folds — flips to this line on the estimates.' : 'Pick its estimate line and a 💰 Its price button appears above the folds — it flips straight to that line on the estimates.'}</div></div>`;
   const pktN = ((it.pkt || {}).docs || []).length + ((it.pkt || {}).notes ? 1 : 0);
   return `<div class="mat-sheet" id="matSheet" role="dialog" aria-modal="true" aria-label="edit ${esc(it.n)}" onpointerdown="this._pd = (event.target === this)" onclick="if (event.target === this && this._pd) matEditClose(); this._pd = false">
    <div class="mat-sheet-box">
@@ -21262,6 +21895,11 @@ ${hm && (it.remarks || []).length ? `<div class="hint" style="flex: 1 1 100%;">$
       <div class="ms-sec"><button type="button" class="pick-chip${it.first ? ' sel' : ''}" style="width: 100%; font-weight: var(--fw8, 800); min-height: 44px;" onclick="matFirstToggle('${id}')" aria-pressed="${!!it.first}">${it.first ? '✓ ⚠ FIRST — at the top of its category; the rest waits on this' : '⚠ Flag it FIRST — it goes to the top of its category'}</button></div>
       <div class="ms-sec"><button type="button" class="pick-chip${matIsStuck(it) ? ' sel' : ''}" style="width: 100%; font-weight: var(--fw8, 800); min-height: 44px;" onclick="matStuckToggle('${id}')" aria-pressed="${matIsStuck(it)}">${matIsStuck(it) ? '✓ 🚧 STUCK — it cannot move until something happens' : '🚧 Mark it STUCK — it cannot move until something happens'}</button>
         ${matIsStuck(it) ? `<div class="field" style="flex: 1 1 100%; margin-top: 8px;"><label for="matNeedS-${id}">What has to happen first</label><input type="text" id="matNeedS-${id}" value="${esc(it.need || '')}" placeholder="find a tan soffit, ask the supplier, get their answer…" onchange="matSet('${id}', 'need', this.value); renderMatMgr()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></div>` : ''}</div>
+      ${hitCan() || it.ec ? `<!-- 🔀 📌 v7.82 — the same item, its price side; and onto the job's hit list -->
+      <div class="ms-sec ms-doors">
+        ${it.ec ? `<button type="button" class="btn-ghost ms-flip" onclick="matFlipToEst(['${escq(it.ec)}'], '${escq(it.n)}', '${id}')">💰 Its price — the estimates at ${esc(it.ec)} ›</button>` : ''}
+        ${hitCan() ? `<button type="button" class="btn-ghost ms-hit" onclick="hitAddMat('${id}')">${hitHas((((_portalIdx || {}).clients || [])[_matIdx] || {}).code, { from: 'mat', id: it.id }) ? '📌 ✓ ON THE HIT LIST — add another line' : '📌 Send to the hit list'}</button>` : ''}
+      </div>` : ''}
       ${fold('money', '💵 Money', [it.est ? 'est ' + matMoney(it.est) : '', it.act ? 'paid ' + matMoney(it.act) : '', it.sku ? esc(it.sku) : '', it.ec ? esc(it.ec) : ''].filter(Boolean).join(' · ') || 'nothing yet', moneyHtml)}
       ${buy ? fold('tags', '🏷 Whose list — tags', tags.length ? esc(tags.join(', ')) : 'nobody yet', tagsHtml) : ''}
       ${fold('home', '🏠 The homeowner', hm ? '✓ ON their page' : '🏢 office only', homeHtml)}
@@ -21326,7 +21964,9 @@ function matQuickHtml(it) {
 let _matSelEdit = '', _matSelDraft = null;
 function matSelHtml(it) {
   const id = escq(it.id);
-  const rest = [matIsBuy(it) && it.schd ? '📅 install ' + esc(it.schd) : '', matCostBits(it), it.ec ? '💰 ' + esc(it.ec) : ''].filter(Boolean).join(' · ');
+  // 🔀 v7.82 — the row's estimate line is a door: a tap flips to the 💰 estimates at that line (↩ there comes back to this row)
+  const ecBit = it.ec ? `<button type="button" class="mat-flip-ec" onclick="event.stopPropagation(); matFlipToEst(['${escq(it.ec)}'], '${escq(it.n)}', '${id}')" aria-label="open the estimates at ${esc(it.ec)}" title="flip to the 💰 estimates at this line — the price side of this row">💰 ${esc(it.ec)} ›</button>` : '';
+  const rest = [matIsBuy(it) && it.schd ? '📅 install ' + esc(it.schd) : '', matCostBits(it), ecBit].filter(Boolean).join(' · ');
   if (_matSelEdit === it.id) {
     const v = _matSelDraft != null ? _matSelDraft : (it.sel || '');
     return `<span class="mat-sel"><textarea id="matSelIn-${esc(it.id)}" class="mat-seledit" rows="2" aria-label="the note — Enter keeps it, Esc lets it go" placeholder="what was picked, what has to be decided, what to check…"
@@ -22246,6 +22886,7 @@ function matClose() {
   clearTimeout(_matSaveT);
   if (_matDirty) matAutoSave();
   _matArm = ''; _matEdit = ''; _matWhoFor = ''; matLightDisarm(); { const h = $('matSheetHost'); if (h) h.innerHTML = ''; }   // ✎ v6.91 — the edit window goes with the board
+  _matFlip = null; _matEcF = ''; hitAddClose();   // 🔀 v7.82
   closeReview();
 }
 // 💬 v5.25 — Eric's actions travel back to the ask on the client's page (the three lamps).
@@ -25219,6 +25860,18 @@ function rlSearchShow(open) {
   if (b) { const on = show || !!window._rlFiltersOn; b.classList.toggle('sel', on); b.textContent = show ? '✕ Close search' : on ? '🔍 Search ✓ ON' : '🔍 Search'; }
 }
 function rlSearchToggle() { rlSearchShow(); }
+// 📜 v7.82 — Eric: "the running log should be foldable". The log's own name is the fold (▾ / ▸): a tap folds the card to its
+// heading — the count beside it says "folded — tap to open" in words — and a tap opens it again. 🔍 Search still opens the log in
+// its own window; 🧾 Receipts opens the card again (he asked to SEE them). Kept with his settings, as the WITH PHIL card's fold is.
+function rlFoldPaint() {
+  const card = $('runLogCard'), b = $('rlFoldBtn'); if (!card || !b) return;
+  const shut = !!prefs.rlFold;
+  card.classList.toggle('rl-folded', shut);
+  b.textContent = (shut ? '▸' : '▾') + ' 📜 RUNNING LOG';
+  b.setAttribute('aria-expanded', String(!shut));
+  b.title = shut ? 'the log is folded — tap to open it' : 'tap to fold the log';
+}
+function rlFold(open) { prefs.rlFold = open === true ? false : open === false ? true : !prefs.rlFold; scheduleSave(); renderAskRecent(); }
 // 🎒 v7.07 — a row still ON the pocket list (the 🎒 plate) goes to the list itself on the main page, lit for a moment
 function rlPocketGo() {
   if ($('rlWin') && $('rlWin').classList.contains('show')) rlSearchShow(false);
@@ -25384,7 +26037,8 @@ function renderAskRecent() {
   window._rlTotal = items.length;   // ⬆ v7.16 — what "take 30 back off" counts down from
   // the head count on the divider — the whole book, or how much of it the searches caught
   const cnt = $('rlCount');
-  if (cnt) cnt.textContent = (filtersOn || f || who || hide.length) ? `${items.length} showing` : `${items.length} on record`;
+  if (cnt) cnt.textContent = ((filtersOn || f || who || hide.length) ? `${items.length} showing` : `${items.length} on record`) + (prefs.rlFold ? ' · folded — tap ▸ to open' : '');   // 📜 v7.82 — the fold, in words
+  rlFoldPaint();
   // 🔎 the searches' receipt: totals of what they caught + the clear button
   const banner = $('logDayBanner');
   if (banner) {
@@ -26751,6 +27405,7 @@ function rcptLampHtml(e) {
 function rlRcptToggle() {
   window._logRcptOnly = !window._logRcptOnly;
   window._rlN = 12;
+  if (window._logRcptOnly && prefs.rlFold) { prefs.rlFold = false; scheduleSave(); }   // 📜 v7.82 — he asked to SEE the receipts: a folded log opens
   // 🧾 v6.33 — Eric: "when i click on receipts it should turn off all other filters because
   // i when i click on receipts i will always only be looking for a reciept." Turning it ON
   // drops the search words, every wheel, the dates and the heads-up view, so the list is every
@@ -26905,7 +27560,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.81';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.82';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap

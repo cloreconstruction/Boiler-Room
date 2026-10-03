@@ -356,7 +356,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
   console.log('— 👷 a crew phone —');
   await page.evaluate(() => { localStorage.setItem('daylog-crew-name', 'Phil'); });
   await page.reload(); await page.waitForTimeout(900);
-  ok('a crew phone has no door to any of it: the board is Eric\'s, and the window draws nothing', await page.evaluate(async () => {
+  // 👁 v7.82 — an OFFICE phone that has the shared folder may LOOK at the board and at this window (_test782 holds that); a FIELD
+  // phone — this one: a crew name and nothing else — still has no door, and the window draws nothing even with a board in memory
+  ok('a FIELD crew phone has no door to any of it: the window draws nothing, whatever the phone holds', await page.evaluate(async () => {
     _portalIdx = { clients: [{ key: 'oak', job: 'Oak House', code: 'oak-111111' }] };
     _estD = { mk: 20, cats: [{ n: 'Framing', bids: [], pend: [{ a: 100, ts: '2026-09-01' }] }] }; _estIdx = 0;
     estWhatOpen(0, 'way');

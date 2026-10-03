@@ -155,22 +155,26 @@ const { chromium } = require('playwright');
 
   const seedBill = () => page.evaluate(() => { pendingQueue = []; pendDone.clear && pendDone.clear(); delete prefs.billAuto; window._notify = []; todos = []; curJob = 'Mery'; });
   const F = name => ({ name });
+  // (v7.82, met on 2026-10-03: the due dates below were fixed days in October–December 2026 — the first of them passed, that bill read
+  //  as OVERDUE and its to-do was rightly dated TODAY, so a check failed on a date it had been written before. Every due date is
+  //  counted from today now, and an overdue bill has a check of its own.)
+  await page.evaluate(() => { window._dueIn = n => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return localDay(d); }; });
 
   ok('a PAID receipt with a date printed on it is NOT a bill — no card', await page.evaluate(async () => {
     pendingQueue = []; window._notify = []; curJob = 'Mery';
-    billMaybeSuggest({ name: 'IMG_0001.jpg' }, { ai: '📅 2026-09-10\n🏪 Home Depot\n💵 $30.30', ocr: 'HOME DEPOT ... THANK YOU FOR YOUR PURCHASE ... 10/10/2026 ... APPROVED', aiTotal: 30.3, aiDue: '2026-10-10' });
+    billMaybeSuggest({ name: 'IMG_0001.jpg' }, { ai: '📅 2026-09-10\n🏪 Home Depot\n💵 $30.30', ocr: 'HOME DEPOT ... THANK YOU FOR YOUR PURCHASE ... 10/10/2026 ... APPROVED', aiTotal: 30.3, aiDue: _dueIn(7) });
     return !pendingQueue.length && !window._notify.length;
   }));
 
   ok('an INVOICE with a due date becomes a 💳 card: the vendor, the amount to the cent, the date, what the read saw', await page.evaluate(async () => {
     pendingQueue = []; window._notify = []; curJob = 'Hertz'; qnJobPick = 'Mery';   // 📌 v6.81 — "the wheel" is the grinder's pick, never the app's leftover job
-    billMaybeSuggest({ name: 'IMG_0002.jpg' }, { ai: '📅 2026-09-10\n🏪 Peninsula Overhead Doors\n💵 $3,290\n🗓 DUE 2026-10-10', ocr: 'INVOICE 8812 ... Balance due $3,290.00 ... Due 10/10/2026', aiTotal: 3290, aiDue: '2026-10-10' });
+    billMaybeSuggest({ name: 'IMG_0002.jpg' }, { ai: '📅 2026-09-10\n🏪 Peninsula Overhead Doors\n💵 $3,290\n🗓 DUE ' + _dueIn(7), ocr: 'INVOICE 8812 ... Balance due $3,290.00 ... Due 10/10/2026', aiTotal: 3290, aiDue: _dueIn(7) });
     const p = pendingQueue[0];
     renderReview();
     const t = $('revBox').textContent;
     window._bill = p;
-    return !!p && p.kind === 'bill' && p.payload.who === 'Peninsula Overhead Doors' && p.payload.amt === 3290 && p.payload.due === '2026-10-10' && p.payload.job === 'Mery' && p.payload.fname === 'IMG_0002.jpg' &&
-      /Bill spotted — who pays it\?/.test(t) && /\$3,290\.00 · due 2026-10-10/.test(t) && /from Peninsula Overhead Doors/.test(t) && /🏪 Peninsula Overhead Doors/.test(t) &&
+    return !!p && p.kind === 'bill' && p.payload.who === 'Peninsula Overhead Doors' && p.payload.amt === 3290 && p.payload.due === _dueIn(7) && p.payload.job === 'Mery' && p.payload.fname === 'IMG_0002.jpg' &&
+      /Bill spotted — who pays it\?/.test(t) && t.includes('$3,290.00 · due ' + _dueIn(7)) && /from Peninsula Overhead Doors/.test(t) && /🏪 Peninsula Overhead Doors/.test(t) &&
       /📗 The bookkeeper pays it/.test(t) && /🔁 Autopay — never ask about Peninsula Overhead Doo/.test(t) && /✓ I'll pay it — remind me/.test(t) && /✕ Not a bill/.test(t) && !/ADD IT/.test(t);
   }));
 
@@ -179,7 +183,7 @@ const { chromium } = require('playwright');
 
   ok('the push says only that a bill is waiting — no amount, no vendor', await page.evaluate(() => {
     prefs.pushSecret = 's'; prefs.pushWin = { from: 0, to: 0 }; pendingQueue = []; window._notify = [];   // 🔔 v7.39 — his hours: all day here, so the check does not depend on the clock
-    billMaybeSuggest({ name: 'IMG_0003.jpg' }, { ai: '🏪 Enstar\n💵 $412.55\n🗓 DUE 2026-10-02', ocr: 'Amount due $412.55 Due date 10/02/2026', aiTotal: 412.55, aiDue: '2026-10-02' });
+    billMaybeSuggest({ name: 'IMG_0003.jpg' }, { ai: '🏪 Enstar\n💵 $412.55\n🗓 DUE ' + _dueIn(5), ocr: 'Amount due $412.55 Due date 10/02/2026', aiTotal: 412.55, aiDue: _dueIn(5) });
     delete prefs.pushSecret; prefs.pushWin = null;
     const b = JSON.parse((window._notify[0] || {}).body || '{}');
     return window._notify.length === 1 && !/\$|\d{3}|Enstar/.test(b.body || '') && /bill/i.test(b.body || '');
@@ -187,37 +191,48 @@ const { chromium } = require('playwright');
 
   ok('$30.3 reads $30.30', await page.evaluate(() => {
     pendingQueue = [];
-    billMaybeSuggest({ name: 'IMG_0004.jpg' }, { ai: '🏪 Laun Pant\n💵 $30.3\n🗓 DUE 2026-10-10', ocr: 'balance due 30.3 due 10/10/2026', aiTotal: 30.3, aiDue: '2026-10-10' });
+    billMaybeSuggest({ name: 'IMG_0004.jpg' }, { ai: '🏪 Laun Pant\n💵 $30.3\n🗓 DUE ' + _dueIn(7), ocr: 'balance due 30.3 due 10/10/2026', aiTotal: 30.3, aiDue: _dueIn(7) });
     renderReview();
-    return /\$30\.30 · due 2026-10-10/.test($('revBox').textContent) && pendingQueue[0].payload.amt === 30.3;   // the amount line is to the cent; the raw read below it stays as the photo said
+    return $('revBox').textContent.includes('$30.30 · due ' + _dueIn(7)) && pendingQueue[0].payload.amt === 30.3;   // the amount line is to the cent; the raw read below it stays as the photo said
   }));
 
   ok('✓ I\'ll pay it → a to-do with the date, on the job the wheel says', await page.evaluate(() => {
     pendingQueue = []; todos = [];
-    billMaybeSuggest({ name: 'IMG_0005.jpg' }, { ai: '🏪 Enstar\n💵 $412.55\n🗓 DUE 2026-10-02', ocr: 'Amount due $412.55', aiTotal: 412.55, aiDue: '2026-10-02' });
+    billMaybeSuggest({ name: 'IMG_0005.jpg' }, { ai: '🏪 Enstar\n💵 $412.55\n🗓 DUE ' + _dueIn(5), ocr: 'Amount due $412.55', aiTotal: 412.55, aiDue: _dueIn(5) });
     const p = pendingQueue[0]; renderReview();
     $(revJobId(p.id)).value = 'Hertz'; qbJobPick(String(p.id), 'Hertz');
     reviewAct(String(p.id), 'pay');
     const t = todos[0];
-    return !!t && /Pay Enstar — \$412\.55/.test(t.text) && t.due === '2026-10-02' && t.job === 'Hertz' && !pendingQueue.length;
+    return !!t && /Pay Enstar — \$412\.55/.test(t.text) && t.due === _dueIn(5) && t.job === 'Hertz' && !pendingQueue.length;
+  }));
+
+  ok('a bill already PAST its due date says ⚠ OVERDUE on the card, and ✓ I\'ll pay it dates the to-do TODAY — never a day that has passed', await page.evaluate(() => {
+    pendingQueue = []; todos = [];
+    billMaybeSuggest({ name: 'IMG_0011.jpg' }, { ai: '🏪 Enstar\n💵 $88.10\n🗓 DUE ' + _dueIn(-2), ocr: 'Amount due $88.10', aiTotal: 88.1, aiDue: _dueIn(-2) });
+    const p = pendingQueue[0]; if (!p) return false;
+    renderReview();
+    const card = $('revBox').textContent;
+    reviewAct(String(p.id), 'pay');
+    const t = todos[0];
+    return p.payload.overdue === true && p.payload.due === _dueIn(-2) && /due \d{4}-\d\d-\d\d · ⚠ OVERDUE/.test(card) && !!t && /^⚠ OVERDUE — Pay Enstar — \$88\.10$/.test(t.text) && t.due === localDay(new Date()) && !pendingQueue.length;
   }));
 
   ok('🔁 Autopay → that exact vendor never asks again; another vendor still does', await page.evaluate(() => {
     pendingQueue = [];
-    billMaybeSuggest({ name: 'IMG_0006.jpg' }, { ai: '🏪 Enstar\n💵 $400\n🗓 DUE 2026-11-02', ocr: 'Amount due', aiTotal: 400, aiDue: '2026-11-02' });
+    billMaybeSuggest({ name: 'IMG_0006.jpg' }, { ai: '🏪 Enstar\n💵 $400\n🗓 DUE ' + _dueIn(30), ocr: 'Amount due', aiTotal: 400, aiDue: _dueIn(30) });
     const p = pendingQueue[0]; renderReview();
     reviewAct(String(p.id), 'auto');
     const learned = !!(prefs.billAuto || {}).enstar && !pendingQueue.length;
-    billMaybeSuggest({ name: 'IMG_0007.jpg' }, { ai: '🏪 Enstar\n💵 $410\n🗓 DUE 2026-12-02', ocr: 'Amount due', aiTotal: 410, aiDue: '2026-12-02' });
+    billMaybeSuggest({ name: 'IMG_0007.jpg' }, { ai: '🏪 Enstar\n💵 $410\n🗓 DUE ' + _dueIn(60), ocr: 'Amount due', aiTotal: 410, aiDue: _dueIn(60) });
     const quiet = !pendingQueue.length;
-    billMaybeSuggest({ name: 'IMG_0008.jpg' }, { ai: '🏪 HEA\n💵 $210\n🗓 DUE 2026-12-02', ocr: 'Amount due', aiTotal: 210, aiDue: '2026-12-02' });
+    billMaybeSuggest({ name: 'IMG_0008.jpg' }, { ai: '🏪 HEA\n💵 $210\n🗓 DUE ' + _dueIn(60), ocr: 'Amount due', aiTotal: 210, aiDue: _dueIn(60) });
     return learned && quiet && pendingQueue.length === 1 && pendingQueue[0].payload.who === 'HEA';
   }));
 
   ok('📗 Logan pays it → the photo\'s entry wears the Bookkeeper tag, the mark the receipts window reads', await page.evaluate(() => {
     pendingQueue = [];
     const e = addEntry('Note', 'HEA bill', 'Mery', { noSniff: true, photoPath: '/Clore DayLog/Job Notes/Mery/2026-09-12 IMG_0009.jpg' });
-    billMaybeSuggest({ name: 'IMG_0009.jpg' }, { ai: '🏪 HEA\n💵 $210\n🗓 DUE 2026-12-05', ocr: 'Amount due', aiTotal: 210, aiDue: '2026-12-05' });
+    billMaybeSuggest({ name: 'IMG_0009.jpg' }, { ai: '🏪 HEA\n💵 $210\n🗓 DUE ' + _dueIn(63), ocr: 'Amount due', aiTotal: 210, aiDue: _dueIn(63) });
     const p = pendingQueue[0]; renderReview();
     const shows = /📷 Look at it/.test($('revBox').textContent);
     reviewAct(String(p.id), 'logan');
@@ -226,7 +241,7 @@ const { chromium } = require('playwright');
 
   ok('✕ Not a bill → the card goes, nothing is learned, nothing is added', await page.evaluate(() => {
     pendingQueue = []; const nT = todos.length;
-    billMaybeSuggest({ name: 'IMG_0010.jpg' }, { ai: '🏪 Somebody\n💵 $99\n🗓 DUE 2026-12-09', ocr: 'Amount due', aiTotal: 99, aiDue: '2026-12-09' });
+    billMaybeSuggest({ name: 'IMG_0010.jpg' }, { ai: '🏪 Somebody\n💵 $99\n🗓 DUE ' + _dueIn(67), ocr: 'Amount due', aiTotal: 99, aiDue: _dueIn(67) });
     const p = pendingQueue[0]; renderReview();
     reviewAct(String(p.id), false);
     return !pendingQueue.length && todos.length === nT && !(prefs.billAuto || {}).somebody;

@@ -159,7 +159,9 @@ const http = require('http'), fs = require('fs'), path = require('path');
   const plain = await lineIn('Tile showers');
   await page.evaluate(() => clientPreviewClose());
   ok('(their page is long: opened plainly, the Tile showers line is far below the screen)', plain && plain.top > plain.vh, JSON.stringify(plain));
-  const ti = await page.evaluate(() => { const ci = _estD.cats.findIndex(x => x.n === 'Tile showers'); _estOpenCats = new Set([ci]); renderEstimates(); document.querySelector(`.est-row[data-ci="${ci}"]`).scrollIntoView({ block: 'center' }); return ci; });
+  // (v7.82: the open category is taller than the phone's screen now that it has its two doors — centred, its top and its 👁 sat a few
+  //  pixels above the screen, and the test's OWN click scrolled the board to reach it. Its top is brought on the screen first.)
+  const ti = await page.evaluate(() => { const ci = _estD.cats.findIndex(x => x.n === 'Tile showers'); _estOpenCats = new Set([ci]); renderEstimates(); document.querySelector(`.est-row[data-ci="${ci}"]`).scrollIntoView({ block: 'start' }); $('revModal').scrollTop -= 90; return ci; });
   const before = await page.evaluate(() => ({ st: $('revModal').scrollTop, open: [..._estOpenCats].join() }));
   await page.click(`.est-row[data-ci="${ti}"] .est-eye`);
   await wait(async () => fr() && await fr().evaluate(() => !!document.querySelector('#budgetCard .bud-row')));

@@ -85,7 +85,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const want = await page.evaluate(b => schedAddDays(b, 5), before[5].start);
     await page.evaluate(w => { const st = schedSteps('Oak House'); schedStartSet('Oak House', st[5].id, w); }, want);
     const after = await steps('Oak House');
-    return after[5].start === await page.evaluate(w => schedWorkOn('crew', w, 1), want) && after[6].start > before[6].start && after[7].start > before[7].start && after[0].start === before[0].start
+    // (v7.82, met on a Saturday: the LAST step keeps its place behind the one before it — when that one slides from a Thursday to a
+    //  Friday the crew's next work day is the same Monday, so it may rightly stay where it is; the gaps below are the real check)
+    return after[5].start === await page.evaluate(w => schedWorkOn('crew', w, 1), want) && after[6].start > before[6].start && after[7].start >= before[7].start && after[0].start === before[0].start
       && (await gaps('Oak House')).split('|').slice(6).join('|') === g0.split('|').slice(6).join('|');   // the two after it are as far behind it as they were
   })());
   ok('⇄ the whole job a week later moves every open step and leaves the done one', await (async () => {

@@ -41,9 +41,9 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const cs = key && getComputedStyle(key);
     return { dashed, plain, key: key ? txt(key) : '', keyDashed: cs && cs.borderTopStyle === 'dashed', btnDashed: getComputedStyle(document.querySelector('#portalList .pf-acts .only-me')).outlineStyle === 'dashed' };
   });
-  ok('on Eric\'s portal the Estimates, Receipts and Project Tracker plates, Rotate / Rename / Remove, the 🎛 What they see plate (v7.40) and ➕ Give a job a client page all wear the dashed edge',
-    fold.dashed.some(t => /Estimates/.test(t)) && fold.dashed.some(t => /Receipts/.test(t)) && fold.dashed.some(t => /Project Tracker/.test(t)) && fold.dashed.some(t => /Rotate/.test(t)) && fold.dashed.some(t => /Rename/.test(t)) && fold.dashed.some(t => /Remove/.test(t)) && fold.dashed.some(t => /What they see/.test(t)) && fold.dashed.some(t => /Give a job a client/.test(t)) && fold.btnDashed, JSON.stringify(fold));
-  ok('Plans, Journal, Build List and View as are plain — Phil gets those (v7.14: Copy link and What they look at are only Eric\x27s)', fold.plain.join('|') === '📐 Plans|📖 Journal|📋 Build List|👷 Subs on this job|👁 View as this client', fold.plain.join('|'));   // 👷 v7.51 — every fold has 👷 Subs on this job now (every phone sees the subs)
+  ok('on Eric\'s portal the Receipts and Project Tracker plates, Rotate / Rename / Remove, the 🎛 What they see plate (v7.40) and ➕ Give a job a client page all wear the dashed edge — 💰 Estimates no longer does (v7.82: the office looks at it now)',
+    !fold.dashed.some(t => /Estimates/.test(t)) && fold.dashed.some(t => /Receipts/.test(t)) && fold.dashed.some(t => /Project Tracker/.test(t)) && fold.dashed.some(t => /Rotate/.test(t)) && fold.dashed.some(t => /Rename/.test(t)) && fold.dashed.some(t => /Remove/.test(t)) && fold.dashed.some(t => /What they see/.test(t)) && fold.dashed.some(t => /Give a job a client/.test(t)) && fold.btnDashed, JSON.stringify(fold));
+  ok('Plans, Journal, Build List, Estimates, Schedule, Hit list and View as are plain — Phil gets those (v7.14: Copy link and What they look at are only Eric\x27s · v7.82: 💰 📅 📌 joined)', fold.plain.join('|') === '📐 Plans|📖 Journal|📋 Build List|💰 Estimates|📅 Schedule|📌 Hit list|👷 Subs on this job|👁 View as this client', fold.plain.join('|'));   // 👷 v7.51 — every fold has 👷 Subs on this job now (every phone sees the subs)
   ok('the line at the top says it in words, and names him', /dashed edge means only you see it — Phil does not/.test(fold.key) && fold.keyDashed, fold.key);
   ok('with no office crew there is nothing to keep from anyone: no dashes, no line', await page.evaluate(async () => {
     prefs.office = []; await renderPortalList();
@@ -123,14 +123,16 @@ const fs = require('fs'), path = require('path'), { fileURLToPath } = require('u
     const txt = b => b.textContent.replace(/\s+/g, ' ').trim();
     return { btns: [...document.querySelectorAll('#portalList .pf-acts button')].map(txt), all: txt($('portalList')), meter: txt(document.querySelector('#portalList .jm-word') || { textContent: '' }), dashed: document.querySelectorAll('#portalList .only-me').length };
   });
-  ok('the fold reads Plans · Journal · Build List · View as — nothing else (v7.14: no Copy link, no What they look at)', pf.btns.join('|') === '📐 Plans|📖 Journal|📋 Build List|👁 View as this client|👷 Subs on this job', pf.btns.join('|'));   // 👷 v7.51 — every fold has 👷 Subs on this job now (every phone sees the subs)
-  ok('no Estimates, Receipts, Project Tracker, Rotate, Rename, Remove, no 🎛 they-can-see switches, no ➕ Give a job a client page — and no dashed edges (there is nothing to mark on his own phone)',
-    !/Estimates|Receipts|Project Tracker|Rotate|Rename|Remove|They can see|Give a job a client page/.test(pf.all) && pf.dashed === 0, pf.all.slice(0, 300));
+  ok('the fold reads Plans · Journal · Build List · 💰 Estimates · 📅 Schedule · 📌 Hit list · View as — nothing else (v7.14: no Copy link, no What they look at · v7.82: he looks at the estimates and the schedule, and works the hit list)', pf.btns.join('|') === '📐 Plans|📖 Journal|📋 Build List|💰 Estimates|📅 Schedule|📌 Hit list|👁 View as this client|👷 Subs on this job', pf.btns.join('|'));   // 👷 v7.51 — every fold has 👷 Subs on this job now (every phone sees the subs)
+  ok('no Receipts, Project Tracker, Rotate, Rename, Remove, no 🎛 they-can-see switches, no ➕ Give a job a client page — and no dashed edges (there is nothing to mark on his own phone)',
+    !/Receipts|Project Tracker|Rotate|Rename|Remove page|They can see|Give a job a client page/.test(pf.all) && pf.dashed === 0, pf.all.slice(0, 300));
   ok('the journal meter reads the real date off the page (it said NO JOURNAL YET on every job before)', /DAYS? OLD|POSTED TODAY|POST IT NOW/.test(pf.meter) && !/NO JOURNAL YET/.test(pf.meter), pf.meter);
-  ok('the foot says he is OFFICE and what is his to work', /You are OFFICE — Plans, the Journal and the Build List are yours to work/.test(pf.all));
-  ok('a direct call to the estimates board or the receipts window is turned away in words — the money stays on Eric\'s phone', await p2.evaluate(async () => {
-    _said.length = 0; await openEstimates(0); await openRcptReview(0);
-    return _said.filter(s => /the money stays on his phone/.test(s)).length === 2 && !/— estimates/.test(($('revBox') || {}).textContent || '');
+  ok('the foot says he is OFFICE, what is his to work and what is his to look at (v7.82)', /You are OFFICE — Plans, the Journal, the Build List and the 📌 hit list are yours to work/.test(pf.all) && /Estimates and the 📅 Schedule are yours to look at; Eric makes the changes there/.test(pf.all));
+  ok('💰 Estimates opens on his phone to LOOK (v7.82: "im ready for phil to see money") — the receipts window is still turned away in words', await p2.evaluate(async () => {
+    _said.length = 0; await openEstimates(0); await new Promise(r => setTimeout(r, 300));
+    const ro = !!document.querySelector('#revBox .est-board.est-ro') && /LOOK ONLY/.test(($('estRoSay') || {}).textContent || '');
+    closeEstimates(); await openRcptReview(0);
+    return ro && _said.filter(s => /the money stays on his phone/.test(s)).length === 1;
   }));
   ok('📋 Build List opens the real board (no "coming to office phones next"), reading the shared folder', await p2.evaluate(async () => {
     _said.length = 0; await openMaterials(0); _matRmShut = new Set(); renderMatMgr(); await new Promise(r => setTimeout(r, 300));
