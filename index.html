@@ -3365,6 +3365,23 @@
   .rev-bulk-row .btn-ghost { flex: 0 0 auto; min-height: 42px; font-weight: var(--fw8, 800); }
   .rev-bulk-row .btn-ghost.arm { border-color: #ffd88a; color: #ffe9bd; }
   .rev-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 13px; margin-top: 10px; }
+  /* 📥 v7.84 — photos waiting for his tap: a dashed brass edge = not in his log yet; the first six pictures, a tap looks at one */
+  .rev-card.ph-in, .rev-card.ph-in-all { border: 2px dashed var(--accent); }
+  .ph-in-thumbs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; margin: 8px 0 4px; }
+  .ph-in-th { position: relative; height: 54px; padding: 0; overflow: hidden; cursor: pointer; border: 1px solid var(--border); border-radius: 8px; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; font-family: inherit; }
+  .ph-in-th img { display: none; width: 100%; height: 100%; object-fit: cover; }
+  .ph-in-th img.on { display: block; }
+  .ph-in-th img.on + span { display: none; }
+  .ph-in-th span { font-size: 18px; }
+  #revBox .ph-in-more { width: 100%; min-height: 40px; margin-top: 2px; }
+  #revBox .ph-in-job { width: 100%; min-height: 44px; font-size: 15px; }
+  #revBox .ph-in .rev-row .btn-primary, #revBox .ph-in-all .rev-row .btn-primary { flex: 1 1 60%; min-height: 46px; }
+  #revBox .ph-in-all .btn-primary.armed { background: var(--warn, #ffa657); border-color: var(--warn, #ffa657); color: #1a1408; }
+  /* ☑ v7.84 — a second job this client page can cover: the select-this-too plate, over the journal's photo grid */
+  .jrn-also-box { margin: 2px 0 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .jrn-also-box:empty { display: none; }
+  #revBox .jrn-also { min-height: 40px; white-space: normal; text-align: left; font-size: 13px; }
+  #revBox .jrn-also:not(.sel) { border-style: dashed; }
   /* 🗂 v6.69 — the sort page: five fixed headings, one open at a time, each a word and a count */
   .rev-sec { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; padding: 10px 12px; min-height: 44px;
     border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); color: var(--ink-1);
@@ -4853,7 +4870,7 @@
 
   <!-- 💬 v5.59 — the feedback square moved UP into the running log's chip row (Eric: "merge
        those two... so that I see app feedback"). Nothing at the bottom of the page any more. -->
-  <footer>v7.83 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
+  <footer>v7.84 · Boiler Room — syncs to Dropbox / Clore DayLog when connected (⚙ Setup). Not connected yet? Entries live in this page only — Export CSV to keep them.</footer>
 </div>
 
 <style id="tcgCss">
@@ -6116,6 +6133,17 @@ function toastUndo(msg, fn) {
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.classList.remove('show'); t.style.pointerEvents = 'none'; }, 7000);
+}
+// 📥 v7.84 — a toast with ONE plate that goes somewhere (the same look as Undo; nine seconds, then it lets go)
+function toastDo(msg, label, fn) {
+  const t = $('toast');
+  t.classList.remove('bad');
+  t.innerHTML = `${esc(msg)}<button onclick="window._toastUndo()">${esc(label)}</button>`;
+  window._toastUndo = () => { t.classList.remove('show'); t.style.pointerEvents = 'none'; fn(); };
+  t.style.pointerEvents = 'auto';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.classList.remove('show'); t.style.pointerEvents = 'none'; }, 9000);
 }
 
 const $ = id => document.getElementById(id);
@@ -10438,8 +10466,9 @@ function renderPendBanner() {
   const hotN = pendingQueue.filter(p => p.payload && p.payload.hot).length;
   const mailN = pendingQueue.filter(p => p.kind === 'mail').length;   // 📧 v6.41
   b.style.display = n ? '' : 'none';
-  const sn = $('scSumN'); if (sn) sn.textContent = n ? String(n) : '';   // 📊 v6.76 — the count rides the Summary plate now
-  const hn = $('hbSumN'); if (hn) hn.textContent = n ? String(n) : '';   // 📊 v6.85 — and the header SUMMARY button (the PC's only one)
+  const nAll = n + phInWaiting().length;   // 📥 v7.84 — sets of photos waiting for his tap count on the badge too (the banner's own words stay the pile's)
+  const sn = $('scSumN'); if (sn) sn.textContent = nAll ? String(nAll) : '';   // 📊 v6.76 — the count rides the Summary plate now
+  const hn = $('hbSumN'); if (hn) hn.textContent = nAll ? String(nAll) : '';   // 📊 v6.85 — and the header SUMMARY button (the PC's only one)
   if (n) b.innerHTML = `📥 <b>${n} item${n === 1 ? '' : 's'} waiting for review</b>${hotN ? ` · <b>🔥 ${hotN} HOT</b>` : ''}${mailN ? ` · <b>📧 ${mailN} IMPORTANT email${mailN === 1 ? '' : 's'}</b>` : ''} — tap to go through ${n === 1 ? 'it' : 'them'}<span class="ab-go">›</span>`;
   renderHotCards();
 }
@@ -10671,14 +10700,179 @@ function revRcptRows() {
       <div class="rev-text"><b>${esc(x.c.job)}</b> — ${x.n} waiting</div>
       <div class="rev-row"><button class="btn-primary" onclick="_rcptBack = true; openRcptReview(${x.i})">🧾 Open — check them and send to their page</button></div></div>`) };
 }
+// ================= 📥 v7.84 — PHOTOS WAITING FOR HIS TAP =================
+// Eric, with a year of job photos sitting in a Dropbox folder: "check my transfer and delete drop box folder … put them into the
+// grinder to [a client's] projects" — and, asked what they were for: "just send them to grinder basically, want them just in the
+// job notes under photos, and selectable to send to the job journal. as if i just put a bunch of progress photos in the grinder".
+// Nothing outside the app may write his log (the last writer wins — v7.69's rule), so the pictures are put where the grinder
+// would have put them (Job Notes / <job> / Photos) and a LIST of them is dropped into a file the app only ever READS:
+//   App Data/photo-inbox.json   { "sets": [ { "id", "job", "text", "from", "paper", "files": [ "<DBX_ROOT>/Job Notes/…/x.jpg" ] } ] }
+// The 📥 SORT tab shows each set under 📷 PHOTOS — how many, the words its note will carry, the first few pictures (a tap looks
+// at one), the job on a wheel (pre-lit when the set's job IS a job on his list, the exact name; his pick decides) — and HIS TAP
+// makes it a grinder note on that job, dated now, carrying every picture: in his log, on the job, pickable in that job's 📖
+// journal like any photo he ground himself. A set taken or turned down is remembered by its id (prefs.photoTaken — it rides to
+// his other devices) and never offered again, so the file may be left where it is. A set whose pictures have not all reached
+// Dropbox yet is refused in words (they are copied in from a PC and take a while to arrive). `paper: 1` marks a set's note as
+// paper — screenshots of invoices, emails, words — and the journal's tiles ask twice before one is picked (v7.64's guard).
+// Eric's phone only: a crew phone never reads the file. The app never writes it. A path must sit under Job Notes and be a
+// picture a browser can draw (no HEIC — those are turned into JPEGs before they are put there).
+const PH_IN_MAX = 80, PH_IN_SHOW = 6;
+let _phInbox = null, _phInBusy = false, _phInJob = {}, _phInAllArm = false, _phInAllT = null, _phInOpen = {}, _phInTaking = false;
+function phInPath() { return DBX_ROOT + '/App Data/photo-inbox.json'; }
+function phInCan() { return !CREW_NAME && !crewPreview; }
+function phInClean(s) {   // one shape and its sizes, whoever wrote the file; a set with no id, no words or no usable picture is not a set
+  if (!s || typeof s !== 'object') return null;
+  const id = String(s.id || '').trim().replace(/[^\w.:-]/g, '').slice(0, 60), root = (DBX_ROOT + '/Job Notes/').toLowerCase(), seen = new Set();
+  const files = (Array.isArray(s.files) ? s.files : []).map(p => String(p || '').trim())
+    .filter(p => p.length <= 300 && p.toLowerCase().startsWith(root) && !p.includes('..') && !/[\\\r\n]/.test(p) && /\.(jpe?g|png|webp|gif)$/i.test(p) && !seen.has(p.toLowerCase()) && seen.add(p.toLowerCase())).slice(0, PH_IN_MAX);
+  const text = String(s.text || '').replace(/\s+/g, ' ').trim().slice(0, 240), job = String(s.job || '').trim().slice(0, 120);
+  if (!id || !text || !files.length) return null;
+  return { id, job: isPersonalJob(job) ? '' : job, text, from: String(s.from || '').trim().slice(0, 60), paper: s.paper ? 1 : 0, files };
+}
+function phInTaken() { if (!prefs.photoTaken || typeof prefs.photoTaken !== 'object' || Array.isArray(prefs.photoTaken)) prefs.photoTaken = {}; return prefs.photoTaken; }
+function phInWaiting() {   // the sets not yet taken or turned down
+  if (!phInCan() || !_phInbox) return [];
+  const t = (prefs.photoTaken && typeof prefs.photoTaken === 'object') ? prefs.photoTaken : {};
+  return _phInbox.filter(s => !t[s.id]);
+}
+function phInSig() { return phInWaiting().map(s => s.id).join('|'); }
+function phInJobs() { return jobs.filter(j => j && j !== '—' && !isPersonalJob(j)); }
+function phInJobOf(s) {   // the job his wheel says; else the set's own job when it IS a job on his list (the exact name, case aside); else none
+  if (Object.prototype.hasOwnProperty.call(_phInJob, s.id)) return phInJobs().includes(_phInJob[s.id]) ? _phInJob[s.id] : '';
+  return phInJobs().find(j => j.toLowerCase() === s.job.toLowerCase()) || '';
+}
+function phInOnScreen() { const m = $('revModal'); return !!m && m.classList.contains('show') && !!document.querySelector('#revBox .rev-sec[data-sec="photos"]'); }
+async function phInLoad(force) {
+  if (!phInCan() || !dbx.refreshToken || _phInBusy) return;
+  if (_phInbox && !force) return;
+  _phInBusy = true;
+  const was = phInSig();
+  let txt = null; try { txt = await dbxDownload(phInPath()); } catch (e) { txt = null; }
+  _phInBusy = false;
+  if (txt == null && _phInbox) return;   // a read that got NOTHING back leaves what this session already knows — an offer never vanishes on a dropped connection
+  let j = null; try { j = JSON.parse(txt || 'null'); } catch (e) { j = null; }
+  const seen = new Set();
+  _phInbox = (j && Array.isArray(j.sets) ? j.sets : []).slice(0, 60).map(phInClean).filter(s => s && !seen.has(s.id) && seen.add(s.id));
+  if (phInSig() === was) return;   // nothing new waits: nothing is redrawn
+  renderPendBanner();
+  const a = document.activeElement, typing = !!a && !!$('revBox') && $('revBox').contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+  if (phInOnScreen() && !typing) renderReview();   // never a redraw under his thumbs (v7.39) — the next draw shows the sets
+  phInTell();
+}
+function phInGo() { openReview('sort'); if (phInWaiting().length) { _revSec = 'photos'; renderReview(); } }
+function phInTell() {   // once per set on this device: say where they wait, with a plate that goes there
+  const w = phInWaiting(); if (!w.length) return;
+  let told = []; try { told = JSON.parse(lsGet('daylog-phin-told') || '[]'); } catch (e) { told = []; }
+  if (!Array.isArray(told)) told = [];
+  const fresh = w.filter(s => !told.includes(s.id)); if (!fresh.length) return;
+  lsSet('daylog-phin-told', JSON.stringify(told.concat(fresh.map(s => s.id)).slice(-80)));
+  if (phInOnScreen()) return;
+  const n = fresh.reduce((t, s) => t + s.files.length, 0);
+  toastDo(`📥 ${n} photo${n === 1 ? ' is' : 's are'} waiting to go into your log — SUMMARY → 📥 SORT → 📷 PHOTOS`, 'Look ›', phInGo);
+}
+function phInJobPick(id, v) { _phInJob[id] = phInJobs().includes(v) ? v : ''; _phInAllArm = false; if (phInOnScreen()) renderReview(); }
+function phInMore(id) { _phInOpen[id] = !_phInOpen[id]; if (phInOnScreen()) renderReview(); }
+function phInLook(id, k) { const s = phInWaiting().find(x => x.id === id); if (!s || !s.files[k]) return; lbPaths = s.files.map(p => localPath(p)); lbIdx = k; showPhoto(lbPaths[k]); }
+function phInRows() {   // → the cards for the 📷 PHOTOS section, and how many sets wait
+  const w = phInWaiting(); if (!w.length) return { rows: [], n: 0, photos: 0 };
+  const photos = w.reduce((t, s) => t + s.files.length, 0), ready = w.filter(s => phInJobOf(s)).length;
+  const all = w.length > 1 ? [`<div class="rev-card ph-in-all"><div class="rev-kind">📥 ${w.length} sets of photos are waiting — ${photos} photos, not in your log yet</div>
+      <div class="rev-row"><button type="button" class="btn-primary${_phInAllArm ? ' armed' : ''}" id="phInAllBtn" onclick="phInAllTap()">${_phInAllArm ? `⚠ SURE? Tap again — ${ready} set${ready === 1 ? '' : 's'} go${ready === 1 ? 'es' : ''} into your log` : `✓ Put all ${w.length} sets in your log — each on the job its wheel shows`}</button></div>
+      <div class="rev-why">Each set becomes one note with its photos, dated today, on the job shown. Nothing is added until you tap.</div></div>`] : [];
+  const cards = w.map(s => {
+    const job = phInJobOf(s), open = !!_phInOpen[s.id], n = s.files.length, shown = open ? s.files : s.files.slice(0, PH_IN_SHOW), si = _phInbox.indexOf(s);
+    const drawer = s.files[0].split('/').slice(-3, -1).join(' → ');
+    return `<div class="rev-card ph-in" data-phin="${esc(s.id)}">
+      <div class="rev-kind">📥 Photos waiting — not in your log yet${s.paper ? ' · 🧾 PAPER (screenshots, not progress photos)' : ''}</div>
+      <div class="rev-text"><b>${n} photo${n === 1 ? '' : 's'}</b> — ${esc(s.text)}</div>
+      <div class="ph-in-thumbs">${shown.map((p, k) => `<button type="button" class="ph-in-th" onclick="phInLook('${escq(s.id)}', ${k})" aria-label="look at photo ${k + 1} of ${n}"><img id="phInT-${si}-${k}" data-phin-src="${esc(p)}" alt=""><span aria-hidden="true">📷</span></button>`).join('')}</div>
+      ${n > PH_IN_SHOW ? `<button type="button" class="btn-ghost req-x ph-in-more" onclick="phInMore('${escq(s.id)}')" aria-expanded="${open}">${open ? `▾ Showing all ${n} — tap to tuck the rest away` : `▸ +${n - PH_IN_SHOW} more — tap to see them all`}</button>` : ''}
+      <div class="rev-why">${s.from ? 'From ' + esc(s.from) + ' · ' : ''}the files are in Dropbox under ${esc(drawer)}</div>
+      <div class="field" style="margin: 8px 0 0;"><label for="phInJob-${si}">🏠 Which job do these go on?${s.job && !phInJobs().some(j => j.toLowerCase() === s.job.toLowerCase()) ? ` <span class="hint" style="margin: 0;">⚠ “${esc(s.job)}” is not a job on your list — pick one</span>` : ''}</label>
+        <select class="mini-sel ph-in-job${job ? ' sel-on' : ''}" id="phInJob-${si}" onchange="phInJobPick('${escq(s.id)}', this.value)"><option value=""${job ? '' : ' selected'}>▲ pick the job</option>${phInJobs().map(j => `<option value="${esc(j)}"${j === job ? ' selected' : ''}>${j === job ? '✓ ' : ''}${esc(j)}</option>`).join('')}</select></div>
+      <div class="rev-row"><button type="button" class="btn-primary ph-in-go" onclick="phInTake('${escq(s.id)}')">✓ Put ${n === 1 ? 'it' : 'these ' + n} in your log${job ? '' : ' — pick the job first'}</button>
+        <button type="button" class="btn-ghost ph-in-no" onclick="phInSkip('${escq(s.id)}')">✕ Not these</button></div>
+    </div>`; });
+  return { rows: all.concat(cards), n: w.length, photos };
+}
+async function phInThumbs() {   // the small pictures on the cards, one at a time (Dropbox makes them; kept for the session)
+  for (const img of [...document.querySelectorAll('#revBox img[data-phin-src]:not([data-on])')]) {
+    img.dataset.on = '1';
+    await matThumb(img.dataset.phinSrc, img.id);
+    if (img.getAttribute('src')) img.classList.add('on');
+    if (!phInOnScreen()) return;
+  }
+}
+async function phInMissing(s) {   // how many of the set's pictures are NOT in Dropbox yet — null when Dropbox could not be asked
+  const dirs = {}; s.files.forEach(p => { const i = p.lastIndexOf('/'); (dirs[p.slice(0, i)] = dirs[p.slice(0, i)] || []).push(p.slice(i + 1).toLowerCase()); });
+  let miss = 0;
+  for (const d of Object.keys(dirs)) {
+    let r = null; try { r = await dbxList({ path: d }); } catch (e) { r = null; }
+    if (r && /not_found/.test(String(r.error_summary || ''))) { miss += dirs[d].length; continue; }   // the folder itself is not there yet
+    if (!r || r.error_summary || r.error || r.partial || !Array.isArray(r.entries)) return null;
+    const have = new Set(r.entries.map(e => String(e.name || '').toLowerCase()));
+    miss += dirs[d].filter(n => !have.has(n)).length;
+  }
+  return miss;
+}
+async function phInTake(id, quiet) {   // → 'ok' · 'job' (no job picked) · 'wait' (not all in Dropbox yet) · 'err' · 'no'
+  if (!phInCan() || (_phInTaking && !quiet)) return 'no';
+  const s = phInWaiting().find(x => x.id === id); if (!s) return 'no';
+  const job = phInJobOf(s);
+  if (!job) { if (!quiet) toast('▲ Pick the job first — the wheel on that set', false); return 'job'; }
+  if (!quiet) { _phInTaking = true; busyShow('📥 CHECKING THE PHOTOS ARE IN DROPBOX…'); }
+  const miss = await phInMissing(s);
+  if (!quiet) _phInTaking = false;
+  if (miss == null) { if (!quiet) { busyDone('⚠ COULD NOT CHECK DROPBOX'); toast('⚠ Could not look in Dropbox just now — nothing was added. Try again.', false); } return 'err'; }
+  if (miss > 0) { if (!quiet) { busyDone('⏳ NOT ALL IN DROPBOX YET'); toast(`⏳ ${miss} of these ${s.files.length} photos ${miss === 1 ? 'has' : 'have'} not reached Dropbox yet — nothing was added. Try again in a few minutes.`, false); } return 'wait'; }
+  if (phInTaken()[id]) return 'no';   // (taken while Dropbox was being asked)
+  const e = addEntry('Note', s.text, job, { noSniff: true, photoPath: s.files[0], ...(s.files.length > 1 ? { photoPaths: s.files.slice() } : {}), phIn: id, ...(s.paper ? { paper: true } : {}) });
+  phInTaken()[id] = localDay(new Date());
+  scheduleSave(); renderPendBanner();
+  if (!quiet) {
+    busyDone('📥 ✓ IN YOUR LOG');
+    if (phInOnScreen()) renderReview();
+    toastUndo(`📥 ${s.files.length} photo${s.files.length === 1 ? '' : 's'} in your log on ${job} — pick any of them in that job's 📖 Journal`, () => phInUntake(id, e.id));
+  }
+  return 'ok';
+}
+function phInUntake(id, eid) {
+  entries = entries.filter(x => x.id !== eid); delete phInTaken()[id];
+  scheduleSave(); renderAll(); renderPendBanner(); if (phInOnScreen()) renderReview();
+  toast('↩ Taken back out of your log — the set waits again');
+}
+function phInSkip(id) {
+  if (!phInCan()) return;
+  const s = phInWaiting().find(x => x.id === id); if (!s) return;
+  phInTaken()[id] = 'no'; _phInAllArm = false;
+  scheduleSave(); renderPendBanner(); if (phInOnScreen()) renderReview();
+  toastUndo(`✕ Those ${s.files.length} photo${s.files.length === 1 ? '' : 's'} will not be offered again — the files are still in Dropbox`, () => { delete phInTaken()[id]; scheduleSave(); renderPendBanner(); if (phInOnScreen()) renderReview(); });
+}
+async function phInAllTap() {   // every set that has a job, one after the other — two taps
+  if (!phInCan() || _phInTaking) return;
+  const w = phInWaiting(); if (!w.length) return;
+  if (!w.some(s => phInJobOf(s))) { toast('▲ Pick a job on at least one set first', false); return; }
+  if (!_phInAllArm) { _phInAllArm = true; clearTimeout(_phInAllT); _phInAllT = setTimeout(() => { if (_phInAllArm) { _phInAllArm = false; if (phInOnScreen()) renderReview(); } }, 5000); renderReview(); return; }
+  _phInAllArm = false; clearTimeout(_phInAllT); _phInTaking = true;
+  busyShow('📥 PUTTING THE PHOTOS IN YOUR LOG…');
+  const got = { ok: 0, photos: 0, job: 0, wait: 0, err: 0 };
+  // the LAST set in goes first, so the first set on the list ends up the newest note — on top of his log and first in the journal's grid
+  for (const s of w.slice().reverse()) { const r = await phInTake(s.id, true); if (r === 'ok') { got.ok++; got.photos += s.files.length; } else if (got[r] != null) got[r]++; }
+  _phInTaking = false;
+  busyDone(got.ok ? '📥 ✓ IN YOUR LOG' : '⚠ NOTHING WAS ADDED');
+  renderPendBanner(); if (phInOnScreen()) renderReview();
+  const bits = [got.ok ? `📥 ${got.ok} set${got.ok === 1 ? '' : 's'} in your log — ${got.photos} photos` : '', got.wait ? `⏳ ${got.wait} not all in Dropbox yet — try again in a few minutes` : '', got.job ? `▲ ${got.job} still need${got.job === 1 ? 's' : ''} a job` : '', got.err ? `⚠ ${got.err} could not be checked` : ''].filter(Boolean);
+  toast(bits.join(' · ') || 'Nothing was added', !!got.ok && !got.err);
+}
 function renderReview() {
   const box = $('revBox');
   if (_revTab === 'board') return renderBoard();       // 📋 v6.79 — the third tab
   if (_revTab === 'summary') return renderSummary();   // 📊 v6.76 — the other tab of the same window
   const { rows: rcptRows, n: rcptN } = revRcptRows();
+  const ph = phInRows();   // 📥 v7.84 — photos waiting for his tap, under 📷 PHOTOS
   const wiz = revWizRows();   // 🧙📜 v6.73 — the kept answers, under WIZARD
   const mailBlock = CREW_NAME ? '' : mailAskHtml();   // 📧 v6.76 — the email sort lives in here now, at the top of PEOPLE
-  if (!pendingQueue.length && !rcptRows.length && !wiz.n && !mailBlock) {
+  if (!pendingQueue.length && !rcptRows.length && !wiz.n && !mailBlock && !ph.n) {
     box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3>${revTabsHtml()}<div class="rev-done">All caught up — nothing waiting. ✓</div>
       <div class="rev-row"><button class="btn-primary" onclick="closeReview()">Done</button></div>`;
     return;
@@ -10783,21 +10977,22 @@ function renderReview() {
   // 🗂 v6.69 — the five headings, in order; one open, opening on the fullest
   const secs = REV_SECS.map(([key, label, hint]) => {
     const cards = pendingQueue.filter(p => revSecOf(p) === key);
-    const extra = key === 'money' ? rcptRows : key === 'wizard' ? wiz.rows : key === 'people' && mailBlock ? [`<div class="sum-mail card">${mailBlock}</div>`] : [];
-    return { key, label, hint, cards, extra, n: cards.length + (key === 'money' ? rcptN : key === 'wizard' ? wiz.n : 0) };   // the count is receipts, not jobs
+    const extra = key === 'money' ? rcptRows : key === 'wizard' ? wiz.rows : key === 'photos' ? ph.rows : key === 'people' && mailBlock ? [`<div class="sum-mail card">${mailBlock}</div>`] : [];
+    return { key, label, hint, cards, extra, n: cards.length + (key === 'money' ? rcptN : key === 'wizard' ? wiz.n : key === 'photos' ? ph.n : 0) };   // the count is receipts, not jobs
   });
   if (_revSec == null || (_revSec && !(secs.find(s => s.key === _revSec) || {}).n)) {
     const live = secs.filter(s => s.key !== 'wizard');   // 🧙 v6.73 — history never wins the first open; what WAITS does
     const fullest = live.slice().sort((a, b) => b.n - a.n)[0];   // a stable sort: a tie goes to the earlier heading
     _revSec = fullest && fullest.n ? fullest.key : wiz.n ? 'wizard' : '';
   }
-  box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3>${revTabsHtml()}<div class="rev-sub">${pendingQueue.length + rcptN} waiting · nothing is added until you tap ✓</div>` +
+  box.innerHTML = `<h3>📥 Review${winX('closeReview()', 'close the review pile')}</h3>${revTabsHtml()}<div class="rev-sub">${pendingQueue.length + rcptN + ph.n} waiting · nothing is added until you tap ✓</div>` +
     renderRevBulk() +   // 🧹 v6.45 — the sort-the-pile plate, only when there IS a pile
     secs.map(s => { const open = _revSec === s.key;
       return `<button type="button" class="rev-sec${open ? ' open' : ''}${s.n ? '' : ' empty'}" data-sec="${s.key}" onclick="revSecTap('${s.key}')" aria-expanded="${open}">${open ? '▾' : '▸'} ${s.label} <span class="rev-n">${s.n ? `${s.n} waiting` : s.extra.length ? '📧 email sort' : '○ nothing'}</span></button>
         <div class="rev-sec-body" data-sec="${s.key}"${open ? '' : ' hidden'}>${s.n || s.extra.length ? s.extra.join('') + s.cards.map(cardOf).join('') : `<div class="hint" style="margin: 6px 2px 8px;">${s.hint}</div>`}</div>`; }).join('') +
     `<div class="rev-row"><button class="btn-ghost" style="flex: 1;" onclick="closeReview()">Close — finish later</button></div>`;
   loadCaPhotos();
+  phInThumbs();   // 📥 v7.84
 }
 // 📎 v5.35 — a client sent a PICTURE of their pick: show it on the card + 🔮 read it for details
 async function loadCaPhotos() {
@@ -10850,7 +11045,9 @@ function openReview(tab) {
   });
   if (stamped) publishSharedNotes();
   _revSec = null;   // 🗂 v6.69 — every open lands on the fullest section
+  _phInAllArm = false; _phInOpen = {};   // 📥 v7.84 — no armed plate, every set folded to its first six
   renderReview(); $('revModal').classList.add('show'); document.body.classList.add('modal-open');
+  phInLoad(true);   // 📥 v7.84 — is a set of photos waiting? (the read redraws the page only when something new waits)
 }
 function closeReview() {
   if (_jcEdit) { cardStash(); _jcEdit = false; }   // 📇 v6.77 — the job card closed mid-edit: the words are saved first
@@ -20462,8 +20659,37 @@ function jrnStamp(id) {
   if (e.jrn && (!e.job || e.job === '—')) toast('📖 Stamped — ⚠ it has NO JOB yet. Give it one (✎) or it can\'t find its journal.', false);
   else toast(e.jrn ? `📖 Stamped for the ${e.job} journal — it builds up till you release the week ✓` : 'Stamp removed ✓');
 }
+// ☑ v7.84 — A CLIENT PAGE THAT COVERS A SECOND JOB. One homeowner's page can stand for two jobs on his list (a page named for
+// "the pavilion, the dock and the garage" over a Pavilion job and a Garage job). The page's journal only ever read ONE of them —
+// portalAppJob, the first job on his list that the page's key names — so the other job's photos and notes could never be picked
+// for it. Now the journal window offers each OTHER job the same key names (jrnAlsoCands: the same exact rule, nothing looser)
+// as a ☐ plate, and HIS tap adds it (prefs.jrnAlso[<the page's job>] = [<the other jobs>]): that job's photos join the grid, its
+// stamped notes ride the release and its week joins the draft. Off by default; the same plate takes it off. Nothing else that
+// reads portalAppJob changes (the receipts, the estimates and the Build List stay one job a page).
+function jrnAlso(aj) { const l = (prefs.jrnAlso && typeof prefs.jrnAlso === 'object') ? prefs.jrnAlso[aj] : null; return Array.isArray(l) ? l.filter(j => j !== aj && jobs.includes(j) && !isPersonalJob(j)) : []; }
+function jrnJobHit(e, aj) { return !!e && (e.job === aj || (!!e.job && jrnAlso(aj).includes(e.job))); }
+function jrnAlsoCands(c) {
+  const aj = portalAppJob(c), key = String((c && c.key) || '').toLowerCase(); if (!key) return [];
+  return jobs.filter(j => j && j !== aj && j !== '—' && !isPersonalJob(j) && j.toLowerCase().startsWith(key));
+}
+function jrnAlsoToggle(job) {
+  if (isCrew() || _jrnIdx == null) return;
+  const c = _portalIdx.clients[_jrnIdx], aj = portalAppJob(c);
+  if (!jrnAlsoCands(c).includes(job)) return;
+  if (!prefs.jrnAlso || typeof prefs.jrnAlso !== 'object' || Array.isArray(prefs.jrnAlso)) prefs.jrnAlso = {};
+  const on = jrnAlso(aj).includes(job), next = on ? jrnAlso(aj).filter(j => j !== job) : [...jrnAlso(aj), job];
+  if (next.length) prefs.jrnAlso[aj] = next; else delete prefs.jrnAlso[aj];
+  scheduleSave(); renderJrnAlso(); renderJrnPhotos();
+  toast(on ? `☐ ${job} is off this page's journal — only ${aj} shows here now` : `☑ ${job} shows here too — its photos and notes can go to ${c.job}'s page`);
+}
+function renderJrnAlso() {
+  const box = $('jrnAlsoBox'); if (!box || _jrnIdx == null) return;
+  const c = _portalIdx.clients[_jrnIdx], aj = portalAppJob(c), cands = isCrew() ? [] : jrnAlsoCands(c), on = jrnAlso(aj);
+  box.innerHTML = cands.length ? `<span class="hint" style="margin: 0;">This page's photos and notes come from <b>${esc(aj)}</b>. It can cover more:</span> ${cands.map(j => { const lit = on.includes(j);
+    return `<button type="button" class="pick-chip jrn-also${lit ? ' sel' : ''}" aria-pressed="${lit}" onclick="jrnAlsoToggle('${escq(j)}')">${lit ? '☑' : '☐'} ${esc(j)}${lit ? ' — shows here too · tap to take it off' : ' — show its photos and notes here too'}</button>`; }).join('')}` : '';
+}
 function jrnStamped(aj) {
-  return entries.filter(e => e.jrn && !e.jrnDone && !e.personal && !e.sample && e.job === aj);
+  return entries.filter(e => e.jrn && !e.jrnDone && !e.personal && !e.sample && jrnJobHit(e, aj));
 }
 // ✍ v7.14 — the draft pulls the same things every time: ⭐ what he stamped, the week's work notes, and a line about the
 // photos he picked. The four switches (work notes · hours on site · photo count · money moved) are gone from the window
@@ -20471,7 +20697,7 @@ function jrnStamped(aj) {
 function journalDraft(aj, code) {
   const p = { notes: true, hours: false, photos: false, money: false };
   const from = new Date(); from.setDate(from.getDate() - 7);
-  const win = entries.filter(e => !e.sample && !e.personal && e.job === aj && new Date(e.ts) >= from);
+  const win = entries.filter(e => !e.sample && !e.personal && jrnJobHit(e, aj) && new Date(e.ts) >= from);   // ☑ v7.84 — a second job the page covers counts too
   const lines = [];
   // ⭐ stamped items lead — Eric picked these by hand during the week
   const st = jrnStamped(aj);
@@ -20508,6 +20734,7 @@ async function openJournal(i) {
     <div class="field frow" style="margin: 8px 0 2px; align-items: center; gap: 8px;"><label style="flex: 1;">📷 Job photos — tap the ones to send with this week</label>
       <button type="button" class="pick-chip" style="font-size: var(--fs115, 11.5px); min-height: 30px;" onclick="$('jrnPhFile').click()" title="Photos added here get ground into the job log like normal AND arrive already picked for this week">➕ Add photos</button>
       <input type="file" id="jrnPhFile" accept="image/*" multiple style="display: none;" onchange="jrnAddPhotos(this)"></div>
+    <div id="jrnAlsoBox" class="jrn-also-box"></div>
     <div id="jrnPhGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;"></div>
     <div class="hint" id="jrnPhNote" style="margin: 5px 0 0;"></div>
     <!-- ✍ v5.84 — Eric: "auto write default off so that i can type myself or make my inclusion
@@ -20546,6 +20773,7 @@ async function openJournal(i) {
   // ✍ v5.84 — a chip flip or draft re-render hands Eric's words straight back to the box
   if (_jrnKeepText != null) { const b = $('jrnText'); if (b) { b.value = _jrnKeepText; fitTa(b); } _jrnKeepText = null; }
   renderJrnRecap(c);    // 👷 v6.58 — the crew's own paragraph for this week, to build on
+  renderJrnAlso();      // ☑ v7.84 — a second job this page can cover
   renderJrnPhotos();    // 📷 v5.38 — the photo picker fills + loads its thumbnails
   // 🧙 v5.20's auto-tidy retired v5.84 — the Wizard only writes when ✍ Draft it is tapped
   renderJrnReleased();  // ↩ v5.20 — released weeks: editable, retractable
@@ -20583,11 +20811,16 @@ function jrnSelPaths(e) {
 // at 24 in whatever order the entries happened to sit, so on a busy job the pile he had JUST
 // ground could fall off the end and he had no way to know. Now: picked-and-unsent first, then
 // newest first, and room for 48 — the thumbnails load lazily, a phone can carry that.
+// 📷 v7.84 — Eric brought a year of a job's photos into his log in one go and wants them "selectable to send to the job
+// journal": the grid stopped at 48 photos. It reaches 400 now (JRN_PH_MAX) — still six showing, the rest behind the one plate —
+// and a thumbnail is fetched only for a tile that is SHOWING (the first six and what he picked; all of them once he unfolds), so
+// opening the window never pulls hundreds of pictures; a thumbnail that lands is put in its own tile, the grid is not redrawn.
+const JRN_PH_MAX = 400;
 function jrnPhotoList(aj) {
   const from = new Date(); from.setDate(from.getDate() - 30);
   const pool = [];
   for (const e of entries) {
-    if (!e.photoPath || e.personal || e.sample || e.job !== aj) continue;
+    if (!e.photoPath || e.personal || e.sample || !jrnJobHit(e, aj)) continue;   // ☑ v7.84 — a second job the page covers shows here too
     const picked = !!(e.jrn && !e.jrnDone);
     if (!(picked || new Date(e.ts) >= from)) continue;
     pool.push({ e, picked, t: +new Date(e.ts) || 0 });
@@ -20598,7 +20831,7 @@ function jrnPhotoList(aj) {
     const all = entryAllPhotos(e);
     for (let pi = 0; pi < all.length; pi++) {
       out.push({ e, pi, path: all[pi] });
-      if (out.length >= 48) return out;
+      if (out.length >= JRN_PH_MAX) return out;
     }
   }
   return out;
@@ -20650,14 +20883,25 @@ function renderJrnPhotos() {
     const n = jrnStamped(aj).reduce((t, e) => t + jrnSelPaths(e).length, 0); // v6.26 - counts PHOTOS, not entries
     go.textContent = `📖 Release to the client page${n ? ` (${n} photo${n > 1 ? 's ride' : ' rides'} along)` : ''}`;
   }
-  jrnPhLoadLinks(list);
+  // 📷 v7.84 — only a tile that SHOWS fetches its thumbnail: the first six and what he picked — every one once he unfolds
+  jrnPhLoadLinks(_jrnPhAll ? list : list.filter((it, ti) => ti < JRN_PH_SHOW || jrnSelPaths(it.e).includes(it.path)));
 }
-async function jrnPhLoadLinks(list) {
-  // 📷 v5.84 — Eric: "many of the photos in the job photos dont show up." They were iPhone
-  // HEIC files behind raw temp links — browsers can't draw those. Dropbox's thumbnail door
-  // converts ANY format to jpeg server-side (same door the board photos use), and a failed
-  // fetch is no longer cached forever — reopening the journal retries it.
-  for (const it of list) {
+// 📷 v5.84 — Eric: "many of the photos in the job photos dont show up." They were iPhone HEIC files behind raw temp links —
+// browsers can't draw those. Dropbox's thumbnail door converts ANY format to jpeg server-side (same door the board photos
+// use), and a failed fetch is no longer cached forever — reopening the journal retries it.
+// 📷 v7.84 — ONE line of fetches however often the grid is redrawn (every tap on a tile used to start another loop), and a
+// thumbnail that lands goes into its own tile — the grid itself is not redrawn for it (with hundreds of photos it was redrawn
+// hundreds of times).
+let _jrnPhQ = [], _jrnPhRunP = null;
+function jrnPhLoadLinks(list) {
+  (list || []).forEach(it => { if (!_jrnPhLinks[it.path] && !_jrnPhQ.some(q => q.path === it.path)) _jrnPhQ.push(it); });
+  if (!_jrnPhRunP) _jrnPhRunP = jrnPhRunQ().finally(() => { _jrnPhRunP = null; });
+  return _jrnPhRunP;
+}
+async function jrnPhRunQ() {
+  while (_jrnPhQ.length) {
+    if (!$('jrnPhGrid')) { _jrnPhQ = []; break; }   // window closed — stop fetching
+    const it = _jrnPhQ.shift();
     if (_jrnPhLinks[it.path]) continue;
     try {
       const t = await getToken();
@@ -20668,11 +20912,14 @@ async function jrnPhLoadLinks(list) {
       });
       if (r.ok) {
         _jrnPhLinks[it.path] = URL.createObjectURL(await r.blob());
-        const cell = document.querySelector(`[data-jph="${it.e.id}_${it.pi}"]`);
-        if (cell) renderJrnPhotos(); // grid still on screen — repaint with the new thumb
+        const cell = document.querySelector(`[data-jph="${it.e.id}_${it.pi}"]`), ph = cell && cell.firstElementChild;
+        if (ph && ph.tagName === 'SPAN') {   // grid still on screen — the picture goes into its own tile
+          const im = document.createElement('img'); im.src = _jrnPhLinks[it.path]; im.alt = '';
+          im.style.cssText = 'width: 100%; height: 100%; object-fit: cover; display: block;' + (cell.getAttribute('aria-pressed') === 'true' ? '' : ' opacity: 0.75;');
+          ph.replaceWith(im);
+        }
       }
     } catch (err) { /* left un-cached on purpose — next open tries again */ }
-    if (!$('jrnPhGrid')) break; // window closed — stop fetching
   }
 }
 function jrnPhotoTog(id, pi) {
@@ -20861,6 +21108,7 @@ async function jrnRetract(i) {
 const JRN_PAPER_RE = /\b(check|cheque|invoice|receipt|statement|deposit|routing|account number|bill)\b/i;
 function jrnPaperLike(e) {
   if (!e) return false;
+  if (e.paper) return true;   // 📥 v7.84 — a set of screenshots brought in as paper (invoices, emails, words): its tiles ask twice
   if (e.type === 'Filed' || e.rcpt || e.budg || e.amount != null || e.category) return true;
   if ((e.tags || []).some(t => /^receipt$/i.test(String(t)))) return true;
   const words = String(e.details || '') + '\n' + String(e.ai || '');
@@ -24768,8 +25016,9 @@ function renderSummary() {
   const rc = revRcptRows();
   const kinds = {};
   pendingQueue.forEach(p => { const k = p.kind === 'mail' && p.payload.needs ? 'needs review' : p.kind === 'mail' ? 'important emails' : p.kind === 'bill' ? 'bills' : p.kind === 'qb' ? 'QuickBooks lines' : p.kind === 'clientask' ? 'client questions' : p.kind === 'text' ? 'texts' : p.kind === 'crew' ? 'crew notes' : 'suggestions'; kinds[k] = (kinds[k] || 0) + 1; });
-  const waiting = pendingQueue.length + rc.n;
-  S.need = waiting ? [line('📥', `<b>${waiting} waiting</b> — ${[...Object.entries(kinds).map(([k, n]) => `${n} ${k}`), ...(rc.n ? [`${rc.n} receipts to approve`] : [])].join(', ')}`,
+  const phN = phInWaiting().length;   // 📥 v7.84 — sets of photos waiting for his tap
+  const waiting = pendingQueue.length + rc.n + phN;
+  S.need = waiting ? [line('📥', `<b>${waiting} waiting</b> — ${[...Object.entries(kinds).map(([k, n]) => `${n} ${k}`), ...(rc.n ? [`${rc.n} receipts to approve`] : []), ...(phN ? [`${phN} set${phN === 1 ? '' : 's'} of photos to put in your log`] : [])].join(', ')}`,
     `<button type="button" class="btn-ghost req-x" onclick="revTab('sort')">📥 Open the sort tab</button>`)] : [];
   // 👥 PEOPLE — the 📧 email sort first (this week), then every email and text in the span, one line each
   const ppl = es.filter(e => e.mail || e.texted || /^Text from /.test(e.details || ''));
@@ -27673,7 +27922,7 @@ function exportCsv() {
 // ---------- Dropbox sync ----------
 // v4.65 — crew mode: a crew member's phone points at THEIR OWN Dropbox mount of the one
 // folder Eric shared to them. Everything else in the app just follows DBX_ROOT.
-const APP_VER = 'v7.83';   // 🏷 the build this phone is running — printed where it matters
+const APP_VER = 'v7.84';   // 🏷 the build this phone is running — printed where it matters
 // 🔄 v6.09 — A PHONE THAT QUIETLY STAYS BEHIND IS A SUPPORT CALL. Phil's desktop had the new
 // build and his phone didn't, and nothing on the phone said so. Now every phone asks the
 // server what the current version is and puts a bar across the top if it's behind — one tap
@@ -28297,6 +28546,7 @@ async function pullRemote() {
   checkQbCosts(); // ✓✓ light the QB lamps + card what the books have that the field missed
   checkQbFresh(); // 📚 v6.18 — did every client budget actually get rewritten on the last run?
   if (!window._schedInboxBooted) { window._schedInboxBooted = true; schedInboxLoad(); }   // 📥 v7.69 — once a session: is a plan waiting for his tap?
+  if (!window._phInBooted) { window._phInBooted = true; phInLoad(); }   // 📥 v7.84 — and are photos waiting to go into his log?
 }
 async function pushRemote() {
   if (!dbx.refreshToken) return;

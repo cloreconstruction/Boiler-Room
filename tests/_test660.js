@@ -33,7 +33,7 @@ const { chromium } = require('playwright');
     entries = entries.filter(e => e.id !== mine.id).concat([mine]);
     const list = jrnPhotoList('Josten/Weiser');
     window._list = list;
-    return list.length === 48 && list[0].path === '/p/new1.jpg' && list[1].path === '/p/new2.jpg' && list[2].path === '/p/new3.jpg';
+    return list.length === 50 && list[0].path === '/p/new1.jpg' && list[1].path === '/p/new2.jpg' && list[2].path === '/p/new3.jpg';   // 📷 v7.84 — all fifty: the grid reaches 400 now, it no longer stops at 48
   }));
 
   ok('after the picked ones, newest first', await page.evaluate(() => {
@@ -41,9 +41,15 @@ const { chromium } = require('playwright');
     return rest.every((t, i) => i === 0 || t <= rest[i - 1]);
   }));
 
-  ok('the cap is 48, not 24 — and it is the OLDEST that fall off, never the picked', await page.evaluate(() => {
-    const paths = window._list.map(it => it.path);
-    return paths.length === 48 && paths.includes('/p/old0.jpg') && !paths.includes('/p/old46.jpg') && paths.includes('/p/new3.jpg');
+  // 📷 v7.84 — Eric brought a year of a job's photos in at once and wants every one pickable: the cap is 400 (JRN_PH_MAX), not 48.
+  // The rule itself stands — past the cap it is the OLDEST that fall off, never the picked.
+  ok('the cap is 400, not 48 — and it is the OLDEST that fall off, never the picked', await page.evaluate(() => {
+    const before = window._list.map(it => it.path);
+    const keep = entries.slice(), id0 = nextId;
+    for (let i = 0; i < 360; i++) { const e = addEntry('Note', 'more ' + i, 'Josten/Weiser', { photoPath: '/p/more' + i + '.jpg' }); e.ts = new Date(Date.now() - (i + 400) * 60000); }   // 360 more, all newer than the pile's oldest
+    const paths = jrnPhotoList('Josten/Weiser').map(it => it.path);
+    entries = keep; nextId = id0;
+    return before.length === 50 && before.includes('/p/old46.jpg') && JRN_PH_MAX === 400 && paths.length === 400 && paths[0] === '/p/new1.jpg' && paths.includes('/p/new3.jpg') && paths.includes('/p/old0.jpg') && !paths.includes('/p/old46.jpg');
   }));
 
   ok('a photo sent in a past week still shows (the grid never clears itself) — and sits by date', await page.evaluate(() => {
